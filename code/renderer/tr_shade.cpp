@@ -79,28 +79,6 @@ static void DrawNormals( const shaderCommands_t* input )
 	}
 	qglEnd();
 
-	qglColor3f( 1, 0, 0 );
-	qglBegin( GL_LINES );
-	for (int i = 0; i < input->numVertexes; ++i) {
-		vec3_t temp;
-		qglVertex3fv( input->xyz[i] );
-		VectorMA( input->xyz[i], 2, input->tangent[i], temp );
-		qglVertex3fv( temp );
-	}
-	qglEnd();
-
-	qglColor3f( 0, 1, 0 );
-	qglBegin( GL_LINES );
-	for (int i = 0; i < input->numVertexes; ++i) {
-		vec3_t temp, bitan;
-		qglVertex3fv( input->xyz[i] );
-		CrossProduct( input->normal[i], input->tangent[i], bitan );
-		VectorScale( bitan, input->tangent[i][3], bitan );
-		VectorMA( input->xyz[i], 2, bitan, temp );
-		qglVertex3fv( temp );
-	}
-	qglEnd();
-
 	qglDepthRange( 0, 1 );
 }
 
@@ -262,6 +240,11 @@ void R_ComputeColors( const shaderStage_t* pStage, stageVars_t& svars )
 	case CGEN_LIGHTING_DIFFUSE:
 		RB_CalcDiffuseColor( ( unsigned char * ) svars.colors );
 		break;
+	case CGEN_CONST:
+		for (i = 0; i < tess.numVertexes; i++) {
+			*(int *)svars.colors[i] = *(int *)pStage->constantColor;
+		}
+		break;
 	case CGEN_VERTEX:
 		if ( tr.identityLight == 1 )
 		{
@@ -269,19 +252,13 @@ void R_ComputeColors( const shaderStage_t* pStage, stageVars_t& svars )
 		}
 		else
 		{
-			int k;
 			for ( i = 0; i < tess.numVertexes; i++ )
 			{
-				for(k = 0; k < 3; k++)
-					svars.colors[i][k] = tess.vertexColors[i][k] * tr.identityLight;
-
+				svars.colors[i][0] = tess.vertexColors[i][0] * tr.identityLight;
+				svars.colors[i][1] = tess.vertexColors[i][1] * tr.identityLight;
+				svars.colors[i][2] = tess.vertexColors[i][2] * tr.identityLight;
 				svars.colors[i][3] = tess.vertexColors[i][3];
 			}
-		}
-		break;
-	case CGEN_CONST:
-		for ( i = 0; i < tess.numVertexes; i++ ) {
-			*(int *)svars.colors[i] = *(int *)pStage->constantColor;
 		}
 		break;
 	case CGEN_EXACT_VERTEX:

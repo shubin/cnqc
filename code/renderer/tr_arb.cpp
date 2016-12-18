@@ -10,38 +10,9 @@
 ///////////////////////////////////////////////////////////////
 
 
-// vertex attribs are a total clusterfuck, especially on nvidia drivers  :(
-
-static const GLuint VAA_TANGENT = 6;
-static const GLuint VAA_FREE7 = 7;
-
-static const unsigned GLA_TANGENT = (1 << VAA_TANGENT);
-
-
-static unsigned glslAttribBits;
-
-static void GL_Arrays( int mask )
-{
-	unsigned diff = mask ^ glslAttribBits;
-
-	if (!diff)
-		return;
-
-	if (diff & GLA_TANGENT) {
-		((mask & GLA_TANGENT) ? qglEnableVertexAttribArray : qglDisableVertexAttribArray)( VAA_TANGENT );
-	}
-
-	glslAttribBits = mask;
-}
-
-
-///////////////////////////////////////////////////////////////
-
-
 struct GLSL_Program {
 	GLuint vs;
 	GLuint fs;
-	GLuint p;
 };
 
 
@@ -90,35 +61,11 @@ static GLSL_Program progDynamic;
 
 static void ARB_Lighting_Setup()
 {
-	const shaderStage_t* pStage;
-
-	// bind TMU0 last so we don't have to switch back to it after lighting
-	// because the rest of the system always just assumes TMU0 is selected
-
-	GL_SelectTexture( 2 );
-	if (tess.shader->lightingStages[ST_SPECULAR] != -1) {
-		pStage = tess.xstages[ tess.shader->lightingStages[ST_SPECULAR] ];
-		R_BindAnimatedImage( &pStage->bundle );
-	} else {
-		GL_Bind( tr.shinyImage );
-	}
-
-	GL_SelectTexture( 1 );
-	if (tess.shader->lightingStages[ST_BUMPMAP] != -1) {
-		pStage = tess.xstages[ tess.shader->lightingStages[ST_BUMPMAP] ];
-		R_BindAnimatedImage( &pStage->bundle );
-	} else {
-		GL_Bind( tr.flatImage );
-	}
-
-	pStage = tess.xstages[ tess.shader->lightingStages[ST_DIFFUSE] ];
-	GL_SelectTexture( 0 );
+	const shaderStage_t* pStage = tess.xstages[tess.shader->lightingStages[ST_DIFFUSE]];
+	GL_SelectTexture(0);
 	R_BindAnimatedImage( &pStage->bundle );
 }
 
-
-// things that are already set up:
-// geom, normals, tangents, and ST0 are all in CVA
 
 static void ARB_Lighting()
 {
@@ -131,15 +78,12 @@ static void ARB_Lighting()
 	for ( i = 0; i < tess.numVertexes; ++i ) {
 		vec3_t dist;
 		VectorSubtract( dl->transformed, tess.xyz[i], dist );
-/* hrm...
-	// on the armor md5, this is clearly being SLIGHTLY too agressive
-	// and you can (just) see surfaces being culled for near-coplanar lights
-	// because the triangles are using VERTEX normals rather than SURFACE ones
+
 		if ( DotProduct( dist, tess.normal[i] ) <= 0.0 ) {
 			clipBits[i] = (byte)-1;
 			continue;
 		}
-*/
+
 		int clip = 0;
 		if ( dist[0] > dl->radius ) {
 			clip |= 1;
@@ -221,8 +165,6 @@ static void ARB_LightingPass()
 
 	GL_Cull( tess.shader->cullType );
 
-	// the bump and specular layers implicitly have the TCs of the base layer
-	// (it's nonsensical for them not to, if you think about it)
 	const shaderStage_t* pStage = tess.xstages[ tess.shader->lightingStages[ST_DIFFUSE] ];
 	R_ComputeTexCoords( pStage, tess.svars );
 
@@ -236,9 +178,6 @@ static void ARB_LightingPass()
 	qglEnableClientState( GL_NORMAL_ARRAY );
 	qglNormalPointer( GL_FLOAT, 16, tess.normal );
 
-	GL_Arrays( GLA_TANGENT );
-	qglVertexAttribPointer( VAA_TANGENT, 4, GL_FLOAT, GL_FALSE, 0, tess.tangent );
-
 	qglVertexPointer( 3, GL_FLOAT, 16, tess.xyz );
 	qglLockArraysEXT( 0, tess.numVertexes );
 
@@ -247,7 +186,6 @@ static void ARB_LightingPass()
 	qglUnlockArraysEXT();
 
 	qglDisableClientState( GL_NORMAL_ARRAY );
-	GL_Arrays( 0 );
 }
 
 
@@ -308,10 +246,6 @@ void ARB_StageIterator()
 
 	for ( int stage = 0; stage < tess.shader->numStages; ++stage ) {
 		const shaderStage_t* pStage = tess.xstages[stage];
-
-		if ( (pStage->type == ST_BUMPMAP) || (pStage->type == ST_SPECULAR) )
-			continue;
-
 		R_ComputeColors( pStage, tess.svars );
 		R_ComputeTexCoords( pStage, tess.svars );
 		R_BindAnimatedImage( &pStage->bundle );
@@ -343,42 +277,25 @@ void ARB_StageIterator()
 		qglDisable( GL_POLYGON_OFFSET_FILL );
 }
 
+
 ///////////////////////////////////////////////////////////////
 
 
-static qbool ARB_LoadProgram( GLSL_Program& prog, const char* name )
+static qbool ARB_LoadProgram(GLSL_Program& prog, const char* vp, const char* fp)
 {
-	int len;
-	byte* sp;
-	const char* s;
+	qglGenPrograms(1, &prog.vs);
+	qglBindProgram(GL_VERTEX_PROGRAM_ARB, prog.vs);
+	qglProgramString(GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB, strlen(vp), vp);
 
-	s = va( "glsl/%s.vp", name );
-	len = FS_ReadFile( s, (void**)&sp );
-	if ( !sp )
-		Com_Error( ERR_FATAL, "Couldn't load %s", s );
+	if (qglGetError() != GL_NO_ERROR)
+		ri.Error(ERR_FATAL, "VP Compile Error: %s", qglGetString(GL_PROGRAM_ERROR_STRING_ARB));
 
-	qglGenPrograms( 1, &prog.vs );
-	qglBindProgram( GL_VERTEX_PROGRAM_ARB, prog.vs );
-	qglProgramString( GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB, len, sp );
-	FS_FreeFile( sp );
+	qglGenPrograms(1, &prog.fs);
+	qglBindProgram(GL_FRAGMENT_PROGRAM_ARB, prog.fs);
+	qglProgramString(GL_FRAGMENT_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB, strlen(fp), fp);
 
-	if (glGetError() != GL_NO_ERROR) {
-		ri.Error( ERR_FATAL, "VP Compile Error: %s : %s", s, glGetString(GL_PROGRAM_ERROR_STRING_ARB) );
-	}
-
-	s = va( "glsl/%s.fp", name );
-	len = FS_ReadFile( s, (void**)&sp );
-	if ( !sp )
-		Com_Error( ERR_FATAL, "Couldn't load %s", s );
-
-	qglGenPrograms( 1, &prog.fs );
-	qglBindProgram( GL_FRAGMENT_PROGRAM_ARB, prog.fs );
-	qglProgramString( GL_FRAGMENT_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB, len, sp );
-	FS_FreeFile( sp );
-
-	if (glGetError() != GL_NO_ERROR) {
-		ri.Error( ERR_FATAL, "FP Compile Error: %s : %s", s, glGetString(GL_PROGRAM_ERROR_STRING_ARB) );
-	}
+	if (qglGetError() != GL_NO_ERROR)
+		ri.Error(ERR_FATAL, "FP Compile Error: %s", qglGetString(GL_PROGRAM_ERROR_STRING_ARB));
 
 	return qtrue;
 }
@@ -440,9 +357,7 @@ static const char* legacyFP =
 
 qbool QGL_InitARB()
 {
-	GL_Arrays( 0 );
-
-	ARB_LoadProgram( progDynamic, "dynamic" );
+	ARB_LoadProgram( progDynamic, legacyVP, legacyFP );
 
 	GL_Program();
 

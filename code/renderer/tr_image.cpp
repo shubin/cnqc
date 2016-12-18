@@ -1018,13 +1018,6 @@ static void R_CreateBuiltinImages()
 	Com_Memset( data, 255, 4 );
 	tr.whiteImage = R_CreateImage( "*white", data, 1, 1, GL_RGBA, IMG_NOMIPMAP, GL_REPEAT );
 
-	data[0] = 128;
-	data[1] = 128;
-	tr.flatImage = R_CreateImage( "*flat", data, 1, 1, GL_RGBA, IMG_NOMIPMAP | IMG_NOIMANIP, GL_REPEAT );
-
-	Com_Memset( data, 64, 4 );
-	tr.shinyImage = R_CreateImage( "*shiny", data, 1, 1, GL_RGBA, IMG_NOMIPMAP | IMG_NOIMANIP, GL_REPEAT );
-
 	// scratchimages usually used for cinematic drawing (signal-quality effects)
 	// these are just placeholders: RE_StretchRaw will regenerate them when it wants them
 	for (i = 0; i < 16; ++i) // MAX_VIDEO_HANDLES

@@ -201,74 +201,6 @@ static shader_t* ShaderForShaderNum( int shaderNum, int lightmapNum )
 }
 
 
-// lengyel's algorithm: see http://www.terathon.com/code/tangent.html
-
-static void CalcTangents( srfSurfaceFace_t* srf )
-{
-	int i;
-	const int* indices = srf->indexes;
-
-	vec3_t tan1[MAX_FACE_POINTS];
-	Com_Memset( tan1, 0, sizeof(tan1) );
-
-	vec3_t tan2[MAX_FACE_POINTS];
-	Com_Memset( tan2, 0, sizeof(tan2) );
-
-	for ( i = 0; i < srf->numIndexes / 3; ++i, indices += 3 ) {
-		int i1 = indices[0];
-		int i2 = indices[1];
-		int i3 = indices[2];
-
-		const vec3_t& v1 = srf->verts[i1].xyz;
-		const vec3_t& v2 = srf->verts[i2].xyz;
-		const vec3_t& v3 = srf->verts[i3].xyz;
-
-		const vec2_t& tc1 = srf->verts[i1].st;
-		const vec2_t& tc2 = srf->verts[i2].st;
-		const vec2_t& tc3 = srf->verts[i3].st;
-
-		float x1 = v2[0] - v1[0];
-		float x2 = v3[0] - v1[0];
-		float y1 = v2[1] - v1[1];
-		float y2 = v3[1] - v1[1];
-		float z1 = v2[2] - v1[2];
-		float z2 = v3[2] - v1[2];
-
-		float s1 = tc2[0] - tc1[0];
-		float s2 = tc3[0] - tc1[0];
-		float t1 = tc2[1] - tc1[1];
-		float t2 = tc3[1] - tc1[1];
-
-		float r = 1.0 / (s1 * t2 - s2 * t1);
-
-		vec3_t sdir, tdir;
-		VectorSet( sdir, (t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r, (t2 * z1 - t1 * z2) * r );
-		VectorSet( tdir, (s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r, (s1 * z2 - s2 * z1) * r );
-
-		VectorAdd( tan1[i1], sdir, tan1[i1] );
-		VectorAdd( tan1[i2], sdir, tan1[i2] );
-		VectorAdd( tan1[i3], sdir, tan1[i3] );
-
-		VectorAdd( tan2[i1], tdir, tan2[i1] );
-		VectorAdd( tan2[i2], tdir, tan2[i2] );
-		VectorAdd( tan2[i3], tdir, tan2[i3] );
-	}
-
-	for ( i = 0; i < srf->numVerts; ++i ) {
-		// Gram-Schmidt orthogonalize
-		vec3_t t;
-		float f = DotProduct( srf->plane.normal, tan1[i] );
-		VectorMA( tan1[i], -f, srf->plane.normal, t );
-		VectorNormalize2( t, srf->verts[i].tangent );
-
-		// stash the handedness in tan.w
-		vec3_t x;
-		CrossProduct( srf->plane.normal, tan1[i], x );
-		srf->verts[i].tangent[3] = (DotProduct(x, tan2[i]) < 0.0f) ? -1.0f : 1.0f;
-	}
-}
-
-
 template <class T> T* AllocSurface( int numVerts, int numIndexes )
 {
 	T* surf = (T*)RI_New<byte>
@@ -326,8 +258,6 @@ static void ParseFace( const dsurface_t* ds, const drawVert_t* verts, msurface_t
 	cv->plane.dist = DotProduct( cv->verts[0].xyz, cv->plane.normal );
 	SetPlaneSignbits( &cv->plane );
 	cv->plane.type = PlaneTypeForNormal( cv->plane.normal );
-
-	CalcTangents( cv );
 }
 
 
@@ -383,74 +313,6 @@ static void ParseMesh( const dsurface_t* ds, const drawVert_t* verts, msurface_t
 }
 
 
-// HACK HACK HACK copypaste HACK !!!
-
-static void CalcTangents_TriSurf( srfTriangles_t* srf )
-{
-	int i;
-	const int* indices = srf->indexes;
-
-	vec3_t tan1[SHADER_MAX_VERTEXES];
-	Com_Memset( tan1, 0, sizeof(tan1) );
-
-	vec3_t tan2[SHADER_MAX_VERTEXES];
-	Com_Memset( tan2, 0, sizeof(tan2) );
-
-	for ( i = 0; i < srf->numIndexes / 3; ++i, indices += 3 ) {
-		int i1 = indices[0];
-		int i2 = indices[1];
-		int i3 = indices[2];
-
-		const vec3_t& v1 = srf->verts[i1].xyz;
-		const vec3_t& v2 = srf->verts[i2].xyz;
-		const vec3_t& v3 = srf->verts[i3].xyz;
-
-		const vec2_t& tc1 = srf->verts[i1].st;
-		const vec2_t& tc2 = srf->verts[i2].st;
-		const vec2_t& tc3 = srf->verts[i3].st;
-
-		float x1 = v2[0] - v1[0];
-		float x2 = v3[0] - v1[0];
-		float y1 = v2[1] - v1[1];
-		float y2 = v3[1] - v1[1];
-		float z1 = v2[2] - v1[2];
-		float z2 = v3[2] - v1[2];
-
-		float s1 = tc2[0] - tc1[0];
-		float s2 = tc3[0] - tc1[0];
-		float t1 = tc2[1] - tc1[1];
-		float t2 = tc3[1] - tc1[1];
-
-		float r = 1.0 / (s1 * t2 - s2 * t1);
-
-		vec3_t sdir, tdir;
-		VectorSet( sdir, (t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r, (t2 * z1 - t1 * z2) * r );
-		VectorSet( tdir, (s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r, (s1 * z2 - s2 * z1) * r );
-
-		VectorAdd( tan1[i1], sdir, tan1[i1] );
-		VectorAdd( tan1[i2], sdir, tan1[i2] );
-		VectorAdd( tan1[i3], sdir, tan1[i3] );
-
-		VectorAdd( tan2[i1], tdir, tan2[i1] );
-		VectorAdd( tan2[i2], tdir, tan2[i2] );
-		VectorAdd( tan2[i3], tdir, tan2[i3] );
-	}
-
-	for ( i = 0; i < srf->numVerts; ++i ) {
-		// Gram-Schmidt orthogonalize
-		vec3_t t;
-		float f = DotProduct( srf->verts[i].normal, tan1[i] );
-		VectorMA( tan1[i], -f, srf->verts[i].normal, t );
-		VectorNormalize2( t, srf->verts[i].tangent );
-
-		// stash the handedness in tan.w
-		vec3_t x;
-		CrossProduct( srf->verts[i].normal, tan1[i], x );
-		srf->verts[i].tangent[3] = (DotProduct(x, tan2[i]) < 0.0f) ? -1.0f : 1.0f;
-	}
-}
-
-
 static void ParseTriSurf( const dsurface_t* ds, const drawVert_t* verts, msurface_t* surf, const int* indexes )
 {
 	int i, j;
@@ -488,8 +350,6 @@ static void ParseTriSurf( const dsurface_t* ds, const drawVert_t* verts, msurfac
 			ri.Error( ERR_DROP, "Bad index in triangle surface" );
 		}
 	}
-
-	CalcTangents_TriSurf( tri );
 }
 
 

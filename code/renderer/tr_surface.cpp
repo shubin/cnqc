@@ -215,7 +215,6 @@ static void RB_SurfaceTriangles( srfTriangles_t* surf )
 		VectorCopy( v->xyz, tess.xyz[ndx] );
 		if ( tess.shader->needsNormal )
 			VectorCopy( v->normal, tess.normal[ndx] );
-		Vector4Copy( v->tangent, tess.tangent[ndx] );
 		tess.texCoords[ndx][0][0] = v->st[0];
 		tess.texCoords[ndx][0][1] = v->st[1];
 		tess.texCoords[ndx][1][0] = v->st2[0];
@@ -514,37 +513,6 @@ void RB_SurfaceMesh(md3Surface_t *surface) {
 }
 
 
-static void RB_SurfaceMD5( const md5Mesh_t* mesh )
-{
-// animated models are going to need to reference the parent model for bones etc
-//	const md5Model_t* model = tr.currentModel->md5;
-// static meshes have the bones pre-resolved and only need this
-
-	RB_CHECKOVERFLOW( mesh->numVerts, mesh->numTris*3 );
-
-	const md5Triangle_t* tri = mesh->tris;
-	glIndex_t* tessIndexes = tess.indexes + tess.numIndexes;
-	for ( int i = 0; i < mesh->numTris; ++i, ++tri, tessIndexes += 3 ) {
-		tessIndexes[0] = tri->indexes[0];
-		tessIndexes[1] = tri->indexes[1];
-		tessIndexes[2] = tri->indexes[2];
-	}
-
-	const srfVert_t* sv = mesh->sv;
-	for ( int i = 0, o = tess.numVertexes; i < mesh->numVerts; ++i, ++sv, ++o ) {
-		VectorCopy( sv->xyz, tess.xyz[o] );
-		VectorCopy( sv->normal, tess.normal[o] );
-		tess.texCoords[o][0][0] = sv->st[0];
-		tess.texCoords[o][0][1] = sv->st[1];
-		Vector4Copy( sv->tangent, tess.tangent[o] );
-		*(unsigned int *)&tess.vertexColors[o] = *(unsigned int *)sv->rgba;
-	}
-
-	tess.numIndexes += mesh->numTris*3;
-	tess.numVertexes += mesh->numVerts;
-}
-
-
 static void RB_SurfaceFace( srfSurfaceFace_t* surf )
 {
 	int i, ndx;
@@ -566,7 +534,6 @@ static void RB_SurfaceFace( srfSurfaceFace_t* surf )
 	const srfVert_t* v = surf->verts;
 	for ( i = 0, ndx = tess.numVertexes; i < surf->numVerts; ++i, ++v, ++ndx ) {
 		VectorCopy( v->xyz, tess.xyz[ndx] );
-		Vector4Copy( v->tangent, tess.tangent[ndx] );
 		tess.texCoords[ndx][0][0] = v->st[0];
 		tess.texCoords[ndx][0][1] = v->st[1];
 		tess.texCoords[ndx][1][0] = v->st2[0];
@@ -835,7 +802,6 @@ void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])( const void* ) = {
 	(void(*)( const void* ))RB_SurfaceTriangles,	// SF_TRIANGLES
 	(void(*)( const void* ))RB_SurfacePolychain,	// SF_POLY
 	(void(*)( const void* ))RB_SurfaceMesh,			// SF_MD3
-	(void(*)( const void* ))RB_SurfaceMD5,			// SF_MD5
 	(void(*)( const void* ))RB_SurfaceFlare,		// SF_FLARE
 	(void(*)( const void* ))RB_SurfaceEntity,		// SF_ENTITY
 };

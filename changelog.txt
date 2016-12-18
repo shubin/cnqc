@@ -1,4 +1,9 @@
 
+xx Dec 16 - 1.48
+
+chg: remove the byzantine r_mode usage added in 1.47
+
+
 17 Sep 11 - 1.47
 
 add: backported another bunch of dlight stuff from the pmx branch

@@ -55,8 +55,10 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <PreBuildEvent>
-      <Message>bg_public copy...</Message>
-      <Command>xcopy /Y "$(CPMA_SRC)\game\bg_public.h" "$(SolutionDir)code\game\"</Command>
+      <Message>
+      </Message>
+      <Command>
+      </Command>
     </PreBuildEvent>
     <ClCompile>
       <Optimization>Full</Optimization>
@@ -104,8 +106,10 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <PreBuildEvent>
-      <Message>bg_public copy...</Message>
-      <Command>xcopy /Y "$(CPMA_SRC)\game\bg_public.h" "$(SolutionDir)code\game\"</Command>
+      <Message>
+      </Message>
+      <Command>
+      </Command>
     </PreBuildEvent>
     <ClCompile>
       <Optimization>Disabled</Optimization>

@@ -137,9 +137,6 @@ static cvar_t* r_maxpolyverts;
 int max_polys;
 int max_polyverts;
 
-// 1.32e
-cvar_t  *r_clamptoedge;
-int     gl_clamp_mode = 0;
 
 static void AssertCvarRange( cvar_t *cv, float minVal, float maxVal, qbool shouldBeIntegral )
 {
@@ -243,11 +240,6 @@ static void InitOpenGL()
 	GfxInfo_f();
 
 	GL_SetDefaultState();
-	
-	if (strstr(glConfig.extensions_string, "GL_ARB_vertex_buffer_object")) {
-		qglGenBuffersARB(1, &idVBOData);
-		qglGenBuffersARB(1, &idVBOIndexes);
-	}
 }
 
 
@@ -285,29 +277,16 @@ void GL_CheckErrors()
 	ri.Error( ERR_FATAL, "GL_CheckErrors: %s", s );
 }
 
-qbool R_GetModeInfo( int* width, int* height, float* aspect )
+
+qbool R_GetModeInfo(int* width, int* height, float* aspect)
 {
-    if (r_mode->string && *r_mode->string)
-    {
-        if (r_mode->integer)
-        {
-            int w(-1), h(-1), hz(-1);
-            if (2 <= sscanf( r_mode->string, "%ix%i@%i", &w, &h, &hz))
-            {
-                r_width->integer = w >= 320 && w <= 2560 ? w : r_width->integer;
-                r_height->integer = h >= 240 && h <= 1600 ? h : r_height->integer;
-                r_displayRefresh->integer = hz >= 0 && hz <= 200 ? hz : r_displayRefresh->integer;
-                r_customaspect->value = (float)r_width->integer / r_height->integer;
-            }
-            
-            *width = r_width->integer;
-            *height = r_height->integer;
-            *aspect = r_customaspect->value;
-            return qtrue;
-        }
-    }
-    
-    return qfalse;
+	if (r_fullscreen->integer && !r_mode->integer)
+		return qfalse;
+
+	*width = r_width->integer;
+	*height = r_height->integer;
+	*aspect = r_customaspect->value;
+	return qtrue;
 }
 
 
@@ -338,7 +317,8 @@ static void RB_TakeScreenshotTGA( int x, int y, int width, int height, const cha
 	}
 
 	if ( /*( tr.overbrightBits > 0 ) &&*/ glConfig.deviceSupportsGamma )
-		R_GammaCorrect( pRGB, c );
+	if ((tr.overbrightBits > 0) && glConfig.deviceSupportsGamma)
+			R_GammaCorrect(pRGB, c);
 
 	ri.FS_WriteFile( fileName, p, sizeof(TargaHeader) + c );
 }
@@ -664,8 +644,6 @@ static void R_Register()
 	r_maxpolys = ri.Cvar_Get( "r_maxpolys", va("%d", DEFAULT_MAX_POLYS), 0 );
 	r_maxpolyverts = ri.Cvar_Get( "r_maxpolyverts", va("%d", DEFAULT_MAX_POLYVERTS), 0 );
 
-    r_clamptoedge =  ri.Cvar_Get( "r_clamptoedge", "0", CVAR_ARCHIVE | CVAR_LATCH );
-   
 	for (int i = 0; r_ConsoleCmds[i].cmd; ++i) {
 		ri.Cmd_AddCommand( r_ConsoleCmds[i].cmd, r_ConsoleCmds[i].fn );
 	}
@@ -713,11 +691,6 @@ void R_Init()
 	max_polys = max( r_maxpolys->integer, DEFAULT_MAX_POLYS );
 	max_polyverts = max( r_maxpolyverts->integer, DEFAULT_MAX_POLYVERTS );
 
-    if ( r_clamptoedge && r_clamptoedge->integer > 0 )
-        gl_clamp_mode = GL_CLAMP_TO_EDGE;
-    else
-        gl_clamp_mode = GL_CLAMP;
-    
 	byte* ptr = (byte*)ri.Hunk_Alloc( sizeof( *backEndData[0] ) + sizeof(srfPoly_t) * max_polys + sizeof(polyVert_t) * max_polyverts, h_low );
 	backEndData[0] = (backEndData_t*)ptr;
 	backEndData[0]->polys = (srfPoly_t *) (ptr + sizeof( *backEndData[0] ));
@@ -772,14 +745,6 @@ static void RE_Shutdown( qbool destroyWindow )
 
 	R_DoneFreeType();
 	
-	if (strstr(glConfig.extensions_string, "GL_ARB_vertex_buffer_object")) {
-		if(qglIsBufferARB(idVBOData)) 
-			qglDeleteBuffersARB(1, &idVBOData);
-		
-		if(qglIsBufferARB(idVBOIndexes)) 
-			qglDeleteBuffersARB(1, &idVBOIndexes);
-	}
-
 	// shut down platform specific OpenGL stuff
 	if ( destroyWindow ) {
 		GLimp_Shutdown();

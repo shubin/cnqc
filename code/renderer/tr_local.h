@@ -277,8 +277,6 @@ typedef struct {
 typedef enum {
 	ST_DIFFUSE,
 	ST_LIGHTMAP,
-	ST_BUMPMAP,
-	ST_SPECULAR,
 	ST_MAX
 } stageType_t;
 
@@ -459,7 +457,6 @@ typedef enum {
 	SF_TRIANGLES,
 	SF_POLY,
 	SF_MD3,
-	SF_MD5,
 	SF_FLARE,
 	SF_ENTITY,				// beams, rails, lightning, etc that can be determined by entity
 
@@ -483,7 +480,7 @@ struct litSurf_t {
 
 struct dlight_t {
 	vec3_t	origin;
-	vec3_t	color;				// range from 0.0 to 1.0, should be color normalized
+	vec3_t	color;			// range from 0.0 to 1.0, should be color normalized
 	float	radius;
 	vec3_t	transformed;	// origin in local coordinate system
 	qbool	active;			// actually shines into the frustum rather than just pvs
@@ -549,7 +546,6 @@ struct srfVert_t {
 	vec2_t st;   // diffuse TC
 	vec2_t st2;  // lightmap TC
 	color4ub_t rgba;
-	vec4_t tangent;
 };
 
 struct srfSurfaceFace_t {
@@ -577,80 +573,6 @@ struct srfTriangles_t {
 
 	int				numVerts;
 	srfVert_t		*verts;
-};
-
-
-///////////////////////////////////////////////////////////////
-
-
-typedef vec4_t quat_t;
-
-
-struct md5Weight_t
-{
-	int		boneIndex;
-	float	boneWeight;
-	vec3_t	xyz;
-};
-
-struct md5Vertex_t
-{
-	vec2_t	st;
-	int             firstWeight;
-	int             numWeights;
-	md5Weight_t   **weights;
-};
-
-
-struct md5Triangle_t
-{
-	int             indexes[3];
-//	int             neighbors[3];
-};
-
-
-struct md5Model_t;
-
-struct md5Mesh_t
-{
-	surfaceType_t surfaceType;
-
-//	char            name[MAX_QPATH];    // polyset name
-//	char            shader[MAX_QPATH];
-	int shaderIndex;
-
-	vec3_t mins, maxs;
-	vec3_t localOrigin;
-	float radius;
-
-	int numVerts;
-	md5Vertex_t* verts;
-
-	int numTris;
-	md5Triangle_t* tris;
-
-	int numWeights;
-	md5Weight_t* weights;
-
-	md5Model_t* model;
-
-	srfVert_t* sv;
-};
-
-struct md5Bone_t
-{
-	char            name[MAX_QPATH];
-	int             parentIndex;	// parent index (-1 if root)
-	vec3_t          origin;
-	quat_t          rotation;
-};
-
-struct md5Model_t
-{
-	int			numBones;
-	md5Bone_t*	bones;
-	int			numMeshes;
-	md5Mesh_t*	meshes;
 };
 
 
@@ -799,7 +721,6 @@ typedef enum {
 	MOD_BAD,
 	MOD_BRUSH,
 	MOD_MD3,
-	MOD_MD5,
 } modtype_t;
 
 struct model_t {
@@ -808,7 +729,6 @@ struct model_t {
 	modtype_t	type;
 	bmodel_t*		bmodel;				// type == MOD_BRUSH
 	md3Header_t*	md3[MD3_MAX_LODS];	// type == MOD_MD3
-	md5Model_t*		md5;				// type == MOD_MD5
 	int			numLods;
 	int			dataSize;			// just for listing purposes
 };
@@ -941,8 +861,6 @@ typedef struct {
 
 	image_t*		defaultImage;
 	image_t*		whiteImage;		// { 255, 255, 255, 255 }
-	image_t*		flatImage;		// { 128, 128, 255, 255 }, i.e. an encoded "up" normal
-	image_t*		shinyImage;		// { 64, 64, 64, 64 }, 25% specular rgb, 64 specular exponent
 	image_t*		fogImage;
 	image_t*		scratchImage[16];
 
@@ -1010,8 +928,6 @@ extern trGlobals_t	tr;
 extern glstate_t	glState;		// outside of TR since it shouldn't be cleared during ref re-init
 
 // 1.32e
-extern int      gl_clamp_mode;  
-extern cvar_t   *r_customPixelAspect;  
 extern cvar_t   *r_floatfix;
 
 //
@@ -1126,8 +1042,6 @@ void R_RenderView( const viewParms_t* parms );
 
 void R_AddMD3Surfaces( trRefEntity_t *e );
 
-void R_AddMD5Surfaces( trRefEntity_t* e );
-
 void R_AddPolygonSurfaces();
 
 void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int fogIndex );
@@ -1226,8 +1140,6 @@ void	R_DeleteTextures();
 void	R_InitSkins();
 const skin_t* R_GetSkinByHandle( qhandle_t hSkin );
 
-int R_ComputeLOD( trRefEntity_t *ent );
-
 const void *RB_TakeVideoFrameCmd( const void *data );
 
 //
@@ -1297,7 +1209,6 @@ struct shaderCommands_t
 	ALIGN(16) glIndex_t indexes[SHADER_MAX_INDEXES];
 	vec4_t		xyz[SHADER_MAX_VERTEXES];
 	vec4_t		normal[SHADER_MAX_VERTEXES];
-	vec4_t		tangent[SHADER_MAX_VERTEXES];
 	vec2_t		texCoords[SHADER_MAX_VERTEXES][2];
 	color4ub_t	vertexColors[SHADER_MAX_VERTEXES];
 

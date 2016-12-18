@@ -309,8 +309,6 @@ static void SCR_PerformanceCounters()
 	SCR_DrawString( x, y, cw, ch, va("FrusLeafs:  %i", pcFE[RF_LEAFS]), qfalse ); y += ch;
 	SCR_DrawString( x, y, cw, ch, va("MD3 Cull S: %i %i %i", pcFE[RF_MD3_CULL_S_IN], pcFE[RF_MD3_CULL_S_CLIP], pcFE[RF_MD3_CULL_S_OUT]), qfalse ); y += ch;
 	SCR_DrawString( x, y, cw, ch, va("MD3 Cull B: %i %i %i", pcFE[RF_MD3_CULL_B_IN], pcFE[RF_MD3_CULL_B_CLIP], pcFE[RF_MD3_CULL_B_OUT]), qfalse ); y += ch;
-	SCR_DrawString( x, y, cw, ch, va("MD5 Cull S: %i %i %i", pcFE[RF_MD5_CULL_S_IN], pcFE[RF_MD5_CULL_S_CLIP], pcFE[RF_MD5_CULL_S_OUT]), qfalse ); y += ch;
-	SCR_DrawString( x, y, cw, ch, va("MD5 Cull B: %i %i %i", pcFE[RF_MD5_CULL_B_IN], pcFE[RF_MD5_CULL_B_CLIP], pcFE[RF_MD5_CULL_B_OUT]), qfalse ); y += ch;
 	SCR_DrawString( x, y, cw, ch, va("Bez Cull S: %i %i %i", pcFE[RF_BEZ_CULL_S_IN], pcFE[RF_BEZ_CULL_S_CLIP], pcFE[RF_BEZ_CULL_S_OUT]), qfalse ); y += ch;
 	SCR_DrawString( x, y, cw, ch, va("Bez Cull B: %i %i %i", pcFE[RF_BEZ_CULL_B_IN], pcFE[RF_BEZ_CULL_B_CLIP], pcFE[RF_BEZ_CULL_B_OUT]), qfalse ); y += ch;
 	SCR_DrawString( x, y, cw, ch, va("Light Cull: %i %i", pcFE[RF_LIGHT_CULL_IN], pcFE[RF_LIGHT_CULL_OUT]), qfalse ); y += ch;

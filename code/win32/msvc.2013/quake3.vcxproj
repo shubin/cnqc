@@ -43,11 +43,11 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QUAKE3)\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QUAKE3DIR)\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\build\quake3_debug\</IntDir>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</LinkIncremental>
     <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</GenerateManifest>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(QUAKE3)\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(QUAKE3DIR)\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\build\quake3_release\</IntDir>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkIncremental>
     <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</GenerateManifest>
@@ -67,8 +67,10 @@
       </Path>
     </BuildLog>
     <PreBuildEvent>
-      <Message>bg_public copy...</Message>
-      <Command>xcopy /Y "$(CPMA_SRC)\game\bg_public.h" "$(SolutionDir)..\..\game\"</Command>
+      <Message>
+      </Message>
+      <Command>
+      </Command>
     </PreBuildEvent>
     <Midl>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -114,7 +116,7 @@
     </ResourceCompile>
     <Link>
       <AdditionalDependencies>winmm.lib;wsock32.lib;gdi32.lib;opengl32.lib;kernel32.lib;user32.lib;ole32.lib;".\build\botlib_debug\botlib.lib";".\build\renderer_debug\renderer.lib";"..\..\freetype\objs\freetype_d.lib";%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>$(QUAKE3)\cnq3.exe</OutputFile>
+      <OutputFile>$(QUAKE3DIR)\cnq3.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>$(IntDir)quake3.pdb</ProgramDatabaseFile>
@@ -129,14 +131,18 @@
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
     <PostBuildEvent>
-      <Message>Post build processing..</Message>
-      <Command>rem bash -c "perl ./unix/cons -- debug"</Command>
+      <Message>
+      </Message>
+      <Command>
+      </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <PreBuildEvent>
-      <Message>bg_public copy...</Message>
-      <Command>xcopy /Y "$(CPMA_SRC)\game\bg_public.h" "$(SolutionDir)..\..\game\"</Command>
+      <Message>
+      </Message>
+      <Command>
+      </Command>
     </PreBuildEvent>
     <Midl>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -187,7 +193,7 @@
     </ResourceCompile>
     <Link>
       <AdditionalDependencies>winmm.lib;wsock32.lib;gdi32.lib;opengl32.lib;kernel32.lib;user32.lib;ole32.lib;.\build\renderer_release\renderer.lib;.\build\botlib_release\botlib.lib;"..\..\freetype\objs\freetype.lib";%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>$(QUAKE3)\cnq3.exe</OutputFile>
+      <OutputFile>$(QUAKE3DIR)\cnq3.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <ProgramDatabaseFile>$(IntDir)quake3.pdb</ProgramDatabaseFile>

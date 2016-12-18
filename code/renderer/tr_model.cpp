@@ -210,10 +210,6 @@ to prevent disk rescanning if they are asked for again.
 qhandle_t RE_RegisterModel( const char* name )
 {
 	model_t* mod;
-	unsigned	*buf;
-	int			lod;
-	qbool	loaded = qfalse;
-	int			numLoaded;
 	char		*fext, defex[] = "md3", filename[MAX_QPATH], namebuf[MAX_QPATH+20];
 
 	if ( !name || !name[0] ) {
@@ -242,9 +238,8 @@ qhandle_t RE_RegisterModel( const char* name )
 	// make sure the render thread is stopped
 	R_SyncRenderThread();
 
-	// load the files
-	//
-	numLoaded = 0;
+	void* buf;
+	int lod, numLoaded = 0;
 
 	strcpy(filename, name);
 
@@ -275,7 +270,7 @@ qhandle_t RE_RegisterModel( const char* name )
 			ri.Printf( PRINT_WARNING, "RE_RegisterModel: unknown fileid for %s\n", name );
 			goto fail;
 		}
-		loaded = R_LoadMD3( mod, lod, buf, name );
+		qbool loaded = R_LoadMD3( mod, lod, buf, name );
 
 		ri.FS_FreeFile (buf);
 

@@ -512,48 +512,6 @@ static qbool ParseStage( const char** text, shaderStage_t* stage )
 		{
 			break;
 		}
-		else if ( !Q_stricmp( token, "dmap" ) )
-		{
-			token = COM_ParseExt( text, qfalse );
-			if ( !token[0] ) {
-				ri.Printf( PRINT_WARNING, "WARNING: missing parameter for 'dmap' keyword in shader '%s'\n", shader.name );
-				return qfalse;
-			}
-			stage->bundle.image[0] = R_FindImageFile( token, shader.imgflags, GL_REPEAT );
-			if ( !stage->bundle.image[0] ) {
-				ri.Printf( PRINT_WARNING, "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
-				return qfalse;
-			}
-			stage->type = ST_DIFFUSE;
-		}
-		else if ( !Q_stricmp( token, "nmap" ) )
-		{
-			token = COM_ParseExt( text, qfalse );
-			if ( !token[0] ) {
-				ri.Printf( PRINT_WARNING, "WARNING: missing parameter for 'nmap' keyword in shader '%s'\n", shader.name );
-				return qfalse;
-			}
-			stage->bundle.image[0] = R_FindImageFile( token, IMG_NOIMANIP, GL_REPEAT );
-			if ( !stage->bundle.image[0] ) {
-				ri.Printf( PRINT_WARNING, "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
-				return qfalse;
-			}
-			stage->type = ST_BUMPMAP;
-		}
-		else if ( !Q_stricmp( token, "smap" ) )
-		{
-			token = COM_ParseExt( text, qfalse );
-			if ( !token[0] ) {
-				ri.Printf( PRINT_WARNING, "WARNING: missing parameter for 'smap' keyword in shader '%s'\n", shader.name );
-				return qfalse;
-			}
-			stage->bundle.image[0] = R_FindImageFile( token, shader.imgflags, GL_REPEAT );
-			if ( !stage->bundle.image[0] ) {
-				ri.Printf( PRINT_WARNING, "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
-				return qfalse;
-			}
-			stage->type = ST_SPECULAR;
-		}
 		//
 		// map <name>
 		//
@@ -2052,7 +2010,7 @@ static shader_t* FinishShader()
 	shader.numStages = stage;
 
 	// fix up any stages that we want fullbright
-	if ( (r_fullbright->integer > 0) && (shader.lightmapIndex == LIGHTMAP_BY_VERTEX) ) {
+	if ( r_fullbright->integer && (shader.lightmapIndex == LIGHTMAP_BY_VERTEX) ) {
 		for ( int i = 0; i < shader.numStages; ++i ) {
 			if (stages[i].rgbGen == CGEN_EXACT_VERTEX) {
 				stages[i].rgbGen = CGEN_IDENTITY;
@@ -2193,16 +2151,14 @@ shader_t* R_FindShader( const char *name, int lightmapIndex, qbool mipRawImage )
 		}
 	}
 
-    // no, uploading is done by, duh, UPLOAD, so let that worry about it
+	// no, uploading is done by, duh, UPLOAD, so let that worry about it
+#ifdef USE_R_SMP
 	// make sure the render thread is stopped, because we are probably
 	// going to have to upload an image
-	// fix freez
-#ifdef USE_R_SMP
 	if (r_smp->integer) {
 		R_SyncRenderThread();
 	}
 #endif	
-
 
 	// clear the global shader
 	Com_Memset( &shader, 0, sizeof( shader ) );
@@ -2407,41 +2363,41 @@ void R_ShaderList_f( void )
 
 	int count = 0;
 	for ( i = 0 ; i < tr.numShaders ; i++ ) {
-		const shader_t* shader_ptr = (ri.Cmd_Argc() > 1) ? tr.sortedShaders[i] : tr.shaders[i];
+		const shader_t* shader = (ri.Cmd_Argc() > 1) ? tr.sortedShaders[i] : tr.shaders[i];
 
-		int passes = shader_ptr->numStages;
-		for ( int s = 0; s < shader_ptr->numStages; ++s )
-			passes -= shader_ptr->stages[s]->mtStages;
+		int passes = shader->numStages;
+		for ( int s = 0; s < shader->numStages; ++s )
+			passes -= shader->stages[s]->mtStages;
 
-		ri.Printf( PRINT_ALL, "%i %i ", shader_ptr->numStages, passes );
+		ri.Printf( PRINT_ALL, "%i %i ", shader->numStages, passes );
 
-		if (shader_ptr->lightmapIndex >= 0 ) {
+		if (shader->lightmapIndex >= 0 ) {
 			ri.Printf( PRINT_ALL, "L " );
 		//} else if (shader->lightmapIndex == LIGHTMAP_WHITE ) {
 		//	ri.Printf( PRINT_ALL, "W " );
 		} else {
 			ri.Printf( PRINT_ALL, "  " );
 		}
-		if ( shader_ptr->explicitlyDefined ) {
+		if ( shader->explicitlyDefined ) {
 			ri.Printf( PRINT_ALL, "E " );
 		} else {
 			ri.Printf( PRINT_ALL, "  " );
 		}
 
-		if ( shader_ptr->siFunc == ARB_StageIterator ) {
+		if ( shader->siFunc == ARB_StageIterator ) {
 			ri.Printf( PRINT_ALL, "    " );
-		} else if ( shader_ptr->siFunc == RB_StageIteratorSky ) {
+		} else if ( shader->siFunc == RB_StageIteratorSky ) {
 			ri.Printf( PRINT_ALL, "sky " );
-		} else if ( shader_ptr->siFunc == RB_StageIteratorGeneric ) {
+		} else if ( shader->siFunc == RB_StageIteratorGeneric ) {
 			ri.Printf( PRINT_ALL, "lgc " );
 		} else {
 			ri.Printf( PRINT_ALL, "??? " );
 		}
 
-		if ( shader_ptr->defaultShader ) {
-			ri.Printf( PRINT_ALL,  ": %s (DEFAULTED)\n", shader_ptr->name );
+		if ( shader->defaultShader ) {
+			ri.Printf( PRINT_ALL,  ": %s (DEFAULTED)\n", shader->name );
 		} else {
-			ri.Printf( PRINT_ALL,  ": %s\n", shader_ptr->name );
+			ri.Printf( PRINT_ALL,  ": %s\n", shader->name );
 		}
 		count++;
 	}

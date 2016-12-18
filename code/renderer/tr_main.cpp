@@ -708,7 +708,6 @@ static qbool SurfIsOffscreen( const drawSurf_t* drawSurf )
 	int		fogNum;
 	vec4_t clip, eye;
 	int i;
-	//unsigned int pointOr = 0;
 	unsigned int pointAnd = (unsigned int)~0;
 
 #ifdef USE_R_SMP
@@ -744,7 +743,6 @@ static qbool SurfIsOffscreen( const drawSurf_t* drawSurf )
 			}
 		}
 		pointAnd &= pointFlags;
-		//pointOr |= pointFlags;
 	}
 
 	// trivially reject
@@ -1193,9 +1191,6 @@ static void R_AddEntitySurfaces()
 				switch ( tr.currentModel->type ) {
 				case MOD_MD3:
 					R_AddMD3Surfaces( ent );
-					break;
-				case MOD_MD5:
-					R_AddMD5Surfaces( ent );
 					break;
 				case MOD_BRUSH:
 					R_AddBrushModelSurfaces( ent );

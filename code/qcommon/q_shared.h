@@ -26,7 +26,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // q_shared.h -- included first by ALL program modules.
 // A user mod should never modify this file
 
-#define Q3_VERSION				"CNQ3 1.47"
+#define Q3_VERSION				"CNQ3 1.48"
 #define CLIENT_WINDOW_TITLE		"CNQ3"
 #define CONSOLE_WINDOW_TITLE	"CNQ3 Console"
 
@@ -72,20 +72,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #endif
 
 
-#if defined(__cplusplus) || defined(bool)
-#define bool DO_NOT_WANT
-#define true DO_NOT_WANT
-#define false DO_NOT_WANT
-#endif
-
-
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
 
 // technically-correct form, handy for catching sloppy code that mismixes bool and int, *cough* JPVW  :P
-//typedef enum { qfalse, qtrue } qbool;
 #if defined(Q3_VM)
 #define assert(x) { if (!(x)) Com_Error(ERR_FATAL, "ASSERT "__FILE__"(%d): %s", __LINE__, #x); }
 typedef enum { qfalse, qtrue } qbool;

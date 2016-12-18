@@ -274,8 +274,7 @@ static int GLW_MakeContext( PIXELFORMATDESCRIPTOR *pPFD )
 	//
 	if ( !glw_state.pixelFormatSet )
 	{
-        int pixelformat;
-
+		int pixelformat;
 		//
 		// choose, set, and describe our desired pixel format.  If we're
 		// using a minidriver then we need to bypass the GDI functions,
@@ -649,6 +648,7 @@ static void GLW_AttemptFSAA()
 	glEnable(GL_MULTISAMPLE_ARB);
 }
 
+
 static qbool GLW_ResetMode( qbool cdsFullscreen )
 {
 	HDC hDC = GetDC( GetDesktopWindow() );
@@ -659,13 +659,11 @@ static qbool GLW_ResetMode( qbool cdsFullscreen )
 
 	glInfo.isFullscreen = cdsFullscreen;
 	if ( !R_GetModeInfo( &glConfig.vidWidth, &glConfig.vidHeight, &glConfig.windowAspect ) ) {
-
 		if (!glInfo.isFullscreen)
 		{
 			Cvar_SetValue( "vid_xpos", 0 );
 			Cvar_SetValue( "vid_ypos", 0 );
 		}
-
 		glConfig.vidWidth = glw_state.desktopWidth;
 		glConfig.vidHeight = glw_state.desktopHeight;
 		glConfig.windowAspect = (float)glConfig.vidWidth / glConfig.vidHeight;
@@ -716,6 +714,7 @@ static qbool GLW_ResetMode( qbool cdsFullscreen )
 
 	return qtrue;
 }
+
 
 static qbool GLW_SetMode( qbool cdsFullscreen )
 {
@@ -892,9 +891,10 @@ void GLimp_SetGamma( unsigned char red[256], unsigned char green[256], unsigned 
 	if( g_wv.hWnd != GetFocus() ) 
 		return;
 
-    unsigned short table[3][256];
-    
-	for (int i = 0; i < 256; i++ ) {
+	unsigned short table[3][256];
+	int i, j;
+
+	for ( i = 0; i < 256; i++ ) {
 		table[0][i] = ( ( ( unsigned short ) red[i] ) << 8 ) | red[i];
 		table[1][i] = ( ( ( unsigned short ) green[i] ) << 8 ) | green[i];
 		table[2][i] = ( ( ( unsigned short ) blue[i] ) << 8 ) | blue[i];
@@ -906,8 +906,8 @@ void GLimp_SetGamma( unsigned char red[256], unsigned char green[256], unsigned 
 	GetVersionEx( &vinfo );
 	if ( vinfo.dwMajorVersion >= 5 && vinfo.dwPlatformId == VER_PLATFORM_WIN32_NT ) {
 		Com_DPrintf( "performing W2K gamma clamp.\n" );
-		for (int j = 0 ; j < 3 ; j++ ) {
-			for (int i = 0 ; i < 128 ; i++ ) {
+		for ( j = 0 ; j < 3 ; j++ ) {
+			for ( i = 0 ; i < 128 ; i++ ) {
 				if ( table[j][i] > ( (128+i) << 8 ) ) {
 					table[j][i] = (128+i) << 8;
 				}
@@ -919,7 +919,7 @@ void GLimp_SetGamma( unsigned char red[256], unsigned char green[256], unsigned 
 	} else {
 		Com_DPrintf( "skipping W2K gamma clamp.\n" );
 	}
-	
+
 	// enforce constantly increasing
 	for (int j = 0 ; j < 3 ; j++ ) {
 		for (int i = 1 ; i < 256 ; i++ ) {
@@ -930,9 +930,10 @@ void GLimp_SetGamma( unsigned char red[256], unsigned char green[256], unsigned 
 	}
 
 	if ( !SetDeviceGammaRamp( glw_state.hDC, table ) ) {
-		Com_DPrintf( "SetDeviceGammaRamp failed.\n" );
+		Com_Printf( "SetDeviceGammaRamp failed.\n" );
 	}
 }
+
 
 // drakkar
 /*
@@ -942,8 +943,8 @@ void GLimp_SetGamma( unsigned char red[256], unsigned char green[256], unsigned 
 */
 void GLimp_WindowMode( windowMode_t wmode )
 {
-	if( !windowModeLock )	
-		return;	
+	if( !windowModeLock )
+		return;
 
 	Cvar_Get( "in_keyboardShortcuts", "", 0 )->modified = qtrue;
 
@@ -953,7 +954,7 @@ void GLimp_WindowMode( windowMode_t wmode )
 		windowModeLock = qfalse;
 		glw_state.cdsFullscreen = qfalse;
 		ChangeDisplaySettings( 0, 0 );
-		ShowWindow( g_wv.hWnd, SW_SHOWMINIMIZED );			
+		ShowWindow( g_wv.hWnd, SW_SHOWMINIMIZED );
 		g_wv.isMinimized = qtrue;
 		GLimp_WindowFocus( qfalse );
 		windowModeLock = qtrue;
@@ -974,7 +975,7 @@ void GLimp_WindowMode( windowMode_t wmode )
 	case WMODE_SET_FULLSCREEN:
 		windowModeLock = qfalse;
 		GLW_SetMode( qtrue );
-		ShowWindow( g_wv.hWnd, SW_SHOWMAXIMIZED );				
+		ShowWindow( g_wv.hWnd, SW_SHOWMAXIMIZED );
 		g_wv.isMinimized = qfalse;
 		GLimp_WindowFocus( qtrue );
 		windowModeLock = qtrue;
@@ -1070,7 +1071,7 @@ void GLimp_Init()
 	GLW_InitExtensions();
 	GLW_CheckHardwareGamma();
 
-	if (GLW_InitARB() && QGL_InitARB() && QGL_InitExtensions())
+	if (GLW_InitARB() && QGL_InitARB())
 		return;
 
 	ri.Error( ERR_FATAL, "GLimp_Init() - could not find an acceptable OpenGL subsystem\n" );
@@ -1090,8 +1091,8 @@ void GLimp_Shutdown()
 
 	GLW_RestoreGamma();
 
-    const char* success[] = { "failed", "success" };
-    int retVal;
+	const char* success[] = { "failed", "success" };
+	int retVal;
 
 	// set current context to NULL
 	if ( qwglMakeCurrent )
@@ -1179,7 +1180,7 @@ qbool GLimp_SpawnRenderThread( void (*function)( void ) )
 	   0,			// LPVOID lpvThreadParm,
 	   0,			//   DWORD fdwCreate,
 	   &renderThreadId );
-    
+
 	return (renderThreadHandle != NULL);
 }
 
@@ -1187,9 +1188,8 @@ qbool GLimp_SpawnRenderThread( void (*function)( void ) )
 static	void	*smpData;
 static	int		wglErrors;
 
-void *GLimp_RendererSleep( void ) 
+void *GLimp_RendererSleep( void )
 {
-
 	if ( !qwglMakeCurrent( glw_state.hDC, NULL ) ) {
 		wglErrors++;
 	}
@@ -1198,9 +1198,8 @@ void *GLimp_RendererSleep( void )
 
 	// after this, the front end can exit GLimp_FrontEndSleep
 	SetEvent( renderCompletedEvent );
-    
-	WaitForSingleObject( renderCommandsEvent, INFINITE );
 
+	WaitForSingleObject( renderCommandsEvent, INFINITE );
 
 	if ( !qwglMakeCurrent( glw_state.hDC, glw_state.hGLRC ) ) {
 		wglErrors++;
