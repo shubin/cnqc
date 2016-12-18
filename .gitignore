@@ -1,0 +1,14 @@
+*.obj
+*.dll
+*.exe
+*.sdf
+*.suo
+*.ncb
+*.pdb
+*.idb
+code/freetype/objs/
+code/freetype/builds/
+code/win32/msvc*/build/
+code/win32/msvc*/*user*
+code/win32/msvc*/*sdf
+code/win32/winquake.res
