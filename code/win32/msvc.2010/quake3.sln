@@ -1,0 +1,42 @@
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "botlib", "botlib.vcxproj", "{A410161F-AE9F-485D-A01F-5294891430A6}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "quake3", "quake3.vcxproj", "{81CB51C4-B434-4E12-B69B-BAEE102F2852}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "renderer", "renderer.vcxproj", "{AB424155-FBED-4D8D-B007-5B6CF93EA395}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "freetype", "..\..\freetype\builds\win32\visualc.2010\freetype.vcxproj", "{78B079BD-9FC7-4B9E-B4A6-96DA0F00248B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{75ED65B0-1FC4-4283-9962-FC5464F27FAD}"
+	ProjectSection(SolutionItems) = preProject
+		Performance2.psess = Performance2.psess
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A410161F-AE9F-485D-A01F-5294891430A6}.Debug|Win32.ActiveCfg = Debug|Win32
+		{A410161F-AE9F-485D-A01F-5294891430A6}.Debug|Win32.Build.0 = Debug|Win32
+		{A410161F-AE9F-485D-A01F-5294891430A6}.Release|Win32.ActiveCfg = Release|Win32
+		{A410161F-AE9F-485D-A01F-5294891430A6}.Release|Win32.Build.0 = Release|Win32
+		{81CB51C4-B434-4E12-B69B-BAEE102F2852}.Debug|Win32.ActiveCfg = Debug|Win32
+		{81CB51C4-B434-4E12-B69B-BAEE102F2852}.Debug|Win32.Build.0 = Debug|Win32
+		{81CB51C4-B434-4E12-B69B-BAEE102F2852}.Release|Win32.ActiveCfg = Release|Win32
+		{81CB51C4-B434-4E12-B69B-BAEE102F2852}.Release|Win32.Build.0 = Release|Win32
+		{AB424155-FBED-4D8D-B007-5B6CF93EA395}.Debug|Win32.ActiveCfg = Debug|Win32
+		{AB424155-FBED-4D8D-B007-5B6CF93EA395}.Debug|Win32.Build.0 = Debug|Win32
+		{AB424155-FBED-4D8D-B007-5B6CF93EA395}.Release|Win32.ActiveCfg = Release|Win32
+		{AB424155-FBED-4D8D-B007-5B6CF93EA395}.Release|Win32.Build.0 = Release|Win32
+		{78B079BD-9FC7-4B9E-B4A6-96DA0F00248B}.Debug|Win32.ActiveCfg = Debug|Win32
+		{78B079BD-9FC7-4B9E-B4A6-96DA0F00248B}.Debug|Win32.Build.0 = Debug|Win32
+		{78B079BD-9FC7-4B9E-B4A6-96DA0F00248B}.Release|Win32.ActiveCfg = Release|Win32
+		{78B079BD-9FC7-4B9E-B4A6-96DA0F00248B}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

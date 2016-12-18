@@ -1,0 +1,30 @@
+!!ARBvp1.0
+OPTION ARB_position_invariant;
+
+PARAM posEye = program.env[0];
+PARAM posLight = program.local[0];
+
+ATTRIB tangent = vertex.attrib[6];
+
+OUTPUT lv = result.texcoord[4];
+OUTPUT ev = result.texcoord[5];
+
+TEMP tmp;
+
+MOV result.texcoord[0], vertex.texcoord;
+
+TEMP b;
+XPD b, vertex.normal, tangent;
+MUL b, b, tangent.w;
+
+SUB tmp, posEye, vertex.position;
+DP3 ev.x, tmp, tangent;
+DP3 ev.y, tmp, b;
+DP3 ev.z, tmp, vertex.normal;
+
+SUB tmp, posLight, vertex.position;
+DP3 lv.x, tmp, tangent;
+DP3 lv.y, tmp, b;
+DP3 lv.z, tmp, vertex.normal;
+
+END

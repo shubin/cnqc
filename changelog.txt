@@ -1,0 +1,361 @@
+
+17 Sep 11 - 1.47
+
+add: backported another bunch of dlight stuff from the pmx branch
+  adds support for bmodel entities (doors, plats, etc)
+
+add: back directInput mouse (in_mouse 2)
+
+add: back flare support
+
+add: disable/enable windows keyboard shortcuts
+
+add: cnq3 windows can minimize/restore
+
+add: dynamic light by GLSL shaders
+
+add: r_maplightBrightness (from 0 to 8) and r_maplightSaturation(0-4). to use this parameters set r_maplightColorMode 1.
+
+add: r_maplightColorMode to configure lightmaps
+
+add: r_mode can be set resolution and frequency display. For example, r_mode "640x480@100"
+
+fix: in_mouse -1 kept relocating the system cursor even if not focused
+
+fix: implement the sound change from 1.45 *correctly*  :P
+
+fix: default build does not create option r_smp. To assemble the build 
+      with the option r_smp need to use preprocessor USE_R_SMP
+
+fix: small fixes to CVA rendering code
+
+fix: fix opStack and rename targets for unix
+
+fix: GTV/spectator can't change POV after map changed
+
+fix: render shader time overflow (fix splashdamage bug).
+
+fix: mouse event queue
+
+
+24 Nov 09 - 1.46
+
+add: hopefully worked around some vistajoke mousewheel issues
+
+add: m_limit (default: 0 = off), the maximum post-accel speed to use
+
+chg: sensitivity renamed to m_speed
+
+chg: rewrote pretty much all the mouse code
+
+chg: removed the DI code in favor of "raw" mouse input
+  this means only mouse1-mouse5 are supported on windows, sigh MS...
+
+chg: updated freetype from 2.3.5 to 2.3.11
+
+
+05 Nov 09 - 1.45
+note: this release REQUIRES arb shader support
+  if your card doesn't have it, use an older version
+
+add: hw gamma should work on Vista
+
+add: r_measureoverdraw is actually useful
+
+add: r_speeds is far more useful now
+
+chg: sound attenuation is biased
+  i.e. distant sounds are much louder than in 1.43
+  since it's still more correctly spatialised than pre-1.43, this is
+  the best compromise i can come up with
+
+chg: r_fullbright works in vertexlight mode (only)
+  instead of lightmap only, where it just wasted bandwidth and vram
+
+chg: r_customwidth, r_customheight renamed to r_width, r_height
+
+chg: hardcoded r_mode garbage and modelist removed:
+  r_mode 0 (default) = current desktop resolution, depth, hz, etc
+  r_mode 1 = custom resolution etc
+  note: r_mode 1 WILL NOT tolerate invalid r_displayRefresh values any more
+
+chg: require opengl 1.4 or higher
+  removed r_allowExtensions, r_primitives, r_ext_compiled_vertex_array,
+  r_ext_multitexture, r_ext_texture_env_add
+
+chg: removed a bunch of useless/obsolete cvars:
+  r_logfile, r_showcluster, r_facePlaneCull, r_ignoreFastPath, r_drawSun,
+  r_simpleMipMaps, r_offsetFactor, r_offsetUnits
+
+chg: don't tablist cheatvar noise if cheats are off
+
+chg: removed the last bits of legacy altivec cruft
+
+chg: rewrote pretty much all the dlight stuff
+  not only does it actually work reliably now
+  but it's also massively improved in terms of quality
+
+fix: ignorehwgamma 1 would fail to apply sw gamma to some images
+
+fix: roqs failed to apply sw gamma
+
+fix: sv_floodprotect could block all commands indefinitely
+
+
+12 Aug 09 - 1.44 (server only)
+
+fix: unbannable player exploit (stanway/auriemma)
+
+
+08 Aug 08 - 1.43
+
+fixed sfx0 using a real sound and thus "hiding" it
+
+corrected sv_pure back to CVAR_ROM
+
+added the correct "fastsky!=0 == disable portals" test, ffs me  :P
+
+removed long-obsoleted r_lastValidRenderer
+
+removed long-obsoleted r_ext_gamma_control
+
+removed pointless cl_forceavidemo
+
+removed r_rail* and marked the never-used RT_BEAM etc as such
+
+removed RAVENMD4 completely
+
+r_fullbright is not a cheat var
+
+fixed a bug with CVAR_CHEAT
+
+fixed another bug in \video (hopefully)
+
+fixed distance culling on dlit patch seams
+
+changed r_ext_max_anisotropy default to 16
+
+added con_scale for console font scaling
+0 = Q3 style, always 8x12 pixels regardless of screen rez
+1 = Q4 style, scales with screen rez
+!0 = scale with screen rez and a custom multiplier
+
+straightened out the con cvar mess:
+cl_noprint -> con_noprint
+scr_conspeed -> con_speed and correctly CVAR_ARCHIVE
+con_notifytime correctly CVAR_ARCHIVE
+removed cl_conXOffset since it basically doesn't work
+
+sleep correctly if an unfocused client (win32-only)
+don't sleep INcorrectly if a dedicated server (win32-only)
+
+fixed a (huge) memory leak in the vm
+
+fixed sv_pure 1 problems on listen servers
+
+another overhaul of the sound code:
+
+spatialisation is now correct, which has two huge impacts:
+  you can "place" sounds MUCH more accurately than before,
+  but as a result, distant sounds are MUCH quieter
+
+removed s_doppler, it's almost right but it just sounds like shit
+
+most of the s_mixprestep hackery has been removed, and you can
+probably set it to 0 if your sound drivers work properly
+
+OAL support has been dropped completely and indefinitely
+  it's crap and i'm tired of it poisoning the codebase
+
+
+Mar 08 - 1.42
+
+bots are no longer kicked by devmap
+
+legacy cack like joystick/midi support only pollutes configs if enabled
+
+fixed a memory leak in the sound code
+
+fixed even more (hopefully all) dropped sound issues in snd_dma
+
+made com_soundmegs SLIGHTLY less broken: now only 2x instead of 3x  :P
+note that "soundmegs" are taken FROM THE HUNK now to fix the leak
+so you need to increase com_hunkmegs by 2x your com_soundmegs
+
+removed the explicit and incorrect "fastsky==1 == disable portals" test
+
+r_noportals is not a cheat var
+
+hyperspace is a bit less annoying
+
+purged the unused (never finished) idMD4 model code
+
+fixed some bugs in referencedpak list generation
+
+fixed roqs ignoring s_volume
+
+fixed widescreen modes crashing on listen servers
+
+fixed downloads not completing properly
+
+
+18 Feb 08 - 1.41
+
+removed all bs references to GT_SINGLE_PLAYER and ui_singlePlayerActive
+(except from the bot code, which has bigger problems)
+added sv_singleplayer
+
+improved TTF overhead a lot: now as fast as crappy bitmap fonts  :D
+
+removed the stupidity of every key aborting demo playback: now ESC only
+
+only play the id logo cin the FIRST time, not every fkn time
+
+removed the broken stencil/projection shadow code
+
+avis produced by \video actually work (bug+fix both from ioq3)
+
+fixed some ABSURD buffer overruns and broken code in snd_dma
+which caused random dropped sounds for no reason
+it's a miracle it doesn't segfault any real OS
+also dumped the unused-since-TA adpcm/mulaw/etc cruft
+
+fixed a TA-era (surprise, surprise) bug that broke loopsound behavior
+
+loop (ie ambient) sounds are now 75% volume
+
+q3config is NEVER autowritten just because of bind/cvar changes
+it sucks if you're playing and it sucks even more if you're on GTV
+UI/SP code should write it EXPLICITLY if they want to save something
+
+
+19 Dec 07 - 1.40
+
+the code now requires a C++ compiler
+MASSIVE cleanups of the codebase, tho still plenty of bits left
+
+screenshot filename is YYYY_MM_DD-HH_MM_SS-TTT
+this means they'll never collide *; moviemakers won't run out;
+and the engine DOESN'T STAT 10,000 FILES EVERY FRAME
+(* except at 2am on an autumn night if you're amazingly unlucky :P)
+
+demo filename is YYYY_MM_DD-HH_MM_SS
+
+fixed demos to be MAX_OSPATH instead of MAX_QPATH, ie 256 chars now
+
+renamed cl_mouseAccel to m_accel
+
+removed ioq3 "qkey" rubbish
+
+removed support for BMP and PCX
+
+removed fs_cdpath, fs_copyfiles, touchfile, fs_restrict
+
+removed support for IPX
+
+removed in_logitechbug
+
+updated cpu detection
+
+added TTF support
+
+fixed a bunch of stuff in ScanAndLoadShaderFiles, but it's still crap
+
+fixed the patch collision epsilon bugs of 1.34
+
+reverted to id's tab-completion since ioq3's is so hated
+i've semi-merged them atm, will fix up when i get time
+
+interpreted vm is never used on platforms that support compiled vm
+
+clampmaps and nomip images use GL_CLAMP_TO_EDGE rather than GL_CLAMP
+
+disabled curl until it's brought up to standard
+
+merged platform-specific *_net.* into qcommon/net_ip.cpp, <3 timbo  :)
+
+fixed USERINFO vars not being sent properly during connect
+
+remove some network stuff (buffer sizes and TOS) http://support.microsoft.com/kb/248611
+
+
+12 Sep 07 - released as 1.34, since it was about time we did  :P
+
+increased default MAX_POLYS to 8K and MAX_POLYVERTS to 32K
+
+
+Aug 07
+
+fixed a bug in the skybox code that tried to use a 0-length CVA
+which makes recent nvidia drivers go into spaz mode 
+
+changed r_ext_multisample default to 0 to stop ix nagging  :P
+
+
+July 07
+
+added support for curl
+
+improved some network stuff (buffer sizes and TOS)
+
+added support for mouse5-mouse8
+
+
+1 May 07
+
+remove broken useless cl_freezeDemo and make demo pausing work
+just use timescale 0
+
+
+27 Apr 07
+
+ripped out all support for legacy substandard hw/drivers (ie Voodoo etc)
+and r_maskMinidriver
+
+uncorrected mode 8 back to 1280x1024
+
+
+
+18 Jul 06
+
+update various cvar defaults
+r_stencilbits: 0
+r_picmip: 0
+r_roundImagesDown: 0
+r_simpleMipMaps: 0
+s_useOpenAL: 0
+
+default fs_game to cpma
+
+
+30 Jun 06 - initial build from ioq3 svn v810
+
+mode 8 corrected to 1280x960
+
+undefined USE_OPENAL
+
+removed GetUserName call
+
+removed stupid+broken r_dlightbacks
+
+created dlight texture correctly
+
+fixed the dlight code
+
+removed the explicit and incorrect "vertexlight==1 == disable dlights" test
+
+removed redundant r_ext_texture_filter_anisotropic
+
+removed retarded cl_consoleHistory
+
+removed redundant cl_autoRecordDemo
+
+shader spew made developer 1
+
+gl extensions spew made developer 1
+
+pak list made fs_debug 1
+
+removed the TA cvars that were hacked into the engine
+
+reordered demo_protocols to reduce spew
