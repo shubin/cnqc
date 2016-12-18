@@ -24,7 +24,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "q_shared.h"
 #include "qcommon.h"
 
-#define MAX_CMD_BUFFER	16384
+#define MAX_CMD_BUFFER	32768
 #define MAX_CMD_LINE	1024
 
 typedef struct {
@@ -66,7 +66,7 @@ void Cbuf_AddText( const char* text )
 	int l = strlen(text);
 
 	if (cmd_text.cursize + l >= cmd_text.maxsize) {
-		Com_Printf( "Cbuf_AddText: overflow\n" );
+		Com_Printf( "Cbuf_AddText: data was ignored to avoid a buffer overflow\n" );
 		return;
 	}
 
@@ -82,7 +82,7 @@ static void Cbuf_InsertText( const char* text )
 {
 	int len = strlen( text ) + 1;
 	if ( len + cmd_text.cursize > cmd_text.maxsize ) {
-		Com_Printf( "Cbuf_InsertText overflowed\n" );
+		Com_Printf( "Cbuf_InsertText: data was ignored to avoid a buffer overflow\n" );
 		return;
 	}
 
