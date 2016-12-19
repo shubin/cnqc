@@ -36,7 +36,6 @@ static char s_backgroundLoop[MAX_QPATH];
 
 
 static const float SOUND_MAX_DIST = 1250;
-static const float SOUND_FALLOFF = 1.414f;
 
 static const int MASTER_VOL = 127;
 
@@ -262,7 +261,7 @@ static void S_SpatializeOrigin( const vec3_t origin, int master_vol, int* left_v
 {
 	vec_t		dot;
 	vec_t		dist;
-	vec_t		lscale, rscale, scale;
+	vec_t		lscale, rscale;
 	vec3_t		source_vec;
 	vec3_t		vec;
 
@@ -276,10 +275,11 @@ static void S_SpatializeOrigin( const vec3_t origin, int master_vol, int* left_v
 	}
 
 	dist *= (1.0f / SOUND_MAX_DIST);
+	vec_t scale = master_vol * (1.0f - dist);
 
 	// attenuate correctly even if we can't spatialise
 	if (dma.channels == 1) {
-		*left_vol = *right_vol = master_vol * pow(1.0f - dist, SOUND_FALLOFF);
+		*left_vol = *right_vol = scale;
 		return;
 	}
 
@@ -294,8 +294,6 @@ static void S_SpatializeOrigin( const vec3_t origin, int master_vol, int* left_v
 	if ( lscale < 0 ) {
 		lscale = 0;
 	}
-
-	scale = master_vol * pow(1.0f - dist, SOUND_FALLOFF);
 
 	*right_vol = scale * rscale;
 	if (*right_vol < 0)
