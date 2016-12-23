@@ -1195,6 +1195,11 @@ qboolean QGL_Init( const char *dllname )
 		#endif
 	}
 
+	if ( glw_state.OpenGLLib == 0 ) {
+		ri.Printf( PRINT_ALL, "QGL_Init: Failed to load %s: %s\n", dllname, dlerror() );
+		return qfalse;
+	}
+
 /* @brut: i don't know who did this, but it's blatantly Shit And Wrong
 	if (glw_state.OpenGLLib == 0)
 	{
