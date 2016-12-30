@@ -251,9 +251,9 @@ static void RB_ClipSkyPolygons( const shaderCommands_t* input )
 	ClearSkyBox();
 
 	for ( int i = 0; i < input->numIndexes; i += 3 ) {
-		VectorSubtract( input->xyz[input->indexes[i+0]], backEnd.viewParms.or.origin, p[0] );
-		VectorSubtract( input->xyz[input->indexes[i+1]], backEnd.viewParms.or.origin, p[1] );
-		VectorSubtract( input->xyz[input->indexes[i+2]], backEnd.viewParms.or.origin, p[2] );
+		VectorSubtract( input->xyz[input->indexes[i+0]], backEnd.viewParms.orient.origin, p[0] );
+		VectorSubtract( input->xyz[input->indexes[i+1]], backEnd.viewParms.orient.origin, p[1] );
+		VectorSubtract( input->xyz[input->indexes[i+2]], backEnd.viewParms.orient.origin, p[2] );
 		ClipSkyPolygon( 3, p[0], 0 );
 	}
 }
@@ -387,7 +387,7 @@ static void FillCloudySkySide( const int mins[2], const int maxs[2], qbool addIn
 	{
 		for ( s = mins[0]+HALF_SKY_SUBDIVISIONS; s <= maxs[0]+HALF_SKY_SUBDIVISIONS; s++ )
 		{
-			VectorAdd( s_skyPoints[t][s], backEnd.viewParms.or.origin, tess.xyz[tess.numVertexes] );
+			VectorAdd( s_skyPoints[t][s], backEnd.viewParms.orient.origin, tess.xyz[tess.numVertexes] );
 			tess.texCoords[tess.numVertexes][0][0] = s_skyTexCoords[t][s][0];
 			tess.texCoords[tess.numVertexes][0][1] = s_skyTexCoords[t][s][1];
 
@@ -580,7 +580,7 @@ void RB_StageIteratorSky()
 		qglColor3f( tr.identityLight, tr.identityLight, tr.identityLight );
 		qglPushMatrix();
 		GL_State( 0 );
-		qglTranslatef (backEnd.viewParms.or.origin[0], backEnd.viewParms.or.origin[1], backEnd.viewParms.or.origin[2]);
+		qglTranslatef (backEnd.viewParms.orient.origin[0], backEnd.viewParms.orient.origin[1], backEnd.viewParms.orient.origin[2]);
 		DrawSkyBox( tess.shader );
 		qglPopMatrix();
 	}

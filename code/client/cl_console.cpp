@@ -79,8 +79,6 @@ void Con_ToggleConsole_f( void )
 
 	Con_ClearNotify();
 	cls.keyCatchers ^= KEYCATCH_CONSOLE;
-
-	in_keyboardShortcuts->modified = qtrue; // drakkar
 }
 
 /*
@@ -672,6 +670,4 @@ void Con_Close()
 	cls.keyCatchers &= ~KEYCATCH_CONSOLE;
 	con.finalFrac = 0;				// none visible
 	con.displayFrac = 0;
-
-	in_keyboardShortcuts->modified = qtrue; // drakkar
 }

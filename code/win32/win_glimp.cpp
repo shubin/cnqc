@@ -50,7 +50,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define TRY_PFD_FAIL_HARD	2
 
 glwstate_t glw_state;
-static qbool windowModeLock = qtrue;
+
 
 /*
 ** ChoosePFD
@@ -231,8 +231,7 @@ static void GLW_CreatePFD( PIXELFORMATDESCRIPTOR *pPFD, int colorbits, int depth
 		1,								// version number
 		PFD_DRAW_TO_WINDOW |			// support window
 		PFD_SUPPORT_OPENGL |			// support OpenGL
-		PFD_DOUBLEBUFFER |				// double buffered
-		PFD_SUPPORT_COMPOSITION,		// double buffered		
+		PFD_DOUBLEBUFFER,				// double buffered
 		PFD_TYPE_RGBA,					// RGBA type
 		24,								// 24-bit color depth
 		0, 0, 0, 0, 0, 0,				// color bits ignored
@@ -268,13 +267,14 @@ static void GLW_CreatePFD( PIXELFORMATDESCRIPTOR *pPFD, int colorbits, int depth
 
 static int GLW_MakeContext( PIXELFORMATDESCRIPTOR *pPFD )
 {
+	int pixelformat;
+
 	//
 	// don't putz around with pixelformat if it's already set (e.g. this is a soft
 	// reset of the graphics system)
 	//
 	if ( !glw_state.pixelFormatSet )
 	{
-		int pixelformat;
 		//
 		// choose, set, and describe our desired pixel format.  If we're
 		// using a minidriver then we need to bypass the GDI functions,
@@ -475,15 +475,15 @@ static qbool GLW_CreateWindow( int width, int height, int colorbits )
 		ri.Printf( PRINT_DEVELOPER, "...registered window class\n" );
 	}
 
-	g_wv.isMinimized = qfalse;
+
+	RECT r;
+	int x, y, w, h;
 
 	//
 	// create the HWND if one does not already exist
 	//
 	if ( !g_wv.hWnd )
 	{
-        RECT r;
-        int x, y, w, h;
 		//
 		// compute width and height
 		//
@@ -492,18 +492,18 @@ static qbool GLW_CreateWindow( int width, int height, int colorbits )
 		r.right  = width;
 		r.bottom = height;
 
-		int style = WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_SYSMENU;
+		int style = WS_VISIBLE | WS_SYSMENU;
 		int exstyle;
 
 		if ( glInfo.isFullscreen )
 		{
-			style |= WS_POPUP | WS_MAXIMIZE;
-			exstyle = WS_EX_APPWINDOW | WS_EX_TOPMOST;
+			style |= WS_POPUP;
+			exstyle = WS_EX_TOPMOST;
 		}
 		else
 		{
-			style |= WS_SYSMENU | WS_OVERLAPPED | WS_BORDER | WS_CAPTION | WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
-			exstyle = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE;
+			style |= WS_OVERLAPPED | WS_BORDER | WS_CAPTION;
+			exstyle = 0;
 			AdjustWindowRect( &r, style, FALSE );
 		}
 
@@ -517,8 +517,8 @@ static qbool GLW_CreateWindow( int width, int height, int colorbits )
 		}
 		else
 		{
-			const cvar_t* vid_xpos = ri.Cvar_Get( "vid_xpos", "", CVAR_ARCHIVE );
-			const cvar_t* vid_ypos = ri.Cvar_Get( "vid_ypos", "", CVAR_ARCHIVE );
+			const cvar_t* vid_xpos = ri.Cvar_Get( "vid_xpos", "", 0 );
+			const cvar_t* vid_ypos = ri.Cvar_Get( "vid_ypos", "", 0 );
 			x = vid_xpos->integer;
 			y = vid_ypos->integer;
 		}
@@ -529,20 +529,14 @@ static qbool GLW_CreateWindow( int width, int height, int colorbits )
 		if ( !g_wv.hWnd )
 			ri.Error( ERR_FATAL, "GLW_CreateWindow() - Couldn't create window" );
 
-		//ShowWindow( g_wv.hWnd, SW_SHOW );
-		//UpdateWindow( g_wv.hWnd );
+		ShowWindow( g_wv.hWnd, SW_SHOW );
+		UpdateWindow( g_wv.hWnd );
 		ri.Printf( PRINT_DEVELOPER, "...created window@%d,%d (%dx%d)\n", x, y, w, h );
 	}
 	else
 	{
 		ri.Printf( PRINT_DEVELOPER, "...window already present, CreateWindowEx skipped\n" );
-		//SetWindowLong( g_wv.hWnd, GWL_STYLE, style );
-		//SetWindowLong( g_wv.hWnd, GWL_EXSTYLE, exstyle );
-		//SetWindowPos( g_wv.hWnd, glInfo.isFullscreen ? HWND_TOPMOST:HWND_NOTOPMOST, x,y, w,h, SWP_SHOWWINDOW );
 	}
-
-	ShowWindow( g_wv.hWnd, SW_SHOW );
-	UpdateWindow( g_wv.hWnd );
 
 	if ( !GLW_InitDriver( colorbits ) )
 	{
@@ -557,6 +551,7 @@ static qbool GLW_CreateWindow( int width, int height, int colorbits )
 
 	return qtrue;
 }
+
 
 static qbool GLW_Fullscreen( DEVMODE& dm )
 {
@@ -617,7 +612,7 @@ static void GLW_AttemptFSAA()
 	if (!qwglChoosePixelFormatARB(glw_state.hDC, anAttributes, ar, 1, &iPFD, &cPFD) || !cPFD)
 		return;
 
-	// now bounce the ENTIRE fucking subsystem thanks to WGL stupidity
+	// now bounce the ENTIRE fucking subsytem thanks to WGL stupidity
 	// we can't use GLimp_Shutdown() for this, because that does CDS poking that we don't want
 	assert( glw_state.hGLRC && glw_state.hDC && g_wv.hWnd );
 
@@ -649,7 +644,7 @@ static void GLW_AttemptFSAA()
 }
 
 
-static qbool GLW_ResetMode( qbool cdsFullscreen )
+static qbool GLW_SetMode( qbool cdsFullscreen )
 {
 	HDC hDC = GetDC( GetDesktopWindow() );
 	glw_state.desktopBPP = GetDeviceCaps( hDC, BITSPIXEL );
@@ -659,11 +654,6 @@ static qbool GLW_ResetMode( qbool cdsFullscreen )
 
 	glInfo.isFullscreen = cdsFullscreen;
 	if ( !R_GetModeInfo( &glConfig.vidWidth, &glConfig.vidHeight, &glConfig.windowAspect ) ) {
-		if (!glInfo.isFullscreen)
-		{
-			Cvar_SetValue( "vid_xpos", 0 );
-			Cvar_SetValue( "vid_ypos", 0 );
-		}
 		glConfig.vidWidth = glw_state.desktopWidth;
 		glConfig.vidHeight = glw_state.desktopHeight;
 		glConfig.windowAspect = (float)glConfig.vidWidth / glConfig.vidHeight;
@@ -712,19 +702,9 @@ static qbool GLW_ResetMode( qbool cdsFullscreen )
 	if (EnumDisplaySettings( NULL, ENUM_CURRENT_SETTINGS, &dm ))
 		glInfo.displayFrequency = dm.dmDisplayFrequency;
 
+	GLW_AttemptFSAA();
+
 	return qtrue;
-}
-
-
-static qbool GLW_SetMode( qbool cdsFullscreen )
-{
-	if (GLW_ResetMode(cdsFullscreen))
-	{
-		GLW_AttemptFSAA();
-		return qtrue;
-	}
-
-	return qfalse;
 }
 
 
@@ -797,10 +777,8 @@ static qbool GLW_LoadOpenGL()
 
 	// load the driver and bind our function pointers to it
 	if ( QGL_Init( OPENGL_DRIVER_NAME ) ) {
-		windowModeLock = qfalse;
 		// create the window and set up the context
 		if ( GLW_SetMode( (qbool)r_fullscreen->integer ) ) {
-			windowModeLock = qtrue;
 			return qtrue;
 		}
 	}
@@ -885,14 +863,11 @@ static void GLW_RestoreGamma()
 
 void GLimp_SetGamma( unsigned char red[256], unsigned char green[256], unsigned char blue[256] )
 {
-	if ( !glConfig.deviceSupportsGamma || r_ignorehwgamma->integer || !glw_state.hDC )
-		return;
-
-	if( g_wv.hWnd != GetFocus() ) 
-		return;
-
 	unsigned short table[3][256];
 	int i, j;
+
+	if ( !glConfig.deviceSupportsGamma || r_ignorehwgamma->integer || !glw_state.hDC )
+		return;
 
 	for ( i = 0; i < 256; i++ ) {
 		table[0][i] = ( ( ( unsigned short ) red[i] ) << 8 ) | red[i];
@@ -920,119 +895,10 @@ void GLimp_SetGamma( unsigned char red[256], unsigned char green[256], unsigned 
 		Com_DPrintf( "skipping W2K gamma clamp.\n" );
 	}
 
-	// enforce constantly increasing
-	for (int j = 0 ; j < 3 ; j++ ) {
-		for (int i = 1 ; i < 256 ; i++ ) {
-			if ( table[j][i] < table[j][i-1] ) {
-				table[j][i] = table[j][i-1];
-			}
-		}
-	}
-
 	if ( !SetDeviceGammaRamp( glw_state.hDC, table ) ) {
 		Com_Printf( "SetDeviceGammaRamp failed.\n" );
 	}
 }
-
-
-// drakkar
-/*
-** GLimp_WindowMode
-**
-** Changes window mode ( minimized, windowed, fullscreen ) without vid_restart.
-*/
-void GLimp_WindowMode( windowMode_t wmode )
-{
-	if( !windowModeLock )
-		return;
-
-	Cvar_Get( "in_keyboardShortcuts", "", 0 )->modified = qtrue;
-
-	switch( wmode )
-	{
-	case WMODE_SET_MINIMIZED:
-		windowModeLock = qfalse;
-		glw_state.cdsFullscreen = qfalse;
-		ChangeDisplaySettings( 0, 0 );
-		ShowWindow( g_wv.hWnd, SW_SHOWMINIMIZED );
-		g_wv.isMinimized = qtrue;
-		GLimp_WindowFocus( qfalse );
-		windowModeLock = qtrue;
-		break;
-
-	case WMODE_SET_WINDOWED:
-		windowModeLock = qfalse;
-		GLW_ResetMode( qfalse );
-		ShowWindow( g_wv.hWnd, SW_SHOWNORMAL );
-		g_wv.isMinimized = qfalse;
-		GLimp_WindowFocus( qtrue );
-		windowModeLock = qtrue;
-		ri.Cvar_Set( "r_fullscreen", "0" );
-		if( glInfo.isFullscreen )
-			Cbuf_AddText( "vid_restart\n" );
-		break;
-
-	case WMODE_SET_FULLSCREEN:
-		windowModeLock = qfalse;
-		GLW_SetMode( qtrue );
-		ShowWindow( g_wv.hWnd, SW_SHOWMAXIMIZED );
-		g_wv.isMinimized = qfalse;
-		GLimp_WindowFocus( qtrue );
-		windowModeLock = qtrue;
-		ri.Cvar_Set( "r_fullscreen", "1" );
-		Cbuf_AddText( "vid_restart\n" );
-		break;
-
-	case WMODE_RESTART:
-		if( r_fullscreen->modified && r_fullscreen->latchedString )
-		{
-			if( !Q_strncmp( r_fullscreen->latchedString, "0", 1 ) )
-				GLimp_WindowMode( WMODE_SET_WINDOWED );
-			else
-				GLimp_WindowMode( WMODE_SET_FULLSCREEN );
-		}
-		else
-		{
-			GLimp_WindowMode( r_fullscreen->integer ? WMODE_SET_FULLSCREEN : WMODE_SET_WINDOWED );
-		}
-		break;
-
-	case WMODE_SWAP_FULLSCREEN:
-		GLimp_WindowMode( glInfo.isFullscreen ? WMODE_SET_WINDOWED : WMODE_SET_FULLSCREEN );
-		break;		
-
-	case WMODE_SWAP_MINIMIZED:
-		GLimp_WindowMode( g_wv.isMinimized ? WMODE_RESTART : WMODE_SET_MINIMIZED );
-		break;
-
-	default:
-		Com_Printf( "Invalid Window Mode\n" );
-	}
-}
-
-void GLimp_WindowFocus(qbool focus)
-{
-	if( !g_wv.hWnd ) return;
-
-	if( focus )
-	{
-		// Cgg - sets gamma correction, I believe this is not needed when quake hasn't got focus
-		R_SetColorMappings();
-		if( g_wv.isMinimized )
-			GLimp_WindowMode( WMODE_SWAP_MINIMIZED );
-	}
-	else
-	{
-		GLW_RestoreGamma();
-		if( glInfo.isFullscreen )
-			GLimp_WindowMode( WMODE_SWAP_MINIMIZED );
-	}
-
-	g_wv.activeApp = ( focus && !g_wv.isMinimized );
-
-	Cvar_Get( "in_keyboardShortcuts", "", 0 )->modified = qtrue;
-}
-// !drakkar
 
 
 ///////////////////////////////////////////////////////////////
@@ -1082,6 +948,9 @@ void GLimp_Init()
 
 void GLimp_Shutdown()
 {
+	const char* success[] = { "failed", "success" };
+	int retVal;
+
 	// FIXME: Brian, we need better fallbacks from partially initialized failures
 	if ( !qwglMakeCurrent ) {
 		return;
@@ -1090,9 +959,6 @@ void GLimp_Shutdown()
 	ri.Printf( PRINT_DEVELOPER, "Shutting down OpenGL subsystem\n" );
 
 	GLW_RestoreGamma();
-
-	const char* success[] = { "failed", "success" };
-	int retVal;
 
 	// set current context to NULL
 	if ( qwglMakeCurrent )
@@ -1188,8 +1054,9 @@ qbool GLimp_SpawnRenderThread( void (*function)( void ) )
 static	void	*smpData;
 static	int		wglErrors;
 
-void *GLimp_RendererSleep( void )
-{
+void *GLimp_RendererSleep( void ) {
+	void	*data;
+
 	if ( !qwglMakeCurrent( glw_state.hDC, NULL ) ) {
 		wglErrors++;
 	}
@@ -1208,7 +1075,7 @@ void *GLimp_RendererSleep( void )
 	ResetEvent( renderCompletedEvent );
 	ResetEvent( renderCommandsEvent );
 
-	void *data = smpData;
+	data = smpData;
 
 	// after this, the main thread can exit GLimp_WakeRenderer
 	SetEvent( renderActiveEvent );
@@ -1218,8 +1085,8 @@ void *GLimp_RendererSleep( void )
 
 
 void GLimp_FrontEndSleep( void ) {
-	
 	WaitForSingleObject( renderCompletedEvent, INFINITE );
+
 	if ( !qwglMakeCurrent( glw_state.hDC, glw_state.hGLRC ) ) {
 		wglErrors++;
 	}
@@ -1235,7 +1102,7 @@ void GLimp_WakeRenderer( void *data ) {
 
 	// after this, the renderer can continue through GLimp_RendererSleep
 	SetEvent( renderCommandsEvent );
-    
+
 	WaitForSingleObject( renderActiveEvent, INFINITE );
 }
 

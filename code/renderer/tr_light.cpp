@@ -30,15 +30,15 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // never calculate a range less than this to prevent huge light numbers
 
 
-void R_TransformDlights( int count, dlight_t* dl, const orientationr_t* or )
+void R_TransformDlights( int count, dlight_t* dl, const orientationr_t* orient )
 {
 	vec3_t temp;
 
 	for ( int i = 0; i < count; ++i, ++dl ) {
-		VectorSubtract( dl->origin, or->origin, temp );
-		dl->transformed[0] = DotProduct( temp, or->axis[0] );
-		dl->transformed[1] = DotProduct( temp, or->axis[1] );
-		dl->transformed[2] = DotProduct( temp, or->axis[2] );
+		VectorSubtract( dl->origin, orient->origin, temp );
+		dl->transformed[0] = DotProduct( temp, orient->axis[0] );
+		dl->transformed[1] = DotProduct( temp, orient->axis[1] );
+		dl->transformed[2] = DotProduct( temp, orient->axis[2] );
 	}
 }
 

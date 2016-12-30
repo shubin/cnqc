@@ -413,10 +413,10 @@ static void RB_BeginDrawingView()
 		plane[2] = backEnd.viewParms.portalPlane.normal[2];
 		plane[3] = backEnd.viewParms.portalPlane.dist;
 
-		plane2[0] = DotProduct (backEnd.viewParms.or.axis[0], plane);
-		plane2[1] = DotProduct (backEnd.viewParms.or.axis[1], plane);
-		plane2[2] = DotProduct (backEnd.viewParms.or.axis[2], plane);
-		plane2[3] = DotProduct (plane, backEnd.viewParms.or.origin) - plane[3];
+		plane2[0] = DotProduct (backEnd.viewParms.orient.axis[0], plane);
+		plane2[1] = DotProduct (backEnd.viewParms.orient.axis[1], plane);
+		plane2[2] = DotProduct (backEnd.viewParms.orient.axis[2], plane);
+		plane2[3] = DotProduct (plane, backEnd.viewParms.orient.origin) - plane[3];
 
 		qglLoadMatrixf( s_flipMatrix );
 		qglClipPlane (GL_CLIP_PLANE0, plane2);
@@ -491,7 +491,7 @@ static void RB_RenderDrawSurfList( const drawSurf_t* drawSurfs, int numDrawSurfs
 				tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
 
 				// set up the transformation matrix
-				R_RotateForEntity( backEnd.currentEntity, &backEnd.viewParms, &backEnd.or );
+				R_RotateForEntity( backEnd.currentEntity, &backEnd.viewParms, &backEnd.orient );
 
 				if ( backEnd.currentEntity->e.renderfx & RF_DEPTHHACK ) {
 					// hack the depth range to prevent view model from poking into walls
@@ -500,13 +500,13 @@ static void RB_RenderDrawSurfList( const drawSurf_t* drawSurfs, int numDrawSurfs
 			} else {
 				backEnd.currentEntity = &tr.worldEntity;
 				backEnd.refdef.floatTime = originalTime;
-				backEnd.or = backEnd.viewParms.world;
+				backEnd.orient = backEnd.viewParms.world;
 				// we have to reset the shaderTime as well otherwise image animations on
 				// the world (like water) continue with the wrong frame
 				tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
 			}
 
-			qglLoadMatrixf( backEnd.or.modelMatrix );
+			qglLoadMatrixf( backEnd.orient.modelMatrix );
 
 			//
 			// change depthrange if needed
@@ -605,9 +605,9 @@ static void RB_RenderLitSurfList( dlight_t* dl )
 				tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
 
 				// set up the transformation matrix
-				R_RotateForEntity( backEnd.currentEntity, &backEnd.viewParms, &backEnd.or );
+				R_RotateForEntity( backEnd.currentEntity, &backEnd.viewParms, &backEnd.orient );
 
-				R_TransformDlights( 1, dl, &backEnd.or );
+				R_TransformDlights( 1, dl, &backEnd.orient );
 				ARB_SetupLight();
 
 				if ( backEnd.currentEntity->e.renderfx & RF_DEPTHHACK ) {
@@ -617,15 +617,15 @@ static void RB_RenderLitSurfList( dlight_t* dl )
 			} else {
 				backEnd.currentEntity = &tr.worldEntity;
 				backEnd.refdef.floatTime = originalTime;
-				backEnd.or = backEnd.viewParms.world;
+				backEnd.orient = backEnd.viewParms.world;
 				// we have to reset the shaderTime as well otherwise image animations on
 				// the world (like water) continue with the wrong frame
 				tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
-				R_TransformDlights( 1, dl, &backEnd.or );
+				R_TransformDlights( 1, dl, &backEnd.orient );
 				ARB_SetupLight();
 			}
 
-			qglLoadMatrixf( backEnd.or.modelMatrix );
+			qglLoadMatrixf( backEnd.orient.modelMatrix );
 
 			//
 			// change depthrange if needed

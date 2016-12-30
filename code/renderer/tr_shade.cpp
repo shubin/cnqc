@@ -102,7 +102,7 @@ void R_BindAnimatedImage( const textureBundle_t* bundle )
 	// it is necessary to do this messy calc to make sure animations line up
 	// exactly with waveforms of the same frequency
 	double v = tess.shaderTime * bundle->imageAnimationSpeed * FUNCTABLE_SIZE;
-	__int64 index = v; //myftol( tess.shaderTime * bundle->imageAnimationSpeed * FUNCTABLE_SIZE );
+	long long int index = v; //myftol( tess.shaderTime * bundle->imageAnimationSpeed * FUNCTABLE_SIZE );
 	index >>= FUNCTABLE_SHIFT;
 
 	if ( index < 0 ) // may happen with shader time offsets
@@ -383,7 +383,7 @@ void R_ComputeColors( const shaderStage_t* pStage, stageVars_t& svars )
 			for ( i = 0; i < tess.numVertexes; i++ )
 			{
 				vec3_t v;
-				VectorSubtract( tess.xyz[i], backEnd.viewParms.or.origin, v );
+				VectorSubtract( tess.xyz[i], backEnd.viewParms.orient.origin, v );
 				float len = VectorLength( v ) / tess.shader->portalRange;
 				svars.colors[i][3] = (byte)Com_Clamp( 0, 255, len * 255 );
 			}

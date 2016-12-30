@@ -342,7 +342,6 @@ extern	cvar_t	*cl_aviMotionJpeg;
 
 extern	cvar_t	*cl_allowDownload;
 extern	cvar_t	*cl_inGameVideo;
-extern	cvar_t	*in_keyboardShortcuts; // drakkar
 
 //=================================================
 

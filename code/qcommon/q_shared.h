@@ -472,11 +472,7 @@ void AxisCopy( const vec3_t in[3], vec3_t out[3] );
 struct cplane_s;
 
 void SetPlaneSignbits( struct cplane_s *out );
-#if !defined(__GNUC__)
 int BoxOnPlaneSide( const vec3_t emins, const vec3_t emaxs, const struct cplane_s* p );
-#else
-extern "C" int BoxOnPlaneSide( const vec3_t emins, const vec3_t emaxs, const struct cplane_s* p );
-#endif
 
 float AngleMod( float a );
 float LerpAngle( float from, float to, float frac );

@@ -421,7 +421,7 @@ typedef struct {
 
 
 typedef struct {
-	orientationr_t	or;
+	orientationr_t	orient;
 	orientationr_t	world;
 	vec3_t		pvsOrigin;			// may be different than or.origin for portals
 	qbool		isPortal;			// true if this view is through a portal
@@ -813,7 +813,7 @@ typedef struct {
 	int				smpFrame;
 	trRefdef_t		refdef;
 	viewParms_t		viewParms;
-	orientationr_t	or;
+	orientationr_t	orient;
 	trRefEntity_t*	currentEntity;
 
 	qbool			projection2D;	// if qtrue, drawstretchpic doesn't need to change modes
@@ -883,7 +883,7 @@ typedef struct {
 	int						identityLightByte;	// identityLight * 255
 	int						overbrightBits;		// r_overbrightBits->integer, but set to 0 if no hw gamma
 
-	orientationr_t			or;					// for current entity
+	orientationr_t			orient;					// for current entity
 
 	trRefdef_t				refdef;
 
@@ -1057,7 +1057,7 @@ int R_CullLocalBox( const vec3_t bounds[2] );
 int R_CullPointAndRadius( const vec3_t origin, float radius );
 int R_CullLocalPointAndRadius( const vec3_t origin, float radius );
 
-void R_RotateForEntity( const trRefEntity_t* ent, const viewParms_t* viewParms, orientationr_t* or );
+void R_RotateForEntity( const trRefEntity_t* ent, const viewParms_t* viewParms, orientationr_t* orient );
 
 /*
 ** GL wrapper/helper functions
@@ -1175,18 +1175,6 @@ void	GLimp_WakeRenderer( void *data );
 //   the params won't be used, getting the r_gamma cvar directly
 void	GLimp_SetGamma( unsigned char red[256], unsigned char green[256], unsigned char blue[256] );
 
-// drakkar
-typedef enum {
-	WMODE_RESTART = 0,
-	WMODE_SET_MINIMIZED,
-	WMODE_SET_WINDOWED,
-	WMODE_SET_FULLSCREEN,
-	WMODE_SWAP_FULLSCREEN,
-	WMODE_SWAP_MINIMIZED
-} windowMode_t;
-void GLimp_WindowMode( windowMode_t wmode );
-void GLimp_WindowFocus(qbool focus);
-// !drakkar
 
 /*
 ====================================================================
@@ -1286,7 +1274,7 @@ LIGHTS
 */
 
 void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent );
-void R_TransformDlights( int count, dlight_t* dl, const orientationr_t* or );
+void R_TransformDlights( int count, dlight_t* dl, const orientationr_t* orient );
 qbool R_LightForPoint( const vec3_t point, vec3_t ambientLight, vec3_t directedLight, vec3_t lightDir );
 
 

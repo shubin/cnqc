@@ -629,7 +629,7 @@ int BoxOnPlaneSide2 (vec3_t emins, vec3_t emaxs, struct cplane_s *p)
 ==================
 */
 
-#if !id386
+#if !id386 || defined(__GNUC__)
 
 int BoxOnPlaneSide( const vec3_t emins, const vec3_t emaxs, const struct cplane_s* p )
 {
@@ -694,11 +694,10 @@ int BoxOnPlaneSide( const vec3_t emins, const vec3_t emaxs, const struct cplane_
 
 	return sides;
 }
-#elif __GNUC__
-// use matha.s
-#else
-#pragma warning( disable: 4035 )
 
+#else
+
+#pragma warning( disable: 4035 )
 __declspec( naked ) int BoxOnPlaneSide( const vec3_t emins, const vec3_t emaxs, const struct cplane_s* p )
 {
 	static int bops_initialized;

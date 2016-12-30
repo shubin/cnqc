@@ -64,12 +64,16 @@ void (*qfxMesaSwapBuffers)(void);
 
 //GLX Functions
 #if !defined(USE_SDL_VIDEO)
+void* (*qglXGetProcAddress)( const char *symbol );
 XVisualInfo * (*qglXChooseVisual)( Display *dpy, int screen, int *attribList );
 GLXContext (*qglXCreateContext)( Display *dpy, XVisualInfo *vis, GLXContext shareList, Bool direct );
 void (*qglXDestroyContext)( Display *dpy, GLXContext ctx );
 Bool (*qglXMakeCurrent)( Display *dpy, GLXDrawable drawable, GLXContext ctx);
 void (*qglXCopyContext)( Display *dpy, GLXContext src, GLXContext dst, GLuint mask );
 void (*qglXSwapBuffers)( Display *dpy, GLXDrawable drawable );
+void (*qglXSwapIntervalEXT)( Display *dpy, GLXDrawable drawable, int si );
+int  (*qglXSwapIntervalMESA)( unsigned si );
+int  (*qglXSwapIntervalSGI)( int si );
 #endif
 
 void ( APIENTRY * qglSwapIntervalEXT)( int interval );			// added to setup SDL swap interval support
@@ -1145,19 +1149,23 @@ void QGL_Shutdown( void )
 #endif
 
 #if !defined(USE_SDL_VIDEO)
+	qglXGetProcAddress           = NULL;
 	qglXChooseVisual             = NULL;
 	qglXCreateContext            = NULL;
 	qglXDestroyContext           = NULL;
 	qglXMakeCurrent              = NULL;
 	qglXCopyContext              = NULL;
 	qglXSwapBuffers              = NULL;
+	qglXSwapIntervalEXT          = NULL;
+	qglXSwapIntervalMESA         = NULL;
+	qglXSwapIntervalSGI          = NULL;
 #endif
 } // QGL_Shutdown
 
 
 /*
 ** GPA
-** 
+**
 ** This'll setup a wrapper around calling GetProcAddress for all our
 ** GL to QGL bindings, hopefully making them less cumbersome to setup
 **
@@ -1167,19 +1175,34 @@ void QGL_Shutdown( void )
 #define GPA( a ) SDL_GL_GetProcAddress( a )
 qboolean GLimp_sdl_init_video(void);
 #else
-#define GPA( a ) dlsym( glw_state.OpenGLLib, a )
+static void *QGL_GetProcAddress( const char *symbol )
+{
+	void *sym;
+
+	if ( qglXGetProcAddress )
+	{
+		sym = qglXGetProcAddress( symbol );
+		if ( sym )
+		{
+			return sym;
+		}
+	}
+
+	return dlsym( glw_state.OpenGLLib, symbol );
+}
+#define GPA( a ) QGL_GetProcAddress( a )
 #endif
 
 
 /*
 ** QGL_Init
 **
-** This is responsible for binding our qgl function pointers to 
-** the appropriate GL stuff.  In Windows this means doing a 
+** This is responsible for binding our qgl function pointers to
+** the appropriate GL stuff.  In Windows this means doing a
 ** LoadLibrary and a bunch of calls to GetProcAddress.  On other
 ** operating systems we need to do the right thing, whatever that
 ** might be.
-** 
+**
 */
 
 qboolean QGL_Init( const char *dllname )
@@ -1200,33 +1223,9 @@ qboolean QGL_Init( const char *dllname )
 		return qfalse;
 	}
 
-/* @brut: i don't know who did this, but it's blatantly Shit And Wrong
-	if (glw_state.OpenGLLib == 0)
-	{
-		char	fn[1024];
-		// FILE *fp; // bk001204 - unused
-
-		// if we are not setuid, try current directory
-		if (dllname != NULL) {
-			getcwd(fn, sizeof(fn));
-			Q_strcat(fn, sizeof(fn), "/");
-			Q_strcat(fn, sizeof(fn), dllname);
-
-			#if USE_SDL_VIDEO
-			glw_state.OpenGLLib = (void*)(long)((SDL_GL_LoadLibrary(fn) == -1) ? 0 : 1);
-			#else
-			glw_state.OpenGLLib = dlopen( fn, RTLD_LAZY );
-			#endif
-			if ( glw_state.OpenGLLib == 0 ) {
-				ri.Printf(PRINT_ALL, "QGL_Init: Can't load %s from /etc/ld.so.conf or current dir: %s\n", dllname, do_dlerror());
-				return qfalse;
-			}
-		} else {
-			ri.Printf(PRINT_ALL, "QGL_Init: Can't load %s from /etc/ld.so.conf: %s\n", dllname, do_dlerror());
-			return qfalse;
-		}
-	}
-*/
+#if !defined(USE_SDL_VIDEO)
+	qglXGetProcAddress           = (void* (*)( const char *symbol ))GPA( "glXGetProcAddress" );
+#endif
 
 	qglAccum                     = dllAccum				=(void (*)(GLenum, GLfloat))GPA( "glAccum" );
 	qglAlphaFunc                 = dllAlphaFunc			=(void (*)(GLenum, GLclampf))GPA( "glAlphaFunc" );
@@ -1576,27 +1575,30 @@ qboolean QGL_Init( const char *dllname )
 #endif
 
 #if !defined(USE_SDL_VIDEO)
-	qglXChooseVisual             =  GPA("glXChooseVisual");
-	qglXCreateContext            =  GPA("glXCreateContext");
-	qglXDestroyContext           =  GPA("glXDestroyContext");
-	qglXMakeCurrent              =  GPA("glXMakeCurrent");
-	qglXCopyContext              =  GPA("glXCopyContext");
-	qglXSwapBuffers              =  GPA("glXSwapBuffers");
+	qglXChooseVisual             =  (XVisualInfo * (*)( Display *dpy, int screen, int *attribList ))GPA("glXChooseVisual");
+	qglXCreateContext            =  (GLXContext (*)( Display *dpy, XVisualInfo *vis, GLXContext shareList, Bool direct ))GPA("glXCreateContext");
+	qglXDestroyContext           =  (void (*)( Display *dpy, GLXContext ctx ))GPA("glXDestroyContext");
+	qglXMakeCurrent              =  (Bool (*)( Display *dpy, GLXDrawable drawable, GLXContext ctx))GPA("glXMakeCurrent");
+	qglXCopyContext              =  (void (*)( Display *dpy, GLXContext src, GLXContext dst, GLuint mask ))GPA("glXCopyContext");
+	qglXSwapBuffers              =  (void (*)( Display *dpy, GLXDrawable drawable ))GPA("glXSwapBuffers");
 #endif
 
-	qglLockArraysEXT = 0;
-	qglUnlockArraysEXT = 0;
-	qglActiveTextureARB = 0;
-	qglClientActiveTextureARB = 0;
-	qglSwapIntervalEXT = 0;
+	qglLockArraysEXT = (PFNGLLOCKARRAYSEXTPROC)GPA("glLockArraysEXT");
+	qglUnlockArraysEXT = (PFNGLUNLOCKARRAYSEXTPROC)GPA("glUnlockArraysEXT");
+	qglActiveTextureARB = (void ( APIENTRY * )( GLenum texture ))GPA("glActiveTextureARB");
+	qglClientActiveTextureARB = (void ( APIENTRY * )( GLenum texture ))GPA("glClientActiveTextureARB");
+	qglSwapIntervalEXT = (void ( APIENTRY * )( int interval ))GPA("glSwapIntervalEXT");
+	qglXSwapIntervalEXT = (void (*)( Display *dpy, GLXDrawable drawable, int si ))GPA( "glXSwapIntervalEXT" );
+	qglXSwapIntervalMESA = (int  (*)( unsigned si ))GPA( "glXSwapIntervalMESA" );
+	qglXSwapIntervalSGI = (int  (*)( int si ))GPA( "glXSwapIntervalSGI" );
 
-	qglPointParameterfEXT = NULL;
-	qglPointParameterfvEXT = NULL;
-	qglColorTableEXT = NULL;
-	qgl3DfxSetPaletteEXT = NULL;
-	qglSelectTextureSGIS = NULL;
-	qglMTexCoord2fSGIS = NULL;
-	qglMultiTexCoord2fARB = NULL;
+	qglPointParameterfEXT = (void ( APIENTRY * )( GLenum param, GLfloat value ))GPA("glPointParameterfEXT");
+	qglPointParameterfvEXT = (void ( APIENTRY * )( GLenum param, const GLfloat *value ))GPA("glPointParameterfvEXT");
+	qglColorTableEXT = (void ( APIENTRY * )( int, int, int, int, int, const void * ))GPA("glColorTableEXT");
+	qgl3DfxSetPaletteEXT = (void ( APIENTRY * )( GLuint * ))GPA("gl3DfxSetPaletteEXT");
+	qglSelectTextureSGIS = (void ( APIENTRY * )( GLenum ))GPA("glSelectTextureSGIS");
+	qglMTexCoord2fSGIS = (void ( APIENTRY * )( GLenum, GLfloat, GLfloat ))GPA("glMTexCoord2fSGIS");
+	qglMultiTexCoord2fARB = (void ( APIENTRY * )( GLenum texture, GLfloat s, GLfloat t ))GPA("glMultiTexCoord2fARB");
 
 	return qtrue;
 }
@@ -1632,10 +1634,30 @@ qbool GLW_InitARB()
 	QGL_ARB( glEnableVertexAttribArray, PFNGLENABLEVERTEXATTRIBARRAYARBPROC );
 	QGL_ARB( glVertexAttribPointer, PFNGLVERTEXATTRIBPOINTERARBPROC );
 
-	QGL_ARB( glProgramEnvParameter4f, PFNGLPROGRAMENVPARAMETER4FARBPROC ); 
+	QGL_ARB( glProgramEnvParameter4f, PFNGLPROGRAMENVPARAMETER4FARBPROC );
 	QGL_ARB( glProgramLocalParameter4f, PFNGLPROGRAMLOCALPARAMETER4FARBPROC );
 
 	return qtrue;
+}
+
+void QGL_SwapInterval( Display *dpy, Window win, int interval )
+{
+	if( qglSwapIntervalEXT )
+	{
+		qglSwapIntervalEXT( interval );
+	}
+	else if ( qglXSwapIntervalEXT )
+	{
+		qglXSwapIntervalEXT( dpy, win, interval );
+	}
+	else if ( qglXSwapIntervalMESA )
+	{
+		qglXSwapIntervalMESA( interval );
+	}
+	else if ( qglXSwapIntervalSGI )
+	{
+		qglXSwapIntervalSGI( (unsigned int)interval );
+	}
 }
 
 // END linux_qgl.c

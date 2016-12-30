@@ -152,7 +152,7 @@ void ARB_SetupLight()
 	qglProgramLocalParameter4f( GL_FRAGMENT_PROGRAM_ARB, 1, 1.0 / Square(dl->radius), 0, 0, 0 );
 
 	qglProgramEnvParameter4f( GL_VERTEX_PROGRAM_ARB, VP_GLOBAL_EYEPOS,
-		backEnd.or.viewOrigin[0], backEnd.or.viewOrigin[1], backEnd.or.viewOrigin[2], 0 );
+		backEnd.orient.viewOrigin[0], backEnd.orient.viewOrigin[1], backEnd.orient.viewOrigin[2], 0 );
 }
 
 

@@ -21,7 +21,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 // win_local.h: Win32-specific Quake3 header file
 
-#include <windows.h>
+#include "windows.h"
 
 
 void Sys_QueEvent( int time, sysEventType_t type, int value, int value2, int ptrLength, void *ptr );
@@ -34,29 +34,26 @@ void Conbuf_AppendText( const char *msg );
 
 void	IN_Init();
 void	IN_Activate( qbool active );
+qbool	IN_ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam ); // returns true if the event was handled
 void	IN_Frame();
 void	IN_Shutdown();
-void	IN_Move();
-qbool	IN_ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam );
 
 
 void SNDDMA_Activate();
-void EnableKeyboardShortcuts(qbool enable);
 
 LONG WINAPI MainWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam );
 
 typedef struct
 {
-	OSVERSIONINFO osversion;
-
 	HWND		hWnd;
 	HINSTANCE	hInstance;
 	qbool		activeApp;
 	qbool		isMinimized;
+	OSVERSIONINFO	osversion;
 
-	// when we get a windows message, we store off the time
+	// when we get a windows message, we store the time off
 	// so keyboard processing can know the exact time of an event
-	unsigned	sysMsgTime;
+	unsigned		sysMsgTime;
 } WinVars_t;
 
 extern WinVars_t	g_wv;

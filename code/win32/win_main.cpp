@@ -32,6 +32,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <io.h>
 #include <conio.h>
 #include <malloc.h>
+#include <VersionHelpers.h>
+
+
+WinVars_t	g_wv;
 
 
 #define MEM_THRESHOLD 96*1024*1024
@@ -68,7 +72,9 @@ void QDECL Sys_Error( const char *error, ... )
 
 	timeEndPeriod( 1 );
 
+#ifndef DEDICATED
 	IN_Shutdown();
+#endif
 
 	// wait for the user to quit
 	while (1) {
@@ -88,7 +94,9 @@ void QDECL Sys_Error( const char *error, ... )
 void Sys_Quit()
 {
 	timeEndPeriod( 1 );
+#ifndef DEDICATED
 	IN_Shutdown();
+#endif
 	Sys_DestroyConsole();
 	exit(0);
 }
@@ -275,11 +283,13 @@ char **Sys_ListFiles( const char *directory, const char *extension, const char *
 
 void Sys_FreeFileList( char **list )
 {
+	int		i;
+
 	if ( !list ) {
 		return;
 	}
 
-	for (int i = 0 ; list[i] ; i++ ) {
+	for ( i = 0 ; list[i] ; i++ ) {
 		Z_Free( list[i] );
 	}
 
@@ -290,13 +300,13 @@ void Sys_FreeFileList( char **list )
 char *Sys_GetClipboardData( void )
 {
 	char *data = NULL;
+	char *cliptext;
 
 	if ( OpenClipboard( NULL ) ) {
 		HANDLE hClipboardData;
 
 		if ( ( hClipboardData = GetClipboardData( CF_TEXT ) ) != 0 ) {
-		    char *cliptext;
-			if ( (cliptext = (char*)GlobalLock( hClipboardData ) ) != 0 ) {
+			if ( ( cliptext = (char*)GlobalLock( hClipboardData ) ) != 0 ) {
 				data = (char*)Z_Malloc( GlobalSize( hClipboardData ) + 1 );
 				Q_strncpyz( data, cliptext, GlobalSize( hClipboardData ) );
 				GlobalUnlock( hClipboardData );
@@ -320,13 +330,13 @@ LOAD/UNLOAD DLL
 */
 
 
-void Sys_UnloadDll( void* dllHandle )
+void Sys_UnloadDll( void *dllHandle )
 {
 	if ( !dllHandle ) {
 		return;
 	}
 	if ( !FreeLibrary( (HMODULE)dllHandle ) ) {
-		Com_Error( ERR_FATAL, "Sys_UnloadDll FreeLibrary failed" );
+		Com_Error (ERR_FATAL, "Sys_UnloadDll FreeLibrary failed");
 	}
 }
 
@@ -372,14 +382,14 @@ void* QDECL Sys_LoadDll( const char* name,
 		return NULL;
 
 	void (QDECL *dllEntry)( intptr_t (QDECL *syscallptr)(intptr_t, ...) );
-	dllEntry = (void (QDECL *)(intptr_t (QDECL *)( intptr_t, ... ) ) )GetProcAddress( libHandle, "dllEntry" );
+	dllEntry = ( void (QDECL *)(intptr_t (QDECL *)( intptr_t, ... ) ) )GetProcAddress( libHandle, "dllEntry" );
 	*entryPoint = (intptr_t (QDECL *)(intptr_t,...))GetProcAddress( libHandle, "vmMain" );
 	if ( !*entryPoint || !dllEntry ) {
 		FreeLibrary( libHandle );
 		return NULL;
 	}
-
 	dllEntry( systemcalls );
+
 	return libHandle;
 }
 
@@ -392,7 +402,7 @@ EVENT LOOP
 ========================================================================
 */
 
-#define	MAX_QUED_EVENTS		1024
+#define	MAX_QUED_EVENTS		512
 #define	MASK_QUED_EVENTS	( MAX_QUED_EVENTS - 1 )
 
 static sysEvent_t	eventQue[MAX_QUED_EVENTS];
@@ -404,45 +414,22 @@ static int			eventHead, eventTail;
 
 void Sys_QueEvent( int time, sysEventType_t type, int value, int value2, int ptrLength, void *ptr )
 {
-	sysEvent_t* ev; 
-	
-    // try to combine all sequential mouse moves in one event
-    if ( type == SE_MOUSE ) {
-        // get previous event from queue
-        ev = &eventQue[ ( eventHead + MAX_QUED_EVENTS - 1 ) & MASK_QUED_EVENTS ];
-        if ( ev->evType == SE_MOUSE ) {
+	sysEvent_t* ev = &eventQue[ eventHead & MASK_QUED_EVENTS ];
 
-            if ( eventTail == eventHead && eventTail )
-            {
-                ev->evValue = 0;
-                ev->evValue2 = 0;
-                eventTail--;
-            }
-            if ( time == 0 ) {
-                time = Sys_Milliseconds();
-            }
-            ev->evValue += value;
-            ev->evValue2 += value2;
-            ev->evTime = time;
-
-            return;
-        }
-    }
-    
-    ev = &eventQue[ eventHead & MASK_QUED_EVENTS ];
-    
 	if ( eventHead - eventTail >= MAX_QUED_EVENTS ) {
 		Com_Printf("Sys_QueEvent: overflow\n");
 		// we are discarding an event, but don't leak memory
-		if ( ev->evPtr )
+		if ( ev->evPtr ) {
 			Z_Free( ev->evPtr );
-		++eventTail;
+		}
+		eventTail++;
 	}
 
-	++eventHead;
+	eventHead++;
 
-	if ( time == 0 )
+	if ( time == 0 ) {
 		time = Sys_Milliseconds();
+	}
 
 	ev->evTime = time;
 	ev->evType = type;
@@ -457,7 +444,7 @@ sysEvent_t Sys_GetEvent()
 {
 	// return if we have data
 	if ( eventHead > eventTail ) {
-		++eventTail;
+		eventTail++;
 		return eventQue[ ( eventTail - 1 ) & MASK_QUED_EVENTS ];
 	}
 
@@ -490,7 +477,7 @@ sysEvent_t Sys_GetEvent()
 	static byte sys_packetReceived[MAX_MSGLEN]; // static or it'll blow half the stack
 	MSG_Init( &netmsg, sys_packetReceived, sizeof( sys_packetReceived ) );
 	if ( Sys_GetPacket( &adr, &netmsg ) ) {
-		// copy out to a separate buffer for queuing
+		// copy out to a seperate buffer for qeueing
 		// the readcount stepahead is for SOCKS support
 		int len = sizeof( netadr_t ) + netmsg.cursize - netmsg.readcount;
 		netadr_t* buf = (netadr_t*)Z_Malloc( len );
@@ -501,7 +488,7 @@ sysEvent_t Sys_GetEvent()
 
 	// return if we have data
 	if ( eventHead > eventTail ) {
-		++eventTail;
+		eventTail++;
 		return eventQue[ ( eventTail - 1 ) & MASK_QUED_EVENTS ];
 	}
 
@@ -516,11 +503,13 @@ sysEvent_t Sys_GetEvent()
 ///////////////////////////////////////////////////////////////
 
 
+#ifndef DEDICATED
 static void Sys_In_Restart_f( void )
 {
 	IN_Shutdown();
 	IN_Init();
 }
+#endif
 
 
 static void Sys_Net_Restart_f( void )
@@ -530,51 +519,20 @@ static void Sys_Net_Restart_f( void )
 
 
 // called after the common systems (cvars, files, etc) are initialized
-
-#define OSR2_BUILD_NUMBER 1111
-#define WIN98_BUILD_NUMBER 1998
-
 void Sys_Init()
 {
 	// make sure the timer is high precision, otherwise NT gets 18ms resolution
 	timeBeginPeriod( 1 );
 
+#ifndef DEDICATED
 	Cmd_AddCommand( "in_restart", Sys_In_Restart_f );
+#endif
 	Cmd_AddCommand( "net_restart", Sys_Net_Restart_f );
 
-	g_wv.osversion.dwOSVersionInfoSize = sizeof( g_wv.osversion );
+	if ( !IsWindowsVistaOrGreater() )
+		Sys_Error( "%s requires Windows Vista or later", Q3_VERSION );
 
-	if (!GetVersionEx (&g_wv.osversion))
-		Sys_Error ("Couldn't get OS info");
-
-	if (g_wv.osversion.dwMajorVersion < 4)
-		Sys_Error ("Quake3 requires Windows version 4 or greater");
-	if (g_wv.osversion.dwPlatformId == VER_PLATFORM_WIN32s)
-		Sys_Error ("Quake3 doesn't run on Win32s");
-
-	if ( g_wv.osversion.dwPlatformId == VER_PLATFORM_WIN32_NT )
-	{
-		Cvar_Set( "arch", "winnt" );
-	}
-	else if ( g_wv.osversion.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS )
-	{
-		if ( LOWORD( g_wv.osversion.dwBuildNumber ) >= WIN98_BUILD_NUMBER )
-		{
-			Cvar_Set( "arch", "win98" );
-		}
-		else if ( LOWORD( g_wv.osversion.dwBuildNumber ) >= OSR2_BUILD_NUMBER )
-		{
-			Cvar_Set( "arch", "win95 osr2.x" );
-		}
-		else
-		{
-			Cvar_Set( "arch", "win95" );
-		}
-	}
-	else
-	{
-		Cvar_Set( "arch", "unknown Windows variant" );
-	}
+	Cvar_Set( "arch", "winnt" );
 
 	// save out a couple things in rom cvars for the renderer to access
 	Cvar_Get( "win_hinstance", va("%i", (int)g_wv.hInstance), CVAR_ROM );
@@ -601,47 +559,11 @@ void Sys_Init()
 			break;
 		}
 	}
-	Com_DPrintf( "CPU: %s\n", Cvar_VariableString( "sys_cpustring" ) );
+	Com_Printf( "CPU: %s\n", Cvar_VariableString( "sys_cpustring" ) );
 
 	//Cvar_Set( "username", Sys_GetCurrentUser() );
 }
 
-static int CheckPrivs()
-{  
-    HANDLE hToken;
-
-    // Get a token for this process.
-    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hToken)) 
-        return 0;
-    
-    OSVERSIONINFO vinfo;
-    vinfo.dwOSVersionInfoSize = sizeof(vinfo);
-    GetVersionEx( &vinfo );
-
-    PRIVILEGE_SET priv;
-    
-    // Get the LUID for the shutdown privilege.
-    if ( vinfo.dwMajorVersion == 5 && vinfo.dwPlatformId == VER_PLATFORM_WIN32_NT ) {
-        LookupPrivilegeValue(NULL, SE_INC_BASE_PRIORITY_NAME, &priv.Privilege[0].Luid);    // W2K or XP     
-    } 
-    else if ( vinfo.dwMajorVersion == 6 && vinfo.dwPlatformId == VER_PLATFORM_WIN32_NT ){
-        LookupPrivilegeValue(NULL, SE_INC_WORKING_SET_NAME, &priv.Privilege[0].Luid);      // Vista
-    }
-    else {
-        //TODO: what SE_* for Win7 ?
-        return 0;
-    }
-    
-    priv.PrivilegeCount = 1;  // one privilege to set    
-    priv.Privilege[0].Attributes = 0; 
-    
-    BOOL res;
-    if (!PrivilegeCheck(hToken, &priv, &res)){
-        return 0;
-    }
-
-    return priv.Privilege[0].Attributes == SE_PRIVILEGE_USED_FOR_ACCESS;
-}
 
 ///////////////////////////////////////////////////////////////
 
@@ -654,12 +576,6 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 
 	g_wv.hInstance = hInstance;
 
-#ifndef USE_R_SMP
-    SYSTEM_INFO sysInfo;
-    GetSystemInfo( &sysInfo );
-    SetProcessAffinityMask( GetCurrentProcess(), sysInfo.dwActiveProcessorMask );
-#endif    
-    
 	// done before Com/Sys_Init since we need this for error output
 	Sys_CreateConsole();
 
@@ -675,25 +591,20 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 
 	NET_Init();
 
+	char cwd[MAX_OSPATH];
+	_getcwd( cwd, sizeof(cwd) );
+	Com_Printf( "Working directory: %s\n", cwd );
+
 	// hide the early console since we've reached the point where we
 	// have a working graphics subsystem
 	if ( !com_dedicated->integer && !com_viewlog->integer ) {
 		Sys_ShowConsole( 0, qfalse );
 	}
 
+#ifndef DEDICATED
 	if (!com_dedicated->integer)
 		IN_Init();
-
-    // in some cases (XP SP2, Vista UAC), this can supposedly help trim the working set / VM usage of Q3
-    // but it requires admin rights and makes no difference here, so I'm disabling it by default
-    if (CheckPrivs())
-    {
-        typedef BOOL (WINAPI *SetPWSS)( HANDLE, SIZE_T, SIZE_T );
-        SetPWSS spwss = (SetPWSS)GetProcAddress( GetModuleHandle("kernel32"), "SetProcessWorkingSetSize" );
-        if (spwss) {
-            spwss( GetCurrentProcess(), (SIZE_T)-1, (SIZE_T)-1 );
-        }
-    }
+#endif
 
 	int totalMsec = 0, countMsec = 0;
 
@@ -701,24 +612,21 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	while (qtrue) {
 		// if running as a client but not focused, sleep a bit
 		// (servers have their own sleep path)
-		if ( com_dedicated && !com_dedicated->integer )
-		{
-			if( g_wv.isMinimized || !g_wv.activeApp ) {
-				Sleep( 200 );  // 5 fps, free CPU
-			} 
-            //SwitchToThread();
-		}
+		if ( !g_wv.activeApp && com_dedicated && !com_dedicated->integer )
+			Sleep( 5 );
 
 		int startTime = Sys_Milliseconds();
 
+#ifndef DEDICATED
 		// make sure mouse and joystick are only called once a frame
 		IN_Frame();
+#endif
 
 		// run the game
 		Com_Frame();
 
 		totalMsec += Sys_Milliseconds() - startTime;
-		++countMsec;
+		countMsec++;
 	}
 
 	// never gets here

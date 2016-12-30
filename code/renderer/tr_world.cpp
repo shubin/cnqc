@@ -111,7 +111,7 @@ static qbool R_CullSurface( const surfaceType_t* surface, const shader_t* shader
 	}
 
 	const srfSurfaceFace_t* face = (const srfSurfaceFace_t*)surface;
-	float d = DotProduct( tr.or.viewOrigin, face->plane.normal );
+	float d = DotProduct( tr.orient.viewOrigin, face->plane.normal );
 
 	// don't cull exactly on the plane, because there are levels of rounding
 	// through the BSP, ICD, and hardware that may cause pixel gaps if an
@@ -415,7 +415,7 @@ void R_AddBrushModelSurfaces( const trRefEntity_t* re )
 		R_AddWorldSurface( bmodel->firstSurface + s );
 	}
 
-	R_TransformDlights( tr.refdef.num_dlights, tr.refdef.dlights, &tr.or );
+	R_TransformDlights( tr.refdef.num_dlights, tr.refdef.dlights, &tr.orient );
 
 	for ( int i = 0; i < tr.refdef.num_dlights; ++i ) {
 		dlight_t* dl = &tr.refdef.dlights[i];

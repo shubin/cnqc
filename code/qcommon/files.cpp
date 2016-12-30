@@ -553,6 +553,13 @@ fileHandle_t FS_SV_FOpenFileWrite( const char *filename ) {
 	return f;
 }
 
+static void FS_PreventSoundStutter()
+{
+#ifndef DEDICATED
+	S_ClearSoundBuffer();
+#endif
+}
+
 /*
 ===========
 FS_SV_FOpenFileRead
@@ -574,8 +581,7 @@ int FS_SV_FOpenFileRead( const char *filename, fileHandle_t *fp )
 
 	Q_strncpyz( fsh[f].name, filename, sizeof( fsh[f].name ) );
 
-	// don't let sound stutter
-	S_ClearSoundBuffer();
+	FS_PreventSoundStutter();
 
   // search homepath
 	ospath = FS_BuildOSPath( fs_homepath->string, filename, "" );
@@ -636,8 +642,7 @@ void FS_SV_Rename( const char *from, const char *to ) {
 		Com_Error( ERR_FATAL, "Filesystem call made without initialization\n" );
 	}
 
-	// don't let sound stutter
-	S_ClearSoundBuffer();
+	FS_PreventSoundStutter();
 
 	from_ospath = FS_BuildOSPath( fs_homepath->string, from, "" );
 	to_ospath = FS_BuildOSPath( fs_homepath->string, to, "" );
@@ -670,8 +675,7 @@ void FS_Rename( const char *from, const char *to ) {
 		Com_Error( ERR_FATAL, "Filesystem call made without initialization\n" );
 	}
 
-	// don't let sound stutter
-	S_ClearSoundBuffer();
+	FS_PreventSoundStutter();
 
 	from_ospath = FS_BuildOSPath( fs_homepath->string, fs_gamedir, from );
 	to_ospath = FS_BuildOSPath( fs_homepath->string, fs_gamedir, to );
@@ -774,8 +778,7 @@ fileHandle_t FS_FOpenFileAppend( const char *filename ) {
 
 	Q_strncpyz( fsh[f].name, filename, sizeof( fsh[f].name ) );
 
-	// don't let sound stutter
-	S_ClearSoundBuffer();
+	FS_PreventSoundStutter();
 
 	ospath = FS_BuildOSPath( fs_homepath->string, fs_gamedir, filename );
 

@@ -331,12 +331,14 @@ void SV_SpawnServer( const char* mapname )
 	QSUBSYSTEM_INIT_START( "Server" );
 	Com_Printf( "Map: %s\n", mapname );
 
+#ifndef DEDICATED
 	// if not running a dedicated server CL_MapLoading will connect the client to the server
 	// also print some status stuff
 	CL_MapLoading();
 
 	// make sure all the client stuff is unloaded
 	CL_ShutdownAll();
+#endif
 
 	// clear the whole hunk because we're (re)loading the server
 	Hunk_Clear();
@@ -648,7 +650,9 @@ void SV_Shutdown( const char* finalmsg )
 
 	Com_Printf( "---------------------------\n" );
 
+#ifndef DEDICATED
 	// disconnect any local clients
 	CL_Disconnect( qfalse );
+#endif
 }
 

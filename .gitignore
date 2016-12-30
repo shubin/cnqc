@@ -8,6 +8,7 @@
 *.idb
 code/freetype/objs/
 code/freetype/builds/
+code/qcommon/git.h
 code/win32/msvc*/build/
 code/win32/msvc*/*user*
 code/win32/msvc*/*sdf

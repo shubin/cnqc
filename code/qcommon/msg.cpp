@@ -26,10 +26,6 @@ static huffman_t		msgHuff;
 
 static qbool			msgInit = qfalse;
 
-//static int pcount[256];
-
-extern cvar_t* cl_shownet;
-
 /*
 ==============================================================================
 
@@ -464,7 +460,12 @@ delta functions with keys
 =============================================================================
 */
 
+#ifndef DEDICATED
+extern cvar_t* cl_shownet;
 #define NETLOG(x) if ( cl_shownet->integer == 4 ) { Com_Printf("%s ", x ); };
+#else
+#define NETLOG(x) 
+#endif
 
 static const int kbitmask[32] = {
 	0x00000001,	0x00000003,	0x00000007,	0x0000000F,
@@ -795,9 +796,11 @@ void MSG_ReadDeltaEntity( msg_t* msg, const entityState_t* from, entityState_t* 
 	if ( MSG_ReadBits( msg, 1 ) == 1 ) {
 		Com_Memset( to, 0, sizeof( *to ) );
 		to->number = MAX_GENTITIES - 1;
+#ifndef DEDICATED
 		if ( cl_shownet->integer >= 2 || cl_shownet->integer == -1 ) {
 			Com_Printf( "%3i: #%-3i remove\n", msg->readcount, number );
 		}
+#endif
 		return;
 	}
 
@@ -812,12 +815,16 @@ void MSG_ReadDeltaEntity( msg_t* msg, const entityState_t* from, entityState_t* 
 
 	// shownet 2/3 will interleave with other printed info, -1 will
 	// just print the delta records
+#ifndef DEDICATED
 	if ( cl_shownet->integer >= 2 || cl_shownet->integer == -1 ) {
 		print = 1;
 		Com_Printf( "%3i: #%-3i ", msg->readcount, to->number );
 	} else {
 		print = 0;
 	}
+#else
+	print = 0;
+#endif
 
 	to->number = number;
 
@@ -1114,12 +1121,16 @@ void MSG_ReadDeltaPlayerstate( msg_t* msg, const playerState_t* from, playerStat
 
 	// shownet 2/3 will interleave with other printed info, -2 will
 	// just print the delta records
+#ifndef DEDICATED
 	if ( cl_shownet->integer >= 2 || cl_shownet->integer == -2 ) {
 		print = 1;
 		Com_Printf( "%3i: playerstate ", msg->readcount );
 	} else {
 		print = 0;
 	}
+#else
+	print = 0;
+#endif
 
 	lc = MSG_ReadByte(msg);
 

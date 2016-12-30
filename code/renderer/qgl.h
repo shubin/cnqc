@@ -32,7 +32,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #elif defined( _WIN32 )
 
-#include <windows.h>
+#include "../win32/windows.h"
 #include <GL/gl.h>
 #include "../win32/glext.h"
 

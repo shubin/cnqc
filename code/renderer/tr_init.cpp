@@ -477,34 +477,6 @@ void GfxInfo_f( void )
 }
 
 
-static void R_WindowMode_f() 
-{
-	const char *str = ri.Cmd_Argv(1);
-
-	if     ( !Q_stricmpn( str, "restart",        7 ) )  GLimp_WindowMode( WMODE_RESTART );
-	else if( !Q_stricmpn( str, "minimized",      3 ) )  GLimp_WindowMode( WMODE_SET_MINIMIZED );
-	else if( !Q_stricmpn( str, "windowed",       3 ) )  GLimp_WindowMode( WMODE_SET_WINDOWED );
-	else if( !Q_stricmpn( str, "fullscreen",     4 ) )  GLimp_WindowMode( WMODE_SET_FULLSCREEN );
-	else if( !Q_stricmpn( str, "swapFullscreen", 8 ) )  GLimp_WindowMode( WMODE_SWAP_FULLSCREEN );
-	else if( !Q_stricmpn( str, "swapMinimized",  7 ) )  GLimp_WindowMode( WMODE_SWAP_MINIMIZED );
-	else
-	{
-		str = ri.Cmd_Argv(0);
-		ri.Printf( PRINT_ALL,
-			"How to use:\n"
-			"\\%s restart\n"
-			"\\%s minimized\n"
-			"\\%s windowed\n"
-			"\\%s fullscreen\n"
-			"\\%s swapFullscreen\n"
-			"\\%s swapMinimized\n"
-			, str, str, str, str, str, str
-			);
-	}
-
-	Cvar_Get( "in_keyboardShortcuts", "", 0 )->modified = qtrue;
-}
-
 ///////////////////////////////////////////////////////////////
 
 
@@ -519,7 +491,6 @@ static struct r_ConsoleCmd {
 	{ "modellist", R_Modellist_f },
 	{ "screenshot", R_ScreenShotTGA_f },
 	{ "screenshotJPEG", R_ScreenShotJPG_f },
-	{ "windowMode", R_WindowMode_f },
 	{ }
 };
 
@@ -826,9 +797,6 @@ const refexport_t* GetRefAPI( const refimport_t* rimp )
 	re.inPVS = R_inPVS;
 
 	re.TakeVideoFrame = RE_TakeVideoFrame;
-
-	// drakkar
-	re.WindowFocus = GLimp_WindowFocus;
 
 	return &re;
 }

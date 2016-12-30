@@ -469,7 +469,9 @@ void Sys_Error( const char *error, ... )
 	if (ttycon_on)
 		tty_Hide();
 
+#ifndef DEDICATED
 	CL_Shutdown();
+#endif
 
 	va_start (argptr,error);
 	vsprintf (string,error,argptr);
@@ -482,7 +484,10 @@ void Sys_Error( const char *error, ... )
 
 void Sys_Quit()
 {
+#ifndef DEDICATED
 	CL_Shutdown();
+#endif
+
 	fcntl( 0, F_SETFL, fcntl(0, F_GETFL, 0) & ~FNDELAY );
 	Sys_Exit(0);
 }
@@ -644,9 +649,11 @@ sysEvent_t Sys_GetEvent()
 		return eventQue[ ( eventTail - 1 ) & MASK_QUED_EVENTS ];
 	}
 
+#ifndef DEDICATED
 	// pump the message loop
 	// in vga this calls KBD_Update, under X, it calls GetEvent
 	Sys_SendKeyEvents();
+#endif
 
 	// check for console commands
 	const char* s = Sys_ConsoleInput();
@@ -657,8 +664,10 @@ sysEvent_t Sys_GetEvent()
 		Sys_QueEvent( 0, SE_CONSOLE, 0, 0, len, b );
 	}
 
+#ifndef DEDICATED
 	// check for other input devices
 	IN_Frame();
+#endif
 
 	// check for network packets
 	msg_t		netmsg;
@@ -691,11 +700,13 @@ sysEvent_t Sys_GetEvent()
 ///////////////////////////////////////////////////////////////
 
 
+#ifndef DEDICATED
 static void Sys_In_Restart_f( void )
 {
 	IN_Shutdown();
 	IN_Init();
 }
+#endif
 
 
 char *Sys_GetClipboardData(void)
@@ -806,7 +817,9 @@ void  Sys_Print( const char *msg )
 
 void Sys_Init()
 {
+#ifndef DEDICATED
 	Cmd_AddCommand( "in_restart", Sys_In_Restart_f );
+#endif
 	Cvar_Set( "arch", OS_STRING " " ARCH_STRING );
 	Cvar_Set( "username", Sys_GetCurrentUser() );
 }

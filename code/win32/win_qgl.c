@@ -33,7 +33,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../qcommon/q_shared.h"
 
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+#include "../win32/windows.h"
 #include <GL/gl.h>
 #include "glext.h"
 

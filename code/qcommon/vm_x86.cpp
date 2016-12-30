@@ -24,7 +24,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "vm_local.h"
 
 #ifdef _WIN32
-#include <windows.h>
+#include "../win32/windows.h"
 #endif
 
 #ifndef _WIN32
@@ -55,47 +55,6 @@ static	byte	*code = NULL;
 static	int		pc = 0;
 
 static	int		*instructionPointers = NULL;
-
-
-// BEWARE: static int Q_ftol( float f ) { return (int)f; }
-// does NOT work - the function needs to be naked
-// there are "clever" ways to do ftol with bit-hacking, but they aren't worthwhile
-
-#if defined(_MSC_VER)
-
-static const __int16 FPU_CW = 0x0E7F; // double precision, round towards 0
-
-// the float value is already sitting on the top of the FP stack
-
-static __declspec(naked) void QVM_ftol()
-{
-	static __int16 cw;
-	int n;
-	__asm {
-		fnstcw cw
-		fldcw FPU_CW
-		fistp n
-		fldcw cw
-		mov eax, n
-		ret
-	}
-}
-
-#define FTOL_PTR
-static int ftolPtr = (int)QVM_ftol;
-
-#elif defined(__GNUC__)
-
-#define FTOL_PTR
-extern "C" int qftol0F7F( void );
-static int ftolPtr = (int)qftol0F7F;
-
-#else
-
-#error no ANSI-compatible ftol for this platform/compiler
-
-#endif
-
 
 static	int	instruction, pass;
 static	int	lastConst = 0;
@@ -472,7 +431,7 @@ static void EmitMovEAXEDI(vm_t *vm) {
 	EmitString( "8B 07" );		// mov eax, dword ptr [edi]
 }
 
-qbool EmitMovEBXEDI(vm_t *vm, int andit) {
+static qbool EmitMovEBXEDI(vm_t *vm, int andit) {
 	if (LastCommand == LAST_COMMAND_MOV_EDI_EAX)
 	{	// mov [edi], eax
 		compiledOfs -= 2;
@@ -506,6 +465,11 @@ qbool EmitMovEBXEDI(vm_t *vm, int andit) {
 
 void VM_Compile( vm_t* vm, const vmHeader_t* header )
 {
+	// floating point control word, for OP_CVFI
+	// [0] used for saving the current mode
+	// [1] all exceptions bits set, single-precision, round towards 0
+	static int fpcw[2] = { 0x0000, 0x0F7F };
+
 	int		op;
 	int		maxLength;
 	int		v;
@@ -1109,17 +1073,13 @@ void VM_Compile( vm_t* vm, const vmHeader_t* header )
 			EmitString( "D9 1F" );		// fstp dword ptr [edi]
 			break;
 		case OP_CVFI:
-#ifndef FTOL_PTR // WHENHELLISFROZENOVER  // bk001213 - was used in 1.17
-			// not IEEE compliant, but simple and fast
 			EmitString( "D9 07" );		// fld dword ptr [edi]
+			EmitString( "B8" );			// mov eax, &fp_cw[0]
+			Emit4( (int)&fpcw[0] );
+			EmitString( "9B D9 38" );	// fnstcw word ptr [eax]
+			EmitString( "D9 68 04" );	// fldcw word ptr [eax+4]
 			EmitString( "DB 1F" );		// fistp dword ptr [edi]
-#else // FTOL_PTR
-			// call the library conversion function
-			EmitString( "D9 07" );		// fld dword ptr [edi]
-			EmitString( "FF 15" );		// call ftolPtr
-			Emit4( (int)&ftolPtr );
-			EmitCommand(LAST_COMMAND_MOV_EDI_EAX);		// mov dword ptr [edi], eax
-#endif
+			EmitString( "D9 28" );		// fldcw word ptr [eax]
 			break;
 		case OP_SEX8:
 			EmitString( "0F BE 07" );	// movsx eax, byte ptr [edi]
