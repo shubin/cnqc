@@ -19,57 +19,41 @@ if not _OPTIONS["quake3dir"] then
 	error "quake3dir must be specified on the command-line"
 end
 
+-- relative to the LUA script
 path_root = "../.."
 path_src = path_root.."/cnq3/code"
-path_build = path_root.."/.build"
+path_build = path_root.."/cnq3/build"
 path_bin = path_root.."/.bin"
 os.mkdir(path_bin)
 
-abs_path_cnq3_repo = os.realpath(path_root.."/cnq3")
-abs_path_git_scripts = os.realpath(path_root.."/cnq3tools/git")
-abs_path_git_header = path.getabsolute(path_root.."/cnq3/code/qcommon/git.h") -- may not exist yet
-abs_path_q3 = os.realpath(_OPTIONS["quake3dir"])
-abs_path_bin = os.realpath(path_bin)
+-- relative to the makefile
+make_path_git_scripts = "../../../cnq3tools/git"
+make_path_git_header = "../../code/qcommon/git.h"
+make_path_bin = "../../../.bin"
 
-local function LIN_CreateGitPreBuildCommand()
+abs_path_q3 = path.getabsolute(_OPTIONS["quake3dir"]) -- os.realpath won't work if we pass in an env. var. here
 
-	-- os.realpath is problematic on Linux
-	local abs_path_script = path.getabsolute(string.format("%s/create_git_header.sh", abs_path_git_scripts))
+local function CreateGitPreBuildCommand(scriptExtension)
 
-	return string.format("cd \"%s\" && \"%s\" \"%s\"", abs_path_cnq3_repo, abs_path_script, abs_path_git_header)
+	local make_path_script = string.format("%s/create_git_header%s", make_path_git_scripts, scriptExtension)
 
-end
-
-local function WIN_CreateGitPreBuildCommand()
-
-	local abs_path_script = os.realpath(string.format("%s/create_git_header.cmd", abs_path_git_scripts))
-
-	return string.format("cd \"%s\" && \"%s\" \"%s\"", abs_path_cnq3_repo, abs_path_script, abs_path_git_header)
+	return string.format("\"%s\" \"%s\"", make_path_script, make_path_git_header)
 
 end
 
-local function LIN_CreateExeCopyPostBuildCommand(exeName)
+local function CreateExeCopyPostBuildCommand(copyCommand, exeName, exeExtension)
 
-	-- os.realpath fails on Linux due to the %{cfg.buildcfg} token
-	local abs_path_exe = path.getabsolute(string.format("%s/%s/%s", abs_path_bin, "%{cfg.buildcfg}", exeName))
+	local make_path_exe = string.format("%s/%s/%s%s", make_path_bin, "%{cfg.buildcfg}", exeName, exeExtension)
 
-	return string.format("cp \"%s\" \"%s\"", abs_path_exe, abs_path_q3)
-
-end
-
-local function WIN_CreateExeCopyPostBuildCommand(exeName)
-
-	local abs_path_exe = os.realpath(string.format("%s/%s/%s.exe", abs_path_bin, "%{cfg.buildcfg}", exeName))
-
-	return string.format("copy \"%s\" \"%s\"", abs_path_exe, abs_path_q3)
+	return string.format("%s \"%s\" \"%s\"", copyCommand, make_path_exe, abs_path_q3)
 
 end
 
 local function WIN_CreatePdbCopyPostBuildCommand(exeName)
 
-	local abs_path_pdb = string.format("%s\\%s\\%s.pdb", abs_path_bin, "%{cfg.buildcfg}", exeName)
+	local make_path_pdb = string.format("%s/%s/%s.pdb", make_path_bin, "%{cfg.buildcfg}", exeName)
 
-	return string.format("copy \"%s\" \"%s\"", abs_path_pdb, abs_path_q3)
+	return string.format("copy \"%s\" \"%s\"", make_path_pdb, abs_path_q3)
 
 end
 
@@ -215,6 +199,8 @@ local function ApplyExeProjectSettings(exeName, server)
 	ApplyProjectSettings()
 
 	filter { }
+	
+	targetname(exeName)
 
 	local server_sources =
 	{
@@ -379,12 +365,12 @@ local function ApplyExeProjectSettings(exeName, server)
 	-- it seems that "filter" doesn't work with "prebuildcommands", "postbuildcommands"
 	filter { }
 	if os.is("windows") then
-		postbuildcommands { WIN_CreateExeCopyPostBuildCommand(exeName) }
-		postbuildcommands { WIN_CreatePdbCopyPostBuildCommand(exeName) }
-		prebuildcommands { WIN_CreateGitPreBuildCommand() }
+		prebuildcommands { path.translate(CreateGitPreBuildCommand(".cmd"), "\\") }
+		postbuildcommands { path.translate(CreateExeCopyPostBuildCommand("copy", exeName, ".exe"), "\\") }
+		postbuildcommands { path.translate(WIN_CreatePdbCopyPostBuildCommand(exeName), "\\") }
 	else
-		postbuildcommands { LIN_CreateExeCopyPostBuildCommand(exeName) }
-		prebuildcommands { LIN_CreateGitPreBuildCommand() }
+		prebuildcommands { CreateGitPreBuildCommand(".sh") }
+		postbuildcommands { CreateExeCopyPostBuildCommand("cp -u", exeName, "") }
 	end
 
 	-- create VC++ debug settings
@@ -427,6 +413,11 @@ local function ApplyExeProjectSettings(exeName, server)
 
 end
 
+exe_suffix = "";
+if os.is("linux") then
+	exe_suffix = "-x86"
+end
+
 solution "cnq3"
 
 	location ( path_build.."/".._ACTION )
@@ -437,14 +428,14 @@ solution "cnq3"
 
 		kind "WindowedApp"
 		language "C++"
-		ApplyExeProjectSettings("cnq3", 0)
+		ApplyExeProjectSettings("cnq3"..exe_suffix, 0)
 
 	project "cnq3-server"
 
 		kind "WindowedApp"
 		language "C++"
 		defines { "DEDICATED" }
-		ApplyExeProjectSettings("cnq3-server", 1)
+		ApplyExeProjectSettings("cnq3-server"..exe_suffix, 1)
 
 	project "botlib"
 
