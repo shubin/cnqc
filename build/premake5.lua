@@ -378,7 +378,7 @@ local function ApplyExeProjectSettings(exeName, server)
 		local abs_path_exe = string.format("%s\\%s.exe", abs_path_q3, exeName)
 		debugcommand(abs_path_exe)
 		if (server == 1) then
-			debugargs { "+set sv_pure 2 +set r_fullscreen 0" }
+			debugargs { "+set sv_pure 0" }
 		else
 			debugargs { "+set sv_pure 0 +set r_fullscreen 0" }
 		end
@@ -391,17 +391,16 @@ local function ApplyExeProjectSettings(exeName, server)
 		end
 
 	filter "system:not windows"
-		buildoptions { "-pthread" }
-		links { "dl", "m", "pthread" }
+		links { "dl", "m" }
 		if (server == 0) then
-			--links { "X11", "Xxf86dga", "Xxf86vm" }
-			links { "X11" }
+			buildoptions { "-pthread" }
+			links { "X11", "pthread" }
 		end
 
 	-- RC will compile the .rc into a .res
 	-- LINK accepts .res files directly
 	filter "action:vs*"
-		linkoptions { path_src.."/win32/winquake.res", "/STACK:8388608" }
+		linkoptions { path.translate(path_src.."/win32/winquake.res", "\\"), "/STACK:8388608" }
 
 	filter { "action:vs*", "configurations:release" }
 		linkoptions { "/OPT:REF", "/OPT:ICF" }

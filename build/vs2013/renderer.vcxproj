@@ -1,0 +1,181 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="debug|Win32">
+      <Configuration>debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="release|Win32">
+      <Configuration>release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{9C6AA017-8837-FB22-B150-E9CA9D7C30B1}</ProjectGuid>
+    <IgnoreWarnCompileDuplicatedFilename>true</IgnoreWarnCompileDuplicatedFilename>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>renderer</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">
+    <OutDir>..\..\..\.bin\debug\</OutDir>
+    <IntDir>obj\x32\debug\renderer\</IntDir>
+    <TargetName>renderer</TargetName>
+    <TargetExt>.lib</TargetExt>
+    <GenerateManifest>false</GenerateManifest>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='release|Win32'">
+    <OutDir>..\..\..\.bin\release\</OutDir>
+    <IntDir>obj\x32\release\renderer\</IntDir>
+    <TargetName>renderer</TargetName>
+    <TargetExt>.lib</TargetExt>
+    <GenerateManifest>false</GenerateManifest>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>DEBUG;_DEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\code\freetype\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <Optimization>Disabled</Optimization>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <ExceptionHandling>false</ExceptionHandling>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
+      <AdditionalOptions>/Gm %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <Lib>
+      <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <PreprocessorDefinitions>NDEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\code\freetype\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <Optimization>MinSpace</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <OmitFramePointers>true</OmitFramePointers>
+      <StringPooling>true</StringPooling>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <ExceptionHandling>false</ExceptionHandling>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <AdditionalOptions>/GL %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+    <Lib>
+      <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\code\renderer\qgl.h" />
+    <ClInclude Include="..\..\code\renderer\qgl_linked.h" />
+    <ClInclude Include="..\..\code\renderer\tr_local.h" />
+    <ClInclude Include="..\..\code\renderer\tr_public.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\code\jpeg-6\jcapimin.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jccoefct.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jccolor.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jcdctmgr.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jchuff.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jcinit.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jcmainct.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jcmarker.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jcmaster.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jcomapi.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jcparam.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jcphuff.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jcprepct.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jcsample.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jctrans.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jdapimin.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jdapistd.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jdatadst.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jdatasrc.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jdcoefct.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jdcolor.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jddctmgr.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jdhuff.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jdinput.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jdmainct.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jdmarker.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jdmaster.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jdpostct.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jdsample.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jdtrans.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jerror.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jfdctflt.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jidctflt.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jmemmgr.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jmemnobs.c" />
+    <ClCompile Include="..\..\code\jpeg-6\jutils.c" />
+    <ClCompile Include="..\..\code\renderer\tr_arb.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_backend.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_bsp.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_cmds.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_curve.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_flares.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_font.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_image.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_init.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_light.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_main.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_marks.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_mesh.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_model.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_noise.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_scene.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_shade.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_shade_calc.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_shader.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_sky.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_surface.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_world.cpp" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

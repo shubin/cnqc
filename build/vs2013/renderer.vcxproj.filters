@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="jpeg-6">
+      <UniqueIdentifier>{4EAE4507-3A50-70DD-230B-84310F4CF72D}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="renderer">
+      <UniqueIdentifier>{9C6AA017-8837-FB22-B150-E9CA9D7C30B1}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\code\renderer\qgl.h">
+      <Filter>renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\renderer\qgl_linked.h">
+      <Filter>renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\renderer\tr_local.h">
+      <Filter>renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\renderer\tr_public.h">
+      <Filter>renderer</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\code\jpeg-6\jcapimin.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jccoefct.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jccolor.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jcdctmgr.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jchuff.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jcinit.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jcmainct.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jcmarker.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jcmaster.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jcomapi.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jcparam.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jcphuff.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jcprepct.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jcsample.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jctrans.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jdapimin.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jdapistd.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jdatadst.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jdatasrc.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jdcoefct.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jdcolor.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jddctmgr.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jdhuff.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jdinput.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jdmainct.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jdmarker.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jdmaster.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jdpostct.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jdsample.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jdtrans.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jerror.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jfdctflt.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jidctflt.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jmemmgr.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jmemnobs.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\jpeg-6\jutils.c">
+      <Filter>jpeg-6</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\renderer\tr_arb.cpp">
+      <Filter>renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\renderer\tr_backend.cpp">
+      <Filter>renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\renderer\tr_bsp.cpp">
+      <Filter>renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\renderer\tr_cmds.cpp">
+      <Filter>renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\renderer\tr_curve.cpp">
+      <Filter>renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\renderer\tr_flares.cpp">
+      <Filter>renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\renderer\tr_font.cpp">
+      <Filter>renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\renderer\tr_image.cpp">
+      <Filter>renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\renderer\tr_init.cpp">
+      <Filter>renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\renderer\tr_light.cpp">
+      <Filter>renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\renderer\tr_main.cpp">
+      <Filter>renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\renderer\tr_marks.cpp">
+      <Filter>renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\renderer\tr_mesh.cpp">
+      <Filter>renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\renderer\tr_model.cpp">
+      <Filter>renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\renderer\tr_noise.cpp">
+      <Filter>renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\renderer\tr_scene.cpp">
+      <Filter>renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\renderer\tr_shade.cpp">
+      <Filter>renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\renderer\tr_shade_calc.cpp">
+      <Filter>renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\renderer\tr_shader.cpp">
+      <Filter>renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\renderer\tr_sky.cpp">
+      <Filter>renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\renderer\tr_surface.cpp">
+      <Filter>renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\renderer\tr_world.cpp">
+      <Filter>renderer</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

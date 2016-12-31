@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="base">
+      <UniqueIdentifier>{8078947C-6CAF-950D-159C-7B1001B2110F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="sfnt">
+      <UniqueIdentifier>{A0DF9D7C-8C16-9F0D-3503-851021191B0F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="smooth">
+      <UniqueIdentifier>{9F79131C-8B1B-3EF2-74D6-51466017C542}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="truetype">
+      <UniqueIdentifier>{E7B747E9-D384-A2F4-FC9D-909CE8C9D782}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\code\freetype\src\base\ftbase.c">
+      <Filter>base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\freetype\src\base\ftbbox.c">
+      <Filter>base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\freetype\src\base\ftglyph.c">
+      <Filter>base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\freetype\src\base\ftinit.c">
+      <Filter>base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\freetype\src\base\ftstroke.c">
+      <Filter>base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\freetype\src\base\ftsynth.c">
+      <Filter>base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\freetype\src\base\ftsystem.c">
+      <Filter>base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\freetype\src\sfnt\sfnt.c">
+      <Filter>sfnt</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\freetype\src\smooth\smooth.c">
+      <Filter>smooth</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\freetype\src\truetype\truetype.c">
+      <Filter>truetype</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
