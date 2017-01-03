@@ -10,9 +10,6 @@
     <Filter Include="game">
       <UniqueIdentifier>{9F35977C-8B6C-980D-3459-7E10206F140F}</UniqueIdentifier>
     </Filter>
-    <Filter Include="jpeg-6">
-      <UniqueIdentifier>{4EAE4507-3A50-70DD-230B-84310F4CF72D}</UniqueIdentifier>
-    </Filter>
     <Filter Include="qcommon">
       <UniqueIdentifier>{7F6839ED-EB47-B888-F45F-435F60BE1EEA}</UniqueIdentifier>
     </Filter>
@@ -150,39 +147,6 @@
     <ClInclude Include="..\..\code\game\bg_public.h">
       <Filter>game</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\code\jpeg-6\jchuff.h">
-      <Filter>jpeg-6</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\code\jpeg-6\jconfig.h">
-      <Filter>jpeg-6</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\code\jpeg-6\jdct.h">
-      <Filter>jpeg-6</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\code\jpeg-6\jdhuff.h">
-      <Filter>jpeg-6</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\code\jpeg-6\jerror.h">
-      <Filter>jpeg-6</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\code\jpeg-6\jinclude.h">
-      <Filter>jpeg-6</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\code\jpeg-6\jmemsys.h">
-      <Filter>jpeg-6</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\code\jpeg-6\jmorecfg.h">
-      <Filter>jpeg-6</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\code\jpeg-6\jpegint.h">
-      <Filter>jpeg-6</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\code\jpeg-6\jpeglib.h">
-      <Filter>jpeg-6</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\code\jpeg-6\jversion.h">
-      <Filter>jpeg-6</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\code\qcommon\cg_public.h">
       <Filter>qcommon</Filter>
     </ClInclude>
@@ -248,6 +212,24 @@
     </ClInclude>
     <ClInclude Include="..\..\code\server\server.h">
       <Filter>server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\win32\glext.h">
+      <Filter>win32</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\win32\glw_win.h">
+      <Filter>win32</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\win32\resource.h">
+      <Filter>win32</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\win32\wglext.h">
+      <Filter>win32</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\win32\win_local.h">
+      <Filter>win32</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\win32\windows.h">
+      <Filter>win32</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

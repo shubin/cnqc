@@ -638,15 +638,25 @@ static qbool LoadTGA( const char* name, byte** pic, int* w, int* h, GLenum* form
 ///////////////////////////////////////////////////////////////
 
 
+// The only memory allocation function pointers we can override are the ones exposed in jpeg_memory_mgr.
+// The problem is that it's the wrong layer for us: we want to replace malloc and free,
+// not change how the pooling of allocations works.
+// We are therefore re-implementing jmemnobs.c to use the engine's allocator.
 extern "C"
 {
 	#define JPEG_INTERNALS
-	#include "../jpeg-6/jpeglib.h"
+	#include "../libjpeg-turbo/jinclude.h"
+	#include "../libjpeg-turbo/jpeglib.h"
+	#include "../libjpeg-turbo/jmemsys.h"
 
 	void* jpeg_get_small( j_common_ptr cinfo, size_t sizeofobject ) { return (void*)ri.Malloc(sizeofobject); }
 	void jpeg_free_small( j_common_ptr cinfo, void* object, size_t sizeofobject ) { ri.Free(object); }
 	void* jpeg_get_large( j_common_ptr cinfo, size_t sizeofobject ) { return jpeg_get_small( cinfo, sizeofobject ); }
 	void jpeg_free_large( j_common_ptr cinfo, void* object, size_t sizeofobject ) { jpeg_free_small( cinfo, object, sizeofobject ); }
+	size_t jpeg_mem_available( j_common_ptr cinfo, size_t min_bytes_needed, size_t max_bytes_needed, size_t already_allocated ) { return max_bytes_needed; }
+	void jpeg_open_backing_store( j_common_ptr cinfo, backing_store_ptr info, long total_bytes_needed ) { ERREXIT(cinfo, JERR_NO_BACKING_STORE); }
+	long jpeg_mem_init( j_common_ptr cinfo) { return 0; }
+	void jpeg_mem_term( j_common_ptr cinfo) {}
 
 	void error_exit( j_common_ptr cinfo )
 	{
@@ -662,49 +672,50 @@ extern "C"
 		(*cinfo->err->format_message)(cinfo, buffer);
 		ri.Printf(PRINT_ALL, "%s\n", buffer);
 	}
-	typedef void (*jcallback)(j_common_ptr cinfo);
-
-	jcallback error_exit_ptr = &error_exit;
-	jcallback output_message_ptr = &output_message;
-
-	typedef void* (*jmem_get)( j_common_ptr cinfo, size_t sizeofobject );
-	typedef void (*jmem_free)( j_common_ptr cinfo, void* object, size_t sizeofobject );
-
-	jmem_get jpeg_get_small_ptr = &jpeg_get_small;
-	jmem_free jpeg_free_small_ptr = &jpeg_free_small;
-	jmem_get jpeg_get_large_ptr = &jpeg_get_large;
-	jmem_free jpeg_free_large_ptr = &jpeg_free_large;
 };
 
 
 static qbool LoadJPG( const char* name, byte** pic, int* w, int* h )
 {
-	struct jpeg_decompress_struct cinfo;
-	struct jpeg_error_mgr jerr;
+	jpeg_decompress_struct cinfo;
+	jpeg_error_mgr jerr;
 
 	cinfo.err = jpeg_std_error( &jerr );
+	cinfo.err->error_exit = &error_exit;
+	cinfo.err->output_message = &output_message;
+
 	jpeg_create_decompress( &cinfo );
 
 	byte* buffer;
-	int len = ri.FS_ReadFile( name, (void**)&buffer );
+	const int len = ri.FS_ReadFile( name, (void**)&buffer );
 	if (!buffer)
 		return qfalse;
 
-	jpeg_ram_src( &cinfo, buffer, len );
+	jpeg_mem_src( &cinfo, buffer, len );
 
 	jpeg_read_header( &cinfo, TRUE );
 	jpeg_start_decompress( &cinfo );
 
-	unsigned numBytes = cinfo.output_width * cinfo.output_height * 4;
+	const unsigned numBytes = cinfo.output_width * cinfo.output_height * 4;
 	*pic = (byte*)ri.Malloc(numBytes);
 	*w = cinfo.output_width;
 	*h = cinfo.output_height;
 
-	JSAMPROW row_pointer[1];
-	unsigned row_stride = cinfo.output_width * cinfo.output_components;
+	// We set JCS_EXT_RGBA to instruct libjpeg-turbo to always
+	// write the alpha value as 255.
+	cinfo.out_color_space = JCS_EXT_RGBA;
+	cinfo.output_components = 4;
+
+	// go for speed
+	cinfo.dither_mode = JDITHER_NONE;
+	cinfo.dct_method = JDCT_FASTEST;
+	cinfo.do_fancy_upsampling = FALSE;
+
+	const unsigned rowStride = cinfo.output_width * 4;
+	JSAMPROW rowPointer = *pic;
 	while (cinfo.output_scanline < cinfo.output_height) {
-		row_pointer[0] = *pic + (row_stride * cinfo.output_scanline);
-		jpeg_read_scanlines( &cinfo, row_pointer, 1 );
+		jpeg_read_scanlines( &cinfo, &rowPointer, 1 );
+		rowPointer += rowStride;
 	}
 
 	jpeg_finish_decompress( &cinfo );
@@ -715,119 +726,41 @@ static qbool LoadJPG( const char* name, byte** pic, int* w, int* h )
 }
 
 
-// custom destination object for memory output
-
-typedef struct {
-	struct jpeg_destination_mgr pub;
-	byte*	buffer;
-	int		size;
-	int		datacount;
-} my_destination_mgr;
-
-
-static void jpg_init_destination( j_compress_ptr cinfo )
-{
-	my_destination_mgr* dest = (my_destination_mgr*)cinfo->dest;
-	dest->pub.next_output_byte = dest->buffer;
-	dest->pub.free_in_buffer = dest->size;
-}
-
-
-static boolean jpg_empty_output_buffer( j_compress_ptr cinfo )
-{
-	return TRUE;
-}
-
-
-static void jpg_term_destination( j_compress_ptr cinfo )
-{
-	my_destination_mgr* dest = (my_destination_mgr*)cinfo->dest;
-	dest->datacount = dest->size - dest->pub.free_in_buffer;
-}
-
-
-static void jpg_set_destination( j_compress_ptr cinfo, byte* buffer, int size )
-{
-	if (!cinfo->dest) {
-		cinfo->dest = (struct jpeg_destination_mgr *)
-			(*cinfo->mem->alloc_small)( (j_common_ptr)cinfo, JPOOL_PERMANENT, sizeof(my_destination_mgr) );
-	}
-
-	my_destination_mgr* dest = (my_destination_mgr*)cinfo->dest;
-	dest->pub.init_destination = jpg_init_destination;
-	dest->pub.empty_output_buffer = jpg_empty_output_buffer;
-	dest->pub.term_destination = jpg_term_destination;
-	dest->buffer = buffer;
-	dest->size = size;
-}
-
-
-static void jpg_start_compress( j_compress_ptr cinfo )
-{
-	if (cinfo->global_state != CSTATE_START)
-		ERREXIT1( cinfo, JERR_BAD_STATE, cinfo->global_state );
-
-	jpeg_suppress_tables( cinfo, FALSE );
-
-	(*cinfo->err->reset_error_mgr)( (j_common_ptr)cinfo );
-	(*cinfo->dest->init_destination)( cinfo );
-
-	jinit_compress_master( cinfo );
-
-	(*cinfo->master->prepare_for_pass)( cinfo );
-	cinfo->next_scanline = 0;
-	cinfo->global_state = (cinfo->raw_data_in ? CSTATE_RAW_OK : CSTATE_SCANNING);
-
-	// libjpeg fails to do this automatically by deliberate poor design
-	if (cinfo->master->call_pass_startup)
-		(*cinfo->master->pass_startup)( cinfo );
-}
-
-
-static JDIMENSION jpg_write_scanlines( j_compress_ptr cinfo, JSAMPARRAY scanlines, JDIMENSION num_lines )
-{
-	if (cinfo->global_state != CSTATE_SCANNING)
-		ERREXIT1( cinfo, JERR_BAD_STATE, cinfo->global_state );
-	if (cinfo->next_scanline >= cinfo->image_height)
-		ERREXIT( cinfo, JWRN_TOO_MUCH_DATA );
-
-	JDIMENSION row_ctr = 0;
-	(*cinfo->main->process_data)( cinfo, scanlines, &row_ctr, num_lines );
-	cinfo->next_scanline += row_ctr;
-	return row_ctr;
-}
-
-
 int SaveJPGToBuffer( byte* out, int quality, int image_width, int image_height, byte* image_buffer )
 {
-	struct jpeg_compress_struct cinfo;
-	struct jpeg_error_mgr jerr;
+	jpeg_compress_struct cinfo;
+	jpeg_error_mgr jerr;
 
 	cinfo.err = jpeg_std_error( &jerr );
+	cinfo.err->error_exit = &error_exit;
+	cinfo.err->output_message = &output_message;
 	jpeg_create_compress( &cinfo );
 
-	jpg_set_destination( &cinfo, out, image_width * image_height * 4 );
+	// jpeg_mem_dest only calls malloc if both outSize and outBuffer are 0
+	unsigned long outSize = image_width * image_height * 4;
+	unsigned char* outBuffer = out;
+	jpeg_mem_dest( &cinfo, &outBuffer, &outSize );
 
 	cinfo.image_width = image_width;
 	cinfo.image_height = image_height;
 	cinfo.input_components = 4;
-	cinfo.in_color_space = JCS_RGB;
+	cinfo.in_color_space = JCS_EXT_RGBA;
 
 	jpeg_set_defaults( &cinfo );
 	jpeg_set_quality( &cinfo, quality, TRUE );
 
-	jpg_start_compress( &cinfo );
+	jpeg_start_compress( &cinfo, TRUE );
 
-	JSAMPROW row_pointer[1];
-	unsigned row_stride = image_width * cinfo.input_components;
+	const unsigned rowStride = image_width * 4;
+	JSAMPROW rowPointer = image_buffer + (cinfo.image_height - 1) * rowStride;
 	while (cinfo.next_scanline < cinfo.image_height) {
-		row_pointer[0] = & image_buffer[((cinfo.image_height-1)*row_stride)-cinfo.next_scanline * row_stride];
-		jpg_write_scanlines( &cinfo, row_pointer, 1 );
+		jpeg_write_scanlines( &cinfo, &rowPointer, 1 );
+		rowPointer -= rowStride;
 	}
 
 	jpeg_finish_compress( &cinfo );
 
-	int csize = ((my_destination_mgr*)cinfo.dest)->datacount;
+	const int csize = (int)(cinfo.dest->next_output_byte - outBuffer);
 
 	jpeg_destroy_compress( &cinfo );
 

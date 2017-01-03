@@ -167,17 +167,6 @@ copy "..\..\..\.bin\release\cnq3.pdb" "$(QUAKE3DIR)"</Command>
     <ClInclude Include="..\..\code\client\snd_local.h" />
     <ClInclude Include="..\..\code\client\snd_public.h" />
     <ClInclude Include="..\..\code\game\bg_public.h" />
-    <ClInclude Include="..\..\code\jpeg-6\jchuff.h" />
-    <ClInclude Include="..\..\code\jpeg-6\jconfig.h" />
-    <ClInclude Include="..\..\code\jpeg-6\jdct.h" />
-    <ClInclude Include="..\..\code\jpeg-6\jdhuff.h" />
-    <ClInclude Include="..\..\code\jpeg-6\jerror.h" />
-    <ClInclude Include="..\..\code\jpeg-6\jinclude.h" />
-    <ClInclude Include="..\..\code\jpeg-6\jmemsys.h" />
-    <ClInclude Include="..\..\code\jpeg-6\jmorecfg.h" />
-    <ClInclude Include="..\..\code\jpeg-6\jpegint.h" />
-    <ClInclude Include="..\..\code\jpeg-6\jpeglib.h" />
-    <ClInclude Include="..\..\code\jpeg-6\jversion.h" />
     <ClInclude Include="..\..\code\qcommon\cg_public.h" />
     <ClInclude Include="..\..\code\qcommon\cm_local.h" />
     <ClInclude Include="..\..\code\qcommon\cm_patch.h" />
@@ -200,6 +189,12 @@ copy "..\..\..\.bin\release\cnq3.pdb" "$(QUAKE3DIR)"</Command>
     <ClInclude Include="..\..\code\renderer\tr_local.h" />
     <ClInclude Include="..\..\code\renderer\tr_public.h" />
     <ClInclude Include="..\..\code\server\server.h" />
+    <ClInclude Include="..\..\code\win32\glext.h" />
+    <ClInclude Include="..\..\code\win32\glw_win.h" />
+    <ClInclude Include="..\..\code\win32\resource.h" />
+    <ClInclude Include="..\..\code\win32\wglext.h" />
+    <ClInclude Include="..\..\code\win32\win_local.h" />
+    <ClInclude Include="..\..\code\win32\windows.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\code\client\cl_avi.cpp" />
@@ -269,6 +264,9 @@ copy "..\..\..\.bin\release\cnq3.pdb" "$(QUAKE3DIR)"</Command>
     </ProjectReference>
     <ProjectReference Include="freetype.vcxproj">
       <Project>{89895BD8-7556-B6E3-9E6F-A48B8A9BEB71}</Project>
+    </ProjectReference>
+    <ProjectReference Include="libjpeg-turbo.vcxproj">
+      <Project>{DB56484D-4717-C483-1052-0D017CD10860}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

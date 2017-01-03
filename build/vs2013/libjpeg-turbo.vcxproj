@@ -1,0 +1,239 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="debug|Win32">
+      <Configuration>debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="release|Win32">
+      <Configuration>release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{DB56484D-4717-C483-1052-0D017CD10860}</ProjectGuid>
+    <IgnoreWarnCompileDuplicatedFilename>true</IgnoreWarnCompileDuplicatedFilename>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>libjpeg-turbo</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">
+    <OutDir>..\..\..\.bin\debug\</OutDir>
+    <IntDir>obj\x32\debug\libjpeg-turbo\</IntDir>
+    <TargetName>libjpeg-turbo</TargetName>
+    <TargetExt>.lib</TargetExt>
+    <GenerateManifest>false</GenerateManifest>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='release|Win32'">
+    <OutDir>..\..\..\.bin\release\</OutDir>
+    <IntDir>obj\x32\release\libjpeg-turbo\</IntDir>
+    <TargetName>libjpeg-turbo</TargetName>
+    <TargetExt>.lib</TargetExt>
+    <GenerateManifest>false</GenerateManifest>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>WITH_SIMD;SIZEOF_SIZE_T=4;DEBUG;_DEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\code\libjpeg-turbo;..\..\code\libjpeg-turbo\simd;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <Optimization>Disabled</Optimization>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <ExceptionHandling>false</ExceptionHandling>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
+      <AdditionalOptions>/Gm %(AdditionalOptions)</AdditionalOptions>
+      <CompileAs>CompileAsC</CompileAs>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <Lib>
+      <AdditionalOptions>..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jsimdcpu.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jfdctflt-3dn.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctflt-3dn.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jquant-3dn.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jccolor-mmx.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jcgray-mmx.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jcsample-mmx.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jdcolor-mmx.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jdmerge-mmx.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jdsample-mmx.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jfdctfst-mmx.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jfdctint-mmx.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctfst-mmx.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctint-mmx.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctred-mmx.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jquant-mmx.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jfdctflt-sse.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctflt-sse.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jquant-sse.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jccolor-sse2.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jcgray-sse2.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jchuff-sse2.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jcsample-sse2.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jdcolor-sse2.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jdmerge-sse2.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jdsample-sse2.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jfdctfst-sse2.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jfdctint-sse2.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctflt-sse2.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctfst-sse2.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctint-sse2.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctred-sse2.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jquantf-sse2.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jquanti-sse2.obj  %(AdditionalOptions)</AdditionalOptions>
+    </Lib>
+    <PreBuildEvent>
+      <Command>if not exist "..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\" mkdir "..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\"
+echo jsimdcpu.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jsimdcpu.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jsimdcpu.asm 
+echo jfdctflt-3dn.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jfdctflt-3dn.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jfdctflt-3dn.asm 
+echo jidctflt-3dn.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctflt-3dn.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jidctflt-3dn.asm 
+echo jquant-3dn.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jquant-3dn.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jquant-3dn.asm 
+echo jccolor-mmx.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jccolor-mmx.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jccolor-mmx.asm 
+echo jcgray-mmx.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jcgray-mmx.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jcgray-mmx.asm 
+echo jcsample-mmx.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jcsample-mmx.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jcsample-mmx.asm 
+echo jdcolor-mmx.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jdcolor-mmx.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jdcolor-mmx.asm 
+echo jdmerge-mmx.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jdmerge-mmx.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jdmerge-mmx.asm 
+echo jdsample-mmx.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jdsample-mmx.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jdsample-mmx.asm 
+echo jfdctfst-mmx.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jfdctfst-mmx.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jfdctfst-mmx.asm 
+echo jfdctint-mmx.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jfdctint-mmx.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jfdctint-mmx.asm 
+echo jidctfst-mmx.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctfst-mmx.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jidctfst-mmx.asm 
+echo jidctint-mmx.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctint-mmx.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jidctint-mmx.asm 
+echo jidctred-mmx.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctred-mmx.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jidctred-mmx.asm 
+echo jquant-mmx.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jquant-mmx.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jquant-mmx.asm 
+echo jfdctflt-sse.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jfdctflt-sse.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jfdctflt-sse.asm 
+echo jidctflt-sse.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctflt-sse.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jidctflt-sse.asm 
+echo jquant-sse.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jquant-sse.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jquant-sse.asm 
+echo jccolor-sse2.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jccolor-sse2.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jccolor-sse2.asm 
+echo jcgray-sse2.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jcgray-sse2.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jcgray-sse2.asm 
+echo jchuff-sse2.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jchuff-sse2.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jchuff-sse2.asm 
+echo jcsample-sse2.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jcsample-sse2.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jcsample-sse2.asm 
+echo jdcolor-sse2.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jdcolor-sse2.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jdcolor-sse2.asm 
+echo jdmerge-sse2.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jdmerge-sse2.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jdmerge-sse2.asm 
+echo jdsample-sse2.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jdsample-sse2.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jdsample-sse2.asm 
+echo jfdctfst-sse2.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jfdctfst-sse2.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jfdctfst-sse2.asm 
+echo jfdctint-sse2.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jfdctint-sse2.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jfdctint-sse2.asm 
+echo jidctflt-sse2.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctflt-sse2.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jidctflt-sse2.asm 
+echo jidctfst-sse2.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctfst-sse2.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jidctfst-sse2.asm 
+echo jidctint-sse2.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctint-sse2.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jidctint-sse2.asm 
+echo jidctred-sse2.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctred-sse2.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jidctred-sse2.asm 
+echo jquantf-sse2.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jquantf-sse2.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jquantf-sse2.asm 
+echo jquanti-sse2.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jquanti-sse2.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jquanti-sse2.asm </Command>
+    </PreBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <PreprocessorDefinitions>WITH_SIMD;SIZEOF_SIZE_T=4;NDEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\code\libjpeg-turbo;..\..\code\libjpeg-turbo\simd;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <Optimization>MinSpace</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <OmitFramePointers>true</OmitFramePointers>
+      <StringPooling>true</StringPooling>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <ExceptionHandling>false</ExceptionHandling>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <AdditionalOptions>/GL %(AdditionalOptions)</AdditionalOptions>
+      <CompileAs>CompileAsC</CompileAs>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+    <Lib>
+      <AdditionalOptions>..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jsimdcpu.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jfdctflt-3dn.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctflt-3dn.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jquant-3dn.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jccolor-mmx.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jcgray-mmx.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jcsample-mmx.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jdcolor-mmx.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jdmerge-mmx.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jdsample-mmx.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jfdctfst-mmx.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jfdctint-mmx.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctfst-mmx.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctint-mmx.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctred-mmx.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jquant-mmx.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jfdctflt-sse.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctflt-sse.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jquant-sse.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jccolor-sse2.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jcgray-sse2.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jchuff-sse2.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jcsample-sse2.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jdcolor-sse2.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jdmerge-sse2.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jdsample-sse2.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jfdctfst-sse2.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jfdctint-sse2.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctflt-sse2.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctfst-sse2.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctint-sse2.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctred-sse2.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jquantf-sse2.obj ..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jquanti-sse2.obj  %(AdditionalOptions)</AdditionalOptions>
+    </Lib>
+    <PreBuildEvent>
+      <Command>if not exist "..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\" mkdir "..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\"
+echo jsimdcpu.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jsimdcpu.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jsimdcpu.asm 
+echo jfdctflt-3dn.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jfdctflt-3dn.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jfdctflt-3dn.asm 
+echo jidctflt-3dn.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctflt-3dn.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jidctflt-3dn.asm 
+echo jquant-3dn.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jquant-3dn.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jquant-3dn.asm 
+echo jccolor-mmx.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jccolor-mmx.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jccolor-mmx.asm 
+echo jcgray-mmx.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jcgray-mmx.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jcgray-mmx.asm 
+echo jcsample-mmx.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jcsample-mmx.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jcsample-mmx.asm 
+echo jdcolor-mmx.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jdcolor-mmx.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jdcolor-mmx.asm 
+echo jdmerge-mmx.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jdmerge-mmx.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jdmerge-mmx.asm 
+echo jdsample-mmx.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jdsample-mmx.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jdsample-mmx.asm 
+echo jfdctfst-mmx.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jfdctfst-mmx.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jfdctfst-mmx.asm 
+echo jfdctint-mmx.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jfdctint-mmx.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jfdctint-mmx.asm 
+echo jidctfst-mmx.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctfst-mmx.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jidctfst-mmx.asm 
+echo jidctint-mmx.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctint-mmx.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jidctint-mmx.asm 
+echo jidctred-mmx.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctred-mmx.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jidctred-mmx.asm 
+echo jquant-mmx.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jquant-mmx.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jquant-mmx.asm 
+echo jfdctflt-sse.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jfdctflt-sse.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jfdctflt-sse.asm 
+echo jidctflt-sse.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctflt-sse.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jidctflt-sse.asm 
+echo jquant-sse.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jquant-sse.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jquant-sse.asm 
+echo jccolor-sse2.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jccolor-sse2.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jccolor-sse2.asm 
+echo jcgray-sse2.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jcgray-sse2.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jcgray-sse2.asm 
+echo jchuff-sse2.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jchuff-sse2.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jchuff-sse2.asm 
+echo jcsample-sse2.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jcsample-sse2.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jcsample-sse2.asm 
+echo jdcolor-sse2.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jdcolor-sse2.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jdcolor-sse2.asm 
+echo jdmerge-sse2.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jdmerge-sse2.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jdmerge-sse2.asm 
+echo jdsample-sse2.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jdsample-sse2.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jdsample-sse2.asm 
+echo jfdctfst-sse2.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jfdctfst-sse2.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jfdctfst-sse2.asm 
+echo jfdctint-sse2.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jfdctint-sse2.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jfdctint-sse2.asm 
+echo jidctflt-sse2.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctflt-sse2.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jidctflt-sse2.asm 
+echo jidctfst-sse2.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctfst-sse2.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jidctfst-sse2.asm 
+echo jidctint-sse2.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctint-sse2.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jidctint-sse2.asm 
+echo jidctred-sse2.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jidctred-sse2.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jidctred-sse2.asm 
+echo jquantf-sse2.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jquantf-sse2.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jquantf-sse2.asm 
+echo jquanti-sse2.asm &amp;&amp; nasm -o..\..\..\cnq3\build\nasm\libjpeg-turbo\win32\jquanti-sse2.obj -fwin32 -DWIN32 -I..\..\..\cnq3\code\libjpeg-turbo\ -I..\..\..\cnq3\code\libjpeg-turbo\win\ -I..\..\..\cnq3\code\libjpeg-turbo\simd\ ../../../cnq3/code/libjpeg-turbo/simd/jquanti-sse2.asm </Command>
+    </PreBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\code\libjpeg-turbo\jcapimin.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jcapistd.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jccoefct.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jccolor.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jcdctmgr.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jchuff.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jcinit.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jcmainct.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jcmarker.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jcmaster.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jcomapi.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jcparam.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jcphuff.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jcprepct.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jcsample.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jctrans.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jdapimin.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jdapistd.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jdatadst.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jdatasrc.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jdcoefct.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jdcolor.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jddctmgr.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jdhuff.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jdinput.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jdmainct.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jdmarker.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jdmaster.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jdmerge.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jdphuff.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jdpostct.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jdsample.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jdtrans.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jerror.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jfdctflt.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jfdctfst.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jfdctint.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jidctflt.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jidctfst.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jidctint.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jidctred.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jmemmgr.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jquant1.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jquant2.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jutils.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\simd\jsimd_i386.c" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

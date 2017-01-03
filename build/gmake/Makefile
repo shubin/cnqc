@@ -15,6 +15,7 @@ ifeq ($(config),debug_x32)
   cnq3_server_config = debug_x32
   botlib_config = debug_x32
   renderer_config = debug_x32
+  libjpeg_turbo_config = debug_x32
   freetype_config = debug_x32
 endif
 ifeq ($(config),release_x32)
@@ -22,16 +23,17 @@ ifeq ($(config),release_x32)
   cnq3_server_config = release_x32
   botlib_config = release_x32
   renderer_config = release_x32
+  libjpeg_turbo_config = release_x32
   freetype_config = release_x32
 endif
 
-PROJECTS := cnq3 cnq3-server botlib renderer freetype
+PROJECTS := cnq3 cnq3-server botlib renderer libjpeg-turbo freetype
 
 .PHONY: all clean help $(PROJECTS) 
 
 all: $(PROJECTS)
 
-cnq3: botlib renderer freetype
+cnq3: botlib renderer freetype libjpeg-turbo
 ifneq (,$(cnq3_config))
 	@echo "==== Building cnq3 ($(cnq3_config)) ===="
 	@${MAKE} --no-print-directory -C . -f cnq3.make config=$(cnq3_config)
@@ -55,6 +57,12 @@ ifneq (,$(renderer_config))
 	@${MAKE} --no-print-directory -C . -f renderer.make config=$(renderer_config)
 endif
 
+libjpeg-turbo:
+ifneq (,$(libjpeg_turbo_config))
+	@echo "==== Building libjpeg-turbo ($(libjpeg_turbo_config)) ===="
+	@${MAKE} --no-print-directory -C . -f libjpeg-turbo.make config=$(libjpeg_turbo_config)
+endif
+
 freetype:
 ifneq (,$(freetype_config))
 	@echo "==== Building freetype ($(freetype_config)) ===="
@@ -66,6 +74,7 @@ clean:
 	@${MAKE} --no-print-directory -C . -f cnq3-server.make clean
 	@${MAKE} --no-print-directory -C . -f botlib.make clean
 	@${MAKE} --no-print-directory -C . -f renderer.make clean
+	@${MAKE} --no-print-directory -C . -f libjpeg-turbo.make clean
 	@${MAKE} --no-print-directory -C . -f freetype.make clean
 
 help:
@@ -82,6 +91,7 @@ help:
 	@echo "   cnq3-server"
 	@echo "   botlib"
 	@echo "   renderer"
+	@echo "   libjpeg-turbo"
 	@echo "   freetype"
 	@echo ""
 	@echo "For more information, see http://industriousone.com/premake/quick-start"
