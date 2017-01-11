@@ -345,11 +345,6 @@ const char* Sys_DefaultHomePath()
 
 //============================================
 
-int Sys_GetProcessorId()
-{
-	return CPUID_GENERIC;
-}
-
 void Sys_ShowConsole( int visLevel, qboolean quitOnClose )
 {
 }
@@ -363,13 +358,3 @@ const char* Sys_GetCurrentUser()
 
 	return p->pw_name;
 }
-
-
-#if defined(__linux__) || defined(__FreeBSD__)
-// TTimo 
-// sysconf() in libc, POSIX.1 compliant
-unsigned int Sys_ProcessorCount(void)
-{
-  return sysconf(_SC_NPROCESSORS_ONLN);
-}
-#endif

@@ -12,7 +12,7 @@ endif
 
 ifeq ($(config),debug_x32)
   RESCOMP = windres
-  TARGETDIR = ../../../.bin/debug
+  TARGETDIR = ../../../.bin/debug_x32
   TARGET = $(TARGETDIR)/liblibjpeg-turbo.a
   OBJDIR = obj/x32/debug/libjpeg-turbo
   DEFINES += -DWITH_SIMD -DSIZEOF_SIZE_T=4 -DDEBUG -D_DEBUG
@@ -24,45 +24,36 @@ ifeq ($(config),debug_x32)
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
   LIBS +=
   LDDEPS +=
-  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -L../../../.bin/debug -m32 
+  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -L../../../.bin/debug_x32 -m32 
   LINKCMD = $(AR) -rcs "$@" $(OBJECTS)
   define PREBUILDCMDS
-	@echo Running prebuild commands
-	mkdir -p ../../../cnq3/build/nasm/libjpeg-turbo/elf32
-	echo jsimdcpu.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jsimdcpu.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jsimdcpu.asm 
-	echo jfdctflt-3dn.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jfdctflt-3dn.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jfdctflt-3dn.asm 
-	echo jidctflt-3dn.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctflt-3dn.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jidctflt-3dn.asm 
-	echo jquant-3dn.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jquant-3dn.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jquant-3dn.asm 
-	echo jccolor-mmx.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jccolor-mmx.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jccolor-mmx.asm 
-	echo jcgray-mmx.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jcgray-mmx.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jcgray-mmx.asm 
-	echo jcsample-mmx.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jcsample-mmx.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jcsample-mmx.asm 
-	echo jdcolor-mmx.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jdcolor-mmx.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jdcolor-mmx.asm 
-	echo jdmerge-mmx.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jdmerge-mmx.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jdmerge-mmx.asm 
-	echo jdsample-mmx.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jdsample-mmx.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jdsample-mmx.asm 
-	echo jfdctfst-mmx.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jfdctfst-mmx.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jfdctfst-mmx.asm 
-	echo jfdctint-mmx.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jfdctint-mmx.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jfdctint-mmx.asm 
-	echo jidctfst-mmx.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctfst-mmx.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jidctfst-mmx.asm 
-	echo jidctint-mmx.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctint-mmx.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jidctint-mmx.asm 
-	echo jidctred-mmx.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctred-mmx.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jidctred-mmx.asm 
-	echo jquant-mmx.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jquant-mmx.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jquant-mmx.asm 
-	echo jfdctflt-sse.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jfdctflt-sse.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jfdctflt-sse.asm 
-	echo jidctflt-sse.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctflt-sse.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jidctflt-sse.asm 
-	echo jquant-sse.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jquant-sse.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jquant-sse.asm 
-	echo jccolor-sse2.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jccolor-sse2.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jccolor-sse2.asm 
-	echo jcgray-sse2.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jcgray-sse2.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jcgray-sse2.asm 
-	echo jchuff-sse2.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jchuff-sse2.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jchuff-sse2.asm 
-	echo jcsample-sse2.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jcsample-sse2.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jcsample-sse2.asm 
-	echo jdcolor-sse2.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jdcolor-sse2.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jdcolor-sse2.asm 
-	echo jdmerge-sse2.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jdmerge-sse2.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jdmerge-sse2.asm 
-	echo jdsample-sse2.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jdsample-sse2.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jdsample-sse2.asm 
-	echo jfdctfst-sse2.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jfdctfst-sse2.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jfdctfst-sse2.asm 
-	echo jfdctint-sse2.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jfdctint-sse2.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jfdctint-sse2.asm 
-	echo jidctflt-sse2.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctflt-sse2.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jidctflt-sse2.asm 
-	echo jidctfst-sse2.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctfst-sse2.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jidctfst-sse2.asm 
-	echo jidctint-sse2.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctint-sse2.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jidctint-sse2.asm 
-	echo jidctred-sse2.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctred-sse2.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jidctred-sse2.asm 
-	echo jquantf-sse2.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jquantf-sse2.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jquantf-sse2.asm 
-	echo jquanti-sse2.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jquanti-sse2.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jquanti-sse2.asm 
+  endef
+  define PRELINKCMDS
+  endef
+  define POSTBUILDCMDS
+  endef
+all: $(TARGETDIR) $(OBJDIR) prebuild prelink $(TARGET)
+	@:
+
+endif
+
+ifeq ($(config),debug_x64)
+  RESCOMP = windres
+  TARGETDIR = ../../../.bin/debug_x64
+  TARGET = $(TARGETDIR)/liblibjpeg-turbo.a
+  OBJDIR = obj/x64/debug/libjpeg-turbo
+  DEFINES += -DWITH_SIMD -DSIZEOF_SIZE_T=8 -DDEBUG -D_DEBUG
+  INCLUDES += -I../../code/libjpeg-turbo -I../../code/libjpeg-turbo/simd
+  FORCE_INCLUDE +=
+  ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
+  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g -Wno-unused-parameter -Wno-write-strings
+  ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CFLAGS) -fno-exceptions -fno-rtti
+  ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
+  LIBS +=
+  LDDEPS +=
+  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib64 -L../../../.bin/debug_x64 -m64 
+  LINKCMD = $(AR) -rcs "$@" $(OBJECTS)
+  define PREBUILDCMDS
   endef
   define PRELINKCMDS
   endef
@@ -75,7 +66,7 @@ endif
 
 ifeq ($(config),release_x32)
   RESCOMP = windres
-  TARGETDIR = ../../../.bin/release
+  TARGETDIR = ../../../.bin/release_x32
   TARGET = $(TARGETDIR)/liblibjpeg-turbo.a
   OBJDIR = obj/x32/release/libjpeg-turbo
   DEFINES += -DWITH_SIMD -DSIZEOF_SIZE_T=4 -DNDEBUG
@@ -87,45 +78,36 @@ ifeq ($(config),release_x32)
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
   LIBS +=
   LDDEPS +=
-  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -L../../../.bin/release -m32 
+  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -L../../../.bin/release_x32 -m32 
   LINKCMD = $(AR) -rcs "$@" $(OBJECTS)
   define PREBUILDCMDS
-	@echo Running prebuild commands
-	mkdir -p ../../../cnq3/build/nasm/libjpeg-turbo/elf32
-	echo jsimdcpu.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jsimdcpu.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jsimdcpu.asm 
-	echo jfdctflt-3dn.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jfdctflt-3dn.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jfdctflt-3dn.asm 
-	echo jidctflt-3dn.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctflt-3dn.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jidctflt-3dn.asm 
-	echo jquant-3dn.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jquant-3dn.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jquant-3dn.asm 
-	echo jccolor-mmx.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jccolor-mmx.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jccolor-mmx.asm 
-	echo jcgray-mmx.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jcgray-mmx.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jcgray-mmx.asm 
-	echo jcsample-mmx.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jcsample-mmx.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jcsample-mmx.asm 
-	echo jdcolor-mmx.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jdcolor-mmx.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jdcolor-mmx.asm 
-	echo jdmerge-mmx.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jdmerge-mmx.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jdmerge-mmx.asm 
-	echo jdsample-mmx.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jdsample-mmx.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jdsample-mmx.asm 
-	echo jfdctfst-mmx.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jfdctfst-mmx.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jfdctfst-mmx.asm 
-	echo jfdctint-mmx.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jfdctint-mmx.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jfdctint-mmx.asm 
-	echo jidctfst-mmx.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctfst-mmx.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jidctfst-mmx.asm 
-	echo jidctint-mmx.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctint-mmx.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jidctint-mmx.asm 
-	echo jidctred-mmx.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctred-mmx.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jidctred-mmx.asm 
-	echo jquant-mmx.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jquant-mmx.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jquant-mmx.asm 
-	echo jfdctflt-sse.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jfdctflt-sse.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jfdctflt-sse.asm 
-	echo jidctflt-sse.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctflt-sse.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jidctflt-sse.asm 
-	echo jquant-sse.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jquant-sse.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jquant-sse.asm 
-	echo jccolor-sse2.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jccolor-sse2.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jccolor-sse2.asm 
-	echo jcgray-sse2.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jcgray-sse2.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jcgray-sse2.asm 
-	echo jchuff-sse2.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jchuff-sse2.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jchuff-sse2.asm 
-	echo jcsample-sse2.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jcsample-sse2.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jcsample-sse2.asm 
-	echo jdcolor-sse2.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jdcolor-sse2.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jdcolor-sse2.asm 
-	echo jdmerge-sse2.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jdmerge-sse2.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jdmerge-sse2.asm 
-	echo jdsample-sse2.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jdsample-sse2.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jdsample-sse2.asm 
-	echo jfdctfst-sse2.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jfdctfst-sse2.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jfdctfst-sse2.asm 
-	echo jfdctint-sse2.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jfdctint-sse2.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jfdctint-sse2.asm 
-	echo jidctflt-sse2.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctflt-sse2.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jidctflt-sse2.asm 
-	echo jidctfst-sse2.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctfst-sse2.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jidctfst-sse2.asm 
-	echo jidctint-sse2.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctint-sse2.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jidctint-sse2.asm 
-	echo jidctred-sse2.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctred-sse2.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jidctred-sse2.asm 
-	echo jquantf-sse2.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jquantf-sse2.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jquantf-sse2.asm 
-	echo jquanti-sse2.asm && nasm -o../../../cnq3/build/nasm/libjpeg-turbo/elf32/jquanti-sse2.obj -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../../cnq3/code/libjpeg-turbo/simd/jquanti-sse2.asm 
+  endef
+  define PRELINKCMDS
+  endef
+  define POSTBUILDCMDS
+  endef
+all: $(TARGETDIR) $(OBJDIR) prebuild prelink $(TARGET)
+	@:
+
+endif
+
+ifeq ($(config),release_x64)
+  RESCOMP = windres
+  TARGETDIR = ../../../.bin/release_x64
+  TARGET = $(TARGETDIR)/liblibjpeg-turbo.a
+  OBJDIR = obj/x64/release/libjpeg-turbo
+  DEFINES += -DWITH_SIMD -DSIZEOF_SIZE_T=8 -DNDEBUG
+  INCLUDES += -I../../code/libjpeg-turbo -I../../code/libjpeg-turbo/simd
+  FORCE_INCLUDE +=
+  ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
+  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -fomit-frame-pointer -ffast-math -Os -g -msse2 -Wno-unused-parameter -Wno-write-strings -g1
+  ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CFLAGS) -fno-exceptions -fno-rtti
+  ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
+  LIBS +=
+  LDDEPS +=
+  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib64 -L../../../.bin/release_x64 -m64 
+  LINKCMD = $(AR) -rcs "$@" $(OBJECTS)
+  define PREBUILDCMDS
   endef
   define PRELINKCMDS
   endef
@@ -182,11 +164,134 @@ OBJECTS := \
 	$(OBJDIR)/jquant1.o \
 	$(OBJDIR)/jquant2.o \
 	$(OBJDIR)/jutils.o \
-	$(OBJDIR)/jsimd_i386.o \
 
 RESOURCES := \
 
 CUSTOMFILES := \
+
+ifeq ($(config),debug_x32)
+  OBJECTS += \
+	../../../.bin/debug_x32/jccolor-mmx.o \
+	../../../.bin/debug_x32/jccolor-sse2.o \
+	../../../.bin/debug_x32/jcgray-mmx.o \
+	../../../.bin/debug_x32/jcgray-sse2.o \
+	../../../.bin/debug_x32/jchuff-sse2.o \
+	../../../.bin/debug_x32/jcsample-mmx.o \
+	../../../.bin/debug_x32/jcsample-sse2.o \
+	../../../.bin/debug_x32/jdcolor-mmx.o \
+	../../../.bin/debug_x32/jdcolor-sse2.o \
+	../../../.bin/debug_x32/jdmerge-mmx.o \
+	../../../.bin/debug_x32/jdmerge-sse2.o \
+	../../../.bin/debug_x32/jdsample-mmx.o \
+	../../../.bin/debug_x32/jdsample-sse2.o \
+	../../../.bin/debug_x32/jfdctflt-3dn.o \
+	../../../.bin/debug_x32/jfdctflt-sse.o \
+	../../../.bin/debug_x32/jfdctfst-mmx.o \
+	../../../.bin/debug_x32/jfdctfst-sse2.o \
+	../../../.bin/debug_x32/jfdctint-mmx.o \
+	../../../.bin/debug_x32/jfdctint-sse2.o \
+	../../../.bin/debug_x32/jidctflt-3dn.o \
+	../../../.bin/debug_x32/jidctflt-sse.o \
+	../../../.bin/debug_x32/jidctflt-sse2.o \
+	../../../.bin/debug_x32/jidctfst-mmx.o \
+	../../../.bin/debug_x32/jidctfst-sse2.o \
+	../../../.bin/debug_x32/jidctint-mmx.o \
+	../../../.bin/debug_x32/jidctint-sse2.o \
+	../../../.bin/debug_x32/jidctred-mmx.o \
+	../../../.bin/debug_x32/jidctred-sse2.o \
+	../../../.bin/debug_x32/jquant-3dn.o \
+	../../../.bin/debug_x32/jquant-mmx.o \
+	../../../.bin/debug_x32/jquant-sse.o \
+	../../../.bin/debug_x32/jquantf-sse2.o \
+	../../../.bin/debug_x32/jquanti-sse2.o \
+	$(OBJDIR)/jsimd_i386.o \
+	../../../.bin/debug_x32/jsimdcpu.o \
+
+endif
+
+ifeq ($(config),debug_x64)
+  OBJECTS += \
+	../../../.bin/debug_x64/jccolor-sse2-64.o \
+	../../../.bin/debug_x64/jcgray-sse2-64.o \
+	../../../.bin/debug_x64/jchuff-sse2-64.o \
+	../../../.bin/debug_x64/jcsample-sse2-64.o \
+	../../../.bin/debug_x64/jdcolor-sse2-64.o \
+	../../../.bin/debug_x64/jdmerge-sse2-64.o \
+	../../../.bin/debug_x64/jdsample-sse2-64.o \
+	../../../.bin/debug_x64/jfdctflt-sse-64.o \
+	../../../.bin/debug_x64/jfdctfst-sse2-64.o \
+	../../../.bin/debug_x64/jfdctint-sse2-64.o \
+	../../../.bin/debug_x64/jidctflt-sse2-64.o \
+	../../../.bin/debug_x64/jidctfst-sse2-64.o \
+	../../../.bin/debug_x64/jidctint-sse2-64.o \
+	../../../.bin/debug_x64/jidctred-sse2-64.o \
+	../../../.bin/debug_x64/jquantf-sse2-64.o \
+	../../../.bin/debug_x64/jquanti-sse2-64.o \
+	$(OBJDIR)/jsimd_x86_64.o \
+
+endif
+
+ifeq ($(config),release_x32)
+  OBJECTS += \
+	../../../.bin/release_x32/jccolor-mmx.o \
+	../../../.bin/release_x32/jccolor-sse2.o \
+	../../../.bin/release_x32/jcgray-mmx.o \
+	../../../.bin/release_x32/jcgray-sse2.o \
+	../../../.bin/release_x32/jchuff-sse2.o \
+	../../../.bin/release_x32/jcsample-mmx.o \
+	../../../.bin/release_x32/jcsample-sse2.o \
+	../../../.bin/release_x32/jdcolor-mmx.o \
+	../../../.bin/release_x32/jdcolor-sse2.o \
+	../../../.bin/release_x32/jdmerge-mmx.o \
+	../../../.bin/release_x32/jdmerge-sse2.o \
+	../../../.bin/release_x32/jdsample-mmx.o \
+	../../../.bin/release_x32/jdsample-sse2.o \
+	../../../.bin/release_x32/jfdctflt-3dn.o \
+	../../../.bin/release_x32/jfdctflt-sse.o \
+	../../../.bin/release_x32/jfdctfst-mmx.o \
+	../../../.bin/release_x32/jfdctfst-sse2.o \
+	../../../.bin/release_x32/jfdctint-mmx.o \
+	../../../.bin/release_x32/jfdctint-sse2.o \
+	../../../.bin/release_x32/jidctflt-3dn.o \
+	../../../.bin/release_x32/jidctflt-sse.o \
+	../../../.bin/release_x32/jidctflt-sse2.o \
+	../../../.bin/release_x32/jidctfst-mmx.o \
+	../../../.bin/release_x32/jidctfst-sse2.o \
+	../../../.bin/release_x32/jidctint-mmx.o \
+	../../../.bin/release_x32/jidctint-sse2.o \
+	../../../.bin/release_x32/jidctred-mmx.o \
+	../../../.bin/release_x32/jidctred-sse2.o \
+	../../../.bin/release_x32/jquant-3dn.o \
+	../../../.bin/release_x32/jquant-mmx.o \
+	../../../.bin/release_x32/jquant-sse.o \
+	../../../.bin/release_x32/jquantf-sse2.o \
+	../../../.bin/release_x32/jquanti-sse2.o \
+	$(OBJDIR)/jsimd_i386.o \
+	../../../.bin/release_x32/jsimdcpu.o \
+
+endif
+
+ifeq ($(config),release_x64)
+  OBJECTS += \
+	../../../.bin/release_x64/jccolor-sse2-64.o \
+	../../../.bin/release_x64/jcgray-sse2-64.o \
+	../../../.bin/release_x64/jchuff-sse2-64.o \
+	../../../.bin/release_x64/jcsample-sse2-64.o \
+	../../../.bin/release_x64/jdcolor-sse2-64.o \
+	../../../.bin/release_x64/jdmerge-sse2-64.o \
+	../../../.bin/release_x64/jdsample-sse2-64.o \
+	../../../.bin/release_x64/jfdctflt-sse-64.o \
+	../../../.bin/release_x64/jfdctfst-sse2-64.o \
+	../../../.bin/release_x64/jfdctint-sse2-64.o \
+	../../../.bin/release_x64/jidctflt-sse2-64.o \
+	../../../.bin/release_x64/jidctfst-sse2-64.o \
+	../../../.bin/release_x64/jidctint-sse2-64.o \
+	../../../.bin/release_x64/jidctred-sse2-64.o \
+	../../../.bin/release_x64/jquantf-sse2-64.o \
+	../../../.bin/release_x64/jquanti-sse2-64.o \
+	$(OBJDIR)/jsimd_x86_64.o \
+
+endif
 
 SHELLTYPE := msdos
 ifeq (,$(ComSpec)$(COMSPEC))
@@ -375,9 +480,512 @@ $(OBJDIR)/jquant2.o: ../../code/libjpeg-turbo/jquant2.c
 $(OBJDIR)/jutils.o: ../../code/libjpeg-turbo/jutils.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jccolor-mmx.o: ../../code/libjpeg-turbo/simd/jccolor-mmx.asm
+	@echo "jccolor-mmx.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jccolor-mmx.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jccolor-mmx.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jccolor-mmx.o: ../../code/libjpeg-turbo/simd/jccolor-mmx.asm
+	@echo "jccolor-mmx.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jccolor-mmx.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jccolor-mmx.asm
+endif
+ifeq ($(config),debug_x64)
+../../../.bin/debug_x64/jccolor-sse2-64.o: ../../code/libjpeg-turbo/simd/jccolor-sse2-64.asm
+	@echo "jccolor-sse2-64.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x64/jccolor-sse2-64.o -felf64 -DELF -D__x86_64__ -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jccolor-sse2-64.asm
+endif
+ifeq ($(config),release_x64)
+../../../.bin/release_x64/jccolor-sse2-64.o: ../../code/libjpeg-turbo/simd/jccolor-sse2-64.asm
+	@echo "jccolor-sse2-64.asm"
+	$(SILENT) nasm -o../../../.bin/release_x64/jccolor-sse2-64.o -felf64 -DELF -D__x86_64__ -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jccolor-sse2-64.asm
+endif
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jccolor-sse2.o: ../../code/libjpeg-turbo/simd/jccolor-sse2.asm
+	@echo "jccolor-sse2.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jccolor-sse2.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jccolor-sse2.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jccolor-sse2.o: ../../code/libjpeg-turbo/simd/jccolor-sse2.asm
+	@echo "jccolor-sse2.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jccolor-sse2.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jccolor-sse2.asm
+endif
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jcgray-mmx.o: ../../code/libjpeg-turbo/simd/jcgray-mmx.asm
+	@echo "jcgray-mmx.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jcgray-mmx.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jcgray-mmx.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jcgray-mmx.o: ../../code/libjpeg-turbo/simd/jcgray-mmx.asm
+	@echo "jcgray-mmx.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jcgray-mmx.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jcgray-mmx.asm
+endif
+ifeq ($(config),debug_x64)
+../../../.bin/debug_x64/jcgray-sse2-64.o: ../../code/libjpeg-turbo/simd/jcgray-sse2-64.asm
+	@echo "jcgray-sse2-64.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x64/jcgray-sse2-64.o -felf64 -DELF -D__x86_64__ -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jcgray-sse2-64.asm
+endif
+ifeq ($(config),release_x64)
+../../../.bin/release_x64/jcgray-sse2-64.o: ../../code/libjpeg-turbo/simd/jcgray-sse2-64.asm
+	@echo "jcgray-sse2-64.asm"
+	$(SILENT) nasm -o../../../.bin/release_x64/jcgray-sse2-64.o -felf64 -DELF -D__x86_64__ -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jcgray-sse2-64.asm
+endif
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jcgray-sse2.o: ../../code/libjpeg-turbo/simd/jcgray-sse2.asm
+	@echo "jcgray-sse2.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jcgray-sse2.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jcgray-sse2.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jcgray-sse2.o: ../../code/libjpeg-turbo/simd/jcgray-sse2.asm
+	@echo "jcgray-sse2.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jcgray-sse2.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jcgray-sse2.asm
+endif
+ifeq ($(config),debug_x64)
+../../../.bin/debug_x64/jchuff-sse2-64.o: ../../code/libjpeg-turbo/simd/jchuff-sse2-64.asm
+	@echo "jchuff-sse2-64.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x64/jchuff-sse2-64.o -felf64 -DELF -D__x86_64__ -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jchuff-sse2-64.asm
+endif
+ifeq ($(config),release_x64)
+../../../.bin/release_x64/jchuff-sse2-64.o: ../../code/libjpeg-turbo/simd/jchuff-sse2-64.asm
+	@echo "jchuff-sse2-64.asm"
+	$(SILENT) nasm -o../../../.bin/release_x64/jchuff-sse2-64.o -felf64 -DELF -D__x86_64__ -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jchuff-sse2-64.asm
+endif
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jchuff-sse2.o: ../../code/libjpeg-turbo/simd/jchuff-sse2.asm
+	@echo "jchuff-sse2.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jchuff-sse2.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jchuff-sse2.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jchuff-sse2.o: ../../code/libjpeg-turbo/simd/jchuff-sse2.asm
+	@echo "jchuff-sse2.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jchuff-sse2.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jchuff-sse2.asm
+endif
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jcsample-mmx.o: ../../code/libjpeg-turbo/simd/jcsample-mmx.asm
+	@echo "jcsample-mmx.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jcsample-mmx.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jcsample-mmx.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jcsample-mmx.o: ../../code/libjpeg-turbo/simd/jcsample-mmx.asm
+	@echo "jcsample-mmx.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jcsample-mmx.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jcsample-mmx.asm
+endif
+ifeq ($(config),debug_x64)
+../../../.bin/debug_x64/jcsample-sse2-64.o: ../../code/libjpeg-turbo/simd/jcsample-sse2-64.asm
+	@echo "jcsample-sse2-64.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x64/jcsample-sse2-64.o -felf64 -DELF -D__x86_64__ -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jcsample-sse2-64.asm
+endif
+ifeq ($(config),release_x64)
+../../../.bin/release_x64/jcsample-sse2-64.o: ../../code/libjpeg-turbo/simd/jcsample-sse2-64.asm
+	@echo "jcsample-sse2-64.asm"
+	$(SILENT) nasm -o../../../.bin/release_x64/jcsample-sse2-64.o -felf64 -DELF -D__x86_64__ -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jcsample-sse2-64.asm
+endif
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jcsample-sse2.o: ../../code/libjpeg-turbo/simd/jcsample-sse2.asm
+	@echo "jcsample-sse2.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jcsample-sse2.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jcsample-sse2.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jcsample-sse2.o: ../../code/libjpeg-turbo/simd/jcsample-sse2.asm
+	@echo "jcsample-sse2.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jcsample-sse2.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jcsample-sse2.asm
+endif
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jdcolor-mmx.o: ../../code/libjpeg-turbo/simd/jdcolor-mmx.asm
+	@echo "jdcolor-mmx.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jdcolor-mmx.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jdcolor-mmx.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jdcolor-mmx.o: ../../code/libjpeg-turbo/simd/jdcolor-mmx.asm
+	@echo "jdcolor-mmx.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jdcolor-mmx.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jdcolor-mmx.asm
+endif
+ifeq ($(config),debug_x64)
+../../../.bin/debug_x64/jdcolor-sse2-64.o: ../../code/libjpeg-turbo/simd/jdcolor-sse2-64.asm
+	@echo "jdcolor-sse2-64.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x64/jdcolor-sse2-64.o -felf64 -DELF -D__x86_64__ -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jdcolor-sse2-64.asm
+endif
+ifeq ($(config),release_x64)
+../../../.bin/release_x64/jdcolor-sse2-64.o: ../../code/libjpeg-turbo/simd/jdcolor-sse2-64.asm
+	@echo "jdcolor-sse2-64.asm"
+	$(SILENT) nasm -o../../../.bin/release_x64/jdcolor-sse2-64.o -felf64 -DELF -D__x86_64__ -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jdcolor-sse2-64.asm
+endif
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jdcolor-sse2.o: ../../code/libjpeg-turbo/simd/jdcolor-sse2.asm
+	@echo "jdcolor-sse2.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jdcolor-sse2.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jdcolor-sse2.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jdcolor-sse2.o: ../../code/libjpeg-turbo/simd/jdcolor-sse2.asm
+	@echo "jdcolor-sse2.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jdcolor-sse2.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jdcolor-sse2.asm
+endif
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jdmerge-mmx.o: ../../code/libjpeg-turbo/simd/jdmerge-mmx.asm
+	@echo "jdmerge-mmx.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jdmerge-mmx.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jdmerge-mmx.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jdmerge-mmx.o: ../../code/libjpeg-turbo/simd/jdmerge-mmx.asm
+	@echo "jdmerge-mmx.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jdmerge-mmx.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jdmerge-mmx.asm
+endif
+ifeq ($(config),debug_x64)
+../../../.bin/debug_x64/jdmerge-sse2-64.o: ../../code/libjpeg-turbo/simd/jdmerge-sse2-64.asm
+	@echo "jdmerge-sse2-64.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x64/jdmerge-sse2-64.o -felf64 -DELF -D__x86_64__ -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jdmerge-sse2-64.asm
+endif
+ifeq ($(config),release_x64)
+../../../.bin/release_x64/jdmerge-sse2-64.o: ../../code/libjpeg-turbo/simd/jdmerge-sse2-64.asm
+	@echo "jdmerge-sse2-64.asm"
+	$(SILENT) nasm -o../../../.bin/release_x64/jdmerge-sse2-64.o -felf64 -DELF -D__x86_64__ -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jdmerge-sse2-64.asm
+endif
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jdmerge-sse2.o: ../../code/libjpeg-turbo/simd/jdmerge-sse2.asm
+	@echo "jdmerge-sse2.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jdmerge-sse2.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jdmerge-sse2.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jdmerge-sse2.o: ../../code/libjpeg-turbo/simd/jdmerge-sse2.asm
+	@echo "jdmerge-sse2.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jdmerge-sse2.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jdmerge-sse2.asm
+endif
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jdsample-mmx.o: ../../code/libjpeg-turbo/simd/jdsample-mmx.asm
+	@echo "jdsample-mmx.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jdsample-mmx.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jdsample-mmx.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jdsample-mmx.o: ../../code/libjpeg-turbo/simd/jdsample-mmx.asm
+	@echo "jdsample-mmx.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jdsample-mmx.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jdsample-mmx.asm
+endif
+ifeq ($(config),debug_x64)
+../../../.bin/debug_x64/jdsample-sse2-64.o: ../../code/libjpeg-turbo/simd/jdsample-sse2-64.asm
+	@echo "jdsample-sse2-64.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x64/jdsample-sse2-64.o -felf64 -DELF -D__x86_64__ -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jdsample-sse2-64.asm
+endif
+ifeq ($(config),release_x64)
+../../../.bin/release_x64/jdsample-sse2-64.o: ../../code/libjpeg-turbo/simd/jdsample-sse2-64.asm
+	@echo "jdsample-sse2-64.asm"
+	$(SILENT) nasm -o../../../.bin/release_x64/jdsample-sse2-64.o -felf64 -DELF -D__x86_64__ -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jdsample-sse2-64.asm
+endif
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jdsample-sse2.o: ../../code/libjpeg-turbo/simd/jdsample-sse2.asm
+	@echo "jdsample-sse2.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jdsample-sse2.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jdsample-sse2.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jdsample-sse2.o: ../../code/libjpeg-turbo/simd/jdsample-sse2.asm
+	@echo "jdsample-sse2.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jdsample-sse2.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jdsample-sse2.asm
+endif
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jfdctflt-3dn.o: ../../code/libjpeg-turbo/simd/jfdctflt-3dn.asm
+	@echo "jfdctflt-3dn.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jfdctflt-3dn.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jfdctflt-3dn.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jfdctflt-3dn.o: ../../code/libjpeg-turbo/simd/jfdctflt-3dn.asm
+	@echo "jfdctflt-3dn.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jfdctflt-3dn.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jfdctflt-3dn.asm
+endif
+ifeq ($(config),debug_x64)
+../../../.bin/debug_x64/jfdctflt-sse-64.o: ../../code/libjpeg-turbo/simd/jfdctflt-sse-64.asm
+	@echo "jfdctflt-sse-64.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x64/jfdctflt-sse-64.o -felf64 -DELF -D__x86_64__ -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jfdctflt-sse-64.asm
+endif
+ifeq ($(config),release_x64)
+../../../.bin/release_x64/jfdctflt-sse-64.o: ../../code/libjpeg-turbo/simd/jfdctflt-sse-64.asm
+	@echo "jfdctflt-sse-64.asm"
+	$(SILENT) nasm -o../../../.bin/release_x64/jfdctflt-sse-64.o -felf64 -DELF -D__x86_64__ -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jfdctflt-sse-64.asm
+endif
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jfdctflt-sse.o: ../../code/libjpeg-turbo/simd/jfdctflt-sse.asm
+	@echo "jfdctflt-sse.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jfdctflt-sse.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jfdctflt-sse.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jfdctflt-sse.o: ../../code/libjpeg-turbo/simd/jfdctflt-sse.asm
+	@echo "jfdctflt-sse.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jfdctflt-sse.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jfdctflt-sse.asm
+endif
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jfdctfst-mmx.o: ../../code/libjpeg-turbo/simd/jfdctfst-mmx.asm
+	@echo "jfdctfst-mmx.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jfdctfst-mmx.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jfdctfst-mmx.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jfdctfst-mmx.o: ../../code/libjpeg-turbo/simd/jfdctfst-mmx.asm
+	@echo "jfdctfst-mmx.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jfdctfst-mmx.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jfdctfst-mmx.asm
+endif
+ifeq ($(config),debug_x64)
+../../../.bin/debug_x64/jfdctfst-sse2-64.o: ../../code/libjpeg-turbo/simd/jfdctfst-sse2-64.asm
+	@echo "jfdctfst-sse2-64.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x64/jfdctfst-sse2-64.o -felf64 -DELF -D__x86_64__ -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jfdctfst-sse2-64.asm
+endif
+ifeq ($(config),release_x64)
+../../../.bin/release_x64/jfdctfst-sse2-64.o: ../../code/libjpeg-turbo/simd/jfdctfst-sse2-64.asm
+	@echo "jfdctfst-sse2-64.asm"
+	$(SILENT) nasm -o../../../.bin/release_x64/jfdctfst-sse2-64.o -felf64 -DELF -D__x86_64__ -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jfdctfst-sse2-64.asm
+endif
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jfdctfst-sse2.o: ../../code/libjpeg-turbo/simd/jfdctfst-sse2.asm
+	@echo "jfdctfst-sse2.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jfdctfst-sse2.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jfdctfst-sse2.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jfdctfst-sse2.o: ../../code/libjpeg-turbo/simd/jfdctfst-sse2.asm
+	@echo "jfdctfst-sse2.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jfdctfst-sse2.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jfdctfst-sse2.asm
+endif
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jfdctint-mmx.o: ../../code/libjpeg-turbo/simd/jfdctint-mmx.asm
+	@echo "jfdctint-mmx.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jfdctint-mmx.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jfdctint-mmx.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jfdctint-mmx.o: ../../code/libjpeg-turbo/simd/jfdctint-mmx.asm
+	@echo "jfdctint-mmx.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jfdctint-mmx.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jfdctint-mmx.asm
+endif
+ifeq ($(config),debug_x64)
+../../../.bin/debug_x64/jfdctint-sse2-64.o: ../../code/libjpeg-turbo/simd/jfdctint-sse2-64.asm
+	@echo "jfdctint-sse2-64.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x64/jfdctint-sse2-64.o -felf64 -DELF -D__x86_64__ -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jfdctint-sse2-64.asm
+endif
+ifeq ($(config),release_x64)
+../../../.bin/release_x64/jfdctint-sse2-64.o: ../../code/libjpeg-turbo/simd/jfdctint-sse2-64.asm
+	@echo "jfdctint-sse2-64.asm"
+	$(SILENT) nasm -o../../../.bin/release_x64/jfdctint-sse2-64.o -felf64 -DELF -D__x86_64__ -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jfdctint-sse2-64.asm
+endif
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jfdctint-sse2.o: ../../code/libjpeg-turbo/simd/jfdctint-sse2.asm
+	@echo "jfdctint-sse2.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jfdctint-sse2.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jfdctint-sse2.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jfdctint-sse2.o: ../../code/libjpeg-turbo/simd/jfdctint-sse2.asm
+	@echo "jfdctint-sse2.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jfdctint-sse2.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jfdctint-sse2.asm
+endif
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jidctflt-3dn.o: ../../code/libjpeg-turbo/simd/jidctflt-3dn.asm
+	@echo "jidctflt-3dn.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jidctflt-3dn.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jidctflt-3dn.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jidctflt-3dn.o: ../../code/libjpeg-turbo/simd/jidctflt-3dn.asm
+	@echo "jidctflt-3dn.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jidctflt-3dn.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jidctflt-3dn.asm
+endif
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jidctflt-sse.o: ../../code/libjpeg-turbo/simd/jidctflt-sse.asm
+	@echo "jidctflt-sse.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jidctflt-sse.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jidctflt-sse.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jidctflt-sse.o: ../../code/libjpeg-turbo/simd/jidctflt-sse.asm
+	@echo "jidctflt-sse.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jidctflt-sse.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jidctflt-sse.asm
+endif
+ifeq ($(config),debug_x64)
+../../../.bin/debug_x64/jidctflt-sse2-64.o: ../../code/libjpeg-turbo/simd/jidctflt-sse2-64.asm
+	@echo "jidctflt-sse2-64.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x64/jidctflt-sse2-64.o -felf64 -DELF -D__x86_64__ -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jidctflt-sse2-64.asm
+endif
+ifeq ($(config),release_x64)
+../../../.bin/release_x64/jidctflt-sse2-64.o: ../../code/libjpeg-turbo/simd/jidctflt-sse2-64.asm
+	@echo "jidctflt-sse2-64.asm"
+	$(SILENT) nasm -o../../../.bin/release_x64/jidctflt-sse2-64.o -felf64 -DELF -D__x86_64__ -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jidctflt-sse2-64.asm
+endif
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jidctflt-sse2.o: ../../code/libjpeg-turbo/simd/jidctflt-sse2.asm
+	@echo "jidctflt-sse2.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jidctflt-sse2.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jidctflt-sse2.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jidctflt-sse2.o: ../../code/libjpeg-turbo/simd/jidctflt-sse2.asm
+	@echo "jidctflt-sse2.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jidctflt-sse2.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jidctflt-sse2.asm
+endif
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jidctfst-mmx.o: ../../code/libjpeg-turbo/simd/jidctfst-mmx.asm
+	@echo "jidctfst-mmx.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jidctfst-mmx.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jidctfst-mmx.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jidctfst-mmx.o: ../../code/libjpeg-turbo/simd/jidctfst-mmx.asm
+	@echo "jidctfst-mmx.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jidctfst-mmx.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jidctfst-mmx.asm
+endif
+ifeq ($(config),debug_x64)
+../../../.bin/debug_x64/jidctfst-sse2-64.o: ../../code/libjpeg-turbo/simd/jidctfst-sse2-64.asm
+	@echo "jidctfst-sse2-64.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x64/jidctfst-sse2-64.o -felf64 -DELF -D__x86_64__ -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jidctfst-sse2-64.asm
+endif
+ifeq ($(config),release_x64)
+../../../.bin/release_x64/jidctfst-sse2-64.o: ../../code/libjpeg-turbo/simd/jidctfst-sse2-64.asm
+	@echo "jidctfst-sse2-64.asm"
+	$(SILENT) nasm -o../../../.bin/release_x64/jidctfst-sse2-64.o -felf64 -DELF -D__x86_64__ -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jidctfst-sse2-64.asm
+endif
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jidctfst-sse2.o: ../../code/libjpeg-turbo/simd/jidctfst-sse2.asm
+	@echo "jidctfst-sse2.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jidctfst-sse2.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jidctfst-sse2.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jidctfst-sse2.o: ../../code/libjpeg-turbo/simd/jidctfst-sse2.asm
+	@echo "jidctfst-sse2.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jidctfst-sse2.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jidctfst-sse2.asm
+endif
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jidctint-mmx.o: ../../code/libjpeg-turbo/simd/jidctint-mmx.asm
+	@echo "jidctint-mmx.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jidctint-mmx.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jidctint-mmx.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jidctint-mmx.o: ../../code/libjpeg-turbo/simd/jidctint-mmx.asm
+	@echo "jidctint-mmx.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jidctint-mmx.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jidctint-mmx.asm
+endif
+ifeq ($(config),debug_x64)
+../../../.bin/debug_x64/jidctint-sse2-64.o: ../../code/libjpeg-turbo/simd/jidctint-sse2-64.asm
+	@echo "jidctint-sse2-64.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x64/jidctint-sse2-64.o -felf64 -DELF -D__x86_64__ -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jidctint-sse2-64.asm
+endif
+ifeq ($(config),release_x64)
+../../../.bin/release_x64/jidctint-sse2-64.o: ../../code/libjpeg-turbo/simd/jidctint-sse2-64.asm
+	@echo "jidctint-sse2-64.asm"
+	$(SILENT) nasm -o../../../.bin/release_x64/jidctint-sse2-64.o -felf64 -DELF -D__x86_64__ -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jidctint-sse2-64.asm
+endif
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jidctint-sse2.o: ../../code/libjpeg-turbo/simd/jidctint-sse2.asm
+	@echo "jidctint-sse2.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jidctint-sse2.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jidctint-sse2.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jidctint-sse2.o: ../../code/libjpeg-turbo/simd/jidctint-sse2.asm
+	@echo "jidctint-sse2.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jidctint-sse2.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jidctint-sse2.asm
+endif
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jidctred-mmx.o: ../../code/libjpeg-turbo/simd/jidctred-mmx.asm
+	@echo "jidctred-mmx.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jidctred-mmx.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jidctred-mmx.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jidctred-mmx.o: ../../code/libjpeg-turbo/simd/jidctred-mmx.asm
+	@echo "jidctred-mmx.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jidctred-mmx.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jidctred-mmx.asm
+endif
+ifeq ($(config),debug_x64)
+../../../.bin/debug_x64/jidctred-sse2-64.o: ../../code/libjpeg-turbo/simd/jidctred-sse2-64.asm
+	@echo "jidctred-sse2-64.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x64/jidctred-sse2-64.o -felf64 -DELF -D__x86_64__ -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jidctred-sse2-64.asm
+endif
+ifeq ($(config),release_x64)
+../../../.bin/release_x64/jidctred-sse2-64.o: ../../code/libjpeg-turbo/simd/jidctred-sse2-64.asm
+	@echo "jidctred-sse2-64.asm"
+	$(SILENT) nasm -o../../../.bin/release_x64/jidctred-sse2-64.o -felf64 -DELF -D__x86_64__ -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jidctred-sse2-64.asm
+endif
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jidctred-sse2.o: ../../code/libjpeg-turbo/simd/jidctred-sse2.asm
+	@echo "jidctred-sse2.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jidctred-sse2.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jidctred-sse2.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jidctred-sse2.o: ../../code/libjpeg-turbo/simd/jidctred-sse2.asm
+	@echo "jidctred-sse2.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jidctred-sse2.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jidctred-sse2.asm
+endif
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jquant-3dn.o: ../../code/libjpeg-turbo/simd/jquant-3dn.asm
+	@echo "jquant-3dn.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jquant-3dn.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jquant-3dn.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jquant-3dn.o: ../../code/libjpeg-turbo/simd/jquant-3dn.asm
+	@echo "jquant-3dn.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jquant-3dn.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jquant-3dn.asm
+endif
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jquant-mmx.o: ../../code/libjpeg-turbo/simd/jquant-mmx.asm
+	@echo "jquant-mmx.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jquant-mmx.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jquant-mmx.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jquant-mmx.o: ../../code/libjpeg-turbo/simd/jquant-mmx.asm
+	@echo "jquant-mmx.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jquant-mmx.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jquant-mmx.asm
+endif
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jquant-sse.o: ../../code/libjpeg-turbo/simd/jquant-sse.asm
+	@echo "jquant-sse.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jquant-sse.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jquant-sse.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jquant-sse.o: ../../code/libjpeg-turbo/simd/jquant-sse.asm
+	@echo "jquant-sse.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jquant-sse.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jquant-sse.asm
+endif
+ifeq ($(config),debug_x64)
+../../../.bin/debug_x64/jquantf-sse2-64.o: ../../code/libjpeg-turbo/simd/jquantf-sse2-64.asm
+	@echo "jquantf-sse2-64.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x64/jquantf-sse2-64.o -felf64 -DELF -D__x86_64__ -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jquantf-sse2-64.asm
+endif
+ifeq ($(config),release_x64)
+../../../.bin/release_x64/jquantf-sse2-64.o: ../../code/libjpeg-turbo/simd/jquantf-sse2-64.asm
+	@echo "jquantf-sse2-64.asm"
+	$(SILENT) nasm -o../../../.bin/release_x64/jquantf-sse2-64.o -felf64 -DELF -D__x86_64__ -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jquantf-sse2-64.asm
+endif
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jquantf-sse2.o: ../../code/libjpeg-turbo/simd/jquantf-sse2.asm
+	@echo "jquantf-sse2.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jquantf-sse2.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jquantf-sse2.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jquantf-sse2.o: ../../code/libjpeg-turbo/simd/jquantf-sse2.asm
+	@echo "jquantf-sse2.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jquantf-sse2.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jquantf-sse2.asm
+endif
+ifeq ($(config),debug_x64)
+../../../.bin/debug_x64/jquanti-sse2-64.o: ../../code/libjpeg-turbo/simd/jquanti-sse2-64.asm
+	@echo "jquanti-sse2-64.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x64/jquanti-sse2-64.o -felf64 -DELF -D__x86_64__ -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jquanti-sse2-64.asm
+endif
+ifeq ($(config),release_x64)
+../../../.bin/release_x64/jquanti-sse2-64.o: ../../code/libjpeg-turbo/simd/jquanti-sse2-64.asm
+	@echo "jquanti-sse2-64.asm"
+	$(SILENT) nasm -o../../../.bin/release_x64/jquanti-sse2-64.o -felf64 -DELF -D__x86_64__ -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jquanti-sse2-64.asm
+endif
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jquanti-sse2.o: ../../code/libjpeg-turbo/simd/jquanti-sse2.asm
+	@echo "jquanti-sse2.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jquanti-sse2.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jquanti-sse2.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jquanti-sse2.o: ../../code/libjpeg-turbo/simd/jquanti-sse2.asm
+	@echo "jquanti-sse2.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jquanti-sse2.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jquanti-sse2.asm
+endif
 $(OBJDIR)/jsimd_i386.o: ../../code/libjpeg-turbo/simd/jsimd_i386.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/jsimd_x86_64.o: ../../code/libjpeg-turbo/simd/jsimd_x86_64.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+ifeq ($(config),debug_x32)
+../../../.bin/debug_x32/jsimdcpu.o: ../../code/libjpeg-turbo/simd/jsimdcpu.asm
+	@echo "jsimdcpu.asm"
+	$(SILENT) nasm -o../../../.bin/debug_x32/jsimdcpu.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jsimdcpu.asm
+endif
+ifeq ($(config),release_x32)
+../../../.bin/release_x32/jsimdcpu.o: ../../code/libjpeg-turbo/simd/jsimdcpu.asm
+	@echo "jsimdcpu.asm"
+	$(SILENT) nasm -o../../../.bin/release_x32/jsimdcpu.o -felf32 -DELF -I../../../cnq3/code/libjpeg-turbo/ -I../../../cnq3/code/libjpeg-turbo/win/ -I../../../cnq3/code/libjpeg-turbo/simd/ ../../code/libjpeg-turbo/simd/jsimdcpu.asm
+endif
 
 -include $(OBJECTS:%.o=%.d)
 ifneq (,$(PCH))

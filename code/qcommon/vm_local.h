@@ -22,6 +22,13 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "q_shared.h"
 #include "qcommon.h"
 
+#define	MAX_OPSTACK_SIZE	512
+#define	PROC_OPSTACK_SIZE	30
+
+#define VMMAIN_CALL_ARGS	13
+
+// hardcoded in q3asm and reserved at end of bss
+#define	PROGRAM_STACK_SIZE	0x10000
 
 typedef enum {
 	OP_UNDEF,
@@ -107,9 +114,33 @@ typedef enum {
 	OP_MULF,
 
 	OP_CVIF,
-	OP_CVFI
+	OP_CVFI,
+
+	OP_MAX
 } opcode_t;
 
+// macro opcode sequences
+typedef enum {
+	MOP_UNDEF = OP_MAX,
+	MOP_IGNORE4,
+	MOP_ADD4,
+	MOP_SUB4,
+	MOP_BAND4,
+	MOP_BOR4,
+	MOP_CALCF4,
+} macro_op_t;
+
+typedef struct {
+	int		value;
+	byte	op;
+	byte	opStack;
+	byte	jused;	// boolean
+	byte	swtch;	// boolean
+} instruction_t;
+
+extern const char *opname[OP_MAX]; 
+
+typedef int	vmptr_t;
 
 typedef struct vmSymbol_s {
 	struct vmSymbol_s	*next;
@@ -118,52 +149,62 @@ typedef struct vmSymbol_s {
 	char	symName[1];		// variable sized
 } vmSymbol_t;
 
-#define	VM_OFFSET_PROGRAM_STACK		0
-#define	VM_OFFSET_SYSTEM_CALL		4
+typedef union vmFunc_u {
+	byte		*ptr;
+	void (*func)(void);
+} vmFunc_t;
 
 struct vm_s {
 	// DO NOT MOVE OR CHANGE THESE WITHOUT CHANGING THE VM_OFFSET_* DEFINES
 	// USED BY THE ASM CODE
 	int			programStack;		// the vm may be recursively entered
-	intptr_t	(*systemCall)( intptr_t *parms );
+    syscall_t	systemCall;
+	byte		*dataBase;
+	int			*opStack;			// pointer to local function stack
+
+	int			instructionCount;
+	intptr_t	*instructionPointers;
 
 	//------------------------------------
 
-	char		name[MAX_QPATH];
+	const char	*name;
 
 	// for dynamic linked modules
 	void		*dllHandle;
-	intptr_t	(QDECL *entryPoint)( int callNum, ... );
-	void (*destroy)(vm_t* self);
+	dllSyscall_t entryPoint;
+	void		(*destroy)(vm_t* self);
 
-	qbool	compiled;
-	byte		*codeBase;
+	// for interpreted modules
+	qboolean	currentlyInterpreting;
+
+	qboolean	compiled;
+
+	vmFunc_t	codeBase;
 	int			codeLength;
 
-	int			*instructionPointers;
-	int			instructionPointersLength;
-
-	byte		*dataBase;
 	int			dataMask;
+	int			dataLength;			// exact data segment length
+
+	int			stackBottom;		// if programStack < stackBottom, error
+	int			*opStackTop;		
 
 	int			numSymbols;
 	vmSymbol_t	*symbols;
 
-	int			stackBottom;		// if programStack < stackBottom, error
-#if defined(NO_VM_COMPILED)
-	int			callLevel;			// for debug indenting
+	int			callLevel;		// counts recursive VM_Call
 	int			breakFunction;		// increment breakCount on function entry to this
 	int			breakCount;
-#endif
 
 	byte		*jumpTableTargets;
 	int			numJumpTableTargets;
+
+	uint32_t	crc32sum;
+	vmIndex_t	index;
 };
 
+extern	vm_t	*currentVM;
 
 #define	VM_MAGIC		0x12721444
-#define	VM_MAGIC_VER2	0x12721445
-
 typedef struct {
 	int		vmMagic;
 
@@ -176,26 +217,19 @@ typedef struct {
 	int		dataLength;
 	int		litLength;			// ( dataLength - litLength ) should be byteswapped on load
 	int		bssLength;			// zero filled memory appended to datalength
-
-	//!!! below here is VM_MAGIC_VER2 !!!
-	int		jtrgLength;			// number of jump table targets
 } vmHeader_t;
 
+qboolean VM_Compile( vm_t *vm, vmHeader_t *header );
+int	VM_CallCompiled( vm_t *vm, int *args );
 
-extern	vm_t	*currentVM;
-extern	int		vm_debugLevel;
+qboolean VM_PrepareInterpreter2( vm_t *vm, vmHeader_t *header );
+int	VM_CallInterpreted2( vm_t *vm, int *args );
 
-void VM_Compile( vm_t* vm, const vmHeader_t* header );
-int VM_CallCompiled( vm_t* vm, int* args );
-
-#if defined(NO_VM_COMPILED)
-void VM_PrepareInterpreter( vm_t* vm, const vmHeader_t* header );
-int VM_CallInterpreted( vm_t *vm, int *args );
-#endif
-
-const char* VM_ValueToSymbol( const vm_t* vm, int value );
-const vmSymbol_t* VM_ValueToFunctionSymbol( const vm_t* vm, int value );
-void VM_LogSyscalls( int *args );
+const char *VM_LoadInstructions( const vmHeader_t *header, instruction_t *buf );
+const char *VM_CheckInstructions( instruction_t *buf, int instructionCount, 
+								 const byte *jumpTableTargets, 
+								 int numJumpTableTargets, 
+								 int dataLength );
 
 intptr_t VM_ArgPtr( intptr_t intValue );
 intptr_t VM_ExplicitArgPtr( const vm_t* vm, intptr_t intValue );
@@ -210,4 +244,16 @@ static ID_INLINE float _vmf(intptr_t x)
 	return t.f;
 }
 #define VMF(x) _vmf(args[x])
+
+#define VM_OF_JUMP	(1<<0)
+
+typedef struct opcode_info_s 
+{
+	int   size; 
+	int	  stack;
+	int   nargs;
+	int   flags;
+} opcode_info_t ;
+
+extern opcode_info_t ops[ OP_MAX ];
 

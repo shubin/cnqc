@@ -35,43 +35,11 @@ abs_path_q3 = path.getabsolute(_OPTIONS["quake3dir"]) -- os.realpath won't work 
 
 extra_warnings = 1
 
-jpeg_asm_file_names = 
-{
-	"jsimdcpu", 
-	"jfdctflt-3dn", 
-	"jidctflt-3dn", 
-	"jquant-3dn", 
-	"jccolor-mmx", 
-	"jcgray-mmx", 
-	"jcsample-mmx", 
-	"jdcolor-mmx", 
-	"jdmerge-mmx", 
-	"jdsample-mmx", 
-	"jfdctfst-mmx", 
-	"jfdctint-mmx", 
-	"jidctfst-mmx", 
-	"jidctint-mmx", 
-	"jidctred-mmx", 
-	"jquant-mmx", 
-	"jfdctflt-sse", 
-	"jidctflt-sse", 
-	"jquant-sse", 
-	"jccolor-sse2", 
-	"jcgray-sse2", 
-	"jchuff-sse2", 
-	"jcsample-sse2", 
-	"jdcolor-sse2", 
-	"jdmerge-sse2", 
-	"jdsample-sse2", 
-	"jfdctfst-sse2", 
-	"jfdctint-sse2", 
-	"jidctflt-sse2", 
-	"jidctfst-sse2", 
-	"jidctint-sse2", 
-	"jidctred-sse2", 
-	"jquantf-sse2", 
-	"jquanti-sse2"
-}
+local function GetBinDirName()
+
+	return "%{cfg.buildcfg}_%{cfg.platform}"
+
+end
 
 local function CreateGitPreBuildCommand(scriptExtension)
 
@@ -83,7 +51,7 @@ end
 
 local function CreateExeCopyPostBuildCommand(copyCommand, exeName, exeExtension)
 
-	local make_path_exe = string.format("%s/%s/%s%s", make_path_bin, "%{cfg.buildcfg}", exeName, exeExtension)
+	local make_path_exe = string.format("%s/%s/%s%s", make_path_bin, GetBinDirName(), exeName, exeExtension)
 
 	return string.format("%s \"%s\" \"%s\"", copyCommand, make_path_exe, abs_path_q3)
 
@@ -91,7 +59,7 @@ end
 
 local function WIN_CreatePdbCopyPostBuildCommand(exeName)
 
-	local make_path_pdb = string.format("%s/%s/%s.pdb", make_path_bin, "%{cfg.buildcfg}", exeName)
+	local make_path_pdb = string.format("%s/%s/%s.pdb", make_path_bin, GetBinDirName(), exeName)
 
 	return string.format("copy \"%s\" \"%s\"", make_path_pdb, abs_path_q3)
 
@@ -131,10 +99,18 @@ local function AddHeaders(dirPath)
 
 end
 
-local function AddSourcesFromArray(sourceFiles)
+local function AddSourcesFromArray(dir, sourceFiles)
 
 	for idx,path in pairs(sourceFiles) do
-		files { string.format("%s/%s", path_src, path) }
+		files { string.format("%s/%s/%s", path_src, dir, path) }
+	end
+
+end
+
+local function AddAssemblerSourcesFromArray(dir, fileNames)
+
+	for idx,path in pairs(fileNames) do
+		files { string.format("%s/%s/%s.asm", path_src, dir, path) }
 	end
 
 end
@@ -145,14 +121,45 @@ local function GetMakePath(premakePath)
 
 end
 
-local function GetJpegObjPath()
+-- premake tokens for this script:
+-- cfg.buildcfg -> "debug", "release"
+-- cfg.architecture -> "x86", "x86_64"
+-- cfg.system -> "windows", "linux"
+-- cfg.platform -> "x32", "x64"
 
-	local obj_format = "win32"
-	if os.is("linux") then
-		obj_format = "elf32"
+local function GetLibJpegTurboNasmFlags()
+
+	libjpeg_turbo_nasm_flags_map =
+	{
+	   windows_x32 = "-fwin32 -DWIN32",
+	   windows_x64 = "-fwin64 -DWIN64 -D__x86_64__",
+	   linux_x32 = "-felf32 -DELF",
+	   linux_x64 = "-felf64 -DELF -D__x86_64__"
+	}
+
+	return "%{libjpeg_turbo_nasm_flags_map[cfg.system..\"_\"..cfg.platform]}"
+
+end
+
+local function GetCompilerObjectExtension()
+
+	if _ACTION == "gmake" then
+		return ".o"
 	end
 
-	return string.format("%s/nasm/libjpeg-turbo/%s", GetMakePath(path_build), obj_format)
+	return ".obj"
+
+end
+
+local function GetExeNameSuffix()
+
+	platform_exe_name_suffix_map =
+	{
+	   x32 = "-x86",
+	   x64 = "-x64"
+	}
+
+	return "%{platform_exe_name_suffix_map[cfg.platform]}"
 
 end
 
@@ -188,10 +195,8 @@ local function ApplyProjectSettings()
 		}
 
 	-- Build directories
-	filter "configurations:debug"
-		SetTargetAndLink ( path_bin.."/debug" )
-	filter "configurations:release"
-		SetTargetAndLink ( path_bin.."/release" )
+	filter {  }
+	SetTargetAndLink ( string.format("%s/%s", path_bin, GetBinDirName()) )
 
 	--
 	-- Visual C++
@@ -224,6 +229,11 @@ local function ApplyProjectSettings()
 		flags { "LinkTimeOptimization" } -- I had no success with GCC's -flto
 		buildoptions { "/GL"  }
 		linkoptions { "" }
+
+	-- disable the "conversion from 'X' to 'Y', possible loss of data" warning
+	-- this should be removed once the x64 port is complete
+	filter { "action:vs*", "platforms:x64" }
+		buildoptions { "/wd4267" }
 
 	--
 	-- GCC
@@ -258,7 +268,8 @@ local function ApplyExeProjectSettings(exeName, server)
 	ApplyProjectSettings()
 
 	filter { }
-	
+
+	exeName = exeName..GetExeNameSuffix()
 	targetname(exeName)
 
 	local server_sources =
@@ -396,9 +407,9 @@ local function ApplyExeProjectSettings(exeName, server)
 	links { "botlib" }
 
 	if (server == 1) then
-		AddSourcesFromArray(server_sources)
+		AddSourcesFromArray(".", server_sources)
 	else
-		AddSourcesFromArray(client_sources)
+		AddSourcesFromArray(".", client_sources)
 		includedirs { path_src.."/freetype/include" }
 		AddHeaders("renderer")
 		links { "renderer", "freetype", "libjpeg-turbo" }
@@ -406,17 +417,17 @@ local function ApplyExeProjectSettings(exeName, server)
 
 	filter { "system:windows" }
 		if (server == 1) then
-			AddSourcesFromArray(server_sources_windows)
+			AddSourcesFromArray(".", server_sources_windows)
 		else
-			AddSourcesFromArray(client_sources_windows)
+			AddSourcesFromArray(".", client_sources_windows)
 		end
 		AddHeaders("win32")
 
 	filter { "system:not windows" }
 		if (server == 1) then
-			AddSourcesFromArray(server_sources_unix)
+			AddSourcesFromArray(".", server_sources_unix)
 		else
-			AddSourcesFromArray(client_sources_unix)
+			AddSourcesFromArray(".", client_sources_unix)
 		end
 
 	-- create git info header
@@ -468,13 +479,6 @@ local function ApplyExeProjectSettings(exeName, server)
 	-- otherwise, we run into problems (that should really be fixed)
 	filter "action:gmake"
 		buildoptions { "-x c++" }
-		
-	if (server == 0 and os.is("linux")) then
-		for idx,name in pairs(jpeg_asm_file_names) do
-			local obj_path = string.format("%s/%s.obj", GetJpegObjPath(), name)
-			linkoptions { obj_path }
-		end
-	end
 
 end
 
@@ -482,118 +486,171 @@ local function ApplyLibJpegTurboProjectSettings()
 
 	local jpeg_sources =
 	{
-		"libjpeg-turbo/jcapimin.c",
-		"libjpeg-turbo/jcapistd.c",
-		"libjpeg-turbo/jccoefct.c",
-		"libjpeg-turbo/jccolor.c",
-		"libjpeg-turbo/jcdctmgr.c",
-		"libjpeg-turbo/jchuff.c",
-		"libjpeg-turbo/jcinit.c",
-		"libjpeg-turbo/jcmainct.c",
-		"libjpeg-turbo/jcmarker.c",
-		"libjpeg-turbo/jcmaster.c",
-		"libjpeg-turbo/jcomapi.c",
-		"libjpeg-turbo/jcparam.c",
-		"libjpeg-turbo/jcphuff.c",
-		"libjpeg-turbo/jcprepct.c",
-		"libjpeg-turbo/jcsample.c",
-		"libjpeg-turbo/jctrans.c",
-		"libjpeg-turbo/jdapimin.c",
-		"libjpeg-turbo/jdapistd.c",
-		"libjpeg-turbo/jdatadst.c",
-		"libjpeg-turbo/jdatasrc.c",
-		"libjpeg-turbo/jdcoefct.c",
-		"libjpeg-turbo/jdcolor.c",
-		"libjpeg-turbo/jddctmgr.c",
-		"libjpeg-turbo/jdhuff.c",
-		"libjpeg-turbo/jdinput.c",
-		"libjpeg-turbo/jdmainct.c",
-		"libjpeg-turbo/jdmarker.c",
-		"libjpeg-turbo/jdmaster.c",
-		"libjpeg-turbo/jdmerge.c",
-		"libjpeg-turbo/jdphuff.c",
-		"libjpeg-turbo/jdpostct.c",
-		"libjpeg-turbo/jdsample.c",
-		"libjpeg-turbo/jdtrans.c",
-		"libjpeg-turbo/jerror.c",
-		"libjpeg-turbo/jfdctflt.c",
-		"libjpeg-turbo/jfdctfst.c",
-		"libjpeg-turbo/jfdctint.c",
-		"libjpeg-turbo/jidctflt.c",
-		"libjpeg-turbo/jidctfst.c",
-		"libjpeg-turbo/jidctint.c",
-		"libjpeg-turbo/jidctred.c",
-		"libjpeg-turbo/jquant1.c",
-		"libjpeg-turbo/jquant2.c",
-		"libjpeg-turbo/jutils.c",
-		"libjpeg-turbo/jmemmgr.c",
-		"libjpeg-turbo/simd/jsimd_i386.c"
+		"jcapimin.c",
+		"jcapistd.c",
+		"jccoefct.c",
+		"jccolor.c",
+		"jcdctmgr.c",
+		"jchuff.c",
+		"jcinit.c",
+		"jcmainct.c",
+		"jcmarker.c",
+		"jcmaster.c",
+		"jcomapi.c",
+		"jcparam.c",
+		"jcphuff.c",
+		"jcprepct.c",
+		"jcsample.c",
+		"jctrans.c",
+		"jdapimin.c",
+		"jdapistd.c",
+		"jdatadst.c",
+		"jdatasrc.c",
+		"jdcoefct.c",
+		"jdcolor.c",
+		"jddctmgr.c",
+		"jdhuff.c",
+		"jdinput.c",
+		"jdmainct.c",
+		"jdmarker.c",
+		"jdmaster.c",
+		"jdmerge.c",
+		"jdphuff.c",
+		"jdpostct.c",
+		"jdsample.c",
+		"jdtrans.c",
+		"jerror.c",
+		"jfdctflt.c",
+		"jfdctfst.c",
+		"jfdctint.c",
+		"jidctflt.c",
+		"jidctfst.c",
+		"jidctint.c",
+		"jidctred.c",
+		"jquant1.c",
+		"jquant2.c",
+		"jutils.c",
+		"jmemmgr.c"
 	}
 
-	AddSourcesFromArray(jpeg_sources)
+	local jpeg_asm_sources_x86 =
+	{
+		"jsimdcpu",
+		"jfdctflt-3dn",
+		"jidctflt-3dn",
+		"jquant-3dn",
+		"jccolor-mmx",
+		"jcgray-mmx",
+		"jcsample-mmx",
+		"jdcolor-mmx",
+		"jdmerge-mmx",
+		"jdsample-mmx",
+		"jfdctfst-mmx",
+		"jfdctint-mmx",
+		"jidctfst-mmx",
+		"jidctint-mmx",
+		"jidctred-mmx",
+		"jquant-mmx",
+		"jfdctflt-sse",
+		"jidctflt-sse",
+		"jquant-sse",
+		"jccolor-sse2",
+		"jcgray-sse2",
+		"jchuff-sse2",
+		"jcsample-sse2",
+		"jdcolor-sse2",
+		"jdmerge-sse2",
+		"jdsample-sse2",
+		"jfdctfst-sse2",
+		"jfdctint-sse2",
+		"jidctflt-sse2",
+		"jidctfst-sse2",
+		"jidctint-sse2",
+		"jidctred-sse2",
+		"jquantf-sse2",
+		"jquanti-sse2"
+	}
+
+	local jpeg_asm_sources_x64 =
+	{
+		"jfdctflt-sse-64",
+		"jccolor-sse2-64",
+		"jcgray-sse2-64",
+		"jchuff-sse2-64",
+		"jcsample-sse2-64",
+		"jdcolor-sse2-64",
+		"jdmerge-sse2-64",
+		"jdsample-sse2-64",
+		"jfdctfst-sse2-64",
+		"jfdctint-sse2-64",
+		"jidctflt-sse2-64",
+		"jidctfst-sse2-64",
+		"jidctint-sse2-64",
+		"jidctred-sse2-64",
+		"jquantf-sse2-64",
+		"jquanti-sse2-64"
+	}
+
+	AddSourcesFromArray("libjpeg-turbo", jpeg_sources)
 	includedirs { path_src.."/libjpeg-turbo", path_src.."/libjpeg-turbo/simd" }
-	defines { "WITH_SIMD", "SIZEOF_SIZE_T=4" }
+	defines { "WITH_SIMD" }
+
+	filter "platforms:x32"
+		AddAssemblerSourcesFromArray("libjpeg-turbo/simd", jpeg_asm_sources_x86)
+		files { path_src.."/libjpeg-turbo/simd/jsimd_i386.c" }
+		defines { "SIZEOF_SIZE_T=4" }
+
+	filter "platforms:x64"
+		AddAssemblerSourcesFromArray("libjpeg-turbo/simd", jpeg_asm_sources_x64)
+		files { path_src.."/libjpeg-turbo/simd/jsimd_x86_64.c" }
+		defines { "SIZEOF_SIZE_T=8" }
 
 	local asm_inc_path = GetMakePath(path_src.."/libjpeg-turbo")
-	local nasm_flags;
+	local nasm_flags = GetLibJpegTurboNasmFlags()
+	local nasm_includes
 	if os.is("windows") then
 		asm_inc_path = path.translate(asm_inc_path, "\\")
-		nasm_flags = string.format("-fwin32 -DWIN32 -I%s\\ -I%s\\win\\ -I%s\\simd\\", asm_inc_path, asm_inc_path, asm_inc_path)
+		nasm_includes = string.format("-I%s\\ -I%s\\win\\ -I%s\\simd\\", asm_inc_path, asm_inc_path, asm_inc_path)
 	else
-		nasm_flags = string.format("-felf32 -DELF -I%s/ -I%s/win/ -I%s/simd/", asm_inc_path, asm_inc_path, asm_inc_path)
+		nasm_includes = string.format("-I%s/ -I%s/win/ -I%s/simd/", asm_inc_path, asm_inc_path, asm_inc_path)
 	end
-	
-	-- the very first pre-build step is to make sure the output directory exists
-	-- no, NASM will not create it for us if it doesn't exist
+
+	local obj_file_path = string.format("%s%s", "%{cfg.targetdir}/%{file.basename}", GetCompilerObjectExtension())
+	local command = string.format("nasm -o%s %s %s %s", obj_file_path, nasm_flags, nasm_includes, "%{file.relpath}")
 	if os.is("windows") then
-		local obj_path = path.translate(string.format("%s/", GetJpegObjPath()), "\\")
-		prebuildcommands { string.format("if not exist \"%s\" mkdir \"%s\"", obj_path, obj_path) }
-	else
-		prebuildcommands { string.format("mkdir -p %s", GetJpegObjPath()) }
+		command = path.translate(command, "\\")
+		obj_file_path = path.translate(obj_file_path, "\\")
 	end
-	
-	for idx,name in pairs(jpeg_asm_file_names) do
-		local src_path = string.format("%s/libjpeg-turbo/simd/%s.asm", GetMakePath(path_src), name)
-		local obj_path = string.format("%s/%s.obj", GetJpegObjPath(), name)
-		if os.is("windows") then
-			obj_path = path.translate(obj_path, "\\")
-		end
-		prebuildcommands { string.format("echo %s.asm && nasm -o%s %s %s ", name, obj_path, nasm_flags, src_path) }
-		-- on Linux, we link those directly against the client
-		if os.is("windows") then
-			linkoptions { obj_path }
-		end
-	end
-	
+
+	filter "files:**.asm"
+		buildmessage "%{file.basename}.asm"
+		buildcommands { command }
+		buildoutputs { obj_file_path }
+
 	extra_warnings = 0
 	ApplyLibProjectSettings()
 	extra_warnings = 1
 
 end
 
-exe_suffix = "";
-if os.is("linux") then
-	exe_suffix = "-x86"
-end
-
 solution "cnq3"
 
 	location ( path_build.."/".._ACTION )
-	platforms { "x32" }
+	platforms { "x32", "x64" }
 	configurations { "debug", "release" }
 
 	project "cnq3"
 
 		kind "WindowedApp"
 		language "C++"
-		ApplyExeProjectSettings("cnq3"..exe_suffix, 0)
+		ApplyExeProjectSettings("cnq3", 0)
 
 	project "cnq3-server"
 
 		kind "WindowedApp"
 		language "C++"
 		defines { "DEDICATED" }
-		ApplyExeProjectSettings("cnq3-server"..exe_suffix, 1)
+		ApplyExeProjectSettings("cnq3-server", 1)
 
 	project "botlib"
 
@@ -610,9 +667,9 @@ solution "cnq3"
 		AddSourcesAndHeaders("renderer")
 		includedirs { path_src.."/freetype/include" }
 		ApplyLibProjectSettings()
-			
+
 	project "libjpeg-turbo"
-	
+
 		kind "StaticLib"
 		language "C"
 		ApplyLibJpegTurboProjectSettings()
@@ -621,21 +678,23 @@ solution "cnq3"
 
 		local ft_sources =
 		{
-			"freetype/src/base/ftbbox.c",
-			"freetype/src/base/ftsynth.c",
-			"freetype/src/base/ftbase.c",
-			"freetype/src/base/ftglyph.c",
-			"freetype/src/base/ftinit.c",
-			"freetype/src/base/ftstroke.c",
-			"freetype/src/base/ftsystem.c",
-			"freetype/src/sfnt/sfnt.c",
-			"freetype/src/smooth/smooth.c",
-			"freetype/src/truetype/truetype.c"
+			"base/ftbbox.c",
+			"base/ftsynth.c",
+			"base/ftbase.c",
+			"base/ftglyph.c",
+			"base/ftinit.c",
+			"base/ftstroke.c",
+			"base/ftsystem.c",
+			"sfnt/sfnt.c",
+			"smooth/smooth.c",
+			"truetype/truetype.c"
 		}
 
 		kind "StaticLib"
 		language "C"
-		AddSourcesFromArray(ft_sources)
+		AddSourcesFromArray("freetype/src", ft_sources)
 		includedirs { path_src.."/freetype/include" }
 		defines { "_LIB", "FT2_BUILD_LIBRARY", "_BIND_TO_CURRENT_VCLIBS_VERSION=1" }
 		ApplyLibProjectSettings()
+		filter "action:vs*"
+			buildoptions { "/wd4324" } -- "structure was padded due to __declspec(align())"

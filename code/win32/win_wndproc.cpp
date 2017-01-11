@@ -201,7 +201,7 @@ main window procedure
 ====================
 */
 
-LONG WINAPI MainWndProc (
+LRESULT CALLBACK MainWndProc (
     HWND    hWnd,
     UINT    uMsg,
     WPARAM  wParam,

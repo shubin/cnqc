@@ -25,6 +25,14 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "qcommon.h"
 #include <setjmp.h>
 
+#if (_MSC_VER >= 1400) // Visual C++ 2005 or later
+#define MSVC_CPUID 1
+#include <intrin.h>
+#elif (__GNUC__)
+#define GCC_CPUID 1
+#include <cpuid.h>
+#endif
+
 #ifndef _WIN32
 #include <netinet/in.h>
 #include <sys/stat.h> // umask
@@ -219,14 +227,6 @@ void QDECL Com_Error( int code, const char *fmt, ... )
 	static int	lastErrorTime;
 	static int	errorCount;
 
-#if defined(_WIN32) && defined(_DEBUG)
-	if ( code != ERR_DISCONNECT && code != ERR_NEED_CD ) {
-		if (!com_noErrorInterrupt->integer && IsDebuggerPresent()) {
-			__debugbreak();
-		}
-	}
-#endif
-
 	// when we are running automated scripts, make sure we
 	// know if anything failed
 	if ( com_buildScript && com_buildScript->integer ) {
@@ -256,6 +256,14 @@ void QDECL Com_Error( int code, const char *fmt, ... )
 	va_start( argptr, fmt );
 	vsprintf( com_errorMessage, fmt, argptr );
 	va_end( argptr );
+
+#if defined(_WIN32) && defined(_DEBUG)
+	if ( code != ERR_DISCONNECT && code != ERR_NEED_CD ) {
+		if (!com_noErrorInterrupt->integer && IsDebuggerPresent()) {
+			__debugbreak();
+		}
+	}
+#endif
 
 	if ( code != ERR_DISCONNECT && code != ERR_NEED_CD ) {
 		Cvar_Set("com_errorMessage", com_errorMessage);
@@ -906,7 +914,7 @@ void *Z_TagMalloc( int size, int tag ) {
 
 	zone->rover = base->next;	// next allocation will start looking here
 	zone->used += base->size;	//
-	
+
 	base->id = ZONEID;
 
 #ifdef ZONE_DEBUG
@@ -1354,13 +1362,18 @@ static void Com_InitHunkMemory()
 	} else {
 		s_hunkTotal = cv->integer * 1024 * 1024;
 	}
-
-	s_hunkData = (byte*)calloc( s_hunkTotal + 31, 1 );
+#if defined( _MSC_VER ) && defined( _DEBUG ) && defined( idx64 )
+	// try to allocate at the highest possible address range to help detect errors during development
+	s_hunkData = (byte*)VirtualAlloc( NULL, ( s_hunkTotal + 4095 ) & ( ~4095 ), MEM_COMMIT | MEM_TOP_DOWN, PAGE_READWRITE );
+	Cvar_Get( "sys_hunkBaseAddress", va( "%p", s_hunkData ), 0 );
+#else
+	s_hunkData = (byte*)calloc( s_hunkTotal + 63, 1 );
+#endif
 	if ( !s_hunkData ) {
 		Com_Error( ERR_FATAL, "Hunk data failed to allocate %i megs", s_hunkTotal / (1024*1024) );
 	}
 	// cacheline align
-	s_hunkData = (byte *) ( ( (intptr_t)s_hunkData + 31 ) & ~31 );
+	s_hunkData = (byte *) ( ( (intptr_t)s_hunkData + 63 ) & ( ~63 ) );
 	Hunk_Clear();
 
 	Cmd_AddCommand( "meminfo", Com_Meminfo_f );
@@ -1497,7 +1510,7 @@ void *Hunk_Alloc( int size, ha_pref preference )
 #endif
 
 	// round to cacheline
-	size = (size+31)&~31;
+	size = ( size + 63 ) & ( ~63 );
 
 	if ( hunk_low.temp + hunk_high.temp + size > s_hunkTotal ) {
 #ifdef HUNK_DEBUG
@@ -1546,8 +1559,7 @@ void* Hunk_AllocateTempMemory( int size )
 {
 	// return a Z_Malloc'd block if the hunk has not been initialized
 	// this allows the config and product id files ( journal files too ) to be loaded
-	// by the file system without redundant routines in the file system utilizing different
-	// memory systems
+	// by the file system without redundant routines in the FS utilizing different memory systems
 	if (!s_hunkData) {
 		return Z_Malloc(size);
 	}
@@ -1588,8 +1600,7 @@ void Hunk_FreeTempMemory( void* buf )
 {
 	// free with Z_Free if the hunk has not been initialized
 	// this allows the config and product id files ( journal files too ) to be loaded
-	// by the file system without redunant routines in the file system utilizing different 
-	// memory systems
+	// by the file system without redundant routines in the FS utilizing different memory systems
 	if (!s_hunkData) {
 		Z_Free(buf);
 		return;
@@ -2000,6 +2011,101 @@ void Com_ReadCDKey( const char *filename ) {
 #endif
 
 
+// 0=eax 1=ebx 2=ecx 3=edx
+static qbool Com_CPUID( int function, int registers[4] ) {
+#if MSVC_CPUID
+	__cpuid( registers, function );
+	return qtrue;
+#elif GCC_CPUID
+	if( __get_cpuid( (unsigned int)function, (unsigned int*)&registers[0], (unsigned int*)&registers[1],
+		(unsigned int*)&registers[2], (unsigned int*)&registers[3] ) != 1 )
+		return qfalse;
+	return qtrue;
+#else
+	return qfalse;
+#endif
+}
+
+static const char* Com_ProcessorName() {
+	static int regs[4];
+
+	if( !Com_CPUID( 0, regs) ) {
+		return NULL;
+	}
+
+	regs[0] = regs[1];
+	regs[1] = regs[3];
+	regs[3] = 0;
+
+	return (const char*)regs;
+}
+
+typedef struct {
+	const char* s;
+	int reg;
+	int bit;
+	int flag;
+	qbool noTest;
+} cpuFeatureBit_t;
+
+#if idx64
+#define IS_X64 qtrue
+#define BASIC_CPU_FEATURES (CPU_MMX | CPU_SSE | CPU_SSE2)
+#else
+#define IS_X64 qfalse
+#define BASIC_CPU_FEATURES 0
+#endif
+
+static const cpuFeatureBit_t cpu_featureBits[] = {
+	{ " MMX", 3, 23, CPU_MMX, IS_X64 },
+	{ " SSE", 3, 25, CPU_SSE, IS_X64 },
+	{ " SSE2", 3, 26, CPU_SSE2, IS_X64 },
+// the following aren't used anywhere for now:
+//	{ " SSE3", 2, 0, CPU_SSE3, qfalse },
+//	{ " SSSE3", 2, 9, CPU_SSSE3, qfalse },
+//	{ " SSE4.1", 2, 19, CPU_SSE41, qfalse },
+//	{ " SSE4.2", 2, 20, CPU_SSE42, qfalse },
+//	{ " AVX", 2, 28, CPU_AVX, qfalse }
+// for AVX2 and later, you'd need to call cpuid with eax=7 and ecx=0 ("extended features")
+};
+
+int cpu_features = BASIC_CPU_FEATURES;
+
+static qbool Com_GetProcessorInfo()
+{
+	Cvar_Get( "sys_cpustring", "unknown", 0 );
+
+	int regs[4];
+	const char* name = Com_ProcessorName();
+	if ( name == NULL || !Com_CPUID( 1, regs ) ) {
+		cpu_features = BASIC_CPU_FEATURES;
+		return qfalse;
+	}
+
+	char s[256] = "";
+	Q_strcat( s, sizeof(s), name );
+
+	int features = BASIC_CPU_FEATURES;
+	for (int i = 0; i < ARRAY_LEN(cpu_featureBits); i++) {
+		const cpuFeatureBit_t* f = cpu_featureBits + i;
+
+		if ( f->noTest || (regs[f->reg] & (1 << f->bit)) ) {
+			Q_strcat( s, sizeof(s), f->s );
+			features |= f->flag;
+		}
+	}
+
+	cpu_features = features;
+
+	Cvar_Set( "sys_cpustring", s );
+
+	return qtrue;
+}
+
+#undef BASIC_CPU_FEATURES
+#undef IS_X64
+
+
 #if defined(_MSC_VER)
 #pragma warning (disable: 4611) // setjmp + destructors = bad. which it is, but...
 #endif
@@ -2116,6 +2222,11 @@ void Com_Init( char *commandLine )
 
 	const char* s = Q3_VERSION" "PLATFORM_STRING" "__DATE__;
 	com_version = Cvar_Get( "version", s, CVAR_ROM | CVAR_SERVERINFO );
+
+	Cvar_Get( "sys_cpustring", "detect", 0 );
+	if ( Com_GetProcessorInfo() ) {
+		Com_Printf( "CPU: %s\n", Cvar_VariableString( "sys_cpustring" ) );
+	}
 
 	Sys_Init();
 	Netchan_Init( Com_Milliseconds() & 0xffff );	// pick a port value that should be nice and random
@@ -2494,6 +2605,51 @@ static void PrintCvarMatches( const char *s )
 }
 
 
+/*
+==================
+crc32 routines
+==================
+*/
+
+static unsigned int crc32_table[256];
+static qboolean crc32_inited = qfalse;
+
+void crc32_init( unsigned int *crc )
+{
+	unsigned int c;
+    int i, j;
+
+	if ( !crc32_inited )
+	{
+		for (i = 0; i < 256; i++)
+		{
+			c = i;
+			for ( j = 0; j < 8; j++ )
+				c = c & 1 ? (c >> 1) ^ 0xEDB88320UL : c >> 1;
+			crc32_table[i] = c;
+		}
+		crc32_inited = qtrue;
+	}
+
+    *crc = 0xFFFFFFFFUL;
+}
+
+
+void crc32_update( unsigned int *crc, unsigned char *buf, unsigned int len )
+{
+	while ( len-- )
+	{
+		*crc = crc32_table[(*crc ^ *buf++) & 0xFF] ^ (*crc >> 8);
+	}
+}
+
+
+void crc32_final( unsigned int *crc )
+{
+	*crc = *crc ^ 0xFFFFFFFFUL;
+}
+
+
 #if I_EVER_NAG_TIMBO_INTO_FIXING_THIS
 
 
@@ -2609,7 +2765,7 @@ static void Field_CompleteFilename( const char *dir,
 	}
 
 	Com_Printf( "]%s\n", completionField->buffer );
-	
+
 	FS_FilenameCompletion( dir, ext, stripExt, PrintMatches );
 }
 

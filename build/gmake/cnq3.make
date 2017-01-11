@@ -12,7 +12,7 @@ endif
 
 ifeq ($(config),debug_x32)
   RESCOMP = windres
-  TARGETDIR = ../../../.bin/debug
+  TARGETDIR = ../../../.bin/debug_x32
   TARGET = $(TARGETDIR)/cnq3-x86
   OBJDIR = obj/x32/debug/cnq3
   DEFINES += -DDEBUG -D_DEBUG
@@ -22,9 +22,9 @@ ifeq ($(config),debug_x32)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -g -Wno-unused-parameter -Wno-write-strings -pthread -x c++
   ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CFLAGS) -fno-exceptions -fno-rtti
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-  LIBS += ../../../.bin/debug/libbotlib.a ../../../.bin/debug/librenderer.a ../../../.bin/debug/libfreetype.a ../../../.bin/debug/liblibjpeg-turbo.a -ldl -lm -lX11 -lpthread
-  LDDEPS += ../../../.bin/debug/libbotlib.a ../../../.bin/debug/librenderer.a ../../../.bin/debug/libfreetype.a ../../../.bin/debug/liblibjpeg-turbo.a
-  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -L../../../.bin/debug -m32  ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jsimdcpu.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jfdctflt-3dn.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctflt-3dn.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jquant-3dn.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jccolor-mmx.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jcgray-mmx.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jcsample-mmx.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jdcolor-mmx.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jdmerge-mmx.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jdsample-mmx.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jfdctfst-mmx.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jfdctint-mmx.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctfst-mmx.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctint-mmx.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctred-mmx.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jquant-mmx.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jfdctflt-sse.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctflt-sse.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jquant-sse.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jccolor-sse2.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jcgray-sse2.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jchuff-sse2.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jcsample-sse2.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jdcolor-sse2.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jdmerge-sse2.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jdsample-sse2.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jfdctfst-sse2.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jfdctint-sse2.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctflt-sse2.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctfst-sse2.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctint-sse2.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctred-sse2.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jquantf-sse2.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jquanti-sse2.obj
+  LIBS += ../../../.bin/debug_x32/libbotlib.a ../../../.bin/debug_x32/librenderer.a ../../../.bin/debug_x32/libfreetype.a ../../../.bin/debug_x32/liblibjpeg-turbo.a -ldl -lm -lX11 -lpthread
+  LDDEPS += ../../../.bin/debug_x32/libbotlib.a ../../../.bin/debug_x32/librenderer.a ../../../.bin/debug_x32/libfreetype.a ../../../.bin/debug_x32/liblibjpeg-turbo.a
+  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -L../../../.bin/debug_x32 -m32 
   LINKCMD = $(CXX) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
   define PREBUILDCMDS
 	@echo Running prebuild commands
@@ -34,7 +34,38 @@ ifeq ($(config),debug_x32)
   endef
   define POSTBUILDCMDS
 	@echo Running postbuild commands
-	cp -u "../../../.bin/debug/cnq3-x86" "$(QUAKE3DIR)"
+	cp -u "../../../.bin/debug_x32/cnq3-x86" "$(QUAKE3DIR)"
+  endef
+all: $(TARGETDIR) $(OBJDIR) prebuild prelink $(TARGET)
+	@:
+
+endif
+
+ifeq ($(config),debug_x64)
+  RESCOMP = windres
+  TARGETDIR = ../../../.bin/debug_x64
+  TARGET = $(TARGETDIR)/cnq3-x64
+  OBJDIR = obj/x64/debug/cnq3
+  DEFINES += -DDEBUG -D_DEBUG
+  INCLUDES += -I../../code/freetype/include
+  FORCE_INCLUDE +=
+  ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
+  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g -Wno-unused-parameter -Wno-write-strings -pthread -x c++
+  ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CFLAGS) -fno-exceptions -fno-rtti
+  ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
+  LIBS += ../../../.bin/debug_x64/libbotlib.a ../../../.bin/debug_x64/librenderer.a ../../../.bin/debug_x64/libfreetype.a ../../../.bin/debug_x64/liblibjpeg-turbo.a -ldl -lm -lX11 -lpthread
+  LDDEPS += ../../../.bin/debug_x64/libbotlib.a ../../../.bin/debug_x64/librenderer.a ../../../.bin/debug_x64/libfreetype.a ../../../.bin/debug_x64/liblibjpeg-turbo.a
+  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib64 -L../../../.bin/debug_x64 -m64 
+  LINKCMD = $(CXX) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
+  define PREBUILDCMDS
+	@echo Running prebuild commands
+	"../../../cnq3tools/git/create_git_header.sh" "../../code/qcommon/git.h"
+  endef
+  define PRELINKCMDS
+  endef
+  define POSTBUILDCMDS
+	@echo Running postbuild commands
+	cp -u "../../../.bin/debug_x64/cnq3-x64" "$(QUAKE3DIR)"
   endef
 all: $(TARGETDIR) $(OBJDIR) prebuild prelink $(TARGET)
 	@:
@@ -43,7 +74,7 @@ endif
 
 ifeq ($(config),release_x32)
   RESCOMP = windres
-  TARGETDIR = ../../../.bin/release
+  TARGETDIR = ../../../.bin/release_x32
   TARGET = $(TARGETDIR)/cnq3-x86
   OBJDIR = obj/x32/release/cnq3
   DEFINES += -DNDEBUG
@@ -53,9 +84,9 @@ ifeq ($(config),release_x32)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -fomit-frame-pointer -ffast-math -Os -g -msse2 -Wno-unused-parameter -Wno-write-strings -g1 -pthread -x c++
   ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CFLAGS) -fno-exceptions -fno-rtti
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-  LIBS += ../../../.bin/release/libbotlib.a ../../../.bin/release/librenderer.a ../../../.bin/release/libfreetype.a ../../../.bin/release/liblibjpeg-turbo.a -ldl -lm -lX11 -lpthread
-  LDDEPS += ../../../.bin/release/libbotlib.a ../../../.bin/release/librenderer.a ../../../.bin/release/libfreetype.a ../../../.bin/release/liblibjpeg-turbo.a
-  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -L../../../.bin/release -m32  ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jsimdcpu.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jfdctflt-3dn.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctflt-3dn.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jquant-3dn.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jccolor-mmx.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jcgray-mmx.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jcsample-mmx.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jdcolor-mmx.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jdmerge-mmx.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jdsample-mmx.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jfdctfst-mmx.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jfdctint-mmx.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctfst-mmx.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctint-mmx.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctred-mmx.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jquant-mmx.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jfdctflt-sse.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctflt-sse.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jquant-sse.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jccolor-sse2.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jcgray-sse2.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jchuff-sse2.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jcsample-sse2.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jdcolor-sse2.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jdmerge-sse2.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jdsample-sse2.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jfdctfst-sse2.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jfdctint-sse2.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctflt-sse2.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctfst-sse2.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctint-sse2.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jidctred-sse2.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jquantf-sse2.obj ../../../cnq3/build/nasm/libjpeg-turbo/elf32/jquanti-sse2.obj
+  LIBS += ../../../.bin/release_x32/libbotlib.a ../../../.bin/release_x32/librenderer.a ../../../.bin/release_x32/libfreetype.a ../../../.bin/release_x32/liblibjpeg-turbo.a -ldl -lm -lX11 -lpthread
+  LDDEPS += ../../../.bin/release_x32/libbotlib.a ../../../.bin/release_x32/librenderer.a ../../../.bin/release_x32/libfreetype.a ../../../.bin/release_x32/liblibjpeg-turbo.a
+  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -L../../../.bin/release_x32 -m32 
   LINKCMD = $(CXX) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
   define PREBUILDCMDS
 	@echo Running prebuild commands
@@ -65,7 +96,38 @@ ifeq ($(config),release_x32)
   endef
   define POSTBUILDCMDS
 	@echo Running postbuild commands
-	cp -u "../../../.bin/release/cnq3-x86" "$(QUAKE3DIR)"
+	cp -u "../../../.bin/release_x32/cnq3-x86" "$(QUAKE3DIR)"
+  endef
+all: $(TARGETDIR) $(OBJDIR) prebuild prelink $(TARGET)
+	@:
+
+endif
+
+ifeq ($(config),release_x64)
+  RESCOMP = windres
+  TARGETDIR = ../../../.bin/release_x64
+  TARGET = $(TARGETDIR)/cnq3-x64
+  OBJDIR = obj/x64/release/cnq3
+  DEFINES += -DNDEBUG
+  INCLUDES += -I../../code/freetype/include
+  FORCE_INCLUDE +=
+  ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
+  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -fomit-frame-pointer -ffast-math -Os -g -msse2 -Wno-unused-parameter -Wno-write-strings -g1 -pthread -x c++
+  ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CFLAGS) -fno-exceptions -fno-rtti
+  ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
+  LIBS += ../../../.bin/release_x64/libbotlib.a ../../../.bin/release_x64/librenderer.a ../../../.bin/release_x64/libfreetype.a ../../../.bin/release_x64/liblibjpeg-turbo.a -ldl -lm -lX11 -lpthread
+  LDDEPS += ../../../.bin/release_x64/libbotlib.a ../../../.bin/release_x64/librenderer.a ../../../.bin/release_x64/libfreetype.a ../../../.bin/release_x64/liblibjpeg-turbo.a
+  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib64 -L../../../.bin/release_x64 -m64 
+  LINKCMD = $(CXX) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
+  define PREBUILDCMDS
+	@echo Running prebuild commands
+	"../../../cnq3tools/git/create_git_header.sh" "../../code/qcommon/git.h"
+  endef
+  define PRELINKCMDS
+  endef
+  define POSTBUILDCMDS
+	@echo Running postbuild commands
+	cp -u "../../../.bin/release_x64/cnq3-x64" "$(QUAKE3DIR)"
   endef
 all: $(TARGETDIR) $(OBJDIR) prebuild prelink $(TARGET)
 	@:

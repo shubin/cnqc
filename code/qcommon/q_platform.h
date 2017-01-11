@@ -28,13 +28,20 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #define id386 0
 #define idppc 0
+#define idx64 0
 
 #else
 
-#if (defined _M_IX86 || defined __i386__) && !defined(C_ONLY)
+#if (defined _M_IX86 || defined __i386__ || defined __i386) && !defined(C_ONLY)
 #define id386 1
 #else
 #define id386 0
+#endif
+
+#if (defined _M_AMD64 || defined _M_X64 || defined __amd64__ || defined __amd64 || defined __x86_64__ || defined __x86_64) && !defined(C_ONLY)
+#define idx64 1
+#else
+#define idx64 0
 #endif
 
 #if (defined(powerc) || defined(powerpc) || defined(ppc) || \
@@ -67,8 +74,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define ID_INLINE __inline
 #define PATH_SEP '\\'
 
-#if defined( _M_IX86 ) || defined( __i386__ )
+#if defined( _M_IX86 ) || defined( __i386__ ) || defined( __i386 )
 #define ARCH_STRING "x86"
+#elif defined( _M_AMD64 ) || defined( _M_X64 ) || defined( __amd64__ ) || defined( __amd64 ) || defined( __x86_64__ ) || defined( __x86_64 )
+#define ARCH_STRING "x64"
 #elif defined _M_ALPHA
 #define ARCH_STRING "AXP"
 #endif

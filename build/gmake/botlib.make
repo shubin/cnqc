@@ -12,7 +12,7 @@ endif
 
 ifeq ($(config),debug_x32)
   RESCOMP = windres
-  TARGETDIR = ../../../.bin/debug
+  TARGETDIR = ../../../.bin/debug_x32
   TARGET = $(TARGETDIR)/libbotlib.a
   OBJDIR = obj/x32/debug/botlib
   DEFINES += -DBOTLIB -DDEBUG -D_DEBUG
@@ -24,7 +24,34 @@ ifeq ($(config),debug_x32)
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
   LIBS +=
   LDDEPS +=
-  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -L../../../.bin/debug -m32 
+  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -L../../../.bin/debug_x32 -m32 
+  LINKCMD = $(AR) -rcs "$@" $(OBJECTS)
+  define PREBUILDCMDS
+  endef
+  define PRELINKCMDS
+  endef
+  define POSTBUILDCMDS
+  endef
+all: $(TARGETDIR) $(OBJDIR) prebuild prelink $(TARGET)
+	@:
+
+endif
+
+ifeq ($(config),debug_x64)
+  RESCOMP = windres
+  TARGETDIR = ../../../.bin/debug_x64
+  TARGET = $(TARGETDIR)/libbotlib.a
+  OBJDIR = obj/x64/debug/botlib
+  DEFINES += -DBOTLIB -DDEBUG -D_DEBUG
+  INCLUDES +=
+  FORCE_INCLUDE +=
+  ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
+  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g -Wno-unused-parameter -Wno-write-strings
+  ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CFLAGS) -fno-exceptions -fno-rtti
+  ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
+  LIBS +=
+  LDDEPS +=
+  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib64 -L../../../.bin/debug_x64 -m64 
   LINKCMD = $(AR) -rcs "$@" $(OBJECTS)
   define PREBUILDCMDS
   endef
@@ -39,7 +66,7 @@ endif
 
 ifeq ($(config),release_x32)
   RESCOMP = windres
-  TARGETDIR = ../../../.bin/release
+  TARGETDIR = ../../../.bin/release_x32
   TARGET = $(TARGETDIR)/libbotlib.a
   OBJDIR = obj/x32/release/botlib
   DEFINES += -DBOTLIB -DNDEBUG
@@ -51,7 +78,34 @@ ifeq ($(config),release_x32)
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
   LIBS +=
   LDDEPS +=
-  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -L../../../.bin/release -m32 
+  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -L../../../.bin/release_x32 -m32 
+  LINKCMD = $(AR) -rcs "$@" $(OBJECTS)
+  define PREBUILDCMDS
+  endef
+  define PRELINKCMDS
+  endef
+  define POSTBUILDCMDS
+  endef
+all: $(TARGETDIR) $(OBJDIR) prebuild prelink $(TARGET)
+	@:
+
+endif
+
+ifeq ($(config),release_x64)
+  RESCOMP = windres
+  TARGETDIR = ../../../.bin/release_x64
+  TARGET = $(TARGETDIR)/libbotlib.a
+  OBJDIR = obj/x64/release/botlib
+  DEFINES += -DBOTLIB -DNDEBUG
+  INCLUDES +=
+  FORCE_INCLUDE +=
+  ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
+  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -fomit-frame-pointer -ffast-math -Os -g -msse2 -Wno-unused-parameter -Wno-write-strings -g1
+  ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CFLAGS) -fno-exceptions -fno-rtti
+  ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
+  LIBS +=
+  LDDEPS +=
+  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib64 -L../../../.bin/release_x64 -m64 
   LINKCMD = $(AR) -rcs "$@" $(OBJECTS)
   define PREBUILDCMDS
   endef

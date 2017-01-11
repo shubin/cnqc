@@ -1104,7 +1104,7 @@ void CL_InitUI()
 	// if sv_pure is set we only allow qvms to be loaded
 	vmInterpret_t interpret = cl_connectedToPureServer ? VMI_COMPILED : (vmInterpret_t)Cvar_VariableIntegerValue("vm_ui");
 
-	uivm = VM_Create( "ui", CL_UISystemCalls, interpret );
+	uivm = VM_Create( VM_UI, CL_UISystemCalls, interpret );
 	if ( !uivm )
 		Com_Error( ERR_FATAL, "VM_Create on UI failed" );
 

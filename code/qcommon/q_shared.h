@@ -173,6 +173,7 @@ typedef int		clipHandle_t;
 	#define ALIGN(x)
 #endif
 
+#define ARRAY_LEN(x)		(sizeof(x) / sizeof(*(x)))
 
 // angle indexes
 #define	PITCH				0		// up / down
@@ -576,6 +577,10 @@ void	Q_strcat( char *dest, int size, const char *src );
 int Q_PrintStrlen( const char *string );
 // removes color sequences from string
 char *Q_CleanStr( char *string );
+
+typedef intptr_t ( *syscall_t )( intptr_t *parms );
+typedef intptr_t ( QDECL *dllSyscall_t )( intptr_t callNum, ... );
+typedef void ( QDECL *dllEntry_t )( dllSyscall_t syscallptr );
 
 
 //

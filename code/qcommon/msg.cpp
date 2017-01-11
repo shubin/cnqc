@@ -581,8 +581,8 @@ void MSG_ReadDeltaUsercmdKey( msg_t* msg, int key, const usercmd_t* from, usercm
 
 typedef struct {
 	const char* name;
-	int		offset;
-	int		bits;		// 0 = float
+	size_t		offset;
+	int			bits;		// 0 = float
 } netField_t;
 
 
@@ -595,7 +595,7 @@ entityState_t communication
 */
 
 // using the stringizing operator to save typing...
-#define ESF(x) #x,(int)&((entityState_t*)0)->x
+#define ESF(x) #x,(size_t)&((entityState_t*)0)->x
 
 static const netField_t entityStateFields[] =
 {
@@ -900,7 +900,7 @@ plyer_state_t communication
 */
 
 // using the stringizing operator to save typing...
-#define PSF(x) #x,(int)&((playerState_t*)0)->x
+#define PSF(x) #x,(size_t)&((playerState_t*)0)->x
 
 static const netField_t playerStateFields[] =
 {

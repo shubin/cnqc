@@ -562,9 +562,9 @@ void CL_InitCGame()
 	Com_sprintf( cl.mapname, sizeof( cl.mapname ), "maps/%s.bsp", mapname );
 
 	// if sv_pure is set we only allow qvms to be loaded
-	vmInterpret_t interpret = cl_connectedToPureServer ? VMI_COMPILED : (vmInterpret_t)Cvar_VariableIntegerValue("vm_cgame");
+	const vmInterpret_t interpret = cl_connectedToPureServer ? VMI_COMPILED : (vmInterpret_t)Cvar_VariableIntegerValue( "vm_cgame" );
 
-	cgvm = VM_Create( "cgame", CL_CgameSystemCalls, interpret );
+	cgvm = VM_Create( VM_CGAME, CL_CgameSystemCalls, interpret );
 	if ( !cgvm ) {
 		Com_Error( ERR_DROP, "VM_Create on cgame failed" );
 	}
@@ -605,7 +605,6 @@ qbool CL_GameCommand()
 void CL_CGameRendering( stereoFrame_t stereo )
 {
 	VM_Call( cgvm, CG_DRAW_ACTIVE_FRAME, cl.serverTime, stereo, clc.demoplaying );
-	VM_Debug( 0 );
 }
 
 

@@ -844,8 +844,10 @@ void SV_InitGameProgs()
 	cvar_t* var = Cvar_Get( "bot_enable", "1", CVAR_LATCH );
 	bot_enable = (var && var->integer);
 
+	const vmInterpret_t interpret = (vmInterpret_t)Cvar_VariableIntegerValue( "vm_game" );
+
 	// load the dll or bytecode
-	gvm = VM_Create( "qagame", SV_GameSystemCalls, (vmInterpret_t)Cvar_VariableIntegerValue( "vm_game" ) );
+	gvm = VM_Create( VM_GAME, SV_GameSystemCalls, interpret );
 
 	SV_InitGameVM( qfalse );
 }

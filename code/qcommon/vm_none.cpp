@@ -1,10 +1,10 @@
 #include "vm_local.h"
 
 int VM_CallCompiled( vm_t *vm, int *args ) {
-	exit(99);
+	Com_Error(ERR_FATAL, "VM compiler N/A");
 	return 0;
 }
 
-void VM_Compile( vm_t *vm, vmHeader_t *header ) {
-	exit(99);
+void VM_Compile( vm_t *vm, const vmHeader_t *header ) {
+	Com_Error(ERR_FATAL, "VM compiler N/A");
 }

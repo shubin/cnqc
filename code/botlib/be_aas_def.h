@@ -225,7 +225,7 @@ typedef struct aas_s
 	int faceindexsize;
 	aas_faceindex_t *faceindex;
 	//convex areas
-	size_t numareas;
+	unsigned int numareas;
 	aas_area_t *areas;
 	//convex area settings
 	int numareasettings;
@@ -243,7 +243,7 @@ typedef struct aas_s
 	int portalindexsize;
 	aas_portalindex_t *portalindex;
 	//clusters
-	size_t numclusters;
+	unsigned int numclusters;
 	aas_cluster_t *clusters;
 	//
 	int numreachabilityareas;

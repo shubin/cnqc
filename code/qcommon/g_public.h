@@ -611,7 +611,7 @@ typedef enum {
 	// The game should call G_GET_ENTITY_TOKEN to parse through all the
 	// entity configuration text and spawn gentities.
 
-	GAME_SHUTDOWN,	// (void);
+	GAME_SHUTDOWN,	// (int restart);
 
 	GAME_CLIENT_CONNECT,	// ( int clientNum, qboolean firstTime, qboolean isBot );
 	// return NULL if the client is allowed to connect, otherwise return

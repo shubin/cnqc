@@ -549,9 +549,7 @@ static void* try_dlopen( const char* base, const char* gamedir, const char* file
 // in release builds, the load procedure matches the VFS logic (fs_homepath, then fs_basepath)
 // in debug builds, the current working directory is tried first
 
-void* Sys_LoadDll( const char* name,
-		intptr_t (**entryPoint)(intptr_t, ...),
-		intptr_t (*systemcalls)(intptr_t, ...) )
+void* QDECL Sys_LoadDll( const char* name, dllSyscall_t *entryPoint, dllSyscall_t systemcalls )
 {
 	char filename[MAX_QPATH];
 	Com_sprintf( filename, sizeof( filename ), "%s" ARCH_STRING DLL_EXT, name );
@@ -575,14 +573,12 @@ void* Sys_LoadDll( const char* name,
 	if ( !libHandle )
 		return NULL;
 
-	void (QDECL *dllEntry)( int (QDECL *syscallptr)(int, ...) );
-
 #if USE_SDL_VIDEO
-	dllEntry = (void (QDECL *)( int (QDECL *)( int, ... ) ) )SDL_LoadFunction( libHandle, "dllEntry" );
-	*entryPoint = (int (QDECL *)(intptr_t,...))SDL_LoadFunction( libHandle, "vmMain" );
+	dllEntry_t dllEntry = (dllEntry_t)SDL_LoadFunction( libHandle, "dllEntry" );
+	*entryPoint = (dllSyscall_t)SDL_LoadFunction( libHandle, "vmMain" );
 #else
-	dllEntry = (void (QDECL *)( int (QDECL *)( int, ... ) ) )dlsym( libHandle, "dllEntry" );
-	*entryPoint = (int (QDECL *)(intptr_t,...))dlsym( libHandle, "vmMain" );
+	dllEntry_t dllEntry = (dllEntry_t)dlsym( libHandle, "dllEntry" );
+	*entryPoint = (dllSyscall_t)dlsym( libHandle, "vmMain" );
 #endif
 
 	if ( !*entryPoint || !dllEntry ) {

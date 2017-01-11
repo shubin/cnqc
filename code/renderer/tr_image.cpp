@@ -154,7 +154,7 @@ Used to resample images in a more general than quartering fashion.
 This will only be filtered properly if the resampled size
 is greater than half the original size.
 
-If a larger shrinking is needed, use the mipmap function 
+If a larger shrinking is needed, use the mipmap function
 before or after.
 ================
 */
@@ -262,7 +262,7 @@ static void R_MipMap( unsigned* in, int inWidth, int inHeight )
 		for ( j = 0 ; j < outWidth ; j++ ) {
 			outpix = (byte *) ( temp + i * outWidth + j );
 			for ( k = 0 ; k < 4 ; k++ ) {
-				total = 
+				total =
 					1 * ((byte *)&in[ ((i*2-1)&inHeightMask)*inWidth + ((j*2-1)&inWidthMask) ])[k] +
 					2 * ((byte *)&in[ ((i*2-1)&inHeightMask)*inWidth + ((j*2)&inWidthMask) ])[k] +
 					2 * ((byte *)&in[ ((i*2-1)&inHeightMask)*inWidth + ((j*2+1)&inWidthMask) ])[k] +
@@ -1104,7 +1104,7 @@ qhandle_t RE_RegisterSkin( const char* name )
 		// lowercase the surface name so skin compares are faster
 		Q_strlwr( surfName );
 
-		if (*p == ',') 
+		if (*p == ',')
 			++p;
 
 		if ( strstr( token, "tag_" ) )

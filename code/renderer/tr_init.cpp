@@ -633,7 +633,7 @@ void R_Init()
 	Com_Memset( &backEnd, 0, sizeof( backEnd ) );
 	Com_Memset( &tess, 0, sizeof( tess ) );
 
-	if ((int)tess.xyz & 15)
+	if ((intptr_t)tess.xyz & 15)
 		Com_Printf( "WARNING: tess.xyz not 16 byte aligned\n" );
 
 	// init function tables

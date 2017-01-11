@@ -41,7 +41,7 @@ void	IN_Shutdown();
 
 void SNDDMA_Activate();
 
-LONG WINAPI MainWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam );
+LRESULT CALLBACK MainWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam );
 
 typedef struct
 {

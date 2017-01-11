@@ -18,6 +18,14 @@ ifeq ($(config),debug_x32)
   libjpeg_turbo_config = debug_x32
   freetype_config = debug_x32
 endif
+ifeq ($(config),debug_x64)
+  cnq3_config = debug_x64
+  cnq3_server_config = debug_x64
+  botlib_config = debug_x64
+  renderer_config = debug_x64
+  libjpeg_turbo_config = debug_x64
+  freetype_config = debug_x64
+endif
 ifeq ($(config),release_x32)
   cnq3_config = release_x32
   cnq3_server_config = release_x32
@@ -25,6 +33,14 @@ ifeq ($(config),release_x32)
   renderer_config = release_x32
   libjpeg_turbo_config = release_x32
   freetype_config = release_x32
+endif
+ifeq ($(config),release_x64)
+  cnq3_config = release_x64
+  cnq3_server_config = release_x64
+  botlib_config = release_x64
+  renderer_config = release_x64
+  libjpeg_turbo_config = release_x64
+  freetype_config = release_x64
 endif
 
 PROJECTS := cnq3 cnq3-server botlib renderer libjpeg-turbo freetype
@@ -82,7 +98,9 @@ help:
 	@echo ""
 	@echo "CONFIGURATIONS:"
 	@echo "  debug_x32"
+	@echo "  debug_x64"
 	@echo "  release_x32"
+	@echo "  release_x64"
 	@echo ""
 	@echo "TARGETS:"
 	@echo "   all (default)"

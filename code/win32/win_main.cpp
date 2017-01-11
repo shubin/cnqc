@@ -343,8 +343,7 @@ void Sys_UnloadDll( void *dllHandle )
 
 // used to load a development dll instead of a virtual machine
 
-void* QDECL Sys_LoadDll( const char* name,
-		intptr_t (QDECL **entryPoint)(intptr_t, ...), intptr_t (QDECL *systemcalls)(intptr_t, ...) )
+void* QDECL Sys_LoadDll( const char* name, dllSyscall_t *entryPoint, dllSyscall_t systemcalls )
 {
 	char filename[MAX_QPATH];
 	Com_sprintf( filename, sizeof( filename ), "%sx86.dll", name );
@@ -381,9 +380,8 @@ void* QDECL Sys_LoadDll( const char* name,
 	if ( !libHandle )
 		return NULL;
 
-	void (QDECL *dllEntry)( intptr_t (QDECL *syscallptr)(intptr_t, ...) );
-	dllEntry = ( void (QDECL *)(intptr_t (QDECL *)( intptr_t, ... ) ) )GetProcAddress( libHandle, "dllEntry" );
-	*entryPoint = (intptr_t (QDECL *)(intptr_t,...))GetProcAddress( libHandle, "vmMain" );
+	dllEntry_t dllEntry = ( dllEntry_t ) GetProcAddress( libHandle, "dllEntry" );
+	*entryPoint = ( dllSyscall_t ) GetProcAddress( libHandle, "vmMain" );
 	if ( !*entryPoint || !dllEntry ) {
 		FreeLibrary( libHandle );
 		return NULL;
@@ -536,30 +534,6 @@ void Sys_Init()
 
 	// save out a couple things in rom cvars for the renderer to access
 	Cvar_Get( "win_hinstance", va("%i", (int)g_wv.hInstance), CVAR_ROM );
-
-	//
-	// figure out our CPU
-	//
-	Cvar_Get( "sys_cpustring", "detect", 0 );
-	if ( !Q_stricmp( Cvar_VariableString( "sys_cpustring"), "detect" ) )
-	{
-		int cpuid = Sys_GetProcessorId();
-		switch ( cpuid )
-		{
-		case CPUID_GENERIC:
-			break;
-		case CPUID_AXP:
-			Cvar_Set( "sys_cpustring", "Alpha AXP" );
-			break;
-		case CPUID_UNSUPPORTED:
-			Com_Error( ERR_FATAL, "Unsupported cpu type %s\n", Cvar_VariableString( "sys_cpustring" ) );
-			break;
-		default:
-			Com_Error( ERR_FATAL, "Unknown cpu type %d\n", cpuid );
-			break;
-		}
-	}
-	Com_Printf( "CPU: %s\n", Cvar_VariableString( "sys_cpustring" ) );
 
 	//Cvar_Set( "username", Sys_GetCurrentUser() );
 }

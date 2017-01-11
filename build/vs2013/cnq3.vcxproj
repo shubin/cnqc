@@ -5,9 +5,17 @@
       <Configuration>debug</Configuration>
       <Platform>Win32</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="debug|x64">
+      <Configuration>debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="release|Win32">
       <Configuration>release</Configuration>
       <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="release|x64">
+      <Configuration>release</Configuration>
+      <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -23,7 +31,20 @@
     <CharacterSet>Unicode</CharacterSet>
     <PlatformToolset>v120</PlatformToolset>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
@@ -36,23 +57,45 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>..\..\..\.bin\debug\</OutDir>
+    <OutDir>..\..\..\.bin\debug_x32\</OutDir>
     <IntDir>obj\x32\debug\cnq3\</IntDir>
-    <TargetName>cnq3</TargetName>
+    <TargetName>cnq3-x86</TargetName>
+    <TargetExt>.exe</TargetExt>
+    <GenerateManifest>false</GenerateManifest>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>..\..\..\.bin\debug_x64\</OutDir>
+    <IntDir>obj\x64\debug\cnq3\</IntDir>
+    <TargetName>cnq3-x64</TargetName>
     <TargetExt>.exe</TargetExt>
     <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>..\..\..\.bin\release\</OutDir>
+    <OutDir>..\..\..\.bin\release_x32\</OutDir>
     <IntDir>obj\x32\release\cnq3\</IntDir>
-    <TargetName>cnq3</TargetName>
+    <TargetName>cnq3-x86</TargetName>
+    <TargetExt>.exe</TargetExt>
+    <GenerateManifest>false</GenerateManifest>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>..\..\..\.bin\release_x64\</OutDir>
+    <IntDir>obj\x64\release\cnq3\</IntDir>
+    <TargetName>cnq3-x64</TargetName>
     <TargetExt>.exe</TargetExt>
     <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
@@ -74,15 +117,44 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>Winmm.lib;ws2_32.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\..\.bin\debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\..\.bin\debug_x32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions> ..\..\cnq3\code\win32\winquake.res /STACK:8388608 %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
       <Command>"..\..\..\cnq3tools\git\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>copy "..\..\..\.bin\debug\cnq3.exe" "$(QUAKE3DIR)"
-copy "..\..\..\.bin\debug\cnq3.pdb" "$(QUAKE3DIR)"</Command>
+      <Command>copy "..\..\..\.bin\debug_x32\cnq3-x86.exe" "$(QUAKE3DIR)"
+copy "..\..\..\.bin\debug_x32\cnq3-x86.pdb" "$(QUAKE3DIR)"</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>DEBUG;_DEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\code\freetype\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <Optimization>Disabled</Optimization>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <ExceptionHandling>false</ExceptionHandling>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
+      <AdditionalOptions>/Gm /wd4267 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>Winmm.lib;ws2_32.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\..\..\.bin\debug_x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions> ..\..\cnq3\code\win32\winquake.res /STACK:8388608 %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+    <PreBuildEvent>
+      <Command>"..\..\..\cnq3tools\git\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
+    </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>copy "..\..\..\.bin\debug_x64\cnq3-x64.exe" "$(QUAKE3DIR)"
+copy "..\..\..\.bin\debug_x64\cnq3-x64.pdb" "$(QUAKE3DIR)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release|Win32'">
@@ -114,15 +186,54 @@ copy "..\..\..\.bin\debug\cnq3.pdb" "$(QUAKE3DIR)"</Command>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>Winmm.lib;ws2_32.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\..\.bin\release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\..\.bin\release_x32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions> ..\..\cnq3\code\win32\winquake.res /STACK:8388608 /OPT:REF /OPT:ICF %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
       <Command>"..\..\..\cnq3tools\git\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>copy "..\..\..\.bin\release\cnq3.exe" "$(QUAKE3DIR)"
-copy "..\..\..\.bin\release\cnq3.pdb" "$(QUAKE3DIR)"</Command>
+      <Command>copy "..\..\..\.bin\release_x32\cnq3-x86.exe" "$(QUAKE3DIR)"
+copy "..\..\..\.bin\release_x32\cnq3-x86.pdb" "$(QUAKE3DIR)"</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release|x64'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <PreprocessorDefinitions>NDEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\code\freetype\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <Optimization>MinSpace</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <OmitFramePointers>true</OmitFramePointers>
+      <StringPooling>true</StringPooling>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <ExceptionHandling>false</ExceptionHandling>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <AdditionalOptions>/GL /wd4267 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>Winmm.lib;ws2_32.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\..\..\.bin\release_x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions> ..\..\cnq3\code\win32\winquake.res /STACK:8388608 /OPT:REF /OPT:ICF %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+    <PreBuildEvent>
+      <Command>"..\..\..\cnq3tools\git\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
+    </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>copy "..\..\..\.bin\release_x64\cnq3-x64.exe" "$(QUAKE3DIR)"
+copy "..\..\..\.bin\release_x64\cnq3-x64.pdb" "$(QUAKE3DIR)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

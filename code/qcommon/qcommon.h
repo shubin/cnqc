@@ -249,6 +249,14 @@ VIRTUAL MACHINE
 ==============================================================
 */
 
+typedef enum {
+	CPU_MMX  = (1 << 0),
+	CPU_SSE  = (1 << 1),
+	CPU_SSE2 = (1 << 2)
+} cpuFeatureFlags_t;
+
+extern int cpu_features;
+
 typedef struct vm_s vm_t;
 
 typedef enum {
@@ -275,12 +283,21 @@ typedef enum {
 	TRAP_TESTPRINTFLOAT
 } sharedTraps_t;
 
+typedef enum {
+	VM_BAD = -1,
+	VM_GAME = 0,
+	VM_CGAME,
+	VM_UI,
+	VM_COUNT
+} vmIndex_t;
+
 void	VM_Init();
-vm_t	*VM_Create( const char *module, intptr_t (*systemCalls)(intptr_t *), vmInterpret_t interpret );
-// module should be bare: "cgame", not "cgame.dll" or "vm/cgame.qvm"
+vm_t	*VM_Create( vmIndex_t index, syscall_t systemCalls, vmInterpret_t interpret );
 
 void	VM_Free( vm_t *vm );
 void	VM_Clear(void);
+void	VM_Forced_Unload_Start(void);
+void	VM_Forced_Unload_Done(void);
 vm_t	*VM_Restart( vm_t *vm );
 
 intptr_t	QDECL VM_Call( vm_t *vm, int callNum, ... );
@@ -460,6 +477,10 @@ extern	int			cvar_modifiedFlags;
 // a single check can determine if any CVAR_USERINFO, CVAR_SERVERINFO,
 // etc, variables have been modified since the last check.  The bit
 // can then be cleared to allow another change detection.
+
+void crc32_init( unsigned int *crc );
+void crc32_update( unsigned int *crc, unsigned char *buf, unsigned int len );
+void crc32_final( unsigned int *crc );
 
 /*
 ==============================================================
@@ -649,11 +670,6 @@ MISC
 // centralizing the declarations for cl_cdkey
 // https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=470
 extern char cl_cdkey[34];
-
-// returned by Sys_GetProcessorId
-#define CPUID_GENERIC			0		// anything acceptable
-#define CPUID_AXP				0x10
-#define CPUID_UNSUPPORTED		0x20
 
 // TTimo
 // centralized and cleaned, that's the max string you can send to a Com_Printf / Com_DPrintf (above gets truncated)
@@ -902,8 +918,7 @@ void Sys_Init();
 void Sys_Quit();
 
 // general development dll loading for virtual machine testing
-void* QDECL Sys_LoadDll( const char* name,
-		intptr_t (QDECL **entryPoint)(int, ...), intptr_t (QDECL *systemcalls)(intptr_t, ...) );
+void* QDECL Sys_LoadDll( const char* name, dllSyscall_t *entryPoint, dllSyscall_t systemcalls );
 void Sys_UnloadDll( void* dllHandle );
 
 void	QDECL Sys_Error( const char *error, ...);
@@ -917,8 +932,6 @@ int		Sys_Milliseconds();
 
 // the system console is shown when a dedicated server is running
 void	Sys_DisplaySystemConsole( qbool show );
-
-int		Sys_GetProcessorId();
 
 void	Sys_ShowConsole( int level, qbool quitOnClose );
 void	Sys_SetErrorText( const char *text );
@@ -944,7 +957,6 @@ void	Sys_BeginProfiling( void );
 void	Sys_EndProfiling( void );
 
 qbool Sys_LowPhysicalMemory( void );
-unsigned int Sys_ProcessorCount( void );
 
 
 /* This is based on the Adaptive Huffman algorithm described in Sayood's Data
