@@ -175,6 +175,12 @@ typedef int		clipHandle_t;
 
 #define ARRAY_LEN(x)		(sizeof(x) / sizeof(*(x)))
 
+// #define VALUE 42
+// STRINGIZE_NE(VALUE) -> "VALUE"
+// STRINGIZE(VALUE)    -> "42"
+#define STRINGIZE_NE(x)		#x					// no expansion
+#define STRINGIZE(x)		STRINGIZE_NE(x)		// with expansion
+
 // angle indexes
 #define	PITCH				0		// up / down
 #define	YAW					1		// left / right

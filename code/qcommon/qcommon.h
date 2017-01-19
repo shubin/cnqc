@@ -344,20 +344,26 @@ then searches for a command or variable that matches the first token.
 */
 
 typedef void (*xcommand_t) (void);
+typedef void (*xcommandCompletion_t) (int startArg, int compArg);
 
 void Cmd_Init();
 
-void Cmd_AddCommand( const char *cmd_name, xcommand_t function );
 // called by the init functions of other parts of the program to
 // register commands and functions to call for them.
 // The cmd_name is referenced later, so it should not be in temp memory
 // if function is NULL, the command will be forwarded to the server
 // as a clc_clientCommand instead of executed locally
+void Cmd_AddCommand( const char* cmd_name, xcommand_t function );
 
-void Cmd_RemoveCommand( const char *cmd_name );
+void Cmd_RemoveCommand( const char* cmd_name );
 
-void Cmd_CommandCompletion( void(*callback)(const char *s) );
+// auto-completion of command arguments
+void Cmd_SetAutoCompletion( const char* cmd_name, xcommandCompletion_t complete );
+void Cmd_AutoCompleteArgument( const char* cmd_name, int startArg, int compArg );
+
+// auto-completion of the command's name
 // callback with each valid string
+void Cmd_CommandCompletion( void(*callback)(const char* s) );
 
 // the functions that execute commands get their parameters with these
 // if arg > argc, Cmd_Argv() will return "", not NULL, so string ops are always safe
@@ -365,6 +371,8 @@ int Cmd_Argc();
 const char* Cmd_Argv(int arg);
 const char* Cmd_Args();
 const char* Cmd_ArgsFrom( int arg );
+qbool Cmd_ArgQuoted( int arg );
+int Cmd_ArgIndexFromOffset( int offset ); // offset into the Cmd_TokenizeString argument
 void Cmd_ArgvBuffer( int arg, char *buffer, int bufferLength );
 void Cmd_ArgsBuffer( char *buffer, int bufferLength );
 const char* Cmd_Cmd(); // note: this is NOT argv[0], it's the entire cmd as a raw string
@@ -626,8 +634,11 @@ void FS_Rename( const char *from, const char *to );
 void FS_Remove( const char *osPath );
 void FS_HomeRemove( const char *homePath );
 
-void	FS_FilenameCompletion( const char *dir, const char *ext,
-		qbool stripExt, void(*callback)(const char *s) );
+#define FS_FILTER_INPAK		(1 << 0)
+#define FS_FILTER_NOTINPAK	(1 << 1)
+
+void FS_FilenameCompletion( const char *dir, const char *ext, qbool stripExt,
+							void (*callback)(const char *s), int filters );
 
 
 /*
@@ -647,7 +658,15 @@ typedef struct {
 } field_t;
 
 void Field_Clear( field_t *edit );
-void Field_AutoComplete( field_t *edit );
+void Field_AutoComplete( field_t *edit ); // should only be called by Console_Key
+
+// these are the functions you can use from your own command argument auto-completion callbacks
+void Field_AutoCompleteFrom( int startArg, int compArg, qbool searchCmds, qbool searchVars );
+void Field_AutoCompleteMapName( int startArg, int compArg );
+void Field_AutoCompleteConfigName( int startArg, int compArg );
+void Field_AutoCompleteDemoNameRead( int startArg, int compArg );
+void Field_AutoCompleteDemoNameWrite( int startArg, int compArg );
+void Field_AutoCompleteKeyName( int startArg, int compArg );
 
 /*
 ==============================================================
@@ -852,6 +871,9 @@ void CL_FlushMemory();
 
 void CL_StartHunkUsers( void );
 // start all the client stuff using the hunk
+
+void Key_KeyNameCompletion( void (*callback)(const char *s) );
+// for /bind and /unbind auto-completion
 
 void Key_WriteBindings( fileHandle_t f );
 // for writing the config files

@@ -178,6 +178,13 @@ static void SV_DevMap_f( )
 }
 
 
+static void SV_CompleteMap_f( int startArg, int compArg )
+{
+	if ( startArg + 1 == compArg )
+		Field_AutoCompleteMapName( startArg, compArg );
+}
+
+
 /*
 Completely restarts a level, but doesn't send a new gamestate to the clients.
 This allows fair starts with variable load times.
@@ -690,6 +697,8 @@ void SV_AddOperatorCommands()
 	Cmd_AddCommand ("sectorlist", SV_SectorList_f);
 	Cmd_AddCommand ("map", SV_Map_f);
 	Cmd_AddCommand ("devmap", SV_DevMap_f);
+	Cmd_SetAutoCompletion ("map", SV_CompleteMap_f);
+	Cmd_SetAutoCompletion ("devmap", SV_CompleteMap_f);
 	Cmd_AddCommand ("killserver", SV_KillServer_f);
 	Cmd_AddCommand ("sv_restart", SV_ServerRestart_f );
 	if( com_dedicated->integer ) {

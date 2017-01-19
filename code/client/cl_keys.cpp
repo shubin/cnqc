@@ -758,6 +758,13 @@ int Key_GetKey( const char* binding )
 }
 
 
+void Key_KeyNameCompletion( void (*callback)(const char *s) )
+{
+	for( int i = 0; keynames[i].name != NULL; i++ )
+		callback( keynames[i].name );
+}
+
+
 // write bindings to a config file as "bind key value" so they can be exec'ed later
 
 void Key_WriteBindings( fileHandle_t f )
@@ -830,6 +837,22 @@ static void Key_Bind_f()
 }
 
 
+static void Key_CompleteBind_f( int startArg, int compArg )
+{
+	if ( compArg == startArg + 1 )
+		Field_AutoCompleteKeyName( startArg, compArg );
+	else if ( compArg >= startArg + 2 )
+		Field_AutoCompleteFrom( compArg, compArg, qtrue, qtrue );
+}
+
+
+static void Key_CompleteUnbind_f( int startArg, int compArg )
+{
+	if ( compArg == startArg + 1 )
+		Field_AutoCompleteKeyName( startArg, compArg );
+}
+
+
 static void Key_Bindlist_f()
 {
 	for ( int i = 0; i < MAX_KEYS; ++i ) {
@@ -845,7 +868,9 @@ void CL_InitKeyCommands()
 	COMPILE_TIME_ASSERT( K_LAST_KEY <= MAX_KEYS );
 
 	Cmd_AddCommand( "bind", Key_Bind_f );
+	Cmd_SetAutoCompletion( "bind", Key_CompleteBind_f );
 	Cmd_AddCommand( "unbind", Key_Unbind_f );
+	Cmd_SetAutoCompletion( "unbind", Key_CompleteUnbind_f );
 	Cmd_AddCommand( "unbindall", Key_Unbindall_f );
 	Cmd_AddCommand( "bindlist", Key_Bindlist_f );
 }

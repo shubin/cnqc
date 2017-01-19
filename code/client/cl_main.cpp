@@ -263,6 +263,13 @@ static void CL_Record_f()
 }
 
 
+static void CL_CompleteDemoRecord_f( int startArg, int compArg )
+{
+	if ( startArg + 1 == compArg )
+		Field_AutoCompleteDemoNameWrite( startArg, compArg );
+}
+
+
 /*
 =======================================================================
 
@@ -422,6 +429,13 @@ void CL_PlayDemo_f()
 	// don't get the first snapshot this frame, to prevent the long
 	// time from the gamestate load from messing causing a time skip
 	clc.firstDemoFrameSkipped = qfalse;
+}
+
+
+static void CL_CompleteDemoPlay_f( int startArg, int compArg )
+{
+	if ( startArg + 1 == compArg )
+		Field_AutoCompleteDemoNameRead( startArg, compArg );
 }
 
 
@@ -992,6 +1006,13 @@ static void CL_Rcon_f( void )
 	}
 
 	NET_SendPacket (NS_CLIENT, strlen(message)+1, message, to);
+}
+
+
+static void CL_CompleteRcon_f( int startArg, int compArg )
+{
+	if ( startArg < compArg )
+		Field_AutoCompleteFrom( startArg + 1, compArg, qtrue, qtrue );
 }
 
 
@@ -1947,6 +1968,19 @@ qbool CL_CDKeyValidate( const char *key, const char *checksum )
 }
 
 
+static void CL_CallVote_f()
+{
+	CL_ForwardCommandToServer( Cmd_Cmd() );
+}
+
+
+static void CL_CompleteCallVote_f( int startArg, int compArg )
+{
+	if ( compArg == startArg + 2 && !Q_stricmp( Cmd_Argv( startArg + 1 ), "map" ) )
+		Field_AutoCompleteMapName( startArg, compArg );
+}
+
+
 void CL_Init()
 {
 	//QSUBSYSTEM_INIT_START( "Client" );
@@ -2019,7 +2053,9 @@ void CL_Init()
 	Cmd_AddCommand ("vid_restart", CL_Vid_Restart_f);
 	Cmd_AddCommand ("disconnect", CL_Disconnect_f);
 	Cmd_AddCommand ("record", CL_Record_f);
+	Cmd_SetAutoCompletion ("record", CL_CompleteDemoRecord_f);
 	Cmd_AddCommand ("demo", CL_PlayDemo_f);
+	Cmd_SetAutoCompletion ("demo", CL_CompleteDemoPlay_f);
 	Cmd_AddCommand ("cinematic", CL_PlayCinematic_f);
 	Cmd_AddCommand ("stoprecord", CL_StopRecord_f);
 	Cmd_AddCommand ("connect", CL_Connect_f);
@@ -2027,6 +2063,7 @@ void CL_Init()
 	Cmd_AddCommand ("localservers", CL_LocalServers_f);
 	Cmd_AddCommand ("globalservers", CL_GlobalServers_f);
 	Cmd_AddCommand ("rcon", CL_Rcon_f);
+	Cmd_SetAutoCompletion ("rcon", CL_CompleteRcon_f);
 	Cmd_AddCommand ("ping", CL_Ping_f );
 	Cmd_AddCommand ("serverstatus", CL_ServerStatus_f );
 	Cmd_AddCommand ("showip", CL_ShowIP_f );
@@ -2035,6 +2072,12 @@ void CL_Init()
 	Cmd_AddCommand ("model", CL_SetModel_f );
 	Cmd_AddCommand ("video", CL_Video_f );
 	Cmd_AddCommand ("stopvideo", CL_StopVideo_f );
+
+	// we use these until we get proper handling on the mod side
+	Cmd_AddCommand ("cv", CL_CallVote_f );
+	Cmd_AddCommand ("callvote", CL_CallVote_f );
+	Cmd_SetAutoCompletion ("cv", CL_CompleteCallVote_f );
+	Cmd_SetAutoCompletion ("callvote", CL_CompleteCallVote_f );
 
 	CL_InitRef();
 
@@ -2092,6 +2135,10 @@ void CL_Shutdown()
 	Cmd_RemoveCommand ("model");
 	Cmd_RemoveCommand ("video");
 	Cmd_RemoveCommand ("stopvideo");
+
+	// we use these until we get proper handling on the mod side
+	Cmd_RemoveCommand ("cv");
+	Cmd_RemoveCommand ("callvote");
 
 	Cvar_Set( "cl_running", "0" );
 

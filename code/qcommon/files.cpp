@@ -1668,7 +1668,7 @@ static int FS_AddFileToList( const char *name, char *list[MAX_FOUND_FILES], int 
 Returns a uniqued list of files that match the given criteria
 from all search paths
 */
-static char** FS_ListFilteredFiles( const char *path, const char *extension, const char* filter, int *numfiles )
+static char** FS_ListFilteredFiles( const char *path, const char *extension, const char* filter, int *numfiles, int filters )
 {
 	int				nfiles;
 	char			*list[MAX_FOUND_FILES];
@@ -1706,7 +1706,7 @@ static char** FS_ListFilteredFiles( const char *path, const char *extension, con
 	//
 	for (search = fs_searchpaths ; search ; search = search->next) {
 		// is the element a pak file?
-		if (search->pack) {
+		if (search->pack && !(filters & FS_FILTER_INPAK)) {
 
 			//ZOID:  If we are pure, don't search for files on paks that
 			// aren't on the pure list
@@ -1757,7 +1757,7 @@ static char** FS_ListFilteredFiles( const char *path, const char *extension, con
 					nfiles = FS_AddFileToList( name + temp, list, nfiles );
 				}
 			}
-		} else if (search->dir) { // scan for files in the filesystem
+		} else if (search->dir && !(filters & FS_FILTER_NOTINPAK)) { // scan for files in the filesystem
 			char	*netpath;
 			int		numSysFiles;
 			char	**sysFiles;
@@ -1800,7 +1800,7 @@ FS_ListFiles
 =================
 */
 char **FS_ListFiles( const char *path, const char *extension, int *numfiles ) {
-	return FS_ListFilteredFiles( path, extension, NULL, numfiles );
+	return FS_ListFilteredFiles( path, extension, NULL, numfiles, 0 );
 }
 
 /*
@@ -2151,7 +2151,7 @@ static void FS_NewDir_f()
 
 	Com_Printf( "---------------\n" );
 
-	dirnames = FS_ListFilteredFiles( "", "", Cmd_Argv(1), &ndirs );
+	dirnames = FS_ListFilteredFiles( "", "", Cmd_Argv(1), &ndirs, 0 );
 
 	FS_SortFileList(dirnames, ndirs);
 
@@ -3051,7 +3051,7 @@ Handle based file calls for virtual machines
 ========================================================================================
 */
 
-int		FS_FOpenFileByMode( const char *qpath, fileHandle_t *f, fsMode_t mode ) {
+int FS_FOpenFileByMode( const char *qpath, fileHandle_t *f, fsMode_t mode ) {
 	int		r;
 	qbool	sync;
 
@@ -3099,7 +3099,7 @@ int		FS_FOpenFileByMode( const char *qpath, fileHandle_t *f, fsMode_t mode ) {
 	return r;
 }
 
-int		FS_FTell( fileHandle_t f ) {
+int FS_FTell( fileHandle_t f ) {
 	int pos;
 	if (fsh[f].zipFile == qtrue) {
 		pos = unztell(fsh[f].handleFiles.file.z);
@@ -3109,18 +3109,18 @@ int		FS_FTell( fileHandle_t f ) {
 	return pos;
 }
 
-void	FS_Flush( fileHandle_t f ) {
+void FS_Flush( fileHandle_t f ) {
 	fflush(fsh[f].handleFiles.file.o);
 }
 
-void	FS_FilenameCompletion( const char *dir, const char *ext,
-		qbool stripExt, void(*callback)(const char *s) ) {
+void FS_FilenameCompletion( const char *dir, const char *ext, qbool stripExt, 
+							void(*callback)(const char *s), int filters ) {
 	char	**filenames;
 	int		nfiles;
 	int		i;
 	char	filename[ MAX_STRING_CHARS ];
 
-	filenames = FS_ListFilteredFiles( dir, ext, NULL, &nfiles );
+	filenames = FS_ListFilteredFiles( dir, ext, NULL, &nfiles, filters );
 
 	FS_SortFileList( filenames, nfiles );
 

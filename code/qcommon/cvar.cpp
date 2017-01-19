@@ -398,6 +398,13 @@ qbool Cvar_Command()
 }
 
 
+static void Cvar_CompleteName( int startArg, int compArg )
+{
+	if ( startArg + 1 == compArg )
+		Field_AutoCompleteFrom( compArg, compArg, qfalse, qtrue );
+}
+
+
 // toggles a cvar for easy single key binding
 
 static void Cvar_Toggle_f( void )
@@ -676,4 +683,10 @@ void Cvar_Init()
 	Cmd_AddCommand( "reset", Cvar_Reset_f );
 	Cmd_AddCommand( "cvarlist", Cvar_List_f );
 	Cmd_AddCommand( "cvar_restart", Cvar_Restart_f );
+	Cmd_SetAutoCompletion( "toggle", Cvar_CompleteName );
+	Cmd_SetAutoCompletion( "set", Cvar_CompleteName );
+	Cmd_SetAutoCompletion( "sets", Cvar_CompleteName );
+	Cmd_SetAutoCompletion( "setu", Cvar_CompleteName );
+	Cmd_SetAutoCompletion( "seta", Cvar_CompleteName );
+	Cmd_SetAutoCompletion( "reset", Cvar_CompleteName );
 }

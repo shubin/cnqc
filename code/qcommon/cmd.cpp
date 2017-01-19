@@ -158,7 +158,7 @@ void Cbuf_Execute()
 // SCRIPT COMMANDS
 
 
-void Cmd_Exec_f()
+static void Cmd_Exec_f()
 {
 	char	*f;
 	int		len;
@@ -184,15 +184,29 @@ void Cmd_Exec_f()
 }
 
 
+static void Cmd_CompleteExec_f( int startArg, int compArg )
+{
+	if ( startArg + 1 == compArg )
+		Field_AutoCompleteConfigName( startArg, compArg );
+}
+
+
 // inserts the current value of a variable as command text
 
-void Cmd_Vstr_f()
+static void Cmd_Vstr_f()
 {
 	if (Cmd_Argc() != 2) {
 		Com_Printf( "vstr <variablename> : execute a variable command\n" );
 		return;
 	}
 	Cbuf_InsertText( Cvar_VariableString( Cmd_Argv( 1 ) ) );
+}
+
+
+static void Cmd_CompleteVstr_f( int startArg, int compArg )
+{
+	if ( compArg == startArg + 1 )
+		Field_AutoCompleteFrom( compArg, compArg, qfalse, qtrue );
 }
 
 
@@ -215,11 +229,14 @@ typedef struct cmd_function_s
 	struct cmd_function_s	*next;
 	char					*name;
 	xcommand_t				function;
+	xcommandCompletion_t	completion;
 } cmd_function_t;
 
 
 static	int		cmd_argc;
 static	char*	cmd_argv[MAX_STRING_TOKENS];		// points into cmd_tokenized
+static	int		cmd_argoffsets[MAX_STRING_TOKENS];	// offsets into cmd_cmd
+static	qbool	cmd_quoted[MAX_STRING_TOKENS];		// set to 1 if the input was quoted
 static	char	cmd_tokenized[BIG_INFO_STRING+MAX_STRING_TOKENS];	// will have 0 bytes inserted
 static	char	cmd_cmd[BIG_INFO_STRING]; // the original command we received (no token processing)
 
@@ -258,6 +275,28 @@ const char* Cmd_ArgsFrom( int arg )
 	}
 
 	return cmd_args;
+}
+
+
+qbool Cmd_ArgQuoted( int arg )
+{
+	if (arg < 0 || arg >= cmd_argc)
+		return qfalse;
+
+	return cmd_quoted[arg];
+}
+
+
+int Cmd_ArgIndexFromOffset( int offset )
+{
+	for (int i = 0; i < cmd_argc; ++i) {
+		const int start = cmd_argoffsets[i];
+		const int end = start + strlen( cmd_argv[i] );
+		if (offset >= start && offset <= end)
+			return i;
+	}
+
+	return -1;
 }
 
 
@@ -305,6 +344,7 @@ static void Cmd_TokenizeString2( const char* text, qbool ignoreQuotes )
 	Q_strncpyz( cmd_cmd, text, sizeof(cmd_cmd) );
 
 	char* out = cmd_tokenized;
+	const char* const textStart = text;
 
 	while ( 1 ) {
 		if ( cmd_argc == MAX_STRING_TOKENS ) {
@@ -342,6 +382,8 @@ static void Cmd_TokenizeString2( const char* text, qbool ignoreQuotes )
 		// handle quoted strings - NOTE: this doesn't handle \" escaping
 		if ( !ignoreQuotes && *text == '"' ) {
 			cmd_argv[cmd_argc] = out;
+			cmd_argoffsets[cmd_argc] = text + 1 - textStart; // jump past the opening quote
+			cmd_quoted[cmd_argc] = qtrue;
 			cmd_argc++;
 			text++;
 			while ( *text && *text != '"' ) {
@@ -357,6 +399,8 @@ static void Cmd_TokenizeString2( const char* text, qbool ignoreQuotes )
 
 		// regular token
 		cmd_argv[cmd_argc] = out;
+		cmd_argoffsets[cmd_argc] = text - textStart;
+		cmd_quoted[cmd_argc] = qfalse;
 		cmd_argc++;
 
 		// skip until whitespace, quote, or command
@@ -396,7 +440,7 @@ void Cmd_TokenizeStringIgnoreQuotes( const char* text )
 }
 
 
-void Cmd_AddCommand( const char *cmd_name, xcommand_t function )
+void Cmd_AddCommand( const char* cmd_name, xcommand_t function )
 {
 	cmd_function_t* cmd;
 
@@ -415,12 +459,13 @@ void Cmd_AddCommand( const char *cmd_name, xcommand_t function )
 	cmd = (cmd_function_t*)S_Malloc(sizeof(cmd_function_t));
 	cmd->name = CopyString( cmd_name );
 	cmd->function = function;
+	cmd->completion = NULL;
 	cmd->next = cmd_functions;
 	cmd_functions = cmd;
 }
 
 
-void Cmd_RemoveCommand( const char *cmd_name )
+void Cmd_RemoveCommand( const char* cmd_name )
 {
 	cmd_function_t** back = &cmd_functions;
 
@@ -443,7 +488,32 @@ void Cmd_RemoveCommand( const char *cmd_name )
 }
 
 
-void Cmd_CommandCompletion( void(*callback)(const char *s) )
+void Cmd_SetAutoCompletion( const char* cmd_name, xcommandCompletion_t completion )
+{
+	cmd_function_t* cmd;
+	for ( cmd = cmd_functions; cmd; cmd = cmd->next ) {
+		if ( !strcmp( cmd_name, cmd->name ) ) {
+			cmd->completion = completion;
+			return;
+		}
+	}
+}
+
+
+void Cmd_AutoCompleteArgument( const char* cmd_name, int startArg, int compArg )
+{
+	const cmd_function_t* cmd;
+	for ( cmd = cmd_functions; cmd; cmd = cmd->next ) {
+		if ( !strcmp( cmd_name, cmd->name ) ) {
+			if ( cmd->completion )
+				cmd->completion( startArg, compArg );
+			return;
+		}
+	}
+}
+
+
+void Cmd_CommandCompletion( void(*callback)(const char* s) )
 {
 	const cmd_function_t* cmd;
 	for ( cmd = cmd_functions; cmd; cmd = cmd->next ) {
@@ -533,7 +603,9 @@ void Cmd_Init()
 {
 	Cmd_AddCommand( "cmdlist", Cmd_List_f );
 	Cmd_AddCommand( "exec", Cmd_Exec_f );
+	Cmd_SetAutoCompletion( "exec", Cmd_CompleteExec_f );
 	Cmd_AddCommand( "vstr", Cmd_Vstr_f );
+	Cmd_SetAutoCompletion( "vstr", Cmd_CompleteVstr_f );
 	Cmd_AddCommand( "echo", Cmd_Echo_f );
 	Cmd_AddCommand( "wait", Cmd_Wait_f );
 }
