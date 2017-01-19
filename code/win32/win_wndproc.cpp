@@ -129,7 +129,7 @@ static int MapKey (int key)
 	int modified;
 	qbool is_extended;
 
-//	Com_Printf( "0x%x\n", key);
+	//Com_Printf( "0x%X\n", key );
 
 	modified = ( key >> 16 ) & 255;
 
@@ -149,6 +149,7 @@ static int MapKey (int key)
 
 	if ( !is_extended )
 	{
+		//Com_Printf( "!extended 0x%X\n", result );
 		switch ( result )
 		{
 		case K_HOME:
@@ -171,12 +172,15 @@ static int MapKey (int key)
 			return K_KP_INS;
 		case K_DEL:
 			return K_KP_DEL;
+		case '*':
+			return K_KP_STAR;
 		default:
 			return result;
 		}
 	}
 	else
 	{
+		//Com_Printf( "extended 0x%X\n", result );
 		switch ( result )
 		{
 		case K_PAUSE:
