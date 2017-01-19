@@ -2873,9 +2873,13 @@ void Field_AutoCompleteDemoNameWrite( int startArg, int compArg )
 #undef DEMO_EXT
 
 
+#ifndef DEDICATED
+
 void Field_AutoCompleteKeyName( int startArg, int compArg )
 {
 	Key_KeyNameCompletion( FindMatches );
 	if ( Field_CompleteShortestMatch( startArg, compArg ) )
 		Key_KeyNameCompletion( PrintMatches );
 }
+
+#endif
