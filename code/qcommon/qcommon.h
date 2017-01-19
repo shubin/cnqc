@@ -372,7 +372,8 @@ const char* Cmd_Argv(int arg);
 const char* Cmd_Args();
 const char* Cmd_ArgsFrom( int arg );
 qbool Cmd_ArgQuoted( int arg );
-int Cmd_ArgIndexFromOffset( int offset ); // offset into the Cmd_TokenizeString argument
+int Cmd_ArgOffset( int arg );				// returns the offset into the Cmd_TokenizeString argument
+int Cmd_ArgIndexFromOffset( int offset );	// the argument is the offset into the Cmd_TokenizeString argument
 void Cmd_ArgvBuffer( int arg, char *buffer, int bufferLength );
 void Cmd_ArgsBuffer( char *buffer, int bufferLength );
 const char* Cmd_Cmd(); // note: this is NOT argv[0], it's the entire cmd as a raw string

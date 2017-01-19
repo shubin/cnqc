@@ -2789,7 +2789,26 @@ void Field_AutoCompleteFrom( int startArg, int compArg, qbool searchCmds, qbool 
 }
 
 
-void Field_AutoComplete( field_t *field )
+// returns qtrue if there already was a leading slash
+static qbool Field_EnsureLeadingSlash( field_t *field )
+{
+	if ( String_HasLeadingSlash( field->buffer ) )
+		return qtrue;
+
+	const size_t length = strlen( field->buffer );
+	if ( length + 1 < sizeof( field->buffer ) ) {
+		memmove( field->buffer + 1, field->buffer, length + 1 );
+		*field->buffer = '\\';
+		field->cursor++;
+	}
+
+	return qfalse;
+}
+
+
+// runs the auto-completion but doesn't do the final leading slash and cursor position fix-ups
+// returns qtrue if auto-completion was actually run on an argument
+static qbool Field_AutoCompleteNoLeadingSlash( field_t *field )
 {
 	completionField = field;
 
@@ -2797,7 +2816,7 @@ void Field_AutoComplete( field_t *field )
 	Cmd_TokenizeString( field->buffer );
 	const int compArg = Cmd_Argc() == 1 ? 0 : Cmd_ArgIndexFromOffset( field->cursor );
 	if ( compArg < 0 || compArg >= Cmd_Argc() )
-		return;
+		return qfalse;
 
 	// now select the actual string that needs completing
 	completionString = Cmd_Argv( compArg );
@@ -2806,7 +2825,7 @@ void Field_AutoComplete( field_t *field )
 		completionString++;
 #endif
 	if ( *completionString == '\0' )
-		return;
+		return qfalse;
 
 	Field_AutoCompleteFrom( 0, compArg, qtrue, qtrue );
 
@@ -2817,14 +2836,29 @@ void Field_AutoComplete( field_t *field )
 		field->cursor = strlen( field->buffer );
 	}
 
-	// make sure we have a leading backslash
-	if ( !String_HasLeadingSlash( field->buffer ) ) {
-		const size_t length = strlen( field->buffer );
-		if ( length + 1 < sizeof( field->buffer ) ) {
-			memmove( field->buffer + 1, field->buffer, length + 1 );
-			*field->buffer = '\\';
-			field->cursor++;
-		}
+	return qtrue;
+}
+
+
+void Field_AutoComplete( field_t *field )
+{
+	const qbool ranComp = Field_AutoCompleteNoLeadingSlash( field );
+	const qbool hadSlash = Field_EnsureLeadingSlash( field );
+	if ( ranComp )
+		return;
+
+	const int argc = Cmd_Argc();
+	if ( argc > 0 ) {
+		// keep the whitespace and clamp the cursor to 1 past the last argument
+		const int offset = Cmd_ArgOffset( argc - 1 );
+		const int length = strlen( Cmd_Argv( argc - 1 ) );
+		const int max = offset + length + 1 + ( hadSlash ? 0 : 1 );
+		if ( field->cursor > max )
+			field->cursor = max;
+	} else {
+		// the input line is pure whitespace so we rewrite it
+		Q_strncpyz ( field->buffer, "\\", sizeof( field->buffer ) );
+		field->cursor = strlen( field->buffer );
 	}
 }
 

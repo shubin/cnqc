@@ -280,10 +280,19 @@ const char* Cmd_ArgsFrom( int arg )
 
 qbool Cmd_ArgQuoted( int arg )
 {
-	if (arg < 0 || arg >= cmd_argc)
+	if ((unsigned)arg >= cmd_argc)
 		return qfalse;
 
 	return cmd_quoted[arg];
+}
+
+
+int Cmd_ArgOffset( int arg )
+{
+	if ((unsigned)arg >= cmd_argc)
+		return 0;
+
+	return cmd_argoffsets[arg];
 }
 
 
