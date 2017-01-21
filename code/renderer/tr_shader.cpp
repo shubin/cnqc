@@ -2048,41 +2048,21 @@ static shader_t* FinishShader()
 ///////////////////////////////////////////////////////////////
 
 
-// scans the combined text of ALL shader files for the given shader name
+// searches the combined text of ALL shader files for the given shader name
 // return the body of the shader if found, else NULL
 
 static const char* FindShaderInShaderText( const char* shadername )
 {
-	const char* p;
-	const char* token;
+	const int hash = Q_FileHash( shadername, MAX_SHADERTEXT_HASH );
 
-	int hash = Q_FileHash(shadername, MAX_SHADERTEXT_HASH);
-
+	// since the hash table always contains all loaded shaders
+	// there's no need to actually scan through s_shaderText itself
 	for (int i = 0; shaderTextHashTable[hash][i]; i++) {
-		p = shaderTextHashTable[hash][i];
-		token = COM_ParseExt(&p, qtrue);
-		if ( !Q_stricmp( token, shadername ) ) {
-			return p;
-		}
-	}
-
-	if (!s_shaderText)
-		return NULL;
-	p = s_shaderText;
-
-	// look for label
-	while ( 1 ) {
-		token = COM_ParseExt( &p, qtrue );
-		if ( token[0] == 0 ) {
-			break;
-		}
+		const char* p = shaderTextHashTable[hash][i];
+		const char* const token = COM_ParseExt( &p, qtrue );
 
 		if ( !Q_stricmp( token, shadername ) ) {
 			return p;
-		}
-		else {
-			// skip the definition
-			SkipBracedSection( &p );
 		}
 	}
 
