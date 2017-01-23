@@ -49,6 +49,8 @@ struct console_t {
 	int		linewidth;		// characters across screen
 	int		totallines;		// total lines in console scrollback
 
+	int		rowsVisible;	// number of full rows that can currently be rendered in a page
+
 	float	displayFrac;	// approaches finalFrac at con_speed
 	float	finalFrac;		// 0.0 to 1.0 lines of console to display
 
@@ -539,6 +541,7 @@ static void Con_DrawSolidConsole( float frac )
 	char color = COLOR_WHITE;
 	re.SetColor( ColorFromChar( color ) );
 
+	con.rowsVisible = 0;
 	for (i = 0; i < rows; ++i, --row, y -= con.ch )
 	{
 		if (row < 0)
@@ -547,6 +550,9 @@ static void Con_DrawSolidConsole( float frac )
 			// past scrollback wrap point
 			continue;
 		}
+
+		if (y >= 0)
+			con.rowsVisible++;
 
 		const short* text = con.text + (row % con.totallines)*con.linewidth;
 
@@ -627,24 +633,33 @@ void Con_RunConsole()
 }
 
 
-static const int CON_PAGELINES = 4;
-
-void Con_PageUp()
+static void Con_FixPosition()
 {
-	con.display -= CON_PAGELINES;
-	if ( con.current - con.display >= con.totallines ) {
-		con.display = con.current - con.totallines + 1;
-	}
-}
-
-void Con_PageDown()
-{
-	con.display += CON_PAGELINES;
-	if (con.display > con.current) {
+	if ( con.display < con.totallines ) {
+		con.display = con.totallines;
+	} else if ( con.display > con.current ) {
 		con.display = con.current;
 	}
 }
 
+void Con_ScrollLines( int lines )
+{
+	if (lines == 0)
+		return;
+
+	con.display += lines;
+	Con_FixPosition();
+}
+
+void Con_ScrollPages( int pages )
+{
+	if (pages == 0)
+		return;
+
+	// we allow a single line of overlap for readability
+	con.display += pages * (con.rowsVisible - 1);
+	Con_FixPosition();
+}
 
 void Con_Top()
 {

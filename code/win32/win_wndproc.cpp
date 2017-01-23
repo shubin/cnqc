@@ -321,7 +321,11 @@ LRESULT CALLBACK MainWndProc (
 		break;
 
 	case WM_CHAR:
-		Sys_QueEvent( g_wv.sysMsgTime, SE_CHAR, wParam, 0, 0, NULL );
+		{
+			const char scanCode = (char)( ( lParam >> 16 ) & 0xFF );
+			if ( scanCode != 0x29 ) // never send an event for the console key ('~' or '`')
+				Sys_QueEvent( g_wv.sysMsgTime, SE_CHAR, wParam, 0, 0, NULL );
+		}
 		break;
 
 	default:

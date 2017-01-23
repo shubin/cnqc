@@ -498,8 +498,8 @@ static void Console_Key( int key )
 
 	// command history (ctrl-p ctrl-n for unix style)
 
-	if ( (key == K_MWHEELUP && keys[K_SHIFT].down) || ( key == K_UPARROW ) || ( key == K_KP_UPARROW ) ||
-		 ( ( tolower(key) == 'p' ) && keys[K_CTRL].down ) ) {
+	if ( ( key == K_UPARROW ) ||
+			( ( tolower(key) == 'p' ) && keys[K_CTRL].down ) ) {
 		if ( nextHistoryLine - historyLine < COMMAND_HISTORY 
 			&& historyLine > 0 ) {
 			historyLine--;
@@ -508,8 +508,8 @@ static void Console_Key( int key )
 		return;
 	}
 
-	if ( (key == K_MWHEELDOWN && keys[K_SHIFT].down) || ( key == K_DOWNARROW ) || ( key == K_KP_DOWNARROW ) ||
-		 ( ( tolower(key) == 'n' ) && keys[K_CTRL].down ) ) {
+	if ( ( key == K_DOWNARROW ) ||
+			( ( tolower(key) == 'n' ) && keys[K_CTRL].down ) ) {
 		historyLine++;
 		if (historyLine >= nextHistoryLine) {
 			historyLine = nextHistoryLine;
@@ -521,22 +521,30 @@ static void Console_Key( int key )
 		return;
 	}
 
-	// console scrolling (faster if +CTRL)
-	if ((key == K_PGUP) || (key == K_MWHEELUP)) {
-		Con_PageUp();
-		if (keys[K_CTRL].down) {
-			Con_PageUp();
-			Con_PageUp();
-		}
+	// console scrolling (faster if +SHIFT)
+	if ( key == K_MWHEELUP ) {
+		Con_ScrollLines( keys[K_SHIFT].down ? -6 : -2 );
 		return;
 	}
 
-	if ((key == K_PGDN) || (key == K_MWHEELDOWN)) {
-		Con_PageDown();
-		if (keys[K_CTRL].down) {
-			Con_PageDown();
-			Con_PageDown();
-		}
+	if ( key == K_MWHEELDOWN ) {
+		Con_ScrollLines( keys[K_SHIFT].down ? 6 : 2 );
+		return;
+	}
+
+	if ( key == K_PGUP ) {
+		if ( keys[K_SHIFT].down )
+			Con_ScrollPages( -1 );
+		else
+			Con_ScrollLines( -6 );
+		return;
+	}
+
+	if ( key == K_PGDN ) {
+		if ( keys[K_SHIFT].down )
+			Con_ScrollPages( 1 );
+		else
+			Con_ScrollLines( 6 );
 		return;
 	}
 

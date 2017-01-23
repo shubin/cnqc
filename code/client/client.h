@@ -415,8 +415,8 @@ void Con_ToggleConsole_f( void );
 void Con_ClearNotify();
 void Con_RunConsole();
 void Con_DrawConsole();
-void Con_PageUp();
-void Con_PageDown();
+void Con_ScrollLines( int lines ); // positive means down
+void Con_ScrollPages( int pages ); // positive means down
 void Con_Top();
 void Con_Bottom();
 void Con_Close();
