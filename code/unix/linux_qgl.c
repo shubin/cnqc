@@ -37,11 +37,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <float.h>
 #include "unix_glw.h"
 
-// bk001129 - from cvs1.17 (mkv)
-#if defined(__FX__)
-#include <GL/fxmesa.h>
-#endif
-
 #if defined(USE_SDL_VIDEO)
 #include <SDL.h>
 #include <SDL_opengl.h>
@@ -51,16 +46,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "../renderer/tr_local.h"
 
-// bk001129 - from cvs1.17 (mkv)
-#if defined(__FX__)
-//FX Mesa Functions
-fxMesaContext (*qfxMesaCreateContext)(GLuint win, GrScreenResolution_t, GrScreenRefresh_t, const GLint attribList[]);
-fxMesaContext (*qfxMesaCreateBestContext)(GLuint win, GLint width, GLint height, const GLint attribList[]);
-void (*qfxMesaDestroyContext)(fxMesaContext ctx);
-void (*qfxMesaMakeCurrent)(fxMesaContext ctx);
-fxMesaContext (*qfxMesaGetCurrentContext)(void);
-void (*qfxMesaSwapBuffers)(void);
-#endif
 
 //GLX Functions
 #if !defined(USE_SDL_VIDEO)
@@ -1138,16 +1123,6 @@ void QGL_Shutdown( void )
 	qglVertexPointer             = NULL;
 	qglViewport                  = NULL;
 
-// bk001129 - from cvs1.17 (mkv)
-#if defined(__FX__)
-	qfxMesaCreateContext         = NULL;
-	qfxMesaCreateBestContext     = NULL;
-	qfxMesaDestroyContext        = NULL;
-	qfxMesaMakeCurrent           = NULL;
-	qfxMesaGetCurrentContext     = NULL;
-	qfxMesaSwapBuffers           = NULL;
-#endif
-
 #if !defined(USE_SDL_VIDEO)
 	qglXGetProcAddress           = NULL;
 	qglXChooseVisual             = NULL;
@@ -1563,16 +1538,6 @@ qboolean QGL_Init( const char *dllname )
 	qglVertex4sv                 = dllVertex4sv			=(void (*)(const GLshort*))GPA( "glVertex4sv" );
 	qglVertexPointer             = dllVertexPointer			=(void (*)(GLint, GLenum, GLsizei, const GLvoid*))GPA( "glVertexPointer" );
 	qglViewport                  = dllViewport			=(void (*)(GLint, GLint, GLsizei, GLsizei))GPA( "glViewport" );
-
-// bk001129 - from cvs1.17 (mkv)
-#if defined(__FX__)
-	qfxMesaCreateContext         =  GPA("fxMesaCreateContext");
-	qfxMesaCreateBestContext     =  GPA("fxMesaCreateBestContext");
-	qfxMesaDestroyContext        =  GPA("fxMesaDestroyContext");
-	qfxMesaMakeCurrent           =  GPA("fxMesaMakeCurrent");
-	qfxMesaGetCurrentContext     =  GPA("fxMesaGetCurrentContext");
-	qfxMesaSwapBuffers           =  GPA("fxMesaSwapBuffers");
-#endif
 
 #if !defined(USE_SDL_VIDEO)
 	qglXChooseVisual             =  (XVisualInfo * (*)( Display *dpy, int screen, int *attribList ))GPA("glXChooseVisual");

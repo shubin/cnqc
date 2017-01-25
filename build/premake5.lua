@@ -393,7 +393,7 @@ local function ApplyExeProjectSettings(exeName, server)
 		"unix/linux_signals.cpp",
 		"unix/linux_qgl.c",
 		"unix/linux_snd.c",
-		"unix/linux_glimp.c"
+		"unix/linux_glimp.cpp"
 	}
 
 	AddHeaders("botlib")

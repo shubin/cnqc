@@ -395,9 +395,9 @@ $(OBJDIR)/sv_snapshot.o: ../../code/server/sv_snapshot.cpp
 $(OBJDIR)/sv_world.o: ../../code/server/sv_world.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/linux_glimp.o: ../../code/unix/linux_glimp.c
+$(OBJDIR)/linux_glimp.o: ../../code/unix/linux_glimp.cpp
 	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/linux_joystick.o: ../../code/unix/linux_joystick.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"

@@ -30,9 +30,7 @@ typedef struct
 {
 	void *OpenGLLib; // instance of OpenGL library
 
-        int desktopWidth, desktopHeight, desktopBPP;
-
-	FILE *log_fp;
+	int desktopWidth, desktopHeight, desktopBPP;
 } glwstate_t;
 
 extern glwstate_t glw_state;
