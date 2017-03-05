@@ -501,7 +501,7 @@ static void SV_ConnectionlessPacket( const netadr_t from, msg_t* msg )
 	MSG_ReadLong( msg );		// skip the -1 marker
 
 	if (!Q_strncmp("connect", (const char*)&msg->data[4], 7)) {
-		Huff_Decompress(msg, 12);
+		DynHuff_Decompress(msg, 12);
 	}
 
 	const char* s = MSG_ReadStringLine( msg );

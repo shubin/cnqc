@@ -337,6 +337,7 @@ copy "..\..\..\.bin\release_x64\cnq3-x64.pdb" "$(QUAKE3DIR)"</Command>
     <ClCompile Include="..\..\code\qcommon\cvar.cpp" />
     <ClCompile Include="..\..\code\qcommon\files.cpp" />
     <ClCompile Include="..\..\code\qcommon\huffman.cpp" />
+    <ClCompile Include="..\..\code\qcommon\huffman_static.cpp" />
     <ClCompile Include="..\..\code\qcommon\md4.cpp" />
     <ClCompile Include="..\..\code\qcommon\md5.cpp" />
     <ClCompile Include="..\..\code\qcommon\msg.cpp" />

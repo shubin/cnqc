@@ -248,6 +248,9 @@
     <ClCompile Include="..\..\code\qcommon\huffman.cpp">
       <Filter>qcommon</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\code\qcommon\huffman_static.cpp">
+      <Filter>qcommon</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\code\qcommon\md4.cpp">
       <Filter>qcommon</Filter>
     </ClCompile>

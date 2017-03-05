@@ -597,7 +597,7 @@ void QDECL NET_OutOfBandData( netsrc_t sock, const netadr_t& adr, const byte* da
 	msg_t mbuf;
 	mbuf.data = string;
 	mbuf.cursize = len+4;
-	Huff_Compress( &mbuf, 12 );
+	DynHuff_Compress( &mbuf, 12 );
 
 	NET_SendPacket( sock, mbuf.cursize, mbuf.data, adr );
 }
