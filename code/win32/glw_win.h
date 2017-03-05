@@ -41,6 +41,8 @@ typedef struct
 	qbool cdsFullscreen;
 	qbool pixelFormatSet;
 	int nPendingPF;
+
+	qbool gammaRampSet; // qtrue if our custom ramp is active
 } glwstate_t;
 
 extern glwstate_t glw_state;

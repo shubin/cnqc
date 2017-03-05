@@ -867,6 +867,7 @@ static int vidmode_MajorVersion = 0, vidmode_MinorVersion = 0; // major and mino
 
 // gamma value of the X display before we start playing with it
 static XF86VidModeGamma vidmode_InitialGamma = { -1,-1,-1 };  // drakkar - initialized to nonvalid values
+static qbool vidmode_GammaSet = qfalse;
 #endif /* HAVE_XF86DGA */
 
 #ifdef HAVE_XF86DGA
@@ -900,8 +901,24 @@ void GLimp_SetGamma( unsigned char red[256], unsigned char green[256], unsigned 
   gamma.red = g;
   gamma.green = g;
   gamma.blue = g;
-  XF86VidModeSetGamma(dpy, scrnum, &gamma);
+  if (XF86VidModeSetGamma(dpy, scrnum, &gamma))
+  {
+    vidmode_GammaSet = qtrue;
+  }
 #endif /* HAVE_XF86DGA */
+}
+
+void LIN_RestoreGamma( void )
+{
+#ifdef HAVE_XF86DGA
+	if (dpy && glConfig.deviceSupportsGamma && vidmode_GammaSet)
+    {
+		if (XF86VidModeSetGamma(dpy, scrnum, &vidmode_InitialGamma) == True)
+		{
+			vidmode_GammaSet = qfalse;
+		}
+    }
+#endif
 }
 
 /*
@@ -933,10 +950,7 @@ void GLimp_Shutdown( void )
 #ifdef HAVE_XF86DGA
     if (vidmode_active)
       XF86VidModeSwitchToMode(dpy, scrnum, vidmodes[0]);
-    if (glConfig.deviceSupportsGamma)
-    {
-      XF86VidModeSetGamma(dpy, scrnum, &vidmode_InitialGamma);
-    }
+    LIN_RestoreGamma();
 #endif /* HAVE_XF86DGA */
 
 	// NOTE TTimo opening/closing the display should be necessary only once per run
@@ -1401,8 +1415,6 @@ void GLimp_Init( void )
   }
 #endif
 
-  InitSig();
-
   // set up our custom error handler for X failures
   XSetErrorHandler(&qXErrorHandler);
 
@@ -1428,8 +1440,6 @@ void GLimp_Init( void )
   GLW_InitGamma();
   QGL_InitARB(); // compiles the shaders etc
   QGL_SwapInterval( dpy, win, r_swapInterval->integer );
-
-  InitSig(); // not clear why this is at begin & end of function
 
 	IN_Init();
 }

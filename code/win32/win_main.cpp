@@ -38,6 +38,29 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 WinVars_t	g_wv;
 
 
+static qbool win_timePeriodActive = qfalse;
+
+
+static void Win_BeginTimePeriod()
+{
+	if ( win_timePeriodActive )
+		return;
+
+	timeBeginPeriod( 1 );
+	win_timePeriodActive = qtrue;
+}
+
+
+static void Win_EndTimePeriod()
+{
+	if ( !win_timePeriodActive )
+		return;
+
+	timeEndPeriod( 1 );
+	win_timePeriodActive = qfalse;
+}
+
+
 #define MEM_THRESHOLD 96*1024*1024
 
 qbool Sys_LowPhysicalMemory()
@@ -45,11 +68,6 @@ qbool Sys_LowPhysicalMemory()
 	MEMORYSTATUS stat;
 	GlobalMemoryStatus( &stat );
 	return (stat.dwTotalPhys <= MEM_THRESHOLD);
-}
-
-
-void Sys_BeginProfiling( void ) {
-	// this is just used on the mac build
 }
 
 
@@ -70,7 +88,7 @@ void QDECL Sys_Error( const char *error, ... )
 	Sys_SetErrorText( text );
 	Sys_ShowConsole( 1, qtrue );
 
-	timeEndPeriod( 1 );
+	Win_EndTimePeriod();
 
 #ifndef DEDICATED
 	IN_Shutdown();
@@ -93,7 +111,7 @@ void QDECL Sys_Error( const char *error, ... )
 
 void Sys_Quit()
 {
-	timeEndPeriod( 1 );
+	Win_EndTimePeriod();
 #ifndef DEDICATED
 	IN_Shutdown();
 #endif
@@ -520,7 +538,7 @@ static void Sys_Net_Restart_f( void )
 void Sys_Init()
 {
 	// make sure the timer is high precision, otherwise NT gets 18ms resolution
-	timeBeginPeriod( 1 );
+	Win_BeginTimePeriod();
 
 #ifndef DEDICATED
 	Cmd_AddCommand( "in_restart", Sys_In_Restart_f );
@@ -542,7 +560,7 @@ void Sys_Init()
 ///////////////////////////////////////////////////////////////
 
 
-int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow )
+static int WinMainImpl( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow )
 {
 	// should never get a previous instance in Win32
 	if ( hPrevInstance )
@@ -552,9 +570,6 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 
 	// done before Com/Sys_Init since we need this for error output
 	Sys_CreateConsole();
-
-	// no abort/retry/fail errors
-	SetErrorMode( SEM_FAILCRITICALERRORS );
 
 	// get the initial time base
 	Sys_Milliseconds();
@@ -604,4 +619,83 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	}
 
 	// never gets here
+}
+
+
+//
+// The exception handler's job is to reset system settings that won't get reset
+// as part of the normal process clean-up by the OS.
+// It can't do any memory allocation or use any synchronization objects.
+// Ideally, we want it to be called before every abrupt application exit
+// and right after any legitimate crash.
+//
+// There are 2 cases where the function won't be called:
+//
+// 1. Termination through the debugger.
+//    Our atexit handler never gets called.
+//
+//    Work-around: Quit normally.
+//
+// 2. Breakpoints. The debugger has first-chance access and handles them.
+//    Our exception handler doesn't get called.
+//
+//    Work-around: None for debugging. Quit normally.
+//
+
+
+static qbool exitCalled = qfalse;
+
+
+LONG CALLBACK Win_HandleException( EXCEPTION_POINTERS* ep )
+{
+	static const char* mbMsg = "CNQ3 crashed!\n\nOK to continue after attaching a debugger\nCancel to quit";
+
+#if !DEDICATED
+	__try {
+		GLW_RestoreGamma();
+	} __except( EXCEPTION_EXECUTE_HANDLER ) {}
+#endif
+
+	__try {
+		Win_EndTimePeriod();
+	} __except( EXCEPTION_EXECUTE_HANDLER ) {}
+
+	if ( exitCalled || IsDebuggerPresent() )
+		return EXCEPTION_CONTINUE_SEARCH;
+
+#if defined(_DEBUG)
+	// ask if we want to debug the app
+	if ( MessageBoxA( NULL, mbMsg, "Crash", MB_OKCANCEL | MB_ICONERROR ) == IDOK &&
+		 IsDebuggerPresent() )
+		return EXCEPTION_CONTINUE_SEARCH;
+#endif
+
+	ExitProcess( 666 );
+}
+
+
+static void Win_HandleExit( void )
+{
+	exitCalled = qtrue;
+	Win_HandleException( NULL );
+}
+
+
+int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow )
+{
+	// Register the exception handler for all threads present and future in this process.
+	// 1 means we're inserting the handler at the front of the queue.
+	// The debugger does still get first-chance access though.
+	// The handler is always called in the context of the thread raising the exception.
+	AddVectoredExceptionHandler( 1, Win_HandleException );
+
+	// Make sure we reset system settings even when someone calls exit.
+	atexit( Win_HandleExit );
+
+	// SetErrorMode(0) gets the current flags
+	// SEM_FAILCRITICALERRORS -> no abort/retry/fail errors
+	// SEM_NOGPFAULTERRORBOX  -> the Windows Error Reporting dialog will not be shown
+	SetErrorMode( SetErrorMode(0) | SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX );
+
+	return WinMainImpl( hInstance, hPrevInstance, lpCmdLine, nCmdShow );
 }

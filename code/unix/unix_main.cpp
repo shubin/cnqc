@@ -436,24 +436,11 @@ qboolean Sys_LowPhysicalMemory()
 }
 
 
-void Sys_BeginProfiling( void ) {
-}
-
-
 // single exit point (regular exit or in case of signal fault)
 void Sys_Exit( int ex )
 {
 	Sys_ConsoleInputShutdown();
-
-#ifdef NDEBUG // regular behavior
-	// We can't do this as long as GL DLL's keep installing with atexit...
-	//exit(ex);
-	_exit(ex);
-#else
-	// Give me a backtrace on error exits.
-	assert( ex == 0 );
 	exit(ex);
-#endif
 }
 
 
@@ -823,6 +810,8 @@ void Sys_Init()
 
 int main( int argc, char* argv[] )
 {
+	SIG_Init();
+	
 	// merge the command line: we need it in a single chunk
 	int len = 1, i;
 	for (i = 1; i < argc; ++i)
@@ -843,11 +832,6 @@ int main( int argc, char* argv[] )
 	Sys_ConsoleInputInit();
 
 	fcntl( 0, F_SETFL, fcntl(0, F_GETFL, 0) | FNDELAY );
-
-#ifdef DEDICATED
-	// init here for dedicated, as we don't have GLimp_Init
-	InitSig();
-#endif
 
 	while (qtrue) {
 		// if running as a client but not focused, sleep a bit

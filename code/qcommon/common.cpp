@@ -1892,6 +1892,9 @@ int Com_Milliseconds()
 ///////////////////////////////////////////////////////////////
 
 
+#if defined(DEBUG)
+
+
 // throw a fatal error to test error shutdown procedures
 
 static void Com_Error_f( void )
@@ -1921,12 +1924,21 @@ static void Com_Freeze_f( void )
 }
 
 
+static void Com_Exit_f( void )
+{
+	exit( 666 );
+}
+
+
 // force a bus error for development reasons
 
 static void Com_Crash_f( void )
 {
 	*(int*)0 = 0x12345678;
 }
+
+
+#endif
 
 
 // TTimo: centralizing the cl_cdkey stuff after I discovered a buffer overflow problem with the dedicated server version
@@ -2211,12 +2223,12 @@ void Com_Init( char *commandLine )
 		}
 	}
 
-	if ( com_developer && com_developer->integer ) {
-		Cmd_AddCommand( "error", Com_Error_f );
-		Cmd_AddCommand( "crash", Com_Crash_f );
-		Cmd_AddCommand( "freeze", Com_Freeze_f );
-		//Cmd_AddCommand( "changeVectors", MSG_ReportChangeVectors_f );
-	}
+#if defined(DEBUG)
+	Cmd_AddCommand( "error", Com_Error_f );
+	Cmd_AddCommand( "crash", Com_Crash_f );
+	Cmd_AddCommand( "freeze", Com_Freeze_f );
+	Cmd_AddCommand( "exit", Com_Exit_f );
+#endif
 
 	Cmd_AddCommand( "quit", Com_Quit_f );
 	Cmd_AddCommand( "writeconfig", Com_WriteConfig_f );

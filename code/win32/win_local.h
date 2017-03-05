@@ -43,13 +43,14 @@ void SNDDMA_Activate();
 
 LRESULT CALLBACK MainWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam );
 
+void GLW_RestoreGamma();
+
 typedef struct
 {
 	HWND		hWnd;
 	HINSTANCE	hInstance;
 	qbool		activeApp;
 	qbool		isMinimized;
-	OSVERSIONINFO	osversion;
 
 	// when we get a windows message, we store the time off
 	// so keyboard processing can know the exact time of an event

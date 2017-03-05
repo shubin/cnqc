@@ -842,13 +842,14 @@ static void GLW_CheckHardwareGamma()
 }
 
 
-static void GLW_RestoreGamma()
+void GLW_RestoreGamma()
 {
-	if (!glConfig.deviceSupportsGamma)
+	if (!glConfig.deviceSupportsGamma || !glw_state.gammaRampSet)
 		return;
 
 	HDC hDC = GetDC( GetDesktopWindow() );
-	SetDeviceGammaRamp( hDC, s_oldHardwareGamma );
+	if ( SetDeviceGammaRamp( hDC, s_oldHardwareGamma ) )
+		glw_state.gammaRampSet = qfalse;
 	ReleaseDC( GetDesktopWindow(), hDC );
 }
 
@@ -878,7 +879,9 @@ void GLimp_SetGamma( unsigned char red[256], unsigned char green[256], unsigned 
 		}
 	}
 
-	if ( !SetDeviceGammaRamp( glw_state.hDC, table ) ) {
+	if ( SetDeviceGammaRamp( glw_state.hDC, table ) ) {
+		glw_state.gammaRampSet = qtrue;
+	} else {
 		Com_Printf( "SetDeviceGammaRamp failed.\n" );
 	}
 }

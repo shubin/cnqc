@@ -976,9 +976,6 @@ const char* Sys_DefaultHomePath();
 char** Sys_ListFiles( const char *directory, const char *extension, const char *filter, int *numfiles, qbool wantsubs );
 void	Sys_FreeFileList( char **list );
 
-void	Sys_BeginProfiling( void );
-void	Sys_EndProfiling( void );
-
 qbool Sys_LowPhysicalMemory( void );
 
 

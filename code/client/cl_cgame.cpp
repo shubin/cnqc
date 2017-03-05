@@ -698,8 +698,6 @@ static void CL_FirstSnapshot()
 		Cbuf_AddText( cl_activeAction->string );
 		Cvar_Set( "activeAction", "" );
 	}
-
-	Sys_BeginProfiling();
 }
 
 
