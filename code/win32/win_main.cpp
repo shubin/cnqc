@@ -169,7 +169,7 @@ static void Sys_ListFilteredFiles( const char *basedir, const char *subdirs, con
 	}
 
 	struct _finddata_t findinfo;
-	int findhandle = _findfirst (search, &findinfo);
+	const intptr_t findhandle = _findfirst (search, &findinfo);
 	if (findhandle == -1) {
 		return;
 	}
@@ -208,7 +208,6 @@ char **Sys_ListFiles( const char *directory, const char *extension, const char *
 	char		**listCopy;
 	char		*list[MAX_FOUND_FILES];
 	struct _finddata_t findinfo;
-	int			findhandle;
 	int			flag;
 	int			i;
 
@@ -250,7 +249,7 @@ char **Sys_ListFiles( const char *directory, const char *extension, const char *
 	// search
 	nfiles = 0;
 
-	findhandle = _findfirst (search, &findinfo);
+	const intptr_t findhandle = _findfirst (search, &findinfo);
 	if (findhandle == -1) {
 		*numfiles = 0;
 		return NULL;
