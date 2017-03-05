@@ -559,13 +559,89 @@ void Sys_Init()
 ///////////////////////////////////////////////////////////////
 
 
-static int WinMainImpl( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow )
+static BOOL CALLBACK WIN_MonitorEnumCallback( HMONITOR hMonitor, HDC hdcMonitor, LPRECT lprcMonitor, LPARAM dwData )
+{
+	if ( lprcMonitor )
+	{
+		g_wv.monitorRects[g_wv.monitorCount] = *lprcMonitor;
+		g_wv.hMonitors[g_wv.monitorCount] = hMonitor;
+		g_wv.monitorCount++;
+	}
+
+	if ( g_wv.monitorCount >= MAX_MONITOR_COUNT )
+	{
+		return FALSE;
+	}
+	
+	return TRUE;
+}
+
+
+static void WIN_GetMonitorList()
+{
+	EnumDisplayMonitors( NULL, NULL, &WIN_MonitorEnumCallback, 0 );
+
+	const POINT zero = { 0, 0 };
+	const HMONITOR hMonitor = MonitorFromPoint( zero, MONITOR_DEFAULTTOPRIMARY );
+	for ( int i = 0; i < g_wv.monitorCount; i++ )
+	{
+		if ( hMonitor ==  g_wv.hMonitors[i] )
+		{
+			g_wv.primaryMonitor = i;
+			g_wv.monitor = i;
+			break;
+		}
+	}
+}
+
+
+void WIN_GetStartUpMonitorIndex()
+{
+	static qbool called = qfalse;
+
+	if ( called )
+		return;
+
+	called = qtrue;
+
+	// r_monitor is the 1-based monitor index the user asks for
+	const int monitor = Cvar_Get( "r_monitor", "0", CVAR_ARCHIVE )->integer;
+	if ( monitor <= 0 || monitor > g_wv.monitorCount )
+	{
+		g_wv.monitor = g_wv.primaryMonitor;
+		return;
+	}
+
+	g_wv.monitor = monitor - 1;
+}
+
+
+void WIN_GetMonitorIndexFromMainWindow()
+{
+	const HMONITOR hMonitor = MonitorFromWindow( g_wv.hWnd, MONITOR_DEFAULTTONEAREST );
+	for ( int i = 0; i < g_wv.monitorCount; i++ )
+	{
+		if ( hMonitor == g_wv.hMonitors[i] )
+		{
+			g_wv.monitor = i;
+			break;
+		}
+	}
+}
+
+
+///////////////////////////////////////////////////////////////
+
+
+int WINAPI WinMainImpl( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow )
 {
 	// should never get a previous instance in Win32
 	if ( hPrevInstance )
 		return 0;
 
 	g_wv.hInstance = hInstance;
+
+	WIN_GetMonitorList();
 
 	// done before Com/Sys_Init since we need this for error output
 	Sys_CreateConsole();

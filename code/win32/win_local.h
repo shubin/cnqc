@@ -38,12 +38,17 @@ qbool	IN_ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam ); // returns tr
 void	IN_Frame();
 void	IN_Shutdown();
 
+void WIN_GetStartUpMonitorIndex();
+void WIN_GetMonitorIndexFromMainWindow();
+void WIN_UpdateHardwareGammaRamp( qbool enable );
 
 void SNDDMA_Activate();
 
 LRESULT CALLBACK MainWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam );
 
 void GLW_RestoreGamma();
+
+#define MAX_MONITOR_COUNT 16
 
 typedef struct
 {
@@ -54,7 +59,16 @@ typedef struct
 
 	// when we get a windows message, we store the time off
 	// so keyboard processing can know the exact time of an event
-	unsigned		sysMsgTime;
+	unsigned	sysMsgTime;
+
+	HMONITOR	hGammaMonitor;
+	char		gammaMonitorName[CCHDEVICENAME];
+
+	RECT		monitorRects[MAX_MONITOR_COUNT];
+	HMONITOR	hMonitors[MAX_MONITOR_COUNT];
+	int			monitor; // index of the monitor currently used for display
+	int			primaryMonitor;
+	int			monitorCount;
 } WinVars_t;
 
 extern WinVars_t	g_wv;

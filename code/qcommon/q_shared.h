@@ -508,6 +508,7 @@ void QDECL Com_Printf( const char* msg, ... );
 void QDECL Com_sprintf (char *dest, int size, const char *fmt, ...);
 
 float Com_Clamp( float min, float max, float value );
+int Com_ClampInt( int min, int max, int value );
 
 const char* COM_SkipPath( const char* pathname );
 void COM_StripExtension( const char* in, char* out, int destsize );

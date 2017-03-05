@@ -464,7 +464,7 @@ static qbool GLW_CreateWindow( int width, int height, int colorbits )
 		wc.hInstance     = g_wv.hInstance;
 		wc.hIcon         = LoadIcon( g_wv.hInstance, MAKEINTRESOURCE(IDI_ICON1));
 		wc.hCursor       = LoadCursor (NULL,IDC_ARROW);
-		wc.hbrBackground = (HBRUSH)COLOR_GRAYTEXT;
+		wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
 		wc.lpszMenuName  = 0;
 		wc.lpszClassName = CLIENT_WINDOW_TITLE;
 
@@ -475,55 +475,55 @@ static qbool GLW_CreateWindow( int width, int height, int colorbits )
 		ri.Printf( PRINT_DEVELOPER, "...registered window class\n" );
 	}
 
-
-	RECT r;
-	int x, y, w, h;
-
 	//
 	// create the HWND if one does not already exist
 	//
 	if ( !g_wv.hWnd )
 	{
-		//
-		// compute width and height
-		//
+		RECT r;
 		r.left = 0;
 		r.top = 0;
 		r.right  = width;
 		r.bottom = height;
 
-		int style = WS_VISIBLE | WS_SYSMENU;
+		int style = WS_VISIBLE | WS_CLIPCHILDREN;
 		int exstyle;
 
 		if ( glInfo.isFullscreen )
 		{
-			style |= WS_POPUP;
+			// WS_BORDER fixes the single black flash that happens when reloading a map
+			// right after switching from windowed mode to full-screen
+			style |= WS_POPUP | WS_BORDER;
 			exstyle = WS_EX_TOPMOST;
 		}
 		else
 		{
-			style |= WS_OVERLAPPED | WS_BORDER | WS_CAPTION;
+			style |= WS_OVERLAPPED | WS_BORDER | WS_CAPTION | WS_SYSMENU;
 			exstyle = 0;
 			AdjustWindowRect( &r, style, FALSE );
 		}
 
-		w = r.right - r.left;
-		h = r.bottom - r.top;
+		const int w = r.right - r.left;
+		const int h = r.bottom - r.top;
 
-		if ( glInfo.isFullscreen )
+		WIN_GetStartUpMonitorIndex();
+		const RECT monRect = g_wv.monitorRects[g_wv.monitor];
+
+		int dx = 0;
+		int dy = 0;
+
+		if ( !glInfo.isFullscreen )
 		{
-			x = 0;
-			y = 0;
-		}
-		else
-		{
-			const cvar_t* vid_xpos = ri.Cvar_Get( "vid_xpos", "", 0 );
-			const cvar_t* vid_ypos = ri.Cvar_Get( "vid_ypos", "", 0 );
-			x = vid_xpos->integer;
-			y = vid_ypos->integer;
+			dx = ri.Cvar_Get( "vid_xpos", "0", 0 )->integer;
+			dy = ri.Cvar_Get( "vid_ypos", "0", 0 )->integer;
+			dx = Com_ClampInt( 0, max( 0, monRect.right - monRect.left - w ), dx );
+			dy = Com_ClampInt( 0, max( 0, monRect.bottom - monRect.top - h ), dy );
 		}
 
-		g_wv.hWnd = CreateWindowEx( exstyle, CLIENT_WINDOW_TITLE, CLIENT_WINDOW_TITLE, style,
+		const int x = monRect.left + dx;
+		const int y = monRect.top + dy;
+
+		g_wv.hWnd = CreateWindowEx( exstyle, CLIENT_WINDOW_TITLE, " "CLIENT_WINDOW_TITLE, style,
 				x, y, w, h, NULL, NULL, g_wv.hInstance, NULL );
 
 		if ( !g_wv.hWnd )
@@ -842,15 +842,66 @@ static void GLW_CheckHardwareGamma()
 }
 
 
+static void GLW_UpdateGammaMonitorInfo()
+{
+	const int screenCount = GetSystemMetrics( SM_CMONITORS );
+	if ( screenCount <= 1 )
+	{
+		g_wv.hGammaMonitor = NULL;
+		g_wv.gammaMonitorName[0] = '\0';
+		return;
+	}
+
+	RECT rect;
+	GetWindowRect( g_wv.hWnd, &rect );
+	const HMONITOR hMonitor = MonitorFromRect( &rect, MONITOR_DEFAULTTONEAREST );
+
+	MONITORINFOEX info;
+	ZeroMemory( &info, sizeof( info ) );
+	info.cbSize = sizeof( MONITORINFOEX );
+	if ( GetMonitorInfo( hMonitor, &info ) )
+	{
+		g_wv.hGammaMonitor = hMonitor;
+		Q_strncpyz( g_wv.gammaMonitorName, info.szDevice, sizeof( g_wv.gammaMonitorName ) );
+	}
+}
+
+
+static void GLW_RestoreGammaRamp( HDC hDC )
+{
+	if ( SetDeviceGammaRamp( hDC, s_oldHardwareGamma ) )
+		glw_state.gammaRampSet = qfalse;
+}
+
+
 void GLW_RestoreGamma()
 {
 	if (!glConfig.deviceSupportsGamma || !glw_state.gammaRampSet)
 		return;
 
-	HDC hDC = GetDC( GetDesktopWindow() );
-	if ( SetDeviceGammaRamp( hDC, s_oldHardwareGamma ) )
-		glw_state.gammaRampSet = qfalse;
-	ReleaseDC( GetDesktopWindow(), hDC );
+	if ( g_wv.hGammaMonitor )
+	{
+		const HDC hDC = CreateDC( "DISPLAY", g_wv.gammaMonitorName, NULL, NULL );
+		GLW_RestoreGammaRamp( hDC );
+		DeleteDC( hDC );
+	}
+	else
+	{
+		GLW_RestoreGammaRamp( glw_state.hDC );
+	}
+}
+
+
+static void GLW_SetGammaRamp( HDC hDC, LPVOID lpRamp )
+{
+	if ( SetDeviceGammaRamp( hDC, lpRamp ) ) 
+	{
+		glw_state.gammaRampSet = qtrue;
+	}
+	else
+	{
+		Com_Printf( "SetDeviceGammaRamp failed.\n" );
+	}
 }
 
 
@@ -879,10 +930,16 @@ void GLimp_SetGamma( unsigned char red[256], unsigned char green[256], unsigned 
 		}
 	}
 
-	if ( SetDeviceGammaRamp( glw_state.hDC, table ) ) {
-		glw_state.gammaRampSet = qtrue;
-	} else {
-		Com_Printf( "SetDeviceGammaRamp failed.\n" );
+	GLW_UpdateGammaMonitorInfo();
+	if ( g_wv.hGammaMonitor )
+	{
+		const HDC hDC = CreateDC( "DISPLAY", g_wv.gammaMonitorName, NULL, NULL );
+		GLW_SetGammaRamp( hDC, table );
+		DeleteDC( hDC );
+	}
+	else
+	{
+		GLW_SetGammaRamp( glw_state.hDC, table );
 	}
 }
 
@@ -1088,3 +1145,14 @@ void GLimp_WakeRenderer( void *data ) {
 	WaitForSingleObject( renderActiveEvent, INFINITE );
 }
 
+
+void WIN_UpdateHardwareGammaRamp( qbool enable )
+{
+	if ( !glConfig.deviceSupportsGamma )
+		return;
+
+	if ( enable )
+		R_SetColorMappings();
+	else
+		GLW_RestoreGamma();
+}

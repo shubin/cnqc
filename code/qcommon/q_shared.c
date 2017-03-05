@@ -46,6 +46,18 @@ float Com_Clamp( float min, float max, float value )
 }
 
 
+int Com_ClampInt( int min, int max, int value )
+{
+	if ( value < min ) {
+		return min;
+	}
+	if ( value > max ) {
+		return max;
+	}
+	return value;
+}
+
+
 const char* COM_SkipPath( const char* pathname )
 {
 	const char* last = pathname;

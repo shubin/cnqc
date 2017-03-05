@@ -294,14 +294,12 @@ LONG WINAPI InputLineWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 */
 void Sys_CreateConsole( void )
 {
-	HDC hDC;
-	WNDCLASS wc;
-	RECT rect;
+	const int desiredw = 540;
+	const int desiredh = 450;
 	const char *DEDCLASS = "Q3 WinConsole";
-	int nHeight;
-	int swidth, sheight;
-	int DEDSTYLE = WS_POPUPWINDOW | WS_CAPTION | WS_MINIMIZEBOX;
+	const DWORD DEDSTYLE = WS_POPUPWINDOW | WS_CAPTION | WS_MINIMIZEBOX;
 
+	WNDCLASS wc;
 	memset( &wc, 0, sizeof( wc ) );
 
 	wc.style         = 0;
@@ -318,25 +316,30 @@ void Sys_CreateConsole( void )
 	if ( !RegisterClass (&wc) )
 		return;
 
+	RECT rect;
 	rect.left = 0;
-	rect.right = 540;
+	rect.right = desiredw;
 	rect.top = 0;
-	rect.bottom = 450;
+	rect.bottom = desiredh;
 	AdjustWindowRect( &rect, DEDSTYLE, FALSE );
 
-	hDC = GetDC( GetDesktopWindow() );
-	swidth = GetDeviceCaps( hDC, HORZRES );
-	sheight = GetDeviceCaps( hDC, VERTRES );
-	ReleaseDC( GetDesktopWindow(), hDC );
+	const RECT monRect = g_wv.monitorRects[g_wv.monitor];
+	const int swidth = monRect.right - monRect.left;
+	const int sheight = monRect.bottom - monRect.top;
+	const int x = monRect.left + (swidth - desiredw) / 2;
+	const int y = monRect.top + (sheight - desiredh) / 2;
+	const int w = rect.right - rect.left + 1;
+	const int h = rect.bottom - rect.top + 1;
 
-	s_wcd.windowWidth = rect.right - rect.left + 1;
-	s_wcd.windowHeight = rect.bottom - rect.top + 1;
+	s_wcd.windowWidth = w;
+	s_wcd.windowHeight = h;
 
 	s_wcd.hWnd = CreateWindowEx( 0,
 							   DEDCLASS,
-							   CONSOLE_WINDOW_TITLE,
+							   " "CONSOLE_WINDOW_TITLE,
 							   DEDSTYLE,
-							   ( swidth - 600 ) / 2, ( sheight - 450 ) / 2 , rect.right - rect.left + 1, rect.bottom - rect.top + 1,
+							   x, y,
+							   w, h,
 							   NULL,
 							   NULL,
 							   g_wv.hInstance,
@@ -350,8 +353,8 @@ void Sys_CreateConsole( void )
 	//
 	// create fonts
 	//
-	hDC = GetDC( s_wcd.hWnd );
-	nHeight = -MulDiv( 8, GetDeviceCaps( hDC, LOGPIXELSY), 72);
+	const HDC hDC = GetDC( s_wcd.hWnd );
+	const int nHeight = -MulDiv( 8, GetDeviceCaps( hDC, LOGPIXELSY ), 72 );
 
 	s_wcd.hfBufferFont = CreateFont( nHeight,
 									  0,

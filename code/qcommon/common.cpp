@@ -2252,7 +2252,6 @@ void Com_Init( char *commandLine )
 #ifndef DEDICATED
 		CL_Init();
 #endif
-		Sys_ShowConsole( com_viewlog->integer, qfalse );
 	}
 
 	// set com_frameTime so that if a map is started on the
@@ -2278,6 +2277,10 @@ void Com_Init( char *commandLine )
 #ifndef DEDICATED
 	CL_StartHunkUsers();
 #endif
+
+	// moved to fix the console window staying visible when starting the game in full-screen mode
+	if ( !com_dedicated->integer )
+		Sys_ShowConsole( com_viewlog->integer, qfalse );
 
 	// make sure single player is off by default
 	Cvar_Set( "sv_singlePlayer", "0" );

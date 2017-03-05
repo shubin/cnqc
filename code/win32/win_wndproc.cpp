@@ -86,6 +86,8 @@ static void VID_AppActivate( BOOL fActive, BOOL minimize )
 	// we don't want to act like we're active if we're minimized
 	g_wv.activeApp = (fActive && !g_wv.isMinimized);
 
+	WIN_UpdateHardwareGammaRamp( g_wv.activeApp );
+
 	// minimize/restore mouse-capture on demand
 	IN_Activate( g_wv.activeApp );
 }
@@ -272,25 +274,27 @@ LRESULT CALLBACK MainWndProc (
 		{
 			if (!r_fullscreen->integer )
 			{
-				int xPos = (short)LOWORD(lParam);    // horizontal position
-				int yPos = (short)HIWORD(lParam);    // vertical position
+				WIN_GetMonitorIndexFromMainWindow();
 
 				RECT r;
 				r.left   = 0;
 				r.top    = 0;
 				r.right  = 1;
 				r.bottom = 1;
-
 				AdjustWindowRect( &r, GetWindowLong( hWnd, GWL_STYLE ), FALSE );
-
-				Cvar_SetValue( "vid_xpos", xPos + r.left );
-				Cvar_SetValue( "vid_ypos", yPos + r.top );
+				
+				const RECT monRect = g_wv.monitorRects[g_wv.monitor];
+				const int x = LOWORD( lParam );
+				const int y = HIWORD( lParam );
+				Cvar_SetValue( "vid_xpos", x + r.left - monRect.left );
+				Cvar_SetValue( "vid_ypos", y + r.top - monRect.top );
 				vid_xpos->modified = qfalse;
 				vid_ypos->modified = qfalse;
-				if ( g_wv.activeApp )
-				{
-					IN_Activate (qtrue);
-				}
+				// @TODO: fix this broken mess
+                if ( g_wv.activeApp )
+                {
+                    IN_Activate (qtrue);
+                }
 			}
 		}
 		break;

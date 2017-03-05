@@ -32,17 +32,16 @@ extern "C" {
 
 typedef struct
 {
-	HDC     hDC;			// handle to device context
-	HGLRC   hGLRC;			// handle to GL rendering context
-	HINSTANCE hinstOpenGL;	// HINSTANCE for the OpenGL library
-
-	int desktopWidth, desktopHeight, desktopBPP;
-
-	qbool cdsFullscreen;
-	qbool pixelFormatSet;
-	int nPendingPF;
-
-	qbool gammaRampSet; // qtrue if our custom ramp is active
+	// The main window's rendering context is the only one we can ever keep around
+	// because the window class has the CS_OWNDC style set (for OpenGL).
+	HDC			hDC;
+	HGLRC		hGLRC;
+	HINSTANCE	hinstOpenGL;
+	int			desktopWidth, desktopHeight, desktopBPP;
+	qbool		cdsFullscreen;
+	qbool		pixelFormatSet;
+	int			nPendingPF;
+	qbool		gammaRampSet; // qtrue if our custom ramp is active
 } glwstate_t;
 
 extern glwstate_t glw_state;
