@@ -170,11 +170,6 @@ or configs will never get loaded from disk!
 */
 
 
-// every time a new demo pk3 file is built, this checksum must be updated.
-// the easiest way to get it is to just run the game and see what it spits out
-#define	DEMO_PAK0_CHECKSUM	2985612116u
-#define	PAK0_CHECKSUM		1566731103u
-
 #define MAX_ZPATH			256
 #define	MAX_SEARCH_PATHS	4096
 #define MAX_FILEHASH_SIZE	1024
@@ -2585,50 +2580,84 @@ static void FS_Startup( const char *gameName )
 	QSUBSYSTEM_INIT_DONE( "FileSystem" );
 }
 
+
+#define DEFAULT_PAK_COUNT 9
+
+static const int DefaultPakChecksums[DEFAULT_PAK_COUNT] = {
+	1566731103,
+	298122907,
+	412165236,
+	-1303471980,
+	1197932710,
+	-207895723,
+	-585902437,
+	908855077,
+	977125798
+};
+
+
 /*
 ===================
-FS_CheckPak0
+FS_CheckPaks
 
-Checks that pak0.pk3 is present and its checksum is correct
+Checks that pak0.pk3 to pakN.pk3 are present and
+their checksums correct, N being DEFAULT_PAK_COUNT
 Note: If you're building a game that doesn't depend on the
-Q3 media pak0.pk3, you'll want to remove this function
+Q3 media pak0-N.pk3, you'll want to remove this function
 ===================
 */
-static void FS_CheckPak0()
+static void FS_CheckPaks()
 {
-	searchpath_t	*path;
-	qbool			foundPak0 = qfalse;
+	enum defaultPakStatus_t {
+		DPS_FOUND = 1,
+		DPS_VALID = 2
+	};
 
-	for( path = fs_searchpaths; path; path = path->next ) {
-		if( path->pack &&
-				!Q_stricmpn( path->pack->pakBasename, "pak0", MAX_OSPATH ) &&
-				(!Q_stricmpn( path->pack->pakGamename, BASEGAME, MAX_OSPATH ) ||
-				!Q_stricmpn( path->pack->pakGamename, "demoq3", MAX_OSPATH ))) {
-			foundPak0 = qtrue;
+	int status[DEFAULT_PAK_COUNT] = { 0 };
+	int badChecksums[DEFAULT_PAK_COUNT] = { 0 };
+	int found = 0;
 
-			if( path->pack->checksum == DEMO_PAK0_CHECKSUM ) {
-				Com_Printf( "\n\n"
-						"**************************************************\n"
-						"WARNING: It looks like you're using pak0.pk3\n"
-						"from the demo. This may work fine, but it is not\n"
-						"guaranteed or supported.\n"
-						"**************************************************\n\n\n" );
-			} else if( path->pack->checksum != PAK0_CHECKSUM ) {
-				Com_Printf( "\n\n"
-						"**************************************************\n"
-						"WARNING: pak0.pk3 is present but its checksum (%u)\n"
-						"is not correct. Please re-copy pak0.pk3 from your\n"
-						"legitimate Q3 CDROM.\n"
-						"**************************************************\n\n\n",
-						path->pack->checksum );
+	for( searchpath_t* path = fs_searchpaths; path; path = path->next ) {
+		for ( int i = 0; i < DEFAULT_PAK_COUNT; ++i ) {
+			if ( status[i] & DPS_FOUND )
+				continue;
+
+			if ( path->pack &&
+				!Q_stricmpn(path->pack->pakBasename, va("pak%d", i), MAX_OSPATH) &&
+				!Q_stricmpn(path->pack->pakGamename, BASEGAME, MAX_OSPATH) ) {
+				++found;
+				status[i] |= DPS_FOUND;
+				if ( path->pack->checksum == DefaultPakChecksums[i] )
+					status[i] |= DPS_VALID;
+				else
+					badChecksums[i] = path->pack->checksum;
 			}
 		}
+
+		if ( found == DEFAULT_PAK_COUNT )
+			break;
 	}
 
-	if( !foundPak0 ) {
-		Com_Error( ERR_FATAL, "Couldn't find pak0.pk3. Check that your Q3\n"
-				"executable is in the correct place and that every file\n"
-				"in the %s directory is present and readable.", BASEGAME);
+	if ( found < DEFAULT_PAK_COUNT ) {
+		int firstMissing = 0;
+		for ( int i = 0; i < DEFAULT_PAK_COUNT; ++i ) {
+			if ( !(status[i] & DPS_FOUND) ) {
+				firstMissing = i;
+				break;
+			}
+		}
+		Com_Error( ERR_FATAL, "pak%d.pk3 is missing or unreadable! Check that CNQ3 is in the correct place "
+				  "and that every file in the %s directory is present and readable.", firstMissing, BASEGAME );
+		return;
+	}
+
+	for ( int i = 0; i < DEFAULT_PAK_COUNT; ++i ) {
+		if ( !(status[i] & DPS_VALID) ) {
+			Com_Error( ERR_FATAL, "pak%d.pk3 is corrupt! Please re-copy pak%d.pk3 "
+					  "from your legitimate Q3 CD-ROM. Got checksum %X, expected %X.",
+					  i, i, (unsigned int)badChecksums[i], (unsigned int)DefaultPakChecksums[i] );
+			return;
+		}
 	}
 }
 
@@ -2963,7 +2992,7 @@ void FS_InitFilesystem()
 	// try to start up normally
 	FS_Startup( BASEGAME );
 
-	FS_CheckPak0();
+	FS_CheckPaks();
 
 	// if we can't find default.cfg, assume that the paths are busted
 	// and error out now, rather than getting an unreadable
@@ -2995,7 +3024,7 @@ void FS_Restart( int checksumFeed ) {
 	// try to start up normally
 	FS_Startup( BASEGAME );
 
-	FS_CheckPak0();
+	FS_CheckPaks();
 
 	// if we can't find default.cfg, assume that the paths are
 	// busted and error out now, rather than getting an unreadable
