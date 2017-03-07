@@ -308,12 +308,38 @@ const char* Sys_ConsoleInput()
       {
         if (key == '\n')
         {
+#ifdef DEDICATED
           // push it in history
           tty_Hist_Add(&tty_con);
-          strcpy(text, tty_con.buffer);
+          Q_strncpyz(text, tty_con.buffer, sizeof(text));
           Field_Clear(&tty_con);
-          key = '\n';
-          write(1, &key, 1);
+          write(STDOUT_FILENO, "\n]", 2);
+#else
+          // not in a game yet and no leading slash?
+          if (cls.state != CA_ACTIVE && tty_con.cursor > 0 &&
+              tty_con.buffer[0] != '/' && tty_con.buffer[0] != '\\')
+          {
+            // there's no one to chat with, so we consider this a command
+            memmove(tty_con.buffer + 1, tty_con.buffer, strlen(tty_con.buffer) + 1);
+            tty_con.buffer[0] = '\\';
+            tty_con.cursor++;
+          }
+
+          // decide what the final command will be
+          if (tty_con.buffer[0] == '/' || tty_con.buffer[0] == '\\')
+            Q_strncpyz(text, tty_con.buffer + 1, sizeof(text));
+          else if (tty_con.cursor)
+            Com_sprintf(text, sizeof(text), "say %s", tty_con.buffer);
+          else
+            *text = '\0';
+            
+          // push it in history
+          tty_Hist_Add(&tty_con);
+          tty_Hide();
+          Com_Printf("tty]%s\n", tty_con.buffer);
+          Field_Clear(&tty_con);
+          tty_Show();
+#endif
           return text;
         }
         if (key == '\t')
@@ -641,10 +667,11 @@ sysEvent_t Sys_GetEvent()
 	// check for console commands
 	const char* s = Sys_ConsoleInput();
 	if ( s ) {
-		int len = strlen( s ) + 1;
-		char* b = (char*)Z_Malloc( len );
-		Q_strncpyz( b, s, len-1 );
-		Sys_QueEvent( 0, SE_CONSOLE, 0, 0, len, b );
+		const int slen = strlen( s );
+		const int blen = slen + 1;
+		char* b = (char*)Z_Malloc( blen );
+		Q_strncpyz( b, s, blen );
+		Sys_QueEvent( 0, SE_CONSOLE, 0, 0, slen, b );
 	}
 
 #ifndef DEDICATED
