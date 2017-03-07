@@ -43,6 +43,7 @@ void	IN_Shutdown();
 void WIN_GetStartUpMonitorIndex();
 void WIN_GetMonitorIndexFromMainWindow();
 void WIN_UpdateHardwareGammaRamp( qbool enable );
+void WIN_UpdateResolution( int width, int height );
 
 void SNDDMA_Activate();
 

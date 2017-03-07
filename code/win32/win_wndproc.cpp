@@ -297,6 +297,10 @@ LRESULT CALLBACK MainWndProc (
 		}
 		break;
 
+	case WM_SIZE:
+		WIN_UpdateResolution( (int)LOWORD(lParam), (int)HIWORD(lParam) );
+		break;
+
 	case WM_SYSCOMMAND:
 		if ( wParam == SC_SCREENSAVE )
 			return 0;

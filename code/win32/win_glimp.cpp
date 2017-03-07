@@ -1156,3 +1156,11 @@ void WIN_UpdateHardwareGammaRamp( qbool enable )
 	else
 		GLW_RestoreGamma();
 }
+
+
+void WIN_UpdateResolution( int width, int height )
+{
+	glConfig.vidWidth = width;
+	glConfig.vidHeight = height;
+}
+
