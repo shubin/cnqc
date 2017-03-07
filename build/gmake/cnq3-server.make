@@ -145,6 +145,7 @@ OBJECTS := \
 	$(OBJDIR)/cvar.o \
 	$(OBJDIR)/files.o \
 	$(OBJDIR)/huffman.o \
+	$(OBJDIR)/huffman_static.o \
 	$(OBJDIR)/md4.o \
 	$(OBJDIR)/md5.o \
 	$(OBJDIR)/msg.o \
@@ -253,6 +254,9 @@ $(OBJDIR)/files.o: ../../code/qcommon/files.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/huffman.o: ../../code/qcommon/huffman.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/huffman_static.o: ../../code/qcommon/huffman_static.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/md4.o: ../../code/qcommon/md4.cpp
