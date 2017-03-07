@@ -34,6 +34,8 @@ void Conbuf_AppendText( const char *msg );
 
 void	IN_Init();
 void	IN_Activate( qbool active );
+void	IN_WindowMoved();
+qbool	IN_ShouldBeActive();
 qbool	IN_ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam ); // returns true if the event was handled
 void	IN_Frame();
 void	IN_Shutdown();

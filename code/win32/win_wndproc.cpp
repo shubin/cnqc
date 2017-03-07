@@ -88,8 +88,7 @@ static void VID_AppActivate( BOOL fActive, BOOL minimize )
 
 	WIN_UpdateHardwareGammaRamp( g_wv.activeApp );
 
-	// minimize/restore mouse-capture on demand
-	IN_Activate( g_wv.activeApp );
+	IN_Activate( IN_ShouldBeActive() );
 }
 
 
@@ -290,10 +289,9 @@ LRESULT CALLBACK MainWndProc (
 				Cvar_SetValue( "vid_ypos", y + r.top - monRect.top );
 				vid_xpos->modified = qfalse;
 				vid_ypos->modified = qfalse;
-				// @TODO: fix this broken mess
                 if ( g_wv.activeApp )
                 {
-                    IN_Activate (qtrue);
+					IN_WindowMoved();
                 }
 			}
 		}

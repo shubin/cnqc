@@ -27,6 +27,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 struct Mouse {
 	virtual qbool Init() { return qtrue; }
 	virtual qbool Activate( qbool active );
+	virtual void OnWindowMoved() {}
 	virtual void Shutdown() {}
 	virtual void Read( int* mx, int* my ) = 0;
 	virtual qbool ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam ) { return qfalse; } // returns true if the event was handled
@@ -171,8 +172,11 @@ qbool rawmouse_t::ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam )
 
 struct winmouse_t : public Mouse {
 	virtual qbool Activate( qbool active );
+	virtual void OnWindowMoved();
 	virtual void Read( int* mx, int* my );
 	virtual qbool ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam );
+
+	void UpdateWindowCenter();
 
 	int window_center_x, window_center_y;
 };
@@ -180,23 +184,34 @@ struct winmouse_t : public Mouse {
 static winmouse_t winmouse;
 
 
-qbool winmouse_t::Activate( qbool active )
+void winmouse_t::UpdateWindowCenter()
 {
-	if (!active)
-		return qtrue;
-
-	int sw = GetSystemMetrics(SM_CXSCREEN);
-	int sh = GetSystemMetrics(SM_CYSCREEN);
+	const int sw = GetSystemMetrics( SM_CXSCREEN );
+	const int sh = GetSystemMetrics( SM_CYSCREEN );
 
 	RECT rc;
 	GetWindowRect( g_wv.hWnd, &rc );
 
-	window_center_x = ( max(rc.left, 0) + min(rc.right, sw) ) / 2;
-	window_center_y = ( max(rc.top, 0) + min(rc.bottom, sh) ) / 2;
+	window_center_x = ( max(rc.left, 0) + min(rc.right,  sw) ) / 2;
+	window_center_y = ( max(rc.top,  0) + min(rc.bottom, sh) ) / 2;
+}
 
+
+qbool winmouse_t::Activate(qbool active)
+{
+	if (!active)
+		return qtrue;
+
+	UpdateWindowCenter();
 	SetCursorPos( window_center_x, window_center_y );
 
 	return qtrue;
+}
+
+
+void winmouse_t::OnWindowMoved()
+{
+	UpdateWindowCenter();
 }
 
 
@@ -363,6 +378,21 @@ void IN_Activate( qbool active )
 }
 
 
+void IN_WindowMoved()
+{
+	if (!mouse)
+		return;
+
+	mouse->OnWindowMoved();
+}
+
+
+qbool IN_ShouldBeActive()
+{
+	return g_wv.activeApp && (!(cls.keyCatchers & KEYCATCH_CONSOLE) || Cvar_VariableIntegerValue("r_fullscreen"));
+}
+
+
 // called every frame, even if not generating commands
 
 void IN_Frame()
@@ -372,18 +402,12 @@ void IN_Frame()
 	if (!mouse)
 		return;
 
-	if (cls.keyCatchers & KEYCATCH_CONSOLE) {
-		// temporarily deactivate if not in the game and running on the desktop
-		if (!Cvar_VariableValue("r_fullscreen")) {
-			IN_Activate( qfalse );
-			return;
-		}
+	if (!IN_ShouldBeActive()) {
+		IN_Activate( qfalse );
+		return;
 	}
 
-	// this should really only happen on actual focus changes
-	// but is needed to compensate for the console+windowed hack
-	if (g_wv.activeApp)
-		IN_Activate( qtrue );
+	IN_Activate( qtrue );
 
 	int mx, my;
 	mouse->Read( &mx, &my );
