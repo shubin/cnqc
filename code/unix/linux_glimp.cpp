@@ -315,7 +315,7 @@ qbool rawmouse_t::Init()
 		return qfalse;
 	}
 
-	XSelectInput( dpy, win, KeyPressMask | KeyReleaseMask );
+	XSelectInput( dpy, win, KeyPressMask | KeyReleaseMask | FocusChangeMask );
 
 	return qtrue;
 }
@@ -624,7 +624,7 @@ static int mouse_threshold;
 
 #define KEY_MASK (KeyPressMask | KeyReleaseMask)
 #define MOUSE_MASK (ButtonPressMask | ButtonReleaseMask | PointerMotionMask | ButtonMotionMask )
-#define X_MASK (KEY_MASK | MOUSE_MASK | VisibilityChangeMask | StructureNotifyMask )
+#define X_MASK (KEY_MASK | MOUSE_MASK | VisibilityChangeMask | StructureNotifyMask | FocusChangeMask )
 cvar_t* in_nograb;
 
 
@@ -782,6 +782,14 @@ static void HandleEvents()
 				if (key) {
 					Sys_QueEvent( 0, SE_KEY, key, qfalse, 0, NULL );
 				}
+			break;
+			
+			case FocusIn:
+			case FocusOut:
+				// reset all modifiers on focus change
+				Sys_QueEvent( 0, SE_KEY, K_ALT,   qfalse, 0, NULL );
+				Sys_QueEvent( 0, SE_KEY, K_CTRL,  qfalse, 0, NULL );
+				Sys_QueEvent( 0, SE_KEY, K_SHIFT, qfalse, 0, NULL );
 			break;
 		}
 	}
