@@ -1140,3 +1140,89 @@ void Key_ClearStates()
 
 	anykeydown = 0;
 }
+
+
+#define HISTORY_PATH "cnq3cmdhistory"
+
+
+static const cvar_t* con_saveCmdHistory;
+
+
+void CL_LoadCommandHistory()
+{
+	con_saveCmdHistory = Cvar_Get( "con_saveCmdHistory", "0", CVAR_ARCHIVE );
+
+	fileHandle_t f;
+	FS_FOpenFileRead( HISTORY_PATH, &f, qfalse );
+	if ( f == NULL )
+		return;
+
+	int count;
+	if ( FS_Read( &count, sizeof(int), f ) != sizeof(int) ||
+		count <= 0 ||
+		count > COMMAND_HISTORY ) {
+		FS_FCloseFile( f );
+		return;
+	}
+
+	int lengths[COMMAND_HISTORY];
+	const int lengthBytes = sizeof(int) * count;
+	if ( FS_Read( lengths, lengthBytes, f ) != lengthBytes ) {
+		FS_FCloseFile( f );
+		return;
+	}
+
+	for ( int i = 0; i < count; ++i ) {
+		const int l = lengths[i];
+		if ( l <= 0 ||
+			FS_Read( historyEditLines[i].buffer, l, f ) != l ) {
+			FS_FCloseFile( f );
+			return;
+		}
+		historyEditLines[i].buffer[l] = '\0';
+		historyEditLines[i].cursor = l;
+	}
+
+	nextHistoryLine = count;
+	historyLine = count;
+	const int totalCount = ARRAY_LEN( historyEditLines );
+	for ( int i = count; i < totalCount; ++i ) {
+		historyEditLines[i].buffer[0] = '\0';
+	}
+
+	FS_FCloseFile(f);
+}
+
+
+void CL_SaveCommandHistory()
+{
+	if ( con_saveCmdHistory->integer == 0 )
+		return;
+
+	const fileHandle_t f = FS_FOpenFileWrite( HISTORY_PATH );
+	if ( f == NULL )
+		return;
+
+	int count = 0;
+	int lengths[COMMAND_HISTORY];
+	const int totalCount = ARRAY_LEN( historyEditLines );
+	for ( int i = 0; i < totalCount; ++i ) {
+		const char* const s = historyEditLines[(historyLine + i) % COMMAND_HISTORY].buffer;
+		if ( *s == '\0' )
+			continue;
+
+		lengths[count++] = strlen( s );
+	}
+
+	FS_Write( &count, sizeof(count), f );
+	FS_Write( lengths, sizeof(int) * count, f );
+	for ( int i = 0, j = 0; i < totalCount; ++i ) {
+		const char* const s = historyEditLines[(historyLine + i) % COMMAND_HISTORY].buffer;
+		if ( *s == '\0' )
+			continue;
+
+		FS_Write( s, lengths[j++], f );
+	}
+
+	FS_FCloseFile( f );
+}

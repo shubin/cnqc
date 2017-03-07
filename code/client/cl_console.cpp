@@ -288,6 +288,8 @@ void CL_ConInit()
 	}
 	Con_ClearNotify();
 
+	CL_LoadCommandHistory();
+
 	Cmd_AddCommand( "toggleconsole", Con_ToggleConsole_f );
 	Cmd_AddCommand( "messagemode", Con_MessageMode_f );
 	Cmd_AddCommand( "messagemode2", Con_MessageMode2_f );
@@ -642,6 +644,7 @@ static void Con_FixPosition()
 	}
 }
 
+
 void Con_ScrollLines( int lines )
 {
 	if (lines == 0)
@@ -650,6 +653,7 @@ void Con_ScrollLines( int lines )
 	con.display += lines;
 	Con_FixPosition();
 }
+
 
 void Con_ScrollPages( int pages )
 {
@@ -661,6 +665,7 @@ void Con_ScrollPages( int pages )
 	Con_FixPosition();
 }
 
+
 void Con_Top()
 {
 	con.display = con.totallines;
@@ -668,6 +673,7 @@ void Con_Top()
 		con.display = con.current - con.totallines + 1;
 	}
 }
+
 
 void Con_Bottom()
 {

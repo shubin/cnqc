@@ -2114,6 +2114,8 @@ void CL_Shutdown()
 
 	CL_ShutdownUI();
 
+	CL_SaveCommandHistory();
+
 	Cmd_RemoveCommand ("cmd");
 	Cmd_RemoveCommand ("configstrings");
 	Cmd_RemoveCommand ("userinfo");

@@ -41,3 +41,6 @@ qbool Key_GetOverstrikeMode();
 void Key_SetOverstrikeMode( qbool state );
 void Key_ClearStates();
 int Key_GetKey( const char* binding );
+
+void CL_LoadCommandHistory();
+void CL_SaveCommandHistory();
