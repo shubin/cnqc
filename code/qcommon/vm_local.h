@@ -182,6 +182,8 @@ struct vm_s {
 	vmFunc_t	codeBase;
 	int			codeLength;
 
+	int			allocSize;			// total allocation size, in bytes
+
 	int			dataMask;
 	int			dataLength;			// exact data segment length
 
@@ -191,7 +193,7 @@ struct vm_s {
 	int			numSymbols;
 	vmSymbol_t	*symbols;
 
-	int			callLevel;		// counts recursive VM_Call
+	int			callLevel;			// counts recursive VM_Call
 	int			breakFunction;		// increment breakCount on function entry to this
 	int			breakCount;
 

@@ -2319,7 +2319,7 @@ __compile:
 	VM_FreeBuffers();
 
 #ifdef VM_X86_MMAP
-	if ( mprotect( vm->codeBase.ptr, compiledOfs + n, PROT_READ|PROT_EXEC ) ) {
+	if ( mprotect( vm->codeBase.ptr, vm->allocSize, PROT_READ|PROT_EXEC ) ) {
 		VM_Destroy_Compiled( vm );
 		Com_Error( ERR_FATAL, "VM_CompileX86: mprotect failed" );
 		return qfalse;
@@ -2329,7 +2329,7 @@ __compile:
 		DWORD oldProtect = 0;
 
 		// remove write permissions.
-		if ( !VirtualProtect( vm->codeBase.ptr, compiledOfs + n, PAGE_EXECUTE_READ, &oldProtect ) ) {
+		if ( !VirtualProtect( vm->codeBase.ptr, vm->allocSize, PAGE_EXECUTE_READ, &oldProtect ) ) {
 			VM_Destroy_Compiled( vm );
 			Com_Error( ERR_FATAL, "VM_CompileX86: VirtualProtect failed" );
 			return qfalse;
@@ -2352,25 +2352,22 @@ VM_Alloc_Compiled
 */
 static void *VM_Alloc_Compiled(vm_t *vm, int codeLength, int tableLength)
 {
-	void	*ptr;
-	int		length;
-
-	length = codeLength + tableLength;
+	const int length = codeLength + tableLength;
 #ifdef VM_X86_MMAP
-	ptr = mmap( NULL, length, PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0 );
+	void* const ptr = mmap( NULL, length, PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0 );
 	if ( ptr == MAP_FAILED ) {
 		Com_Error( ERR_FATAL, "VM_CompileX86: mmap failed" );
 		return NULL;
 	}
 #elif _WIN32
 	// allocate memory with EXECUTE permissions under windows.
-	ptr = VirtualAlloc( NULL, length, MEM_COMMIT, PAGE_EXECUTE_READWRITE );
+	void* const ptr = VirtualAlloc(NULL, length, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
 	if ( !ptr ) {
 		Com_Error( ERR_FATAL, "VM_CompileX86: VirtualAlloc failed" );
 		return NULL;
 	}
 #else
-	ptr = malloc( length );
+	void* const ptr = malloc( length );
 	if ( !ptr ) {
 		Com_Error( ERR_FATAL, "VM_CompileX86: malloc failed" );
 		return NULL;
@@ -2378,6 +2375,7 @@ static void *VM_Alloc_Compiled(vm_t *vm, int codeLength, int tableLength)
 #endif
 	vm->codeBase.ptr = (byte*)ptr;
 	vm->codeLength = codeLength;
+	vm->allocSize = length;
 	return vm->codeBase.ptr;
 }
 
@@ -2390,7 +2388,7 @@ VM_Destroy_Compiled
 static void VM_Destroy_Compiled(vm_t* vm)
 {
 #ifdef VM_X86_MMAP
-	munmap( vm->codeBase.ptr, vm->codeLength );
+	munmap( vm->codeBase.ptr, vm->allocSize );
 #elif _WIN32
 	VirtualFree( vm->codeBase.ptr, 0, MEM_RELEASE );
 #else
