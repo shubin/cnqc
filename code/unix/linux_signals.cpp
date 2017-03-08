@@ -155,21 +155,30 @@ static int sig_signal = 0;
 
 
 // Every call in there needs to be safe when called more than once.
-static void SIG_HandleCrash()
+static void SIG_HandleCrash(qbool restoreSettings)
 {
-	// We crashed and only care about restoring system settings
-	// that the process clean-up won't handle for us.
+	if (restoreSettings)
+	{
+		// We crashed and only care about restoring system settings
+		// that the process clean-up won't handle for us.
 #ifndef DEDICATED
-	LIN_RestoreGamma();
+		LIN_RestoreGamma();
 #endif
-	Sys_ConsoleInputShutdown();
+		Sys_ConsoleInputShutdown();
+	}
 	
-	if (!sig_crashed)
-		return;
-		
-	Sig_WriteJSON(sig_signal);
-	Sig_WriteBacktraceSafe();
-	Sig_WriteBacktraceUnsafe();
+	if (sig_crashed)
+	{
+		Sig_WriteJSON(sig_signal);
+		Sig_WriteBacktraceSafe();
+		Sig_WriteBacktraceUnsafe();	
+	}
+}
+
+
+static void SIG_HandleExit()
+{
+	SIG_HandleCrash(qtrue);
 }
 
 
@@ -197,7 +206,7 @@ static void Sig_HandleSignal(int sig)
 		printf("DOUBLE SIGNAL FAULT: Received signal %d (%s), exiting...\n", sig, Sig_GetName(sig));
 		if (sig_crashed && !crashHandled)
 		{
-			SIG_HandleCrash();
+			SIG_HandleCrash(qfalse);
 		}
 		exit(2);
 	}
@@ -207,7 +216,7 @@ static void Sig_HandleSignal(int sig)
 	
 	if (sig_crashed)
 	{
-		SIG_HandleCrash();
+		SIG_HandleCrash(qtrue);
 		crashHandled = qtrue;
 		exit(1);
 	}
@@ -231,7 +240,7 @@ void SIG_Init()
 	// there ever being a real crash.
 	// This happens for instance with the "fatal IO error"
 	// of the X server.
-	atexit(SIG_HandleCrash);
+	atexit(SIG_HandleExit);
 	
 	signal(SIGILL,  Sig_HandleSignal);
 	signal(SIGIOT,  Sig_HandleSignal);
