@@ -26,7 +26,7 @@ path_build = path_root.."/cnq3/build"
 path_bin = path_root.."/.bin"
 
 -- relative to the makefile
-make_path_git_scripts = "../../../cnq3tools/git"
+make_path_git_scripts = ".."
 make_path_git_header = "../../code/qcommon/git.h"
 make_path_bin = "../../../.bin"
 

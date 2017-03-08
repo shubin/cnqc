@@ -121,7 +121,7 @@
       <AdditionalOptions> ..\..\cnq3\code\win32\winquake.res /STACK:8388608 %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
-      <Command>"..\..\..\cnq3tools\git\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
+      <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
     </PreBuildEvent>
     <PostBuildEvent>
       <Command>copy "..\..\..\.bin\debug_x32\cnq3-x86.exe" "$(QUAKE3DIR)"
@@ -150,7 +150,7 @@ copy "..\..\..\.bin\debug_x32\cnq3-x86.pdb" "$(QUAKE3DIR)"</Command>
       <AdditionalOptions> ..\..\cnq3\code\win32\winquake.res /STACK:8388608 %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
-      <Command>"..\..\..\cnq3tools\git\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
+      <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
     </PreBuildEvent>
     <PostBuildEvent>
       <Command>copy "..\..\..\.bin\debug_x64\cnq3-x64.exe" "$(QUAKE3DIR)"
@@ -190,7 +190,7 @@ copy "..\..\..\.bin\debug_x64\cnq3-x64.pdb" "$(QUAKE3DIR)"</Command>
       <AdditionalOptions> ..\..\cnq3\code\win32\winquake.res /STACK:8388608 /OPT:REF /OPT:ICF %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
-      <Command>"..\..\..\cnq3tools\git\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
+      <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
     </PreBuildEvent>
     <PostBuildEvent>
       <Command>copy "..\..\..\.bin\release_x32\cnq3-x86.exe" "$(QUAKE3DIR)"
@@ -229,7 +229,7 @@ copy "..\..\..\.bin\release_x32\cnq3-x86.pdb" "$(QUAKE3DIR)"</Command>
       <AdditionalOptions> ..\..\cnq3\code\win32\winquake.res /STACK:8388608 /OPT:REF /OPT:ICF %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
-      <Command>"..\..\..\cnq3tools\git\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
+      <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
     </PreBuildEvent>
     <PostBuildEvent>
       <Command>copy "..\..\..\.bin\release_x64\cnq3-x64.exe" "$(QUAKE3DIR)"

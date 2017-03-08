@@ -28,7 +28,7 @@ ifeq ($(config),debug_x32)
   LINKCMD = $(CXX) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
   define PREBUILDCMDS
 	@echo Running prebuild commands
-	"../../../cnq3tools/git/create_git_header.sh" "../../code/qcommon/git.h"
+	"../create_git_header.sh" "../../code/qcommon/git.h"
   endef
   define PRELINKCMDS
   endef
@@ -59,7 +59,7 @@ ifeq ($(config),debug_x64)
   LINKCMD = $(CXX) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
   define PREBUILDCMDS
 	@echo Running prebuild commands
-	"../../../cnq3tools/git/create_git_header.sh" "../../code/qcommon/git.h"
+	"../create_git_header.sh" "../../code/qcommon/git.h"
   endef
   define PRELINKCMDS
   endef
@@ -90,7 +90,7 @@ ifeq ($(config),release_x32)
   LINKCMD = $(CXX) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
   define PREBUILDCMDS
 	@echo Running prebuild commands
-	"../../../cnq3tools/git/create_git_header.sh" "../../code/qcommon/git.h"
+	"../create_git_header.sh" "../../code/qcommon/git.h"
   endef
   define PRELINKCMDS
   endef
@@ -121,7 +121,7 @@ ifeq ($(config),release_x64)
   LINKCMD = $(CXX) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
   define PREBUILDCMDS
 	@echo Running prebuild commands
-	"../../../cnq3tools/git/create_git_header.sh" "../../code/qcommon/git.h"
+	"../create_git_header.sh" "../../code/qcommon/git.h"
   endef
   define PRELINKCMDS
   endef

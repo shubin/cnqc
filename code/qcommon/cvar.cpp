@@ -23,6 +23,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "q_shared.h"
 #include "qcommon.h"
+#include "git.h"
 
 static cvar_t* cvar_vars;
 static cvar_t* cvar_cheats;
@@ -675,6 +676,8 @@ void Cvar_Update( vmCvar_t *vmCvar )
 void Cvar_Init()
 {
 	cvar_cheats = Cvar_Get( "sv_cheats", "1", CVAR_ROM | CVAR_SYSTEMINFO );
+	Cvar_Get( "git_branch", GIT_BRANCH, CVAR_ROM );
+	Cvar_Get( "git_headHash", GIT_COMMIT, CVAR_ROM );
 
 	Cmd_AddCommand( "toggle", Cvar_Toggle_f );
 	Cmd_AddCommand( "set", Cvar_Set_f );
