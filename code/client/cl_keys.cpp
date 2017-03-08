@@ -1154,7 +1154,7 @@ void CL_LoadCommandHistory()
 
 	fileHandle_t f;
 	FS_FOpenFileRead( HISTORY_PATH, &f, qfalse );
-	if ( f == NULL )
+	if ( f == 0 )
 		return;
 
 	int count;
@@ -1200,7 +1200,7 @@ void CL_SaveCommandHistory()
 		return;
 
 	const fileHandle_t f = FS_FOpenFileWrite( HISTORY_PATH );
-	if ( f == NULL )
+	if ( f == 0 )
 		return;
 
 	int count = 0;
