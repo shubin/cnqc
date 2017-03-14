@@ -160,22 +160,22 @@ static void RB_CalcDeformVertexes( const deformStage_t* ds )
 static void RB_CalcDeformNormals( const deformStage_t* ds )
 {
 	int i;
-	double	scale;
-	double	*xyz = ( double * ) tess.xyz;
-	float	*normal = ( float * ) tess.normal;
+	float scale;
+	const float *xyz = ( const float * ) tess.xyz;
+	float *normal = ( float * ) tess.normal;
 
 	for ( i = 0; i < tess.numVertexes; i++, xyz += 4, normal += 4 ) {
-		scale = 0.98;
+		scale = 0.98f;
 		scale = R_NoiseGet4f( xyz[0] * scale, xyz[1] * scale, xyz[2] * scale,
 			tess.shaderTime * ds->deformationWave.frequency );
 		normal[ 0 ] += ds->deformationWave.amplitude * scale;
 
-		scale = 0.98;
+		scale = 0.98f;
 		scale = R_NoiseGet4f( 100 + xyz[0] * scale, xyz[1] * scale, xyz[2] * scale,
 			tess.shaderTime * ds->deformationWave.frequency );
 		normal[ 1 ] += ds->deformationWave.amplitude * scale;
 
-		scale = 0.98;
+		scale = 0.98f;
 		scale = R_NoiseGet4f( 200 + xyz[0] * scale, xyz[1] * scale, xyz[2] * scale,
 			tess.shaderTime * ds->deformationWave.frequency );
 		normal[ 2 ] += ds->deformationWave.amplitude * scale;
