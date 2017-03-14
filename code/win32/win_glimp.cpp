@@ -491,9 +491,7 @@ static qbool GLW_CreateWindow( int width, int height, int colorbits )
 
 		if ( glInfo.isFullscreen )
 		{
-			// WS_BORDER fixes the single black flash that happens when reloading a map
-			// right after switching from windowed mode to full-screen
-			style |= WS_POPUP | WS_BORDER;
+			style |= WS_POPUP;
 			exstyle = WS_EX_TOPMOST;
 		}
 		else
