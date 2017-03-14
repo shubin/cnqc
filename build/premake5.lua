@@ -281,10 +281,12 @@ local function ApplyExeProjectSettings(exeName, server)
 		"qcommon/cm_test.cpp",
 		"qcommon/cm_trace.cpp",
 		"qcommon/common.cpp",
+		"qcommon/crash.cpp",
 		"qcommon/cvar.cpp",
 		"qcommon/files.cpp",
 		"qcommon/huffman.cpp",
 		"qcommon/huffman_static.cpp",
+		"qcommon/json.cpp",
 		"qcommon/md4.cpp",
 		"qcommon/md5.cpp",
 		"qcommon/msg.cpp",
@@ -311,6 +313,7 @@ local function ApplyExeProjectSettings(exeName, server)
 	{
 		"win32/win_main.cpp",
 		"win32/win_shared.cpp",
+		"win32/win_exception.cpp",
 		"win32/win_syscon.cpp"
 	}
 
@@ -349,10 +352,12 @@ local function ApplyExeProjectSettings(exeName, server)
 		"qcommon/cm_test.cpp",
 		"qcommon/cm_trace.cpp",
 		"qcommon/common.cpp",
+		"qcommon/crash.cpp",
 		"qcommon/cvar.cpp",
 		"qcommon/files.cpp",
 		"qcommon/huffman.cpp",
 		"qcommon/huffman_static.cpp",
+		"qcommon/json.cpp",
 		"qcommon/md4.cpp",
 		"qcommon/md5.cpp",
 		"qcommon/msg.cpp",
@@ -380,6 +385,7 @@ local function ApplyExeProjectSettings(exeName, server)
 		"win32/win_input.cpp",
 		"win32/win_main.cpp",
 		"win32/win_shared.cpp",
+		"win32/win_exception.cpp",
 		"win32/win_snd.cpp",
 		"win32/win_syscon.cpp",
 		"win32/win_wndproc.cpp",
@@ -457,13 +463,13 @@ local function ApplyExeProjectSettings(exeName, server)
 		debugdir(abs_path_q3)
 
 	filter "system:windows"
-		links { "Winmm", "ws2_32" }
+		links { "Winmm", "ws2_32", "Version" }
 		if (server == 0) then
 			links { "opengl32" }
 		end
 
 	filter "system:not windows"
-		links { "dl", "m" }
+		links { "dl", "m", "backtrace" }
 		if (server == 0) then
 			buildoptions { "-pthread" }
 			links { "X11", "pthread" }

@@ -162,6 +162,9 @@
     <ClInclude Include="..\..\code\qcommon\cm_public.h">
       <Filter>qcommon</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\code\qcommon\crash.h">
+      <Filter>qcommon</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\code\qcommon\g_public.h">
       <Filter>qcommon</Filter>
     </ClInclude>
@@ -311,6 +314,9 @@
     <ClCompile Include="..\..\code\qcommon\common.cpp">
       <Filter>qcommon</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\code\qcommon\crash.cpp">
+      <Filter>qcommon</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\code\qcommon\cvar.cpp">
       <Filter>qcommon</Filter>
     </ClCompile>
@@ -321,6 +327,9 @@
       <Filter>qcommon</Filter>
     </ClCompile>
     <ClCompile Include="..\..\code\qcommon\huffman_static.cpp">
+      <Filter>qcommon</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\qcommon\json.cpp">
       <Filter>qcommon</Filter>
     </ClCompile>
     <ClCompile Include="..\..\code\qcommon\md4.cpp">
@@ -382,6 +391,9 @@
     </ClCompile>
     <ClCompile Include="..\..\code\server\sv_world.cpp">
       <Filter>server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\win32\win_exception.cpp">
+      <Filter>win32</Filter>
     </ClCompile>
     <ClCompile Include="..\..\code\win32\win_glimp.cpp">
       <Filter>win32</Filter>

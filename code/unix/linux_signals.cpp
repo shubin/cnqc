@@ -20,9 +20,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 #include <signal.h>
+#include <execinfo.h>
+#include <backtrace.h>
 
 #include "../qcommon/q_shared.h"
 #include "../qcommon/qcommon.h"
+#include "../qcommon/crash.h"
 #ifndef DEDICATED
 #include "../renderer/tr_local.h"
 #endif
@@ -76,6 +79,81 @@ static const char* Sig_GetName(int sig)
 }
 
 
+static void Sig_WriteJSON(int sig)
+{
+	FILE* const file = fopen(va("%s-crash.json", q_argv[0]), "w");
+	if (file == NULL)
+		return;
+
+	JSONW_BeginFile(file);
+	JSONW_IntegerValue("signal", sig);
+	JSONW_StringValue("signal_name", Sig_GetName(sig));
+	JSONW_StringValue("signal_description", Sig_GetDescription(sig));
+	Crash_PrintToFile(q_argv[0]);
+	JSONW_EndFile();
+	fclose(file);
+}
+
+
+// only uses functions safe to call in a signal handler
+static void Sig_WriteBacktraceSafe()
+{
+	FILE* const file = fopen(va("%s-crash.bt", q_argv[0]), "w");
+	if (file == NULL)
+		return;
+
+	void* addresses[64];
+	const int addresscount = backtrace(addresses, sizeof(addresses));
+	if (addresscount > 0)
+	{
+		fprintf(file, "backtrace_symbols_fd stack trace:\r\n");
+		fflush(file);
+		backtrace_symbols_fd(addresses, addresscount, fileno(file));
+	}
+	else
+	{
+		fprintf(file, "The call to backtrace failed\r\n");
+	}
+	
+	fclose(file);
+}
+
+
+static void libbt_ErrorCallback(void* data, const char* msg, int errnum)
+{
+	fprintf((FILE*)data, "libbacktrace error: %s (%d)\r\n", msg, errnum);
+}
+
+
+// might not be safe in a signal handler
+static void Sig_WriteBacktraceUnsafe()
+{
+	FILE* const file = fopen(va("%s-crash.bt", q_argv[0]), "a");
+	if (file == NULL)
+		return;
+
+	fprintf(file, "\r\n\r\n");
+
+	backtrace_state* const state = backtrace_create_state(q_argv[0], 0, libbt_ErrorCallback, file);
+	if (state)
+	{
+		fprintf(file, "libbacktrace stack trace:\r\n");
+		fflush(file);
+		backtrace_print(state, 0, file);
+	}
+	else
+	{
+		fprintf(file, "The call to backtrace_create_state failed\r\n");
+	}
+	
+	fclose(file);
+}
+
+
+static qbool sig_crashed = qfalse;
+static int sig_signal = 0;
+
+
 // Every call in there needs to be safe when called more than once.
 static void SIG_HandleCrash()
 {
@@ -84,6 +162,14 @@ static void SIG_HandleCrash()
 #ifndef DEDICATED
 	LIN_RestoreGamma();
 #endif
+	Sys_ConsoleInputShutdown();
+	
+	if (!sig_crashed)
+		return;
+		
+	Sig_WriteJSON(sig_signal);
+	Sig_WriteBacktraceSafe();
+	Sig_WriteBacktraceUnsafe();
 }
 
 
@@ -91,7 +177,8 @@ static void Sig_HandleSignal(int sig)
 {
 	static int faultCounter = 0;
 	static qbool crashHandled = qfalse;
-	
+
+	sig_signal = sig;
 	faultCounter++;
 
 	if (faultCounter >= 3)
@@ -102,23 +189,23 @@ static void Sig_HandleSignal(int sig)
 		exit(3);
 	}
 
-	const qbool crashed = Sig_IsCrashSignal(sig);
+	sig_crashed = Sig_IsCrashSignal(sig);
 	if (faultCounter == 2)
 	{
 		// The termination handler failed which means that if we exit right now,
 		// some system settings might still be in a bad state.
 		printf("DOUBLE SIGNAL FAULT: Received signal %d (%s), exiting...\n", sig, Sig_GetName(sig));
-		if (crashed && !crashHandled)
+		if (sig_crashed && !crashHandled)
 		{
 			SIG_HandleCrash();
 		}
 		exit(2);
 	}
 
-	fprintf(crashed ? stderr : stdout, "Received %s signal %d: %s (%s), exiting...\n",
-		crashed ? "crash" : "termination", sig, Sig_GetName(sig), Sig_GetDescription(sig));
+	fprintf(sig_crashed ? stderr : stdout, "Received %s signal %d: %s (%s), exiting...\n",
+		sig_crashed ? "crash" : "termination", sig, Sig_GetName(sig), Sig_GetDescription(sig));
 	
-	if (crashed)
+	if (sig_crashed)
 	{
 		SIG_HandleCrash();
 		crashHandled = qtrue;
@@ -131,12 +218,13 @@ static void Sig_HandleSignal(int sig)
 		CL_Shutdown();
 #endif
 		SV_Shutdown("Signal caught");
-		Sys_Exit(0);
+		Sys_ConsoleInputShutdown();
+		exit(0);
 	}
 }
 
 
-void SIG_Init(void)
+void SIG_Init()
 {
 	// This is unfortunately needed because some code might
 	// call exit and bypass all the clean-up work without

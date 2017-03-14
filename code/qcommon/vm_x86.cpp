@@ -1553,6 +1553,85 @@ static qboolean EmitMOPs(vm_t *vm, int op)
 }
 
 
+static void EmitCallStackPush( vm_t *vm )
+{
+	const int instOffset = (int)(ci - inst);
+
+#if id386
+	// clampedDepth = MIN_UNSIGNED(vm->callStackDepth, MAX_VM_CALL_STACK_DEPTH - 1);
+	EmitString( "8B 0D" ); // mov ecx, dword ptr [&vm->callStackDepth]
+	EmitPtr( &vm->callStackDepth );
+	EmitString( "BA" ); // mov edx, MAX_VM_CALL_STACK_DEPTH - 1
+	Emit4( MAX_VM_CALL_STACK_DEPTH - 1 );
+	EmitString( "39 D1" ); // cmp ecx, edx
+	EmitString( "0F 47 CA" ); // cmova ecx, edx
+
+	// vm->callStack[clampedDepth] = instOffset;
+	EmitString( "C7 04 8D" ); // mov dword ptr [vm->callStack + ecx*4], instOffset
+	EmitPtr( vm->callStack );
+	Emit4( instOffset );
+
+	// vm->callStackDepth++;
+	EmitString( "83 05" ); // add dword ptr [&vm->callStackDepth], 1
+	EmitPtr( &vm->callStackDepth );
+	Emit1( 1 );
+
+	// vm->callStackDepthTemp = MAX(vm->callStackDepthTemp, clampedDepth + 1);
+	EmitString( "83 C1 01" ); // add ecx, 1
+	EmitString( "8B 15" ); // mov edx, dword ptr [&vm->callStackDepthTemp]
+	EmitPtr( &vm->callStackDepthTemp );
+	EmitString( "39 D1" ); // cmp ecx, edx
+	EmitString( "0F 47 D1" ); // cmova edx, ecx
+	EmitString( "89 15" ); // mov dword ptr [&vm->callStackDepthTemp], edx
+	EmitPtr( &vm->callStackDepthTemp );
+#elif idx64
+	// clampedDepth = MIN_UNSIGNED(vm->callStackDepth, MAX_VM_CALL_STACK_DEPTH - 1);
+	EmitString( "A1" ); // mov eax, dword ptr [&vm->callStackDepth]
+	EmitPtr( &vm->callStackDepth );
+	EmitString( "BA" ); // mov edx, MAX_VM_CALL_STACK_DEPTH - 1
+	Emit4( MAX_VM_CALL_STACK_DEPTH - 1 );
+	EmitString( "39 D0" ); // cmp eax, edx
+	EmitString( "0F 46 D0" ); // cmovbe edx, eax
+
+	// vm->callStack[clampedDepth] = instOffset;
+	EmitString( "48 B8" ); // mov rax, vm->callStack
+	EmitPtr( vm->callStack );
+	EmitString( "C7 04 90" ); // mov dword ptr [rax + rdx*4], instOffset
+	Emit4( instOffset );
+
+	// vm->callStackDepth++;
+	EmitString( "48 B8" ); // mov rax, &vm->callStackDepth
+	EmitPtr( &vm->callStackDepth );
+	EmitString( "83 00 01" ); // add dword ptr [rax], 1
+
+	// vm->callStackDepthTemp = MAX(vm->callStackDepthTemp, clampedDepth + 1);
+	EmitString( "48 B8" ); // mov rax, &vm->callStackDepthTemp
+	EmitPtr( &vm->callStackDepthTemp );
+	EmitString( "83 C2 01" ); // add edx, 1
+	EmitString( "8B 08" ); // mov ecx, dword ptr [rax]
+	EmitString( "39 D1" ); // cmp ecx, edx
+	EmitString( "0F 47 D1" ); // cmova edx, ecx
+	EmitString( "89 10" ); // mov dword ptr [rax], edx
+#endif
+}
+
+
+static void EmitCallStackPop( vm_t *vm )
+{
+#if id386
+	// vm->callStackDepth--;
+	EmitString( "83 2D" ); // sub dword ptr [&vm->callStackDepth], 1
+	EmitPtr( &vm->callStackDepth );
+	Emit1( 1 );
+#elif idx64
+	// vm->callStackDepth--;
+	EmitString( "48 B9" ); // mov rcx, &vm->callStackDepth
+	EmitPtr( &vm->callStackDepth );
+	EmitString( "83 29 01" ); // sub dword ptr [rcx], 1
+#endif
+}
+
+
 /*
 =================
 VM_Compile
@@ -1715,6 +1794,8 @@ __compile:
 			break;
 
 		case OP_ENTER:
+			EmitCallStackPush( vm );
+
 			v = ci->value;
 			if ( ISS8( v ) ) {
 				EmitString( "83 EE" );		// sub	esi, 0x12
@@ -1862,8 +1943,12 @@ __compile:
 			break;
 
 		case OP_CALL:
+			EmitCallStackPush( vm );
+
 			EmitMovEAXEDI( vm );					// mov eax, dword ptr [edi]
 			EmitCallOffset( FUNC_CALL );			// call +FUNC_CALL
+
+			EmitCallStackPop( vm );
 			break;
 
 		case OP_PUSH:
@@ -1885,6 +1970,7 @@ __compile:
 				Emit4( v );
 			}
 #endif
+			EmitCallStackPop( vm );
 			EmitString( "C3" );							// ret
 			break;
 
@@ -2433,7 +2519,10 @@ int	VM_CallCompiled( vm_t *vm, int *args )
 	vm->opStack = opStack;
 	vm->opStackTop = opStack + ARRAY_LEN( opStack ) - 1;
 
+	vm->callStackDepth = 0; // theoretically not necessary...
+	vm->callStackDepthTemp = 0;
 	vm->codeBase.func(); // go into generated code
+	vm->lastCallStackDepth = vm->callStackDepthTemp;
 
 	if ( vm->opStack != &opStack[1] ) {
 		Com_Error( ERR_DROP, "opStack corrupted in compiled code" );

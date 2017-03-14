@@ -63,6 +63,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ///////////////////////////////////////////////////////////////
 
 
+int          q_argc = 0;
+const char** q_argv = NULL;
+
 static qboolean stdin_active = qtrue;
 
 // enable/disable tty input mode
@@ -274,6 +277,9 @@ static void Sys_ConsoleInputInit()
     }
   } else
     ttycon_on = qfalse;
+
+	// make stdin non-blocking
+	fcntl( 0, F_SETFL, fcntl(0, F_GETFL, 0) | FNDELAY );
 }
 
 
@@ -442,12 +448,16 @@ const char* Sys_ConsoleInput()
 
 
 // never exit without calling this, or your terminal will be left in a pretty bad state
-static void Sys_ConsoleInputShutdown()
+void Sys_ConsoleInputShutdown()
 {
-	if (!ttycon_on)
-		return;
-	Com_Printf("Shutdown tty console\n");
-	tcsetattr (0, TCSADRAIN, &tty_tc);
+	if (ttycon_on)
+	{
+		tcsetattr (0, TCSADRAIN, &tty_tc);
+		ttycon_on = qfalse;
+	}
+
+	// make stdin blocking
+	fcntl( 0, F_SETFL, fcntl(0, F_GETFL, 0) & ~FNDELAY );
 }
 
 
@@ -462,22 +472,10 @@ qboolean Sys_LowPhysicalMemory()
 }
 
 
-// single exit point (regular exit or in case of signal fault)
-void Sys_Exit( int ex )
-{
-	Sys_ConsoleInputShutdown();
-	exit(ex);
-}
-
-
 void Sys_Error( const char *error, ... )
 {
 	va_list     argptr;
 	char        string[1024];
-
-	// change stdin to nonblocking
-	// NOTE TTimo not sure how well that goes with tty console mode
-	fcntl( 0, F_SETFL, fcntl(0, F_GETFL, 0) & ~FNDELAY );
 
 	if (ttycon_on)
 		tty_Hide();
@@ -491,18 +489,15 @@ void Sys_Error( const char *error, ... )
 	va_end (argptr);
 	fprintf(stderr, "Sys_Error: %s\n", string);
 
-	Sys_Exit( 1 );
+	Sys_ConsoleInputShutdown();
+	exit(1);
 }
 
 
 void Sys_Quit()
 {
-#ifndef DEDICATED
-	CL_Shutdown();
-#endif
-
-	fcntl( 0, F_SETFL, fcntl(0, F_GETFL, 0) & ~FNDELAY );
-	Sys_Exit(0);
+	Sys_ConsoleInputShutdown();
+	exit(0);
 }
 
 
@@ -835,8 +830,11 @@ void Sys_Init()
 }
 
 
-int main( int argc, char* argv[] )
+int main( int argc, const char** argv )
 {
+	q_argc = argc;
+	q_argv = argv;
+
 	SIG_Init();
 	
 	// merge the command line: we need it in a single chunk
@@ -857,8 +855,6 @@ int main( int argc, char* argv[] )
 	Com_Printf( "Working directory: %s\n", Sys_Cwd() );
 
 	Sys_ConsoleInputInit();
-
-	fcntl( 0, F_SETFL, fcntl(0, F_GETFL, 0) | FNDELAY );
 
 	while (qtrue) {
 		// if running as a client but not focused, sleep a bit

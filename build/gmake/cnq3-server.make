@@ -22,7 +22,7 @@ ifeq ($(config),debug_x32)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -g -Wno-unused-parameter -Wno-write-strings -x c++
   ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CFLAGS) -fno-exceptions -fno-rtti
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-  LIBS += ../../../.bin/debug_x32/libbotlib.a -ldl -lm
+  LIBS += ../../../.bin/debug_x32/libbotlib.a -ldl -lm -lbacktrace
   LDDEPS += ../../../.bin/debug_x32/libbotlib.a
   ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -L../../../.bin/debug_x32 -m32 
   LINKCMD = $(CXX) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
@@ -53,7 +53,7 @@ ifeq ($(config),debug_x64)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g -Wno-unused-parameter -Wno-write-strings -x c++
   ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CFLAGS) -fno-exceptions -fno-rtti
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-  LIBS += ../../../.bin/debug_x64/libbotlib.a -ldl -lm
+  LIBS += ../../../.bin/debug_x64/libbotlib.a -ldl -lm -lbacktrace
   LDDEPS += ../../../.bin/debug_x64/libbotlib.a
   ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib64 -L../../../.bin/debug_x64 -m64 
   LINKCMD = $(CXX) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
@@ -84,7 +84,7 @@ ifeq ($(config),release_x32)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -fomit-frame-pointer -ffast-math -Os -g -msse2 -Wno-unused-parameter -Wno-write-strings -g1 -x c++
   ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CFLAGS) -fno-exceptions -fno-rtti
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-  LIBS += ../../../.bin/release_x32/libbotlib.a -ldl -lm
+  LIBS += ../../../.bin/release_x32/libbotlib.a -ldl -lm -lbacktrace
   LDDEPS += ../../../.bin/release_x32/libbotlib.a
   ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -L../../../.bin/release_x32 -m32 
   LINKCMD = $(CXX) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
@@ -115,7 +115,7 @@ ifeq ($(config),release_x64)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -fomit-frame-pointer -ffast-math -Os -g -msse2 -Wno-unused-parameter -Wno-write-strings -g1 -x c++
   ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CFLAGS) -fno-exceptions -fno-rtti
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-  LIBS += ../../../.bin/release_x64/libbotlib.a -ldl -lm
+  LIBS += ../../../.bin/release_x64/libbotlib.a -ldl -lm -lbacktrace
   LDDEPS += ../../../.bin/release_x64/libbotlib.a
   ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib64 -L../../../.bin/release_x64 -m64 
   LINKCMD = $(CXX) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
@@ -142,10 +142,12 @@ OBJECTS := \
 	$(OBJDIR)/cm_trace.o \
 	$(OBJDIR)/cmd.o \
 	$(OBJDIR)/common.o \
+	$(OBJDIR)/crash.o \
 	$(OBJDIR)/cvar.o \
 	$(OBJDIR)/files.o \
 	$(OBJDIR)/huffman.o \
 	$(OBJDIR)/huffman_static.o \
+	$(OBJDIR)/json.o \
 	$(OBJDIR)/md4.o \
 	$(OBJDIR)/md5.o \
 	$(OBJDIR)/msg.o \
@@ -247,6 +249,9 @@ $(OBJDIR)/cmd.o: ../../code/qcommon/cmd.cpp
 $(OBJDIR)/common.o: ../../code/qcommon/common.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/crash.o: ../../code/qcommon/crash.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/cvar.o: ../../code/qcommon/cvar.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
@@ -257,6 +262,9 @@ $(OBJDIR)/huffman.o: ../../code/qcommon/huffman.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/huffman_static.o: ../../code/qcommon/huffman_static.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/json.o: ../../code/qcommon/json.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/md4.o: ../../code/qcommon/md4.cpp

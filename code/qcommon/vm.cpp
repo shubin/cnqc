@@ -34,6 +34,7 @@ and one exported function: Perform
 */
 
 #include "vm_local.h"
+#include "crash.h"
 
 opcode_info_t ops[ OP_MAX ] =
 {
@@ -435,6 +436,7 @@ vmHeader_t *VM_LoadQVM( vm_t *vm, qboolean alloc ) {
 	}
 
 	vm->crc32sum = crc32sum;
+	Crash_SaveQVMChecksum( vm->index, crc32sum );
 
 	dataLength = header->dataLength + header->litLength + header->bssLength;
 	vm->dataLength = dataLength;
@@ -989,6 +991,8 @@ vm_t *VM_Create( vmIndex_t index, syscall_t systemCalls, vmInterpret_t interpret
 	// load the map file
 	VM_LoadSymbols( vm );
 
+	Crash_SaveQVMPointer( index, vm );
+
 	Com_Printf( "%s loaded in %d bytes on the hunk\n", vm->name, remaining - Hunk_MemoryRemaining() );
 
 	return vm;
@@ -1005,6 +1009,8 @@ void VM_Free( vm_t *vm ) {
 	if( !vm ) {
 		return;
 	}
+
+	Crash_SaveQVMPointer( vm->index, NULL );
 
 	if ( vm->destroy )
 		vm->destroy( vm );

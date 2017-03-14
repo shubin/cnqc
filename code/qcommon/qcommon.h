@@ -993,4 +993,8 @@ int		StatHuff_WriteSymbol( int symbol, byte* buffer, int bitIndex ); // returns 
 #define SV_DECODE_START		CL_ENCODE_START
 #define CL_DECODE_START		SV_ENCODE_START
 
+
+const char* Q_itohex( uint64_t number, qbool uppercase, qbool prefix );
+
+
 #endif // _QCOMMON_H_

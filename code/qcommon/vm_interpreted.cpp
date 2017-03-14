@@ -138,6 +138,22 @@ qboolean VM_PrepareInterpreter2( vm_t *vm, vmHeader_t *header )
 }
 
 
+static void CallStackPush( vm_t *vm, int *callStackDepth, int ip )
+{
+	const int clampedDepth = min( vm->callStackDepth, MAX_VM_CALL_STACK_DEPTH - 1 );
+
+	vm->callStack[clampedDepth] = ip;
+	vm->callStackDepth++;
+	*callStackDepth = max( *callStackDepth, clampedDepth + 1 );
+}
+
+
+static void CallStackPop( vm_t *vm )
+{
+	vm->callStackDepth--;
+}
+
+
 /*
 ==============
 VM_CallInterpreted2
@@ -173,6 +189,7 @@ int	VM_CallInterpreted2( vm_t *vm, int *args ) {
 	int		*opStack, *opStackTop;
 	int		programStack;
 	int		stackOnEntry;
+	int		callStackDepth = 0;
 	byte	*image;
 	int		v1, v0;
 	int		dataMask;
@@ -238,9 +255,12 @@ nextInstruction2:
 			if ( opStack + ((ci-1)->opStack/4) >= opStackTop ) {
 				Com_Error( ERR_DROP, "VM opStack overflow" );
 			}
+			CallStackPush( vm, &callStackDepth, (int)(ci - (instruction_t*)vm->codeBase.ptr) - 1 );
 			break;
 
 		case OP_LEAVE:
+			CallStackPop( vm );
+
 			// remove our stack frame
 			programStack += v0;
 
@@ -274,9 +294,13 @@ nextInstruction2:
 					for ( argn = 0; argn < ARRAY_LEN( argarr ); ++argn ) {
 						argarr[ argn ] = *(int*)&image[ programStack + 4 + 4*argn ];
 					}
+					CallStackPush( vm, &callStackDepth, r0.i );
 					v0 = vm->systemCall( &argarr[0] );
+					CallStackPop( vm );
 #else
+					CallStackPush( vm, &callStackDepth, r0.i );
 					v0 = vm->systemCall( (intptr_t *)&image[ programStack + 4 ] );
+					CallStackPop( vm );
 #endif
 				}
 
@@ -607,6 +631,7 @@ done:
 	}
 
 	vm->programStack = stackOnEntry;
+	vm->lastCallStackDepth = callStackDepth;
 
 	// return the result
 	return *opStack;

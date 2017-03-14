@@ -23,7 +23,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 void Sys_QueEvent( int time, sysEventType_t type, int value, int value2, int ptrLength, void *ptr );
 void Sys_SendKeyEvents (void);
-void Sys_Exit(int);
+void Sys_ConsoleInputShutdown(void);
 
 // Input subsystem
 void IN_Init (void);
@@ -42,3 +42,6 @@ void SIG_Init(void);
 
 // hardware gamma ramp
 void LIN_RestoreGamma(void);
+
+extern int          q_argc;
+extern const char** q_argv;

@@ -23,6 +23,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "q_shared.h"
 #include "qcommon.h"
+#include "crash.h"
 #include "git.h"
 
 static cvar_t* cvar_vars;
@@ -633,6 +634,14 @@ void Cvar_InfoStringBuffer( int bit, char* buff, int buffsize )
 void Cvar_Register( vmCvar_t *vmCvar, const char *varName, const char *defaultValue, int flags )
 {
 	cvar_t* cv = Cvar_Get( varName, defaultValue, flags );
+
+	if ( (flags & CVAR_SERVERINFO) && !Q_stricmp(varName, "gamename") )
+		Crash_SaveModName( defaultValue );
+	else if ( (flags & CVAR_SERVERINFO) && !Q_stricmp(varName, "gameversion") )
+		Crash_SaveModVersion( defaultValue );
+	else
+		Crash_SaveQVMGitString( varName, defaultValue );
+
 	if ( !vmCvar )
 		return;
 

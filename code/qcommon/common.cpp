@@ -1892,7 +1892,7 @@ int Com_Milliseconds()
 ///////////////////////////////////////////////////////////////
 
 
-#if defined(DEBUG)
+#if defined(DEBUG) || defined(CNQ3_DEV)
 
 
 // throw a fatal error to test error shutdown procedures
@@ -2223,7 +2223,7 @@ void Com_Init( char *commandLine )
 		}
 	}
 
-#if defined(DEBUG)
+#if defined(DEBUG) || defined(CNQ3_DEV)
 	Cmd_AddCommand( "error", Com_Error_f );
 	Cmd_AddCommand( "crash", Com_Crash_f );
 	Cmd_AddCommand( "freeze", Com_Freeze_f );
@@ -2932,3 +2932,33 @@ void Field_AutoCompleteKeyName( int startArg, int compArg )
 }
 
 #endif
+
+
+const char* Q_itohex( uint64_t number, qbool uppercase, qbool prefix )
+{
+	static const char* luts[2] = { "0123456789abcdef", "0123456789ABCDEF" };
+	static char buffer[19];
+	const int maxLength = 16;
+
+	const char* const lut = luts[uppercase == 0 ? 0 : 1];
+	uint64_t x = number;
+	int i = maxLength;
+	buffer[i] = '\0';
+	while ( i-- ) {
+		buffer[i] = lut[x & 15];
+		x >>= 4;
+	}
+
+	int startOffset = 0;
+	for ( i = 0; i < maxLength - 1; i++, startOffset++ ) {
+		if ( buffer[i] != '0' )
+			break;
+	}
+
+	if ( prefix ) {
+		startOffset -= 2;
+		buffer[startOffset + 1] = 'x';
+	}
+
+	return buffer + startOffset;
+}

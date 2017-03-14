@@ -154,6 +154,8 @@ typedef union vmFunc_u {
 	void (*func)(void);
 } vmFunc_t;
 
+#define MAX_VM_CALL_STACK_DEPTH 64
+
 struct vm_s {
 	// DO NOT MOVE OR CHANGE THESE WITHOUT CHANGING THE VM_OFFSET_* DEFINES
 	// USED BY THE ASM CODE
@@ -202,6 +204,11 @@ struct vm_s {
 
 	uint32_t	crc32sum;
 	vmIndex_t	index;
+
+	int			callStackDepth;
+	int			lastCallStackDepth;
+	int			callStackDepthTemp; // only for vm_x86.cpp
+	int			callStack[MAX_VM_CALL_STACK_DEPTH];
 };
 
 extern	vm_t	*currentVM;

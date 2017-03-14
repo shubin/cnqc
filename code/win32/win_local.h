@@ -49,7 +49,11 @@ void SNDDMA_Activate();
 
 LRESULT CALLBACK MainWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam );
 
+// crash handling
+LONG CALLBACK WIN_HandleException( EXCEPTION_POINTERS* ep );
+void WIN_HandleExit();
 void GLW_RestoreGamma();
+void WIN_EndTimePeriod();
 
 #define MAX_MONITOR_COUNT 16
 
