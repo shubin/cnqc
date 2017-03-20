@@ -30,11 +30,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ** GLimp_Init
 ** GLimp_Shutdown
 ** GLimp_SwitchFullscreen
-** GLimp_SetGamma
 **
 */
-
-#if !USE_SDL_VIDEO
 
 #include <termios.h>
 #include <sys/ioctl.h>
@@ -872,10 +869,6 @@ cvar_t	*r_fullscreen;
 qboolean vidmode_ext = qfalse;
 #ifdef HAVE_XF86DGA
 static int vidmode_MajorVersion = 0, vidmode_MinorVersion = 0; // major and minor of XF86VidExtensions
-
-// gamma value of the X display before we start playing with it
-static XF86VidModeGamma vidmode_InitialGamma = { -1,-1,-1 };  // drakkar - initialized to nonvalid values
-static qbool vidmode_GammaSet = qfalse;
 #endif /* HAVE_XF86DGA */
 
 #ifdef HAVE_XF86DGA
@@ -886,48 +879,6 @@ static qboolean vidmode_active = qfalse;
 
 static int scrnum;
 
-
-/*
-** GLimp_SetGamma
-**
-** This routine should only be called if glConfig.deviceSupportsGamma is TRUE
-*/
-void GLimp_SetGamma( unsigned char red[256], unsigned char green[256], unsigned char blue[256] )
-{
-  // NOTE TTimo we get the gamma value from cvar, because we can't work with the s_gammatable
-  //   the API wasn't changed to avoid breaking other OSes
-#ifdef HAVE_XF86DGA
-  float g = Cvar_Get("r_gamma", "1.0", 0)->value;
-  XF86VidModeGamma gamma;
-  // drakkar - do not set gamma if window is not focused
-  Window focus;
-  int state;
-  XGetInputFocus( dpy, &focus, &state );
-  if( win != focus ) return;
-  // !drakkar
-  assert(glConfig.deviceSupportsGamma);
-  gamma.red = g;
-  gamma.green = g;
-  gamma.blue = g;
-  if (XF86VidModeSetGamma(dpy, scrnum, &gamma))
-  {
-    vidmode_GammaSet = qtrue;
-  }
-#endif /* HAVE_XF86DGA */
-}
-
-void LIN_RestoreGamma( void )
-{
-#ifdef HAVE_XF86DGA
-	if (dpy && glConfig.deviceSupportsGamma && vidmode_GammaSet)
-    {
-		if (XF86VidModeSetGamma(dpy, scrnum, &vidmode_InitialGamma) == True)
-		{
-			vidmode_GammaSet = qfalse;
-		}
-    }
-#endif
-}
 
 /*
 ** GLimp_Shutdown
@@ -958,7 +909,6 @@ void GLimp_Shutdown( void )
 #ifdef HAVE_XF86DGA
     if (vidmode_active)
       XF86VidModeSwitchToMode(dpy, scrnum, vidmodes[0]);
-    LIN_RestoreGamma();
 #endif /* HAVE_XF86DGA */
 
 	// NOTE TTimo opening/closing the display should be necessary only once per run
@@ -1322,30 +1272,6 @@ static void GLW_InitExtensions()
 }
 
 
-static void GLW_InitGamma()
-{
-  /* Minimum extension version required */
-  #define GAMMA_MINMAJOR 2
-  #define GAMMA_MINMINOR 0
-
-  glConfig.deviceSupportsGamma = qfalse;
-
-#ifdef HAVE_XF86DGA
-  if (vidmode_ext)
-  {
-    if (vidmode_MajorVersion < GAMMA_MINMAJOR ||
-        (vidmode_MajorVersion == GAMMA_MINMAJOR && vidmode_MinorVersion < GAMMA_MINMINOR)) {
-      ri.Printf( PRINT_ALL, "XF86 Gamma extension not supported in this version\n");
-      return;
-    }
-	if( vidmode_InitialGamma.red < 0 ) // drakkar - get initial gamma only one time
-		XF86VidModeGetGamma(dpy, scrnum, &vidmode_InitialGamma);
-    ri.Printf( PRINT_ALL, "XF86 Gamma extension initialized\n");
-    glConfig.deviceSupportsGamma = qtrue;
-  }
-#endif /* HAVE_XF86DGA */
-}
-
 /*
 ** GLW_LoadOpenGL
 **
@@ -1444,9 +1370,10 @@ void GLimp_Init( void )
 
   // initialize extensions
   GLW_InitExtensions();
-  GLW_InitARB(); // loads the ARB extensions
-  GLW_InitGamma();
-  QGL_InitARB(); // compiles the shaders etc
+  
+  if ( !GLW_InitGL2() || !QGL_InitGL2() )
+    ri.Error( ERR_FATAL, "GLimp_Init - could not find or initialize a suitable OpenGL 2 subsystem\n" );
+    
   QGL_SwapInterval( dpy, win, r_swapInterval->integer );
 
 	IN_Init();
@@ -1469,11 +1396,7 @@ void GLimp_EndFrame (void)
     QGL_SwapInterval( dpy, win, r_swapInterval->integer );
   }
 
-  // don't flip if drawing to front buffer
-  if ( Q_stricmp( r_drawBuffer->string, "GL_FRONT" ) != 0 )
-  {
-    qglXSwapBuffers(dpy, win);
-  }
+  qglXSwapBuffers( dpy, win );
 }
 
 
@@ -1735,6 +1658,4 @@ void Sys_SendKeyEvents (void) {
 void IN_StartupJoystick( void ) {}
 void IN_JoyMove( void ) {}
 #endif
-
-#endif  // !USE_SDL_VIDEO
 

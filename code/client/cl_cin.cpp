@@ -65,7 +65,6 @@ static	long				ROQ_VR_tab[256];
 static	unsigned short		vq2[256*16*4];
 static	unsigned short		vq4[256*64*4];
 static	unsigned short		vq8[256*256*4];
-static byte s_gammatable[256];
 
 
 typedef struct {
@@ -501,7 +500,6 @@ static void ROQ_GenYUVTables( void )
 {
 	float t_ub,t_vr,t_ug,t_vg;
 	long i;
-	float gamma = 1.0f / Cvar_VariableValue( "r_gamma" );
 
 	t_ub = (1.77200f/2.0f) * (float)(1<<6) + 0.5f;
 	t_vr = (1.40200f/2.0f) * (float)(1<<6) + 0.5f;
@@ -515,9 +513,6 @@ static void ROQ_GenYUVTables( void )
 		ROQ_UG_tab[i] = (long)( (-t_ug * x) );
 		ROQ_VG_tab[i] = (long)( (-t_vg * x) + (1<<5));
 		ROQ_YY_tab[i] = (long)( (i << 6) | (i >> 2) );
-
-		int n = 255 * pow( i / 255.0f, gamma ) + 0.5;
-		s_gammatable[i] = Com_Clamp( 0, 255, n );
 	}
 }
 
@@ -596,13 +591,6 @@ static unsigned int yuv_to_rgb24( long y, long u, long v )
 
 	if (r<0) r = 0; if (g<0) g = 0; if (b<0) b = 0;
 	if (r > 255) r = 255; if (g > 255) g = 255; if (b > 255) b = 255;
-
-	// this could be (and always should have been) handled by the renderer, but meh
-	if (!cls.glconfig.deviceSupportsGamma) {
-		r = s_gammatable[r];
-		g = s_gammatable[g];
-		b = s_gammatable[b];
-	}
 
 	return LittleLong ((r)|(g<<8)|(b<<16)|(255<<24));
 }

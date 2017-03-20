@@ -161,9 +161,6 @@ static void SIG_HandleCrash(qbool restoreSettings)
 	{
 		// We crashed and only care about restoring system settings
 		// that the process clean-up won't handle for us.
-#ifndef DEDICATED
-		LIN_RestoreGamma();
-#endif
 		Sys_ConsoleInputShutdown();
 	}
 	

@@ -211,13 +211,13 @@
     <ClInclude Include="..\..\code\renderer\tr_public.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\code\renderer\tr_arb.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_backend.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_bsp.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_cmds.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_curve.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_flares.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_font.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_gl2.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_image.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_init.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_light.cpp" />

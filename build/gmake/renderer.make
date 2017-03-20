@@ -119,13 +119,13 @@ all: $(TARGETDIR) $(OBJDIR) prebuild prelink $(TARGET)
 endif
 
 OBJECTS := \
-	$(OBJDIR)/tr_arb.o \
 	$(OBJDIR)/tr_backend.o \
 	$(OBJDIR)/tr_bsp.o \
 	$(OBJDIR)/tr_cmds.o \
 	$(OBJDIR)/tr_curve.o \
 	$(OBJDIR)/tr_flares.o \
 	$(OBJDIR)/tr_font.o \
+	$(OBJDIR)/tr_gl2.o \
 	$(OBJDIR)/tr_image.o \
 	$(OBJDIR)/tr_init.o \
 	$(OBJDIR)/tr_light.o \
@@ -198,9 +198,6 @@ $(GCH): $(PCH)
 	$(SILENT) $(CXX) -x c++-header $(ALL_CXXFLAGS) -o "$@" -MF "$(@:%.gch=%.d)" -c "$<"
 endif
 
-$(OBJDIR)/tr_arb.o: ../../code/renderer/tr_arb.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/tr_backend.o: ../../code/renderer/tr_backend.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
@@ -217,6 +214,9 @@ $(OBJDIR)/tr_flares.o: ../../code/renderer/tr_flares.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/tr_font.o: ../../code/renderer/tr_font.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/tr_gl2.o: ../../code/renderer/tr_gl2.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/tr_image.o: ../../code/renderer/tr_image.cpp

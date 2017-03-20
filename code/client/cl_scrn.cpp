@@ -356,13 +356,7 @@ void SCR_UpdateScreen()
 		Com_Error( ERR_FATAL, "SCR_UpdateScreen: recursively called" );
 	}
 
-	// if running in stereo, we need to draw the frame twice
-	if ( cls.glconfig.stereoEnabled ) {
-		SCR_DrawScreenField( STEREO_LEFT );
-		SCR_DrawScreenField( STEREO_RIGHT );
-	} else {
-		SCR_DrawScreenField( STEREO_CENTER );
-	}
+	SCR_DrawScreenField( STEREO_CENTER );
 
 	if ( com_speeds->integer ) {
 		re.EndFrame( pcFE, pc2D, pc3D );

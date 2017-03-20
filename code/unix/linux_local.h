@@ -40,8 +40,5 @@ void QGL_Shutdown( void );
 // signals.c
 void SIG_Init(void);
 
-// hardware gamma ramp
-void LIN_RestoreGamma(void);
-
 extern int          q_argc;
 extern const char** q_argv;

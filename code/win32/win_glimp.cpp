@@ -127,26 +127,12 @@ static int GLW_ChoosePFD( HDC hDC, PIXELFORMATDESCRIPTOR *pPFD )
 		//
 		// selection criteria (in order of priority):
 		// 
-		//  PFD_STEREO
 		//  colorBits
 		//  depthBits
 		//  stencilBits
 		//
 		if ( bestMatch )
 		{
-			// check stereo
-			if ( ( pfds[i].dwFlags & PFD_STEREO ) && ( !( pfds[bestMatch].dwFlags & PFD_STEREO ) ) && ( pPFD->dwFlags & PFD_STEREO ) )
-			{
-				bestMatch = i;
-				continue;
-			}
-			
-			if ( !( pfds[i].dwFlags & PFD_STEREO ) && ( pfds[bestMatch].dwFlags & PFD_STEREO ) && ( pPFD->dwFlags & PFD_STEREO ) )
-			{
-				bestMatch = i;
-				continue;
-			}
-
 			// check color
 			if ( pfds[bestMatch].cColorBits != pPFD->cColorBits )
 			{
@@ -223,7 +209,7 @@ static int GLW_ChoosePFD( HDC hDC, PIXELFORMATDESCRIPTOR *pPFD )
 **
 ** Helper function zeros out then fills in a PFD
 */
-static void GLW_CreatePFD( PIXELFORMATDESCRIPTOR *pPFD, int colorbits, int depthbits, int stencilbits, qbool stereo )
+static void GLW_CreatePFD( PIXELFORMATDESCRIPTOR *pPFD, int colorbits, int depthbits, int stencilbits )
 {
 	PIXELFORMATDESCRIPTOR src = 
 	{
@@ -250,17 +236,6 @@ static void GLW_CreatePFD( PIXELFORMATDESCRIPTOR *pPFD, int colorbits, int depth
 	src.cColorBits = (BYTE)colorbits;
 	src.cDepthBits = (BYTE)depthbits;
 	src.cStencilBits = (BYTE)stencilbits;
-
-	if ( stereo )
-	{
-		ri.Printf( PRINT_ALL, "...attempting to use stereo\n" );
-		src.dwFlags |= PFD_STEREO;
-		glConfig.stereoEnabled = qtrue;
-	}
-	else
-	{
-		glConfig.stereoEnabled = qfalse;
-	}
 
 	*pPFD = src;
 }
@@ -388,7 +363,7 @@ static qbool GLW_InitDriver( int colorbits )
 	//
 	if ( !glw_state.pixelFormatSet )
 	{
-		GLW_CreatePFD( &pfd, colorbits, depthbits, stencilbits, (qbool)r_stereo->integer );
+		GLW_CreatePFD( &pfd, colorbits, depthbits, stencilbits );
 		if ( ( tpfd = GLW_MakeContext( &pfd ) ) != TRY_PFD_SUCCESS )
 		{
 			if ( tpfd == TRY_PFD_FAIL_HARD )
@@ -414,7 +389,7 @@ static qbool GLW_InitDriver( int colorbits )
 			if ( colorbits > glw_state.desktopBPP )
 				colorbits = glw_state.desktopBPP;
 
-			GLW_CreatePFD( &pfd, colorbits, depthbits, 0, (qbool)r_stereo->integer );
+			GLW_CreatePFD( &pfd, colorbits, depthbits, 0 );
 			if ( GLW_MakeContext( &pfd ) != TRY_PFD_SUCCESS )
 			{
 				if ( glw_state.hDC )
@@ -425,14 +400,6 @@ static qbool GLW_InitDriver( int colorbits )
 				ri.Printf( PRINT_ALL, "...failed to find an appropriate PIXELFORMAT\n" );
 				return qfalse;
 			}
-		}
-
-		// report if stereo is desired but unavailable
-		//
-		if ( r_stereo->integer && !( pfd.dwFlags & PFD_STEREO ) )
-		{
-			ri.Printf( PRINT_ALL, "...failed to select stereo pixel format\n" );
-			glConfig.stereoEnabled = qfalse;
 		}
 	}
 
@@ -578,70 +545,6 @@ static qbool GLW_Fullscreen( DEVMODE& dm )
 }
 
 
-// GL_multisample is SUCH a fucking mess  >:(
-
-static void GLW_AttemptFSAA()
-{
-	static const float ar[] = { 0, 0 };
-	// ignore r_xyzbits vars - FSAA requires 32-bit color, and anyone using it is implicitly on decent HW
-	static int anAttributes[] = {
-		WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
-		WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
-		WGL_ACCELERATION_ARB, WGL_FULL_ACCELERATION_ARB,
-		WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
-		WGL_COLOR_BITS_ARB, 32,
-		WGL_ALPHA_BITS_ARB, 0,
-		WGL_DEPTH_BITS_ARB, 24,
-		WGL_STENCIL_BITS_ARB, 8,
-		WGL_SAMPLE_BUFFERS_ARB, GL_TRUE,
-		WGL_SAMPLES_ARB, 4,
-		0, 0
-	};
-
-	qwglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)qwglGetProcAddress( "wglChoosePixelFormatARB" );
-	if (!r_ext_multisample->integer || !qwglChoosePixelFormatARB) {
-		glDisable(GL_MULTISAMPLE_ARB);
-		return;
-	}
-
-	int iPFD;
-	UINT cPFD;
-	anAttributes[19] = r_ext_multisample->integer;	// !!! UGH
-	if (!qwglChoosePixelFormatARB(glw_state.hDC, anAttributes, ar, 1, &iPFD, &cPFD) || !cPFD)
-		return;
-
-	// now bounce the ENTIRE fucking subsytem thanks to WGL stupidity
-	// we can't use GLimp_Shutdown() for this, because that does CDS poking that we don't want
-	assert( glw_state.hGLRC && glw_state.hDC && g_wv.hWnd );
-
-	qwglMakeCurrent( glw_state.hDC, NULL );
-
-	if ( glw_state.hGLRC ) {
-		qwglDeleteContext( glw_state.hGLRC );
-		glw_state.hGLRC = NULL;
-	}
-
-	if ( glw_state.hDC ) {
-		ReleaseDC( g_wv.hWnd, glw_state.hDC );
-		glw_state.hDC = NULL;
-	}
-
-	if ( g_wv.hWnd ) {
-		DestroyWindow( g_wv.hWnd );
-		g_wv.hWnd = NULL;
-	}
-
-	ri.Printf( PRINT_ALL, "...enabling FSAA\n" );
-
-	glw_state.nPendingPF = iPFD;
-	glw_state.pixelFormatSet = qfalse;
-	GLW_CreateWindow( glConfig.vidWidth, glConfig.vidHeight, glConfig.colorBits );
-	glw_state.nPendingPF = 0;
-
-	glEnable(GL_MULTISAMPLE_ARB);
-}
-
-
 static qbool GLW_SetMode( qbool cdsFullscreen )
 {
 	HDC hDC = GetDC( GetDesktopWindow() );
@@ -699,8 +602,6 @@ static qbool GLW_SetMode( qbool cdsFullscreen )
 
 	if (EnumDisplaySettings( NULL, ENUM_CURRENT_SETTINGS, &dm ))
 		glInfo.displayFrequency = dm.dmDisplayFrequency;
-
-	GLW_AttemptFSAA();
 
 	return qtrue;
 }
@@ -784,161 +685,12 @@ void GLimp_EndFrame()
 	if ( r_swapInterval->modified ) {
 		r_swapInterval->modified = qfalse;
 
-		if ( !glConfig.stereoEnabled && qwglSwapIntervalEXT ) {
+		if ( qwglSwapIntervalEXT ) {
 			qwglSwapIntervalEXT( r_swapInterval->integer );
 		}
 	}
 
-	// don't flip if drawing to front buffer
-	if ( Q_stricmp( r_drawBuffer->string, "GL_FRONT" ) != 0 ) {
-		SwapBuffers( glw_state.hDC );
-	}
-}
-
-
-///////////////////////////////////////////////////////////////
-
-
-static unsigned short s_oldHardwareGamma[3][256];
-
-
-static void GLW_CheckHardwareGamma()
-{
-	glConfig.deviceSupportsGamma = qfalse;
-
-	if (r_ignorehwgamma->integer)
-		return;
-
-	HDC hDC = GetDC( GetDesktopWindow() );
-	glConfig.deviceSupportsGamma = (qbool)GetDeviceGammaRamp( hDC, s_oldHardwareGamma );
-	ReleaseDC( GetDesktopWindow(), hDC );
-
-	if (!glConfig.deviceSupportsGamma)
-		return;
-
-	// do a sanity check on the gamma values
-	if ( ( HIBYTE( s_oldHardwareGamma[0][255] ) <= HIBYTE( s_oldHardwareGamma[0][0] ) ) ||
-		 ( HIBYTE( s_oldHardwareGamma[1][255] ) <= HIBYTE( s_oldHardwareGamma[1][0] ) ) ||
-		 ( HIBYTE( s_oldHardwareGamma[2][255] ) <= HIBYTE( s_oldHardwareGamma[2][0] ) ) )
-	{
-		glConfig.deviceSupportsGamma = qfalse;
-		ri.Printf( PRINT_WARNING, "WARNING: device has broken gamma support\n" );
-	}
-
-	// make sure that we didn't have a prior crash in the game:
-	// if so, we need to restore the gamma values to at least a linear value
-	if ( ( HIBYTE( s_oldHardwareGamma[0][181] ) == 255 ) )
-	{
-		ri.Printf( PRINT_WARNING, "WARNING: suspicious gamma tables, using linear ramp for restoration\n" );
-		for (unsigned short g = 0; g < 255; ++g)
-		{
-			s_oldHardwareGamma[0][g] = g << 8;
-			s_oldHardwareGamma[1][g] = g << 8;
-			s_oldHardwareGamma[2][g] = g << 8;
-		}
-	}
-}
-
-
-static void GLW_UpdateGammaMonitorInfo()
-{
-	const int screenCount = GetSystemMetrics( SM_CMONITORS );
-	if ( screenCount <= 1 )
-	{
-		g_wv.hGammaMonitor = NULL;
-		g_wv.gammaMonitorName[0] = '\0';
-		return;
-	}
-
-	RECT rect;
-	GetWindowRect( g_wv.hWnd, &rect );
-	const HMONITOR hMonitor = MonitorFromRect( &rect, MONITOR_DEFAULTTONEAREST );
-
-	MONITORINFOEX info;
-	ZeroMemory( &info, sizeof( info ) );
-	info.cbSize = sizeof( MONITORINFOEX );
-	if ( GetMonitorInfo( hMonitor, &info ) )
-	{
-		g_wv.hGammaMonitor = hMonitor;
-		Q_strncpyz( g_wv.gammaMonitorName, info.szDevice, sizeof( g_wv.gammaMonitorName ) );
-	}
-}
-
-
-static void GLW_RestoreGammaRamp( HDC hDC )
-{
-	if ( SetDeviceGammaRamp( hDC, s_oldHardwareGamma ) )
-		glw_state.gammaRampSet = qfalse;
-}
-
-
-void GLW_RestoreGamma()
-{
-	if (!glConfig.deviceSupportsGamma || !glw_state.gammaRampSet)
-		return;
-
-	if ( g_wv.hGammaMonitor )
-	{
-		const HDC hDC = CreateDC( "DISPLAY", g_wv.gammaMonitorName, NULL, NULL );
-		GLW_RestoreGammaRamp( hDC );
-		DeleteDC( hDC );
-	}
-	else
-	{
-		GLW_RestoreGammaRamp( glw_state.hDC );
-	}
-}
-
-
-static void GLW_SetGammaRamp( HDC hDC, LPVOID lpRamp )
-{
-	if ( SetDeviceGammaRamp( hDC, lpRamp ) ) 
-	{
-		glw_state.gammaRampSet = qtrue;
-	}
-	else
-	{
-		Com_Printf( "SetDeviceGammaRamp failed.\n" );
-	}
-}
-
-
-void GLimp_SetGamma( unsigned char red[256], unsigned char green[256], unsigned char blue[256] )
-{
-	unsigned short table[3][256];
-	int i, j;
-
-	if ( !glConfig.deviceSupportsGamma || r_ignorehwgamma->integer || !glw_state.hDC )
-		return;
-
-	for ( i = 0; i < 256; i++ ) {
-		table[0][i] = ( ( ( unsigned short ) red[i] ) << 8 ) | red[i];
-		table[1][i] = ( ( ( unsigned short ) green[i] ) << 8 ) | green[i];
-		table[2][i] = ( ( ( unsigned short ) blue[i] ) << 8 ) | blue[i];
-	}
-
-	for ( j = 0 ; j < 3 ; j++ ) {
-		for ( i = 0 ; i < 128 ; i++ ) {
-			if ( table[j][i] > ( (128+i) << 8 ) ) {
-				table[j][i] = (128+i) << 8;
-			}
-		}
-		if ( table[j][127] > 254<<8 ) {
-			table[j][127] = 254<<8;
-		}
-	}
-
-	GLW_UpdateGammaMonitorInfo();
-	if ( g_wv.hGammaMonitor )
-	{
-		const HDC hDC = CreateDC( "DISPLAY", g_wv.gammaMonitorName, NULL, NULL );
-		GLW_SetGammaRamp( hDC, table );
-		DeleteDC( hDC );
-	}
-	else
-	{
-		GLW_SetGammaRamp( glw_state.hDC, table );
-	}
+	SwapBuffers( glw_state.hDC );
 }
 
 
@@ -972,12 +724,15 @@ void GLimp_Init()
 	Q_strncpyz( glConfig.extensions_string, (const char*)qglGetString (GL_EXTENSIONS), sizeof( glConfig.extensions_string ) );
 
 	GLW_InitExtensions();
-	GLW_CheckHardwareGamma();
 
-	if (GLW_InitARB() && QGL_InitARB())
-		return;
+	if (!GLW_InitGL2())
+		ri.Error( ERR_FATAL, "GLimp_Init() - could not find OpenGL 2 extensions\n" );
 
-	ri.Error( ERR_FATAL, "GLimp_Init() - could not find an acceptable OpenGL subsystem\n" );
+	// GL2 is mandatory, GL3+ isn't
+	GLW_InitGL3();
+
+	if (!QGL_InitGL2())
+		ri.Error( ERR_FATAL, "GLimp_Init() - could not initialize OpenGL 2 objects\n" );
 }
 
 
@@ -994,8 +749,6 @@ void GLimp_Shutdown()
 	}
 
 	ri.Printf( PRINT_DEVELOPER, "Shutting down OpenGL subsystem\n" );
-
-	GLW_RestoreGamma();
 
 	// set current context to NULL
 	if ( qwglMakeCurrent )
@@ -1141,18 +894,6 @@ void GLimp_WakeRenderer( void *data ) {
 	SetEvent( renderCommandsEvent );
 
 	WaitForSingleObject( renderActiveEvent, INFINITE );
-}
-
-
-void WIN_UpdateHardwareGammaRamp( qbool enable )
-{
-	if ( !glConfig.deviceSupportsGamma )
-		return;
-
-	if ( enable )
-		R_SetColorMappings();
-	else
-		GLW_RestoreGamma();
 }
 
 

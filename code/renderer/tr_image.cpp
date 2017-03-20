@@ -28,14 +28,6 @@ static image_t* hashTable[IMAGE_HASH_SIZE];
 
 
 static byte s_intensitytable[256];
-static byte s_gammatable[256];
-
-void R_GammaCorrect( byte* buffer, int bufSize )
-{
-	for (int i = 0; i < bufSize; ++i) {
-		buffer[i] = s_gammatable[buffer[i]];
-	}
-}
 
 
 static int gl_filter_min = GL_LINEAR_MIPMAP_NEAREST;
@@ -202,43 +194,14 @@ static void ResampleTexture( unsigned *in, int inwidth, int inheight, unsigned *
 
 // scale up the pixel values in a texture to increase the lighting range
 
-static void R_LightScaleTexture( unsigned* in, int width, int height, qbool only_gamma )
+static void R_LightScaleTexture( byte* p, int width, int height )
 {
-	byte* p = (byte*)in;
-	int i, c = width * height;
-
-	if ( only_gamma )
-	{
-		if ( !glConfig.deviceSupportsGamma )
-		{
-			for (i=0 ; i<c ; i++, p+=4)
-			{
-				p[0] = s_gammatable[p[0]];
-				p[1] = s_gammatable[p[1]];
-				p[2] = s_gammatable[p[2]];
-			}
-		}
-	}
-	else
-	{
-		if ( glConfig.deviceSupportsGamma )
-		{
-			for (i=0 ; i<c ; i++, p+=4)
-			{
-				p[0] = s_intensitytable[p[0]];
-				p[1] = s_intensitytable[p[1]];
-				p[2] = s_intensitytable[p[2]];
-			}
-		}
-		else
-		{
-			for (i=0 ; i<c ; i++, p+=4)
-			{
-				p[0] = s_gammatable[s_intensitytable[p[0]]];
-				p[1] = s_gammatable[s_intensitytable[p[1]]];
-				p[2] = s_gammatable[s_intensitytable[p[2]]];
-			}
-		}
+	const int pixels = width * height;
+	for (int i = 0 ; i < pixels; ++i) {
+		p[0] = s_intensitytable[p[0]];
+		p[1] = s_intensitytable[p[1]];
+		p[2] = s_intensitytable[p[2]];
+		p += 4;
 	}
 }
 
@@ -416,8 +379,6 @@ static void Upload32( image_t* image, unsigned int* data )
 	// copy or resample data as appropriate for first MIP level
 	if ( ( scaled_width == image->width ) && ( scaled_height == image->height ) ) {
 		if ( image->flags & IMG_NOMIPMAP ) {
-			if ( !(image->flags & IMG_NOIMANIP) )
-				R_LightScaleTexture( data, scaled_width, scaled_height, qtrue );
 			qglTexImage2D( GL_TEXTURE_2D, 0, image->format, image->width, image->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data );
 			goto done;
 		}
@@ -435,7 +396,7 @@ static void Upload32( image_t* image, unsigned int* data )
 	}
 
 	if ( !(image->flags & IMG_NOIMANIP) )
-		R_LightScaleTexture( pScaled.Get<unsigned int>(), scaled_width, scaled_height, (image->flags & IMG_NOMIPMAP) );
+		R_LightScaleTexture( pScaled.Get<byte>(), scaled_width, scaled_height );
 
 	qglTexImage2D( GL_TEXTURE_2D, 0, image->format, scaled_width, scaled_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pScaled );
 
@@ -965,10 +926,6 @@ void R_SetColorMappings()
 	// allow 2 overbright bits in 24 bit, but only 1 in 16 bit
 	tr.overbrightBits = Com_Clamp( 0, (glConfig.colorBits > 16) ? 2 : 1, r_overBrightBits->integer );
 
-	// setup the overbright lighting - needs hw support and fullscreen
-	if (!glConfig.deviceSupportsGamma || !glInfo.isFullscreen)
-		tr.overbrightBits = 0;
-
 	tr.identityLight = 1.0f / (1 << tr.overbrightBits);
 	tr.identityLightByte = 255 * tr.identityLight;
 
@@ -981,13 +938,8 @@ void R_SetColorMappings()
 		ri.Cvar_Set( "r_gamma", "3.0" );
 
 	for (int i = 0; i < 256; ++i) {
-		int n = 255 * pow( i / 255.0f, 1.0f / r_gamma->value ) + 0.5f;
-		s_gammatable[i] = Com_Clamp( 0, 255, n << tr.overbrightBits );
 		s_intensitytable[i] = (byte)min( r_intensity->value * i, 255.0f );
 	}
-
-	if (glConfig.deviceSupportsGamma)
-		GLimp_SetGamma( s_gammatable, s_gammatable, s_gammatable );
 }
 
 

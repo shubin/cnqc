@@ -493,21 +493,6 @@ extern void (*qglXSwapBuffers)( Display *dpy, GLXDrawable drawable );
 
 extern "C" {
 
-qbool GLW_InitARB();
-
-extern PFNGLGENPROGRAMSARBPROC qglGenPrograms;
-extern PFNGLBINDPROGRAMARBPROC qglBindProgram;
-extern PFNGLPROGRAMSTRINGARBPROC qglProgramString;
-extern PFNGLDELETEPROGRAMSARBPROC qglDeletePrograms;
-
-extern PFNGLDISABLEVERTEXATTRIBARRAYARBPROC qglDisableVertexAttribArray;
-extern PFNGLENABLEVERTEXATTRIBARRAYARBPROC qglEnableVertexAttribArray;
-extern PFNGLVERTEXATTRIBPOINTERARBPROC qglVertexAttribPointer;
-
-extern PFNGLPROGRAMENVPARAMETER4FARBPROC qglProgramEnvParameter4f;
-extern PFNGLPROGRAMLOCALPARAMETER4FARBPROC qglProgramLocalParameter4f;
-
-/*
 qbool GLW_InitGL2();
 
 extern PFNGLCREATESHADERPROC qglCreateShader;
@@ -516,6 +501,8 @@ extern PFNGLCOMPILESHADERPROC qglCompileShader;
 extern PFNGLATTACHSHADERPROC qglAttachShader;
 extern PFNGLDETACHSHADERPROC qglDetachShader;
 extern PFNGLDELETESHADERPROC qglDeleteShader;
+extern PFNGLGETSHADERINFOLOGPROC qglGetShaderInfoLog;
+extern PFNGLGETSHADERIVPROC qglGetShaderiv;
 
 extern PFNGLCREATEPROGRAMPROC qglCreateProgram;
 extern PFNGLLINKPROGRAMPROC qglLinkProgram;
@@ -530,16 +517,37 @@ extern PFNGLVERTEXATTRIBPOINTERPROC qglVertexAttribPointer;
 extern PFNGLGETUNIFORMLOCATIONPROC qglGetUniformLocation;
 extern PFNGLUNIFORM1IPROC qglUniform1i;
 extern PFNGLUNIFORM1FPROC qglUniform1f;
+extern PFNGLUNIFORM2FPROC qglUniform2f;
 extern PFNGLUNIFORM3FPROC qglUniform3f;
 extern PFNGLUNIFORM4FPROC qglUniform4f;
 
-extern PFNGLGETOBJECTPARAMETERIVARBPROC qglGetObjectParameteriv;
-extern PFNGLGETINFOLOGARBPROC qglGetInfoLog;
-*/
+extern PFNGLISRENDERBUFFERPROC qglIsRenderbuffer;
+extern PFNGLBINDRENDERBUFFERPROC qglBindRenderbuffer;
+extern PFNGLDELETERENDERBUFFERSPROC qglDeleteRenderbuffers;
+extern PFNGLGENRENDERBUFFERSPROC qglGenRenderbuffers;
+extern PFNGLRENDERBUFFERSTORAGEPROC qglRenderbufferStorage;
+extern PFNGLGETRENDERBUFFERPARAMETERIVPROC qglGetRenderbufferParameteriv;
+extern PFNGLISFRAMEBUFFERPROC qglIsFramebuffer;
+extern PFNGLBINDFRAMEBUFFERPROC qglBindFramebuffer;
+extern PFNGLDELETEFRAMEBUFFERSPROC qglDeleteFramebuffers;
+extern PFNGLGENFRAMEBUFFERSPROC qglGenFramebuffers;
+extern PFNGLCHECKFRAMEBUFFERSTATUSPROC qglCheckFramebufferStatus;
+extern PFNGLFRAMEBUFFERTEXTURE1DPROC qglFramebufferTexture1D;
+extern PFNGLFRAMEBUFFERTEXTURE2DPROC qglFramebufferTexture2D;
+extern PFNGLFRAMEBUFFERTEXTURE3DPROC qglFramebufferTexture3D;
+extern PFNGLFRAMEBUFFERRENDERBUFFERPROC qglFramebufferRenderbuffer;
+extern PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC qglGetFramebufferAttachmentParameteriv;
+extern PFNGLGENERATEMIPMAPPROC qglGenerateMipmap;
+extern PFNGLBLITFRAMEBUFFERPROC qglBlitFramebuffer;
+
+qbool GLW_InitGL3();
+
+extern PFNGLRENDERBUFFERSTORAGEMULTISAMPLEPROC qglRenderbufferStorageMultisample;
+extern void (APIENTRY* qglTexImage2DMultisample)(GLenum, GLsizei, GLenum, GLsizei, GLsizei, GLboolean);
 
 };
 
-qbool QGL_InitARB();
+qbool QGL_InitGL2();
 
 
 #endif

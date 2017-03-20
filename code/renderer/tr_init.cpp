@@ -44,7 +44,6 @@ cvar_t	*r_skipBackEnd;
 
 cvar_t	*r_intensity;
 cvar_t	*r_gamma;
-cvar_t	*r_ignorehwgamma;
 
 cvar_t	*r_measureOverdraw;
 
@@ -66,17 +65,15 @@ cvar_t	*r_nocurves;
 
 cvar_t	*r_ext_compressed_textures;
 cvar_t	*r_ext_max_anisotropy;
-cvar_t	*r_ext_multisample;
+cvar_t	*r_msaa;
 
 cvar_t	*r_ignoreGLErrors;
 
 cvar_t	*r_stencilbits;
 cvar_t	*r_depthbits;
 cvar_t	*r_colorbits;
-cvar_t	*r_stereo;
 cvar_t	*r_texturebits;
 
-cvar_t	*r_drawBuffer;
 cvar_t	*r_lightmap;
 cvar_t	*r_vertexLight;
 cvar_t	*r_uiFullScreen;
@@ -316,10 +313,6 @@ static void RB_TakeScreenshotTGA( int x, int y, int width, int height, const cha
 		pRGB[i+2] = r;
 	}
 
-	if ( /*( tr.overbrightBits > 0 ) &&*/ glConfig.deviceSupportsGamma )
-	if ((tr.overbrightBits > 0) && glConfig.deviceSupportsGamma)
-			R_GammaCorrect(pRGB, c);
-
 	ri.FS_WriteFile( fileName, p, sizeof(TargaHeader) + c );
 }
 
@@ -328,9 +321,6 @@ static void RB_TakeScreenshotJPG( int x, int y, int width, int height, const cha
 {
 	RI_AutoPtr p( width * height * 4 );
 	qglReadPixels( x, y, width, height, GL_RGBA, GL_UNSIGNED_BYTE, p );
-
-	if ( /*( tr.overbrightBits > 0 ) &&*/ glConfig.deviceSupportsGamma )
-		R_GammaCorrect( p, width * height * 4 );
 
 	RI_AutoPtr out( width * height * 4 );
 	int n = SaveJPGToBuffer( out, 95, width, height, p );
@@ -407,10 +397,6 @@ const void *RB_TakeVideoFrameCmd( const void *data )
 	qglReadPixels( 0, 0, cmd->width, cmd->height, GL_RGBA,
 			GL_UNSIGNED_BYTE, cmd->captureBuffer );
 
-	// gamma correct
-	if( /*( tr.overbrightBits > 0 ) &&*/ glConfig.deviceSupportsGamma )
-		R_GammaCorrect( cmd->captureBuffer, cmd->width * cmd->height * 4 );
-
 	if( cmd->motionJpeg )
 	{
 		frameSize = SaveJPGToBuffer( cmd->encodeBuffer, 95,
@@ -454,10 +440,7 @@ void GfxInfo_f( void )
 	else
 		ri.Printf( PRINT_ALL, "\n" );
 
-	if ( glConfig.deviceSupportsGamma )
-		ri.Printf( PRINT_DEVELOPER, "GAMMA: hardware w/ %d overbright bits\n", tr.overbrightBits );
-	else
-		ri.Printf( PRINT_DEVELOPER, "GAMMA: software w/ %d overbright bits\n", tr.overbrightBits );
+	ri.Printf( PRINT_DEVELOPER, "GAMMA: %d overbright bits\n", tr.overbrightBits );
 
 	ri.Printf( PRINT_DEVELOPER, "texturemode: %s\n", r_textureMode->string );
 	ri.Printf( PRINT_DEVELOPER, "picmip: %d\n", r_picmip->integer );
@@ -502,7 +485,7 @@ static void R_Register()
 	//
 	r_ext_compressed_textures = ri.Cvar_Get( "r_ext_compressed_textures", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_ext_max_anisotropy = ri.Cvar_Get( "r_ext_max_anisotropy", "16", CVAR_ARCHIVE | CVAR_LATCH );
-	r_ext_multisample = ri.Cvar_Get( "r_ext_multisample", "0", CVAR_ARCHIVE | CVAR_LATCH );
+	r_msaa = ri.Cvar_Get( "r_msaa", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	
 	///////////////////////////////////////////////////////////////
 	r_maplightBrightness = ri.Cvar_Get("r_maplightBrightness", "1", CVAR_ARCHIVE | CVAR_LATCH);
@@ -520,11 +503,9 @@ static void R_Register()
 	r_detailTextures = ri.Cvar_Get( "r_detailtextures", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_texturebits = ri.Cvar_Get( "r_texturebits", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_colorbits = ri.Cvar_Get( "r_colorbits", "0", CVAR_ARCHIVE | CVAR_LATCH );
-	r_stereo = ri.Cvar_Get( "r_stereo", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_stencilbits = ri.Cvar_Get( "r_stencilbits", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_depthbits = ri.Cvar_Get( "r_depthbits", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_overBrightBits = ri.Cvar_Get( "r_overBrightBits", "1", CVAR_ARCHIVE | CVAR_LATCH );
-	r_ignorehwgamma = ri.Cvar_Get( "r_ignorehwgamma", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_mode = ri.Cvar_Get( "r_mode", "0", CVAR_ARCHIVE | CVAR_LATCH );
 #if USE_SDL_VIDEO
 	r_fullscreen = ri.Cvar_Get( "r_fullscreen", "1", CVAR_ARCHIVE );
@@ -609,7 +590,6 @@ static void R_Register()
 	r_showsky = ri.Cvar_Get ("r_showsky", "0", CVAR_CHEAT);
 	r_shownormals = ri.Cvar_Get ("r_shownormals", "0", CVAR_CHEAT);
 	r_clear = ri.Cvar_Get ("r_clear", "0", CVAR_CHEAT);
-	r_drawBuffer = ri.Cvar_Get( "r_drawBuffer", "GL_BACK", CVAR_CHEAT );
 	r_lockpvs = ri.Cvar_Get ("r_lockpvs", "0", CVAR_CHEAT);
 
 	r_maxpolys = ri.Cvar_Get( "r_maxpolys", va("%d", DEFAULT_MAX_POLYS), 0 );

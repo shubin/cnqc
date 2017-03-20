@@ -33,22 +33,13 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../qcommon/q_shared.h"
 #include <unistd.h>
 #include <sys/types.h>
-
 #include <float.h>
 #include "unix_glw.h"
-
-#if defined(USE_SDL_VIDEO)
-#include <SDL.h>
-#include <SDL_opengl.h>
-#else
 #include <dlfcn.h>
-#endif
-
 #include "../renderer/tr_local.h"
 
 
 //GLX Functions
-#if !defined(USE_SDL_VIDEO)
 void* (*qglXGetProcAddress)( const char *symbol );
 XVisualInfo * (*qglXChooseVisual)( Display *dpy, int screen, int *attribList );
 GLXContext (*qglXCreateContext)( Display *dpy, XVisualInfo *vis, GLXContext shareList, Bool direct );
@@ -59,7 +50,6 @@ void (*qglXSwapBuffers)( Display *dpy, GLXDrawable drawable );
 void (*qglXSwapIntervalEXT)( Display *dpy, GLXDrawable drawable, int si );
 int  (*qglXSwapIntervalMESA)( unsigned si );
 int  (*qglXSwapIntervalSGI)( int si );
-#endif
 
 void ( APIENTRY * qglSwapIntervalEXT)( int interval );			// added to setup SDL swap interval support
 void ( APIENTRY * qglAccum )(GLenum op, GLfloat value);
@@ -778,11 +768,7 @@ void QGL_Shutdown( void )
 		//if( r_GLlibCoolDownMsec->integer )
 		usleep( 500 * 1000 );
 
-		#if USE_SDL_VIDEO
-		SDL_QuitSubSystem(SDL_INIT_VIDEO);
-		#else
 		dlclose ( glw_state.OpenGLLib );
-		#endif
 		glw_state.OpenGLLib = NULL;
 	}
 
@@ -1123,7 +1109,6 @@ void QGL_Shutdown( void )
 	qglVertexPointer             = NULL;
 	qglViewport                  = NULL;
 
-#if !defined(USE_SDL_VIDEO)
 	qglXGetProcAddress           = NULL;
 	qglXChooseVisual             = NULL;
 	qglXCreateContext            = NULL;
@@ -1134,7 +1119,6 @@ void QGL_Shutdown( void )
 	qglXSwapIntervalEXT          = NULL;
 	qglXSwapIntervalMESA         = NULL;
 	qglXSwapIntervalSGI          = NULL;
-#endif
 } // QGL_Shutdown
 
 
@@ -1146,10 +1130,6 @@ void QGL_Shutdown( void )
 **
 */
 
-#if USE_SDL_VIDEO
-#define GPA( a ) SDL_GL_GetProcAddress( a )
-qboolean GLimp_sdl_init_video(void);
-#else
 static void *QGL_GetProcAddress( const char *symbol )
 {
 	void *sym;
@@ -1165,8 +1145,8 @@ static void *QGL_GetProcAddress( const char *symbol )
 
 	return dlsym( glw_state.OpenGLLib, symbol );
 }
+
 #define GPA( a ) QGL_GetProcAddress( a )
-#endif
 
 
 /*
@@ -1184,13 +1164,7 @@ qboolean QGL_Init( const char *dllname )
 {
 	if (glw_state.OpenGLLib == 0)
 	{
-		#if USE_SDL_VIDEO
-		if (GLimp_sdl_init_video() == qfalse)
-			return qfalse;
-		glw_state.OpenGLLib = (void*)(long)((SDL_GL_LoadLibrary(dllname) == -1) ? 0 : 1);
-		#else
 		glw_state.OpenGLLib = dlopen( dllname, RTLD_LAZY|RTLD_GLOBAL );
-		#endif
 	}
 
 	if ( glw_state.OpenGLLib == 0 ) {
@@ -1198,9 +1172,7 @@ qboolean QGL_Init( const char *dllname )
 		return qfalse;
 	}
 
-#if !defined(USE_SDL_VIDEO)
 	qglXGetProcAddress           = (void* (*)( const char *symbol ))GPA( "glXGetProcAddress" );
-#endif
 
 	qglAccum                     = dllAccum				=(void (*)(GLenum, GLfloat))GPA( "glAccum" );
 	qglAlphaFunc                 = dllAlphaFunc			=(void (*)(GLenum, GLclampf))GPA( "glAlphaFunc" );
@@ -1539,14 +1511,12 @@ qboolean QGL_Init( const char *dllname )
 	qglVertexPointer             = dllVertexPointer			=(void (*)(GLint, GLenum, GLsizei, const GLvoid*))GPA( "glVertexPointer" );
 	qglViewport                  = dllViewport			=(void (*)(GLint, GLint, GLsizei, GLsizei))GPA( "glViewport" );
 
-#if !defined(USE_SDL_VIDEO)
 	qglXChooseVisual             =  (XVisualInfo * (*)( Display *dpy, int screen, int *attribList ))GPA("glXChooseVisual");
 	qglXCreateContext            =  (GLXContext (*)( Display *dpy, XVisualInfo *vis, GLXContext shareList, Bool direct ))GPA("glXCreateContext");
 	qglXDestroyContext           =  (void (*)( Display *dpy, GLXContext ctx ))GPA("glXDestroyContext");
 	qglXMakeCurrent              =  (Bool (*)( Display *dpy, GLXDrawable drawable, GLXContext ctx))GPA("glXMakeCurrent");
 	qglXCopyContext              =  (void (*)( Display *dpy, GLXContext src, GLXContext dst, GLuint mask ))GPA("glXCopyContext");
 	qglXSwapBuffers              =  (void (*)( Display *dpy, GLXDrawable drawable ))GPA("glXSwapBuffers");
-#endif
 
 	qglLockArraysEXT = (PFNGLLOCKARRAYSEXTPROC)GPA("glLockArraysEXT");
 	qglUnlockArraysEXT = (PFNGLUNLOCKARRAYSEXTPROC)GPA("glUnlockArraysEXT");
@@ -1568,42 +1538,137 @@ qboolean QGL_Init( const char *dllname )
 	return qtrue;
 }
 
-// QGL_ARB stuff
-#define QGL_ARB(fn, apicall) q##fn = ( apicall ) GPA( #fn"ARB" ); \
-        if (!q##fn) Com_Error( ERR_FATAL, "QGL_ARB: "#fn"ARB not found" );
 
-PFNGLGENPROGRAMSARBPROC qglGenPrograms;
-PFNGLBINDPROGRAMARBPROC qglBindProgram;
-PFNGLPROGRAMSTRINGARBPROC qglProgramString;
-PFNGLDELETEPROGRAMSARBPROC qglDeletePrograms;
+#define QGL_EXT(fn, type) q##fn = (type)GPA( #fn ); \
+	if (!q##fn) Com_Error( ERR_FATAL, "QGL_EXT: "#fn" not found" );
 
-PFNGLDISABLEVERTEXATTRIBARRAYARBPROC qglDisableVertexAttribArray;
-PFNGLENABLEVERTEXATTRIBARRAYARBPROC qglEnableVertexAttribArray;
-PFNGLVERTEXATTRIBPOINTERARBPROC qglVertexAttribPointer;
+PFNGLCREATESHADERPROC qglCreateShader;
+PFNGLSHADERSOURCEPROC qglShaderSource;
+PFNGLCOMPILESHADERPROC qglCompileShader;
+PFNGLATTACHSHADERPROC qglAttachShader;
+PFNGLDETACHSHADERPROC qglDetachShader;
+PFNGLDELETESHADERPROC qglDeleteShader;
+PFNGLGETSHADERINFOLOGPROC qglGetShaderInfoLog;
+PFNGLGETSHADERIVPROC qglGetShaderiv;
 
-PFNGLPROGRAMENVPARAMETER4FARBPROC qglProgramEnvParameter4f;
-PFNGLPROGRAMLOCALPARAMETER4FARBPROC qglProgramLocalParameter4f;
+PFNGLCREATEPROGRAMPROC qglCreateProgram;
+PFNGLLINKPROGRAMPROC qglLinkProgram;
+PFNGLUSEPROGRAMPROC qglUseProgram;
+PFNGLDELETEPROGRAMPROC qglDeleteProgram;
 
-// Snag ARB process handles
-qbool GLW_InitARB()
+PFNGLBINDATTRIBLOCATIONPROC qglBindAttribLocation;
+PFNGLDISABLEVERTEXATTRIBARRAYPROC qglDisableVertexAttribArray;
+PFNGLENABLEVERTEXATTRIBARRAYPROC qglEnableVertexAttribArray;
+PFNGLVERTEXATTRIBPOINTERPROC qglVertexAttribPointer;
+
+PFNGLGETUNIFORMLOCATIONPROC qglGetUniformLocation;
+PFNGLUNIFORM1IPROC qglUniform1i;
+PFNGLUNIFORM1FPROC qglUniform1f;
+PFNGLUNIFORM2FPROC qglUniform2f;
+PFNGLUNIFORM3FPROC qglUniform3f;
+PFNGLUNIFORM4FPROC qglUniform4f;
+
+PFNGLISRENDERBUFFERPROC qglIsRenderbuffer;
+PFNGLBINDRENDERBUFFERPROC qglBindRenderbuffer;
+PFNGLDELETERENDERBUFFERSPROC qglDeleteRenderbuffers;
+PFNGLGENRENDERBUFFERSPROC qglGenRenderbuffers;
+PFNGLRENDERBUFFERSTORAGEPROC qglRenderbufferStorage;
+PFNGLGETRENDERBUFFERPARAMETERIVPROC qglGetRenderbufferParameteriv;
+PFNGLISFRAMEBUFFERPROC qglIsFramebuffer;
+PFNGLBINDFRAMEBUFFERPROC qglBindFramebuffer;
+PFNGLDELETEFRAMEBUFFERSPROC qglDeleteFramebuffers;
+PFNGLGENFRAMEBUFFERSPROC qglGenFramebuffers;
+PFNGLCHECKFRAMEBUFFERSTATUSPROC qglCheckFramebufferStatus;
+PFNGLFRAMEBUFFERTEXTURE1DPROC qglFramebufferTexture1D;
+PFNGLFRAMEBUFFERTEXTURE2DPROC qglFramebufferTexture2D;
+PFNGLFRAMEBUFFERTEXTURE3DPROC qglFramebufferTexture3D;
+PFNGLFRAMEBUFFERRENDERBUFFERPROC qglFramebufferRenderbuffer;
+PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC qglGetFramebufferAttachmentParameteriv;
+PFNGLGENERATEMIPMAPPROC qglGenerateMipmap;
+PFNGLBLITFRAMEBUFFERPROC qglBlitFramebuffer;
+
+
+qbool GLW_InitGL2()
 {
-	if (atof((const char*)qglGetString(GL_VERSION)) < 1.4)
+	if (atof((const char*)qglGetString(GL_VERSION)) < 2.0f)
+	{
+		Com_Error( ERR_FATAL, "OpenGL 2 is the required minimum" );
 		return qfalse;
+	}
 
-	QGL_ARB( glGenPrograms, PFNGLGENPROGRAMSARBPROC );
-	QGL_ARB( glBindProgram, PFNGLBINDPROGRAMARBPROC );
-	QGL_ARB( glProgramString, PFNGLPROGRAMSTRINGARBPROC );
-	QGL_ARB( glDeletePrograms, PFNGLDELETEPROGRAMSARBPROC );
+	QGL_EXT( glCreateShader, PFNGLCREATESHADERPROC );
+	QGL_EXT( glShaderSource, PFNGLSHADERSOURCEPROC );
+	QGL_EXT( glCompileShader, PFNGLCOMPILESHADERPROC );
+	QGL_EXT( glAttachShader, PFNGLATTACHSHADERPROC );
+	QGL_EXT( glDetachShader, PFNGLDETACHSHADERPROC );
+	QGL_EXT( glDeleteShader, PFNGLDELETESHADERPROC );
+	QGL_EXT( glGetShaderInfoLog, PFNGLGETSHADERINFOLOGPROC );
+	QGL_EXT( glGetShaderiv, PFNGLGETSHADERIVPROC );
 
-	QGL_ARB( glDisableVertexAttribArray, PFNGLDISABLEVERTEXATTRIBARRAYARBPROC );
-	QGL_ARB( glEnableVertexAttribArray, PFNGLENABLEVERTEXATTRIBARRAYARBPROC );
-	QGL_ARB( glVertexAttribPointer, PFNGLVERTEXATTRIBPOINTERARBPROC );
+	QGL_EXT( glCreateProgram, PFNGLCREATEPROGRAMPROC );
+	QGL_EXT( glLinkProgram, PFNGLLINKPROGRAMPROC );
+	QGL_EXT( glUseProgram, PFNGLUSEPROGRAMPROC );
+	QGL_EXT( glDeleteProgram, PFNGLDELETEPROGRAMPROC );
 
-	QGL_ARB( glProgramEnvParameter4f, PFNGLPROGRAMENVPARAMETER4FARBPROC );
-	QGL_ARB( glProgramLocalParameter4f, PFNGLPROGRAMLOCALPARAMETER4FARBPROC );
+	QGL_EXT( glBindAttribLocation, PFNGLBINDATTRIBLOCATIONPROC );
+	QGL_EXT( glDisableVertexAttribArray, PFNGLDISABLEVERTEXATTRIBARRAYPROC );
+	QGL_EXT( glEnableVertexAttribArray, PFNGLENABLEVERTEXATTRIBARRAYPROC );
+	QGL_EXT( glVertexAttribPointer, PFNGLVERTEXATTRIBPOINTERPROC );
+
+	QGL_EXT( glGetUniformLocation, PFNGLGETUNIFORMLOCATIONPROC );
+	QGL_EXT( glUniform1i, PFNGLUNIFORM1IPROC );
+	QGL_EXT( glUniform1f, PFNGLUNIFORM1FPROC );
+	QGL_EXT( glUniform2f, PFNGLUNIFORM2FPROC );
+	QGL_EXT( glUniform3f, PFNGLUNIFORM3FPROC );
+	QGL_EXT( glUniform4f, PFNGLUNIFORM4FPROC );
+
+	QGL_EXT( glIsRenderbuffer, PFNGLISRENDERBUFFERPROC );
+	QGL_EXT( glBindRenderbuffer, PFNGLBINDRENDERBUFFERPROC );
+	QGL_EXT( glDeleteRenderbuffers, PFNGLDELETERENDERBUFFERSPROC );
+	QGL_EXT( glGenRenderbuffers, PFNGLGENRENDERBUFFERSPROC );
+	QGL_EXT( glRenderbufferStorage, PFNGLRENDERBUFFERSTORAGEPROC );
+	QGL_EXT( glGetRenderbufferParameteriv, PFNGLGETRENDERBUFFERPARAMETERIVPROC );
+	QGL_EXT( glIsFramebuffer, PFNGLISFRAMEBUFFERPROC );
+	QGL_EXT( glBindFramebuffer, PFNGLBINDFRAMEBUFFERPROC );
+	QGL_EXT( glDeleteFramebuffers, PFNGLDELETEFRAMEBUFFERSPROC );
+	QGL_EXT( glGenFramebuffers, PFNGLGENFRAMEBUFFERSPROC );
+	QGL_EXT( glCheckFramebufferStatus, PFNGLCHECKFRAMEBUFFERSTATUSPROC );
+	QGL_EXT( glFramebufferTexture1D, PFNGLFRAMEBUFFERTEXTURE1DPROC );
+	QGL_EXT( glFramebufferTexture2D, PFNGLFRAMEBUFFERTEXTURE2DPROC );
+	QGL_EXT( glFramebufferTexture3D, PFNGLFRAMEBUFFERTEXTURE3DPROC );
+	QGL_EXT( glFramebufferRenderbuffer, PFNGLFRAMEBUFFERRENDERBUFFERPROC );
+	QGL_EXT( glGetFramebufferAttachmentParameteriv, PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC );
+	QGL_EXT( glGenerateMipmap, PFNGLGENERATEMIPMAPPROC );
+	QGL_EXT( glBlitFramebuffer, PFNGLBLITFRAMEBUFFERPROC );
 
 	return qtrue;
 }
+
+
+#undef QGL_EXT
+#define QGL_EXT(fn, type) q##fn = (type)GPA( #fn )
+
+
+typedef void ( APIENTRY * PFNGLTEXIMAGE2DMULTISAMPLE )(GLenum, GLsizei, GLenum, GLsizei, GLsizei, GLboolean);
+
+PFNGLRENDERBUFFERSTORAGEMULTISAMPLEPROC qglRenderbufferStorageMultisample;
+PFNGLTEXIMAGE2DMULTISAMPLE qglTexImage2DMultisample;
+
+
+
+qbool GLW_InitGL3()
+{
+	if (atof((const char*)qglGetString(GL_VERSION)) < 3.2f)
+	{
+		return qfalse;
+	}
+	
+	QGL_EXT( glRenderbufferStorageMultisample, PFNGLRENDERBUFFERSTORAGEMULTISAMPLEPROC );
+	QGL_EXT( glTexImage2DMultisample, PFNGLTEXIMAGE2DMULTISAMPLE );
+
+	return qtrue;
+}
+
 
 void QGL_SwapInterval( Display *dpy, Window win, int interval )
 {

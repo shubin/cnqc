@@ -881,7 +881,7 @@ typedef struct {
 
 	float					identityLight;		// 1.0 / ( 1 << overbrightBits )
 	int						identityLightByte;	// identityLight * 255
-	int						overbrightBits;		// r_overbrightBits->integer, but set to 0 if no hw gamma
+	int						overbrightBits;		// r_overbrightBits->integer
 
 	orientationr_t			orient;					// for current entity
 
@@ -938,7 +938,6 @@ extern cvar_t	*r_verbose;				// used for verbose debug spew
 extern cvar_t	*r_stencilbits;			// number of desired stencil bits
 extern cvar_t	*r_depthbits;			// number of desired depth bits
 extern cvar_t	*r_colorbits;			// number of desired color bits, only relevant for fullscreen
-extern cvar_t	*r_stereo;				// desired pixelformat stereo flag
 extern cvar_t	*r_texturebits;			// number of desired texture bits
 										// 0 = use framebuffer depth
 										// 16 = use 16-bit textures
@@ -970,11 +969,10 @@ extern cvar_t	*r_displayRefresh;		// optional display refresh option
 
 extern cvar_t	*r_intensity;
 extern cvar_t	*r_gamma;
-extern cvar_t	*r_ignorehwgamma;		// overrides hardware gamma capabilities
 
 extern cvar_t	*r_ext_compressed_textures;
 extern cvar_t	*r_ext_max_anisotropy;
-extern cvar_t	*r_ext_multisample;
+extern cvar_t	*r_msaa;
 
 extern	cvar_t	*r_nobind;				// turns off binding to appropriate textures
 extern	cvar_t	*r_singleShader;		// make most world faces use default shader
@@ -982,7 +980,6 @@ extern	cvar_t	*r_roundImagesDown;
 extern	cvar_t	*r_colorMipLevels;		// development aid to see texture mip usage
 extern	cvar_t	*r_picmip;				// controls picmip values
 extern	cvar_t	*r_finish;
-extern	cvar_t	*r_drawBuffer;
 
 extern	cvar_t	*r_swapInterval;
 extern	cvar_t	*r_textureMode;
@@ -1128,7 +1125,6 @@ const image_t* R_FindImageFile( const char* name, int flags, int glWrapClampMode
 image_t* R_CreateImage( const char* name, byte* pic, int width, int height, GLenum format, int flags, int wrapClampMode );
 
 void	R_SetColorMappings();
-void	R_GammaCorrect( byte *buffer, int bufSize );
 
 void	R_ImageList_f( void );
 void	R_SkinList_f( void );
@@ -1170,10 +1166,6 @@ qbool	GLimp_SpawnRenderThread( void (*function)( void ) );
 void*	GLimp_RendererSleep( void );
 void	GLimp_FrontEndSleep( void );
 void	GLimp_WakeRenderer( void *data );
-
-// NOTE TTimo linux works with float gamma value, not the gamma table
-//   the params won't be used, getting the r_gamma cvar directly
-void	GLimp_SetGamma( unsigned char red[256], unsigned char green[256], unsigned char blue[256] );
 
 
 /*
@@ -1401,8 +1393,7 @@ typedef struct {
 
 typedef struct {
 	int		commandId;
-	int		buffer;
-} drawBufferCommand_t;
+} beginFrameCommand_t;
 
 typedef struct {
 	int		commandId;
@@ -1464,7 +1455,7 @@ typedef enum {
 	RC_SET_COLOR,
 	RC_STRETCH_PIC,
 	RC_DRAW_SURFS,
-	RC_DRAW_BUFFER,
+	RC_BEGIN_FRAME,
 	RC_SWAP_BUFFERS,
 	RC_SCREENSHOT,
 	RC_VIDEOFRAME
@@ -1556,13 +1547,10 @@ private:
 };
 
 
-enum {
-	VP_GLOBAL_EYEPOS,
-	VP_GLOBAL_MAX,
-};
-
-extern void ARB_SetupLight();
-extern void ARB_StageIterator();
+extern void GL2_DynLights_SetupLight();
+extern void GL2_DynLights_StageIterator();
+extern void GL2_BeginFrame();
+extern void GL2_EndFrame();
 
 
 #endif //TR_LOCAL_H

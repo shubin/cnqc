@@ -608,7 +608,7 @@ static void RB_RenderLitSurfList( dlight_t* dl )
 				R_RotateForEntity( backEnd.currentEntity, &backEnd.viewParms, &backEnd.orient );
 
 				R_TransformDlights( 1, dl, &backEnd.orient );
-				ARB_SetupLight();
+				GL2_DynLights_SetupLight();
 
 				if ( backEnd.currentEntity->e.renderfx & RF_DEPTHHACK ) {
 					// hack the depth range to prevent view model from poking into walls
@@ -622,7 +622,7 @@ static void RB_RenderLitSurfList( dlight_t* dl )
 				// the world (like water) continue with the wrong frame
 				tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
 				R_TransformDlights( 1, dl, &backEnd.orient );
-				ARB_SetupLight();
+				GL2_DynLights_SetupLight();
 			}
 
 			qglLoadMatrixf( backEnd.orient.modelMatrix );
@@ -917,11 +917,11 @@ static const void* RB_DrawSurfs( const void* data )
 }
 
 
-static const void* RB_DrawBuffer( const void* data )
+static const void* RB_BeginFrame( const void* data )
 {
-	const drawBufferCommand_t* cmd = (const drawBufferCommand_t*)data;
+	const beginFrameCommand_t* cmd = (const beginFrameCommand_t*)data;
 
-	qglDrawBuffer( cmd->buffer );
+	GL2_BeginFrame();
 
 	// clear screen for debugging
 	if ( r_clear->integer ) {
@@ -1030,6 +1030,10 @@ static const void* RB_SwapBuffers( const void* data )
 		qglEnable( GL_TEXTURE_2D );
 	}
 
+	if ( !backEnd.projection2D )
+		RB_SetGL2D();
+	GL2_EndFrame();
+
 	if ( !glState.finishCalled ) {
 		qglFinish();
 	}
@@ -1081,8 +1085,8 @@ void RB_ExecuteRenderCommands( const void *data )
 		case RC_DRAW_SURFS:
 			data = RB_DrawSurfs( data );
 			break;
-		case RC_DRAW_BUFFER:
-			data = RB_DrawBuffer( data );
+		case RC_BEGIN_FRAME:
+			data = RB_BeginFrame( data );
 			break;
 		case RC_SWAP_BUFFERS:
 			data = RB_SwapBuffers( data );

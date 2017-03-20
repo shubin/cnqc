@@ -86,8 +86,6 @@ static void VID_AppActivate( BOOL fActive, BOOL minimize )
 	// we don't want to act like we're active if we're minimized
 	g_wv.activeApp = (fActive && !g_wv.isMinimized);
 
-	WIN_UpdateHardwareGammaRamp( g_wv.activeApp );
-
 	IN_Activate( IN_ShouldBeActive() );
 }
 

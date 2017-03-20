@@ -163,8 +163,7 @@ typedef struct {
 
 	int		unused3, unused4;
 
-	qbool	deviceSupportsGamma; // !!! should be noyb
-	// shitui still references it atm to incorrectly disable the "brightness" slider
+	int		unused10; // gamma
 
 	int		unused5, unused6;
 
@@ -176,7 +175,7 @@ typedef struct {
 
 	int		unused7, unused8;
 
-	qbool	stereoEnabled; // for cl_scrn
+	qbool	unused11; // stereo
 
 	int		unused9;
 } glconfig_t;

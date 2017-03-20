@@ -42,7 +42,6 @@ void	IN_Shutdown();
 
 void WIN_GetStartUpMonitorIndex();
 void WIN_GetMonitorIndexFromMainWindow();
-void WIN_UpdateHardwareGammaRamp( qbool enable );
 void WIN_UpdateResolution( int width, int height );
 
 void SNDDMA_Activate();
@@ -52,7 +51,6 @@ LRESULT CALLBACK MainWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 // crash handling
 LONG CALLBACK WIN_HandleException( EXCEPTION_POINTERS* ep );
 void WIN_HandleExit();
-void GLW_RestoreGamma();
 void WIN_EndTimePeriod();
 
 #define MAX_MONITOR_COUNT 16
@@ -67,9 +65,6 @@ typedef struct
 	// when we get a windows message, we store the time off
 	// so keyboard processing can know the exact time of an event
 	unsigned	sysMsgTime;
-
-	HMONITOR	hGammaMonitor;
-	char		gammaMonitorName[CCHDEVICENAME];
 
 	RECT		monitorRects[MAX_MONITOR_COUNT];
 	HMONITOR	hMonitors[MAX_MONITOR_COUNT];

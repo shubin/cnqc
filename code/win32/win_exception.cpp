@@ -387,12 +387,6 @@ static qbool exc_exitCalled = qfalse;
 
 LONG CALLBACK WIN_HandleException( EXCEPTION_POINTERS* ep )
 {
-#if !DEDICATED
-	__try {
-		GLW_RestoreGamma();
-	} __except(EXCEPTION_EXECUTE_HANDLER) {}
-#endif
-
 	__try {
 		WIN_EndTimePeriod();
 	} __except(EXCEPTION_EXECUTE_HANDLER) {}
