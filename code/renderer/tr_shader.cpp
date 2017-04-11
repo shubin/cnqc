@@ -1758,20 +1758,6 @@ static void FindLightingStages()
 
 		shader.lightingStages[ type ] = i;
 	}
-
-	// having to add lightmap stages to every shader by hand is beyond retarded
-	if ( (shader.lightmapIndex >= 0) && (shader.lightingStages[ST_LIGHTMAP] == -1) ) {
-		if (i >= MAX_SHADER_STAGES)
-			ri.Error( ERR_DROP, "too many stages in shader %s\n", shader.name );
-		shader.lightingStages[ST_LIGHTMAP] = i;
-		stages[i].active = qtrue;
-		stages[i].type = ST_LIGHTMAP;
-		stages[i].tcGen = TCGEN_LIGHTMAP;
-		stages[i].bundle.image[0] = tr.lightmaps[shader.lightmapIndex];
-		stages[i].rgbGen = CGEN_IDENTITY;	// lightmaps are scaled on creation for identitylight
-		stages[i].stateBits = GLS_DEFAULT | GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO;
-		++shader.numStages;
-	}
 }
 
 
