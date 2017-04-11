@@ -456,9 +456,9 @@ local function ApplyExeProjectSettings(exeName, server)
 		local abs_path_exe = string.format("%s\\%s.exe", abs_path_q3, exeName)
 		debugcommand(abs_path_exe)
 		if (server == 1) then
-			debugargs { "+set sv_pure 0" }
+			debugargs { "+set fs_game $(CPMADIR) +set sv_pure 0" }
 		else
-			debugargs { "+set sv_pure 0 +set r_fullscreen 0" }
+			debugargs { "+set fs_game $(CPMADIR) +set sv_pure 0 +set r_fullscreen 0" }
 		end
 		debugdir(abs_path_q3)
 

@@ -4,24 +4,24 @@
     <LocalDebuggerCommand>$(QUAKE3DIR)\cnq3-server-x86.exe</LocalDebuggerCommand>
     <LocalDebuggerWorkingDirectory>$(QUAKE3DIR)</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
-    <LocalDebuggerCommandArguments>+set sv_pure 0</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>+set fs_game $(CPMADIR) +set sv_pure 0</LocalDebuggerCommandArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='debug|x64'">
     <LocalDebuggerCommand>$(QUAKE3DIR)\cnq3-server-x64.exe</LocalDebuggerCommand>
     <LocalDebuggerWorkingDirectory>$(QUAKE3DIR)</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
-    <LocalDebuggerCommandArguments>+set sv_pure 0</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>+set fs_game $(CPMADIR) +set sv_pure 0</LocalDebuggerCommandArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='release|Win32'">
     <LocalDebuggerCommand>$(QUAKE3DIR)\cnq3-server-x86.exe</LocalDebuggerCommand>
     <LocalDebuggerWorkingDirectory>$(QUAKE3DIR)</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
-    <LocalDebuggerCommandArguments>+set sv_pure 0</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>+set fs_game $(CPMADIR) +set sv_pure 0</LocalDebuggerCommandArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='release|x64'">
     <LocalDebuggerCommand>$(QUAKE3DIR)\cnq3-server-x64.exe</LocalDebuggerCommand>
     <LocalDebuggerWorkingDirectory>$(QUAKE3DIR)</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
-    <LocalDebuggerCommandArguments>+set sv_pure 0</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>+set fs_game $(CPMADIR) +set sv_pure 0</LocalDebuggerCommandArguments>
   </PropertyGroup>
 </Project>
