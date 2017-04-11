@@ -1,7 +1,64 @@
 
-xx Dec 16 - 1.48
+XX XXX 17 - 1.49
+
+chg: replaced monitor gamma by a post-process gamma shader and removed r_ignorehwgamma
+
+chg: removed stereo rendering
+
+chg: anti-aliasing sample count is set with r_msaa on all platforms (on Windows, it was r_ext_multisample)
+
+chg: file system start-up will now verify the presence and integrity of baseq3/pak0-8.pk3 instead of only pak0
+
+add: command history saving with con_saveCmdHistory (default: 0)
+
+chg: replaced id's Huffman codec code with something both simpler and much faster
+
+add: improved multi-monitor support and added r_monitor to select the start-up monitor
+  r_monitor is the 1-based index of the monitor to use
+  r_monitor 0 (default): start-up on the primary monitor
+  r_monitor N = start-up on monitor number N
+
+fix: fixed the start-up console window staying visible when starting in full-screen
+
+add: crash handlers with crash report generation
+
+chg: tweaked console scrolling speeds, fixed backtip insertion on Windows, XXX
+
+chg: improved level load times
+
+add: improved auto-completion with support for map names, bind key names, etc
+
+chg: sound fall-off is linear instead of using a power function
+
+add: 64-bit support
+
+chg: switch from libjpeg 6 to libjpeg-turbo
 
 chg: remove the byzantine r_mode usage added in 1.47
+
+
+Windows:
+
+fix: the crash handler will reset the system timer resolution
+
+fix: if requesting a resolution too high for the display, the image would be offset vertically
+
+chg: updated mouse input for better grab (de-)activation and fixed window dragging not working
+
+
+Linux:
+
+fix: the crash handler will reset tty input mode correctly
+
+chg: tty input behavior matches in-game behavior when cgame is running and fixed the truncated tty input
+
+fix: clear modifier keys on focus change to avoid ctrl/alt/shift being "stuck"
+
+chg: new Linux mouse input code, support for raw input with XInput 2
+  in_mouse 0 = no input
+  in_mouse 1 = raw input (XInput 2)
+  in_mouse 2 = normal input (XWindows)
+  m_device to select a device explicity when using raw input
 
 
 17 Sep 11 - 1.47
