@@ -60,7 +60,7 @@ typedef enum {
 	DATASEG,	// initialized 32 bit data, will be byte swapped
 	LITSEG,		// strings
 	BSSSEG,		// 0 filled
-	JTRGSEG,	// psuedo-segment that contains only jump table targets
+	JTRGSEG,	// pseudo-segment that contains only jump table targets
 	NUM_SEGMENTS
 } segmentName_t;
 
@@ -874,14 +874,11 @@ static void WriteMapFile()
 	report( "Writing %s...\n", imageName );
 
 	FILE* f = SafeOpenWrite( imageName );
-	for (int seg = CODESEG; seg <= BSSSEG; ++seg) {
-		fprintf( f, "%s:\n", segment[seg].name );
+	for (int seg = CODESEG; seg <= BSSSEG; ++seg) {		
 		for (SymTable::const_iterator it = aSymGlobal.begin(); it != aSymGlobal.end(); ++it) {
 			const symbol_t* s = (*it).second;
 			if ( &segment[seg] == s->segment ) {
-				if ( s->value >= 0 ) { // ignore systraps
-					fprintf( f, "%8X %s\n", s->value, (*it).first );
-				}
+				fprintf( f, "%d %8X %s\n", seg, s->value, (*it).first );
 			}
 		}
 	}
@@ -914,7 +911,7 @@ static void WriteVmFile()
 	// (I know this isn't strictly correct due to padding, but then platforms
 	// that pad wouldn't be able to write a correct header anyway).
 	// Note: if vmHeader_t changes, this needs to be adjusted too.
-	int headerSize = sizeof( header ) - sizeof( header.jtrgLength );
+	const int headerSize = sizeof( header );
 
 	header.instructionCount = instructionCount;
 	header.codeOffset = headerSize;
@@ -923,7 +920,6 @@ static void WriteVmFile()
 	header.dataLength = segment[DATASEG].imageUsed;
 	header.litLength = segment[LITSEG].imageUsed;
 	header.bssLength = segment[BSSSEG].imageUsed;
-	header.jtrgLength = segment[JTRGSEG].imageUsed;
 
 	report( "Writing to %s\n", imageName );
 
@@ -1038,6 +1034,7 @@ int main( int argc, char **argv )
 				"Assemble LCC bytecode assembly to Q3VM bytecode.\n\n"
 				"-o OUTPUT     Write assembled output to file OUTPUT.qvm\n"
 				"-f LISTFILE   Read options and list of files to assemble from LISTFILE\n"
+				"-m            Write symbols to a .map file\n"
 				"-v            Verbose compilation report\n"
 				, argv[0] );
 	}
