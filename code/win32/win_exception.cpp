@@ -387,6 +387,11 @@ static qbool exc_exitCalled = qfalse;
 
 LONG CALLBACK WIN_HandleException( EXCEPTION_POINTERS* ep )
 {
+	// Allow calls to OutputDebugStringA/W.
+	if (ep != NULL && ep->ExceptionRecord != NULL &&
+		ep->ExceptionRecord->ExceptionCode == DBG_PRINTEXCEPTION_C)
+		return EXCEPTION_CONTINUE_SEARCH;
+
 	__try {
 		WIN_EndTimePeriod();
 	} __except(EXCEPTION_EXECUTE_HANDLER) {}
