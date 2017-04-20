@@ -1,5 +1,5 @@
 
-XX XXX 17 - 1.49
+DD Mmm 17 - 1.49
 
 chg: replaced monitor gamma by a post-process gamma shader and removed r_ignorehwgamma
 
@@ -9,20 +9,20 @@ chg: anti-aliasing sample count is set with r_msaa on all platforms (on Windows,
 
 chg: file system start-up will now verify the presence and integrity of baseq3/pak0-8.pk3 instead of only pak0
 
-add: command history saving with con_saveCmdHistory (default: 0)
+add: command history saving with con_history (default: 0)
 
 chg: replaced id's Huffman codec code with something both simpler and much faster
 
 add: improved multi-monitor support and added r_monitor to select the start-up monitor
   r_monitor is the 1-based index of the monitor to use
-  r_monitor 0 (default): start-up on the primary monitor
+  r_monitor 0 (default) = start-up on the primary monitor
   r_monitor N = start-up on monitor number N
 
 fix: fixed the start-up console window staying visible when starting in full-screen
 
 add: crash handlers with crash report generation
 
-chg: tweaked console scrolling speeds, fixed backtip insertion on Windows, XXX
+chg: tweaked console scrolling speeds, fixed backtip insertion on Windows
 
 chg: improved level load times
 

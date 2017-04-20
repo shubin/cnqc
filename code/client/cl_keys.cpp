@@ -1145,12 +1145,12 @@ void Key_ClearStates()
 #define HISTORY_PATH "cnq3cmdhistory"
 
 
-static const cvar_t* con_saveCmdHistory;
+static const cvar_t* con_history;
 
 
 void CL_LoadCommandHistory()
 {
-	con_saveCmdHistory = Cvar_Get( "con_saveCmdHistory", "0", CVAR_ARCHIVE );
+	con_history = Cvar_Get( "con_history", "0", CVAR_ARCHIVE );
 
 	fileHandle_t f;
 	FS_FOpenFileRead( HISTORY_PATH, &f, qfalse );
@@ -1196,7 +1196,7 @@ void CL_LoadCommandHistory()
 
 void CL_SaveCommandHistory()
 {
-	if ( con_saveCmdHistory->integer == 0 )
+	if ( con_history->integer == 0 )
 		return;
 
 	const fileHandle_t f = FS_FOpenFileWrite( HISTORY_PATH );
