@@ -1,6 +1,8 @@
 
 DD Mmm 17 - 1.49
 
+fix: multi-view mouse input sensitivity is now the same as in the UI for CPMA 1.50
+
 chg: replaced monitor gamma by a post-process gamma shader and removed r_ignorehwgamma
 
 chg: removed stereo rendering
