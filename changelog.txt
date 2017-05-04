@@ -1,6 +1,8 @@
 
 DD Mmm 17 - 1.49
 
+fix: the pukka3tourney2 slime wasn't green with r_vertexLight 1
+
 fix: the ct3ctf1 grate near quad was getting picmipped when it wasn't supposed to be
 
 fix: improved the player name look-up behavior for these commands: kick, banUser, dumpuser
