@@ -769,35 +769,60 @@ static void R_LoadImage( const char* name, byte** pic, int* w, int* h, GLenum* f
 }
 
 
+struct forcedLoadImage_t {
+	const char* mapName;
+	const char* shaderName;
+	int shaderNameHash;
+};
+
+// map-specific fixes for textures that are used with different (incompatible) settings
+static const forcedLoadImage_t g_forcedLoadImages[] = {
+	{ "ct3ctf1", "textures/ct3ctf1/grate_02.tga", 716 }
+};
+
+
 // finds or loads the given image - returns NULL if it fails, not a default image
 
 const image_t* R_FindImageFile( const char* name, int flags, int glWrapClampMode )
 {
-	if (!name)
+	if ( !name )
 		return NULL;
-
-	int hash = Q_FileHash(name, IMAGE_HASH_SIZE);
-
+	
+	qbool forcedLoad = qfalse;
+	const int hash = Q_FileHash( name, IMAGE_HASH_SIZE );
+	const int forcedLoadImageCount = ARRAY_LEN( g_forcedLoadImages );
+	for ( int i = 0; i < forcedLoadImageCount; ++i ) {
+		const forcedLoadImage_t* const fli = g_forcedLoadImages + i;
+		if ( hash == fli->shaderNameHash &&
+			 strcmp( R_GetMapName(), fli->mapName ) == 0 &&
+			 strcmp( name, fli->shaderName ) == 0 )
+		   forcedLoad = qtrue;
+	}
+	
 	// see if the image is already loaded
 	//
-	image_t* image;
-	for (image=hashTable[hash]; image; image=image->next) {
-		if ( !strcmp( name, image->name ) ) {
-			/* since this WASN'T enforced as an error, half the shaders out there (including most of id's)
-				have been geting it wrong for years and this is just useless noise
+	if ( !forcedLoad ) {
+		image_t* image;
+		for ( image = hashTable[hash]; image; image=image->next ) {
+			if ( strcmp( name, image->name ) )
+				continue;
+
+			if ( strcmp( name, "*white" ) )
+				return image;
+
+			// since this WASN'T enforced as an error, half the shaders out there (including most of id's)
+			// have been getting it wrong for years
 			// the white image can be used with any set of parms, but other mismatches are errors
-			if ( strcmp( name, "*white" ) ) {
-				if ( image->mipmap != mipmap ) {
-					ri.Printf( PRINT_DEVELOPER, "WARNING: reused image %s with mixed mipmap parm\n", name );
-				}
-				if ( image->allowPicmip != allowPicmip ) {
-					ri.Printf( PRINT_DEVELOPER, "WARNING: reused image %s with mixed allowPicmip parm\n", name );
-				}
-				if ( image->wrapClampMode != glWrapClampMode ) {
-					ri.Printf( PRINT_ALL, "WARNING: reused image %s with mixed glWrapClampMode parm\n", name );
-				}
+			if ( (image->flags & IMG_NOMIPMAP) != (flags & IMG_NOMIPMAP) ) {
+				ri.Printf( PRINT_DEVELOPER, "WARNING: reused image %s with mixed nomipmap settings\n", name );
 			}
-			*/
+			if ( (image->flags & IMG_NOPICMIP) != (image->flags & IMG_NOPICMIP) ) {
+				ri.Printf( PRINT_DEVELOPER, "WARNING: reused image %s with mixed nomipmaps settings\n", name );
+			}
+			if ( image->wrapClampMode != glWrapClampMode ) {
+				ri.Printf( PRINT_DEVELOPER, "WARNING: reused image %s with mixed clamp settings (map vs clampMap)\n", name );
+			}
+
 			return image;
 		}
 	}
@@ -809,10 +834,10 @@ const image_t* R_FindImageFile( const char* name, int flags, int glWrapClampMode
 	GLenum format;
 	R_LoadImage( name, &pic, &width, &height, &format );
 
-	if (!pic)
+	if ( !pic )
 		return NULL;
 
-	image = R_CreateImage( name, pic, width, height, format, flags, glWrapClampMode );
+	image_t* const image = R_CreateImage( name, pic, width, height, format, flags, glWrapClampMode );
 	ri.Free( pic );
 	return image;
 }

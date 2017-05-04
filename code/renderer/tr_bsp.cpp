@@ -1523,3 +1523,9 @@ void RE_LoadWorldMap( const char* name )
 	ri.FS_FreeFile( buffer );
 }
 
+
+const char* R_GetMapName()
+{
+	return s_worldData.baseName[0] != '\0' ? s_worldData.baseName : "";
+}
+

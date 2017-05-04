@@ -1111,6 +1111,8 @@ void		RE_SetWorldVisData( const byte *vis );
 qhandle_t	RE_RegisterModel( const char *name );
 qhandle_t	RE_RegisterSkin( const char *name );
 
+const char*	R_GetMapName();
+
 qbool	R_GetEntityToken( char *buffer, int size );
 
 model_t* R_AllocModel();
