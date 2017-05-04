@@ -420,6 +420,7 @@ typedef struct cvar_s {
 	int			modificationCount;	// incremented each time the cvar is changed
 	float		value;				// atof( string )
 	int			integer;			// atoi( string )
+	qbool		mismatchPrinted;	// have we already notified of mismatching initial values?
 	struct cvar_s *next;
 	struct cvar_s *hashNext;
 } cvar_t;

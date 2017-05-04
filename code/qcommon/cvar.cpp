@@ -273,9 +273,11 @@ cvar_t* Cvar_Get( const char *var_name, const char *var_value, int flags )
 		if ((flags & CVAR_ROM) || !var->resetString[0]) {
 			Z_Free( var->resetString );
 			var->resetString = CopyString( var_value );
-		} else if ( var_value[0] && strcmp( var->resetString, var_value ) ) {
+		} else if ( com_developer && com_developer->integer && !var->mismatchPrinted && 
+				    var_value[0] && strcmp( var->resetString, var_value ) ) {
 			Com_DPrintf( "Warning: cvar \"%s\" given initial values: \"%s\" and \"%s\"\n",
 				var_name, var->resetString, var_value );
+			var->mismatchPrinted = qtrue;
 		}
 
 		// if we have a latched string, take that value now
