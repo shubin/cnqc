@@ -188,6 +188,8 @@ static const keyname_t keynames[] =
 	
 	{"SEMICOLON", ';'},	// because a raw semicolon separates commands
 
+	{"BACKSLASH", K_BACKSLASH},
+
 	{NULL,0}
 };
 

@@ -159,6 +159,8 @@ typedef enum {
 	K_WIN,
 	K_MENU,
 
+	K_BACKSLASH,
+
 	K_LAST_KEY		// this had better be <256!
 } keyNum_t;
 

@@ -44,6 +44,8 @@ chg: remove the byzantine r_mode usage added in 1.47
 
 Windows:
 
+add: new bindable key: BACKSLASH (the key to the right of the left shift button)
+
 fix: the crash handler will reset the system timer resolution
 
 fix: if requesting a resolution too high for the display, the image would be offset vertically

@@ -173,6 +173,8 @@ static int MapKey (int key)
 			return K_KP_DEL;
 		case '*':
 			return K_KP_STAR;
+		case 0x00:
+			return K_BACKSLASH;
 		default:
 			return result;
 		}
