@@ -2942,21 +2942,22 @@ const char* Q_itohex( uint64_t number, qbool uppercase, qbool prefix )
 
 	const char* const lut = luts[uppercase == 0 ? 0 : 1];
 	uint64_t x = number;
-	int i = maxLength;
+	int i = maxLength + 2;
 	buffer[i] = '\0';
 	while ( i-- ) {
 		buffer[i] = lut[x & 15];
 		x >>= 4;
 	}
 
-	int startOffset = 0;
-	for ( i = 0; i < maxLength - 1; i++, startOffset++ ) {
+	int startOffset = 2;
+	for ( i = 2; i < maxLength + 1; i++, startOffset++ ) {
 		if ( buffer[i] != '0' )
 			break;
 	}
 
 	if ( prefix ) {
 		startOffset -= 2;
+		buffer[startOffset + 0] = '0';
 		buffer[startOffset + 1] = 'x';
 	}
 
