@@ -1,6 +1,9 @@
 
 DD Mmm 17 - 1.49
 
+fix: improved the player name look-up behavior for these commands: kick, banUser, dumpuser
+	if 2 players had the same name, it would just pick the first one (lowest client number)
+
 fix: multi-view mouse input sensitivity is now the same as in the UI for CPMA 1.50
 
 chg: replaced monitor gamma by a post-process gamma shader and removed r_ignorehwgamma

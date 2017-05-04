@@ -37,10 +37,6 @@ These commands can only be entered from stdin or by a remote operator datagram
 
 static client_t* SV_GetPlayerByHandle()
 {
-	client_t	*cl;
-	int			i;
-	char		cleanName[64];
-
 	// make sure server is running
 	if ( !com_sv_running->integer ) {
 		return NULL;
@@ -51,42 +47,66 @@ static client_t* SV_GetPlayerByHandle()
 		return NULL;
 	}
 
-	const char* s = Cmd_Argv(1);
+	const char* const s = Cmd_Argv( 1 );
 
-	// Check whether this is a numeric player handle
-	for(i = 0; s[i] >= '0' && s[i] <= '9'; i++);
-	
-	if(!s[i])
-	{
+	// check whether this is a numeric player handle
+	int i;
+	for ( i = 0; s[i] >= '0' && s[i] <= '9'; i++ );
+
+	if ( !s[i] ) {
 		int plid = atoi(s);
 
 		// Check for numeric playerid match
-		if(plid >= 0 && plid < sv_maxclients->integer)
-		{
-			cl = &svs.clients[plid];
+		if ( plid >= 0 && plid < sv_maxclients->integer ) {
+			client_t* const cl = &svs.clients[plid];
 			
-			if(cl->state)
+			if ( cl->state )
 				return cl;
 		}
 	}
 
+	char s2[64];
+	char n2[64];
+	Q_strncpyz( s2, s, sizeof(s2) );
+	Q_CleanStr( s2 );
+
+	int	caseSensMatchCount = 0;
+	int	caseInsMatchCount  = 0;
+	int	caseSensMatchIndex = -1;
+	int	caseInsMatchIndex  = -1;
+	client_t* cl = svs.clients;
+
 	// check for a name match
-	for ( i=0, cl=svs.clients ; i < sv_maxclients->integer ; i++,cl++ ) {
-		if ( !cl->state ) {
+	for ( i = 0; i < sv_maxclients->integer; i++, cl++ ) {
+		if ( !cl->state )
 			continue;
-		}
-		if ( !Q_stricmp( cl->name, s ) ) {
-			return cl;
+
+		Q_strncpyz( n2, cl->name, sizeof(n2) );
+		Q_CleanStr( n2 );
+
+		if ( !strcmp( n2, s2 ) ) {
+			caseSensMatchIndex = i;
+			caseSensMatchCount++;
 		}
 
-		Q_strncpyz( cleanName, cl->name, sizeof(cleanName) );
-		Q_CleanStr( cleanName );
-		if ( !Q_stricmp( cleanName, s ) ) {
-			return cl;
+		if ( !Q_stricmp( n2, s2 ) ) {
+			caseInsMatchIndex = i;
+			caseInsMatchCount++;
 		}
 	}
 
-	Com_Printf( "Player %s is not on the server\n", s );
+	if (caseSensMatchCount == 1)
+		return svs.clients + caseSensMatchIndex;
+
+	if (caseInsMatchCount == 1)
+		return svs.clients + caseInsMatchIndex;
+
+	if (caseSensMatchCount > 1 || caseInsMatchCount > 1) {
+		Com_Printf( "More than 1 player with the name %s\n", s2 );
+		return NULL;
+	}
+
+	Com_Printf( "Player %s is not on the server\n", s2 );
 	return NULL;
 }
 
