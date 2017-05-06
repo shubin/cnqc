@@ -708,7 +708,7 @@ int			Com_HashKey(char *string, int maxlen);
 int			Com_Filter( const char* filter, const char* name );
 int			Com_FilterPath( const char* filter, const char* name );
 int			Com_RealTime(qtime_t *qtime);
-qbool	Com_SafeMode();
+qbool		Com_SafeMode();
 
 void		Com_StartupVariable( const char *match );
 // checks for and removes command line "+set var arg" constructs

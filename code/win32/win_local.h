@@ -63,8 +63,8 @@ typedef struct
 	qbool		isMinimized;
 
 	// when we get a windows message, we store the time off
-	// so keyboard processing can know the exact time of an event
-	unsigned	sysMsgTime;
+	// using Sys_Milliseconds
+	int			sysMsgTime;
 
 	RECT		monitorRects[MAX_MONITOR_COUNT];
 	HMONITOR	hMonitors[MAX_MONITOR_COUNT];

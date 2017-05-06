@@ -29,7 +29,6 @@ struct Mouse {
 	virtual qbool Activate( qbool active );
 	virtual void OnWindowMoved() {}
 	virtual void Shutdown() {}
-	virtual void Read( int* mx, int* my ) = 0;
 	virtual qbool ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam ) { return qfalse; } // returns true if the event was handled
 
 	Mouse() : active(qfalse), wheel(0) {}
@@ -78,10 +77,7 @@ void Mouse::UpdateWheel( int delta )
 struct rawmouse_t : public Mouse {
 	virtual qbool Init();
 	virtual qbool Activate( qbool active );
-	virtual void Read( int* mx, int* my );
 	virtual qbool ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam );
-
-	int x, y;
 };
 
 static rawmouse_t rawmouse;
@@ -109,14 +105,6 @@ qbool rawmouse_t::Activate( qbool active )
 }
 
 
-void rawmouse_t::Read( int* mx, int* my )
-{
-	*mx = rawmouse.x;
-	*my = rawmouse.y;
-	rawmouse.x = rawmouse.y = 0;
-}
-
-
 // MSDN says you have to always let DefWindowProc run for WM_INPUT
 // regardless of whether you process the message or not, so ALWAYS return false here
 
@@ -138,8 +126,10 @@ qbool rawmouse_t::ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam )
 	if ( (ri.header.dwType != RIM_TYPEMOUSE) || (ri.data.mouse.usFlags != MOUSE_MOVE_RELATIVE) )
 		return qfalse;
 
-	rawmouse.x += ri.data.mouse.lLastX;
-	rawmouse.y += ri.data.mouse.lLastY;
+	const int dx = (int)ri.data.mouse.lLastX;
+	const int dy = (int)ri.data.mouse.lLastY;
+	if (dx != 0 || dy != 0)
+		Sys_QueEvent( g_wv.sysMsgTime, SE_MOUSE, dx, dy, 0, NULL );
 
 	if (!ri.data.mouse.usButtonFlags) // no button or wheel transitions
 		return qfalse;
@@ -173,12 +163,12 @@ qbool rawmouse_t::ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam )
 struct winmouse_t : public Mouse {
 	virtual qbool Activate( qbool active );
 	virtual void OnWindowMoved();
-	virtual void Read( int* mx, int* my );
 	virtual qbool ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam );
 
 	void UpdateWindowCenter();
 
 	int window_center_x, window_center_y;
+	qbool active;
 };
 
 static winmouse_t winmouse;
@@ -197,9 +187,11 @@ void winmouse_t::UpdateWindowCenter()
 }
 
 
-qbool winmouse_t::Activate(qbool active)
+qbool winmouse_t::Activate( qbool _active )
 {
-	if (!active)
+	active = _active;
+
+	if (!_active)
 		return qtrue;
 
 	UpdateWindowCenter();
@@ -215,20 +207,22 @@ void winmouse_t::OnWindowMoved()
 }
 
 
-void winmouse_t::Read( int* mx, int* my )
-{
-	POINT p;
-	GetCursorPos( &p );
-	*mx = p.x - window_center_x;
-	*my = p.y - window_center_y;
-	SetCursorPos( window_center_x, window_center_y );
-}
-
-
 qbool winmouse_t::ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam )
 {
+	if ( !active )
+		return qfalse;
+
 #define QUEUE_WM_BUTTON( qbutton, mask ) \
 	Sys_QueEvent( g_wv.sysMsgTime, SE_KEY, qbutton, (wParam & mask), 0, NULL );
+
+	POINT p;
+	GetCursorPos( &p );
+	const int dx = p.x - window_center_x;
+	const int dy = p.y - window_center_y;
+	if (dx != 0 || dy != 0) {
+		Sys_QueEvent( g_wv.sysMsgTime, SE_MOUSE, dx, dy, 0, NULL );
+		SetCursorPos( window_center_x, window_center_y );
+	}
 
 	switch (msg) {
 	case WM_LBUTTONDOWN:
@@ -408,14 +402,6 @@ void IN_Frame()
 	}
 
 	IN_Activate( qtrue );
-
-	int mx, my;
-	mouse->Read( &mx, &my );
-
-	if ( !mx && !my )
-		return;
-
-	Sys_QueEvent( 0, SE_MOUSE, mx, my, 0, NULL );
 }
 
 

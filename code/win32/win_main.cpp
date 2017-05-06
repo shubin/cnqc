@@ -35,7 +35,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <VersionHelpers.h>
 
 
-WinVars_t	g_wv;
+WinVars_t		g_wv;
 
 
 static qbool win_timePeriodActive = qfalse;
@@ -471,7 +471,8 @@ sysEvent_t Sys_GetEvent()
 		}
 
 		// save the msg time, because wndprocs don't have access to the timestamp
-		g_wv.sysMsgTime = msg.time;
+		// msg.time seems to use values from GetTickCount
+		g_wv.sysMsgTime = Sys_Milliseconds();
 
 		TranslateMessage( &msg );
 		DispatchMessage( &msg );

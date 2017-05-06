@@ -295,6 +295,7 @@ void CL_MouseEvent( int dx, int dy, int time )
 			VM_Call( cgvm, CG_MOUSE_EVENT, dx, dy );
 		cl.mouseDx[cl.mouseIndex] += dx;
 		cl.mouseDy[cl.mouseIndex] += dy;
+		cl.mouseTime = time;
 	}
 }
 
@@ -454,6 +455,7 @@ static usercmd_t CL_CreateCmd()
 
 	// get basic movement from mouse
 	CL_MouseMove( &cmd );
+	cl.userCmdTime = Sys_Milliseconds();
 
 	// get basic movement from joystick
 	CL_JoystickMove( &cmd );
@@ -864,6 +866,8 @@ void CL_InitInput()
 	Cmd_AddCommand ("-button15", IN_Button15Up);
 	Cmd_AddCommand ("+mlook", IN_MLookDown);
 	Cmd_AddCommand ("-mlook", IN_MLookUp);
+
+	Cvar_Get( "cl_drawMouseLag", "0", 0 );
 
 	m_speed = Cvar_Get( "m_speed", "8", CVAR_ARCHIVE );
 	m_accel = Cvar_Get( "m_accel", "0", CVAR_ARCHIVE );

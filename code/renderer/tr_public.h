@@ -158,8 +158,6 @@ typedef struct {
 	qbool (*inPVS)( const vec3_t p1, const vec3_t p2 );
 
 	void (*TakeVideoFrame)( int h, int w, byte* captureBuffer, byte *encodeBuffer, qbool motionJpeg );
-	// drakkar
-	void (*WindowFocus)(qbool focus);
 } refexport_t;
 
 //
@@ -222,5 +220,9 @@ typedef struct {
 // this is the only function actually exported at the linker level
 // if the module can't init to a valid rendering state, it will return NULL
 const refexport_t* GetRefAPI( const refimport_t* rimp );
+
+
+extern int re_cameraMatrixTime; // when the final model-view matrix is computed, for cl_drawMouseLag
+
 
 #endif	// __TR_PUBLIC_H

@@ -1272,6 +1272,9 @@ static void R_DebugGraphics()
 }
 
 
+int re_cameraMatrixTime;
+
+
 // a view may be either the actual camera view, or a mirror / remote location
 
 void R_RenderView( const viewParms_t* parms )
@@ -1289,6 +1292,7 @@ void R_RenderView( const viewParms_t* parms )
 	int firstLitSurf = tr.refdef.numLitSurfs;
 
 	// set viewParms.world
+	re_cameraMatrixTime = Sys_Milliseconds();
 	R_RotateForViewer();
 
 	R_SetupFrustum();
