@@ -363,6 +363,50 @@ static int WINAPI WIN_WriteExceptionFiles( EXCEPTION_POINTERS* pExceptionPointer
 	return EXCEPTION_EXECUTE_HANDLER;
 }
 
+static qbool WIN_ShouldContinueSearch( DWORD exceptionCode )
+{
+	// Obviously, this piece of code must be *very* careful with what exception codes are handled.
+	// Invoking our handler on a non-crash will shut down the application when it shouldn't.
+	// Not invoking our handler on a crash means the app shuts down immediately with no crash report.
+	// As you can see, neither scenario is desirable...
+
+	switch (exceptionCode) {
+		// The following should always invoke our handler.
+		case EXCEPTION_ACCESS_VIOLATION:
+		case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:
+		case EXCEPTION_DATATYPE_MISALIGNMENT:
+		case EXCEPTION_FLT_DIVIDE_BY_ZERO:
+		case EXCEPTION_FLT_INVALID_OPERATION:
+		case EXCEPTION_FLT_STACK_CHECK:
+		case EXCEPTION_IN_PAGE_ERROR:
+		case EXCEPTION_INT_DIVIDE_BY_ZERO:
+		case EXCEPTION_ILLEGAL_INSTRUCTION:
+		case EXCEPTION_NONCONTINUABLE_EXCEPTION:
+		case EXCEPTION_PRIV_INSTRUCTION:
+		case EXCEPTION_STACK_OVERFLOW:
+		// The debugger has first-chance access.
+		// Therefore, if we get these, we should stop too.
+		case EXCEPTION_BREAKPOINT:
+		case EXCEPTION_SINGLE_STEP:
+			return qfalse;
+
+		// We don't handle the rest.
+		// Please leave the commented lines so we know what's being allowed.
+		//case DBG_PRINTEXCEPTION_C:			// used by OutputDebugStringA/W
+		//case EXCEPTION_FLT_INEXACT_RESULT:
+		//case EXCEPTION_FLT_DENORMAL_OPERAND:
+		//case EXCEPTION_FLT_OVERFLOW:
+		//case EXCEPTION_FLT_UNDERFLOW:
+		//case EXCEPTION_INT_OVERFLOW:
+		//case EXCEPTION_INVALID_DISPOSITION:	// should not happen
+		//case EXCEPTION_POSSIBLE_DEADLOCK:		// STATUS_POSSIBLE_DEADLOCK is not defined
+		//case EXCEPTION_GUARD_PAGE:			// we hit the stack guard page (used for growing the stack)
+		//case EXCEPTION_INVALID_HANDLE:		// invalid kernel object (may have been closed)
+		default:
+			return qtrue;
+	}
+}
+
 //
 // The exception handler's job is to reset system settings that won't get reset
 // as part of the normal process clean-up by the OS.
@@ -387,10 +431,13 @@ static qbool exc_exitCalled = qfalse;
 
 LONG CALLBACK WIN_HandleException( EXCEPTION_POINTERS* ep )
 {
-	// Allow calls to OutputDebugStringA/W.
-	if (ep != NULL && ep->ExceptionRecord != NULL &&
-		ep->ExceptionRecord->ExceptionCode == DBG_PRINTEXCEPTION_C)
-		return EXCEPTION_CONTINUE_SEARCH;
+	if (ep != NULL && ep->ExceptionRecord != NULL) {
+		qbool contSearch = WIN_ShouldContinueSearch(ep->ExceptionRecord->ExceptionCode);
+		if (contSearch && (ep->ExceptionRecord->ExceptionFlags & EXCEPTION_NONCONTINUABLE) != 0)
+			contSearch = qfalse;
+		if (contSearch)
+			return EXCEPTION_CONTINUE_SEARCH;
+	}
 
 	__try {
 		WIN_EndTimePeriod();
