@@ -27,6 +27,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 static const cvar_t* con_noprint;
 static const cvar_t* con_notifytime;
 static const cvar_t* con_scale;
+static const cvar_t* con_scaleMode; // 0 = without res, 1 = with res, 2 = 8x12
 static const cvar_t* con_speed;
 
 
@@ -252,15 +253,19 @@ static void Con_ResizeFont()
 	con.ch = CONCHAR_HEIGHT;
 	con.xadjust = CONCHAR_WIDTH;
 
-	if (!con_scale || !con_scale->value)
+	if (!con_scale || !con_scaleMode)
 		return;
 
-	SCR_AdjustFrom640( &con.cw, &con.ch, NULL, NULL );
+	if (con_scaleMode->integer == 2)
+		return;
+
+	if (con_scaleMode->integer == 1)
+		SCR_AdjustFrom640( &con.cw, &con.ch, NULL, NULL );
 
 	// bugs in the renderer's overflow handling will cause crashes
 	// if the console has too many polys/verts because of too small a font
 	// this is a fairly arbitrary lower bound, but better than nothing
-	float scale = max( 0.25f, con_scale->value );
+	const float scale = max( 0.25f, fabs( con_scale->value ) );
 	con.cw *= scale;
 	con.ch *= scale;
 
@@ -280,6 +285,7 @@ void CL_ConInit()
 	con_noprint = Cvar_Get( "con_noprint", "0", 0 );
 	con_notifytime = Cvar_Get( "con_notifytime", "3", CVAR_ARCHIVE );
 	con_scale = Cvar_Get( "con_scale", "1", CVAR_ARCHIVE );
+	con_scaleMode = Cvar_Get( "con_scaleMode", "0", CVAR_ARCHIVE );
 	con_speed = Cvar_Get( "con_speed", "3", CVAR_ARCHIVE );
 
 	Field_Clear( &g_consoleField );

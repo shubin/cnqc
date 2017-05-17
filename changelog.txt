@@ -1,6 +1,13 @@
 
 DD Mmm 17 - 1.49
 
+add: con_scaleMode specifies the console text scaling mode
+	con_scaleMode 0 (default) = text size scales with con_scale but not the resolution
+	con_scaleMode 1 = text size scales with con_scale and the resolution
+	con_scaleMode 2 = text size is always 8x12
+
+chg: con_scale only specifies the console text scaling factor and nothing else
+
 fix: the pukka3tourney2 slime wasn't green with r_vertexLight 1
 
 fix: the ct3ctf1 grate near quad was getting picmipped when it wasn't supposed to be
