@@ -153,6 +153,8 @@ static void Con_Clear_f( void )
 		con.text[i] = (COLOR_WHITE << 8) | ' ';
 	}
 
+	con.current = con.totallines - 1;
+
 	Con_Bottom();
 }
 
@@ -233,7 +235,7 @@ static void Con_Init()
 
 	con.linewidth = CONSOLE_WIDTH;
 	con.totallines = CON_TEXTSIZE / con.linewidth;
-	con.current = con.totallines - 1;
+	
 	Con_Clear_f();
 
 	con.cw = CONCHAR_WIDTH;
