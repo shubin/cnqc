@@ -35,7 +35,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <VersionHelpers.h>
 
 
-WinVars_t		g_wv;
+WinVars_t g_wv;
 
 
 static qbool win_timePeriodActive = qfalse;
@@ -552,8 +552,6 @@ void Sys_Init()
 
 	// save out a couple things in rom cvars for the renderer to access
 	Cvar_Get( "win_hinstance", va("%i", (int)g_wv.hInstance), CVAR_ROM );
-
-	//Cvar_Set( "username", Sys_GetCurrentUser() );
 }
 
 
@@ -578,7 +576,7 @@ static BOOL CALLBACK WIN_MonitorEnumCallback( HMONITOR hMonitor, HDC hdcMonitor,
 }
 
 
-static void WIN_GetMonitorList()
+static void WIN_InitMonitorList()
 {
 	EnumDisplayMonitors( NULL, NULL, &WIN_MonitorEnumCallback, 0 );
 
@@ -596,17 +594,11 @@ static void WIN_GetMonitorList()
 }
 
 
-void WIN_GetStartUpMonitorIndex()
+void WIN_UpdateMonitorIndexFromCvar()
 {
-	static qbool called = qfalse;
-
-	if ( called )
-		return;
-
-	called = qtrue;
-
-	// r_monitor is the 1-based monitor index the user asks for
-	const int monitor = Cvar_Get( "r_monitor", "0", CVAR_ARCHIVE )->integer;
+	// r_monitor is the 1-based monitor index, 0 means primary monitor
+	// use Cvar_Get to enforce the latched change, if any
+	const int monitor = Cvar_Get( "r_monitor", "0", CVAR_ARCHIVE | CVAR_LATCH )->integer;
 	if ( monitor <= 0 || monitor > g_wv.monitorCount )
 	{
 		g_wv.monitor = g_wv.primaryMonitor;
@@ -617,7 +609,7 @@ void WIN_GetStartUpMonitorIndex()
 }
 
 
-void WIN_GetMonitorIndexFromMainWindow()
+void WIN_UpdateMonitorIndexFromMainWindow()
 {
 	const HMONITOR hMonitor = MonitorFromWindow( g_wv.hWnd, MONITOR_DEFAULTTONEAREST );
 	for ( int i = 0; i < g_wv.monitorCount; i++ )
@@ -628,6 +620,17 @@ void WIN_GetMonitorIndexFromMainWindow()
 			break;
 		}
 	}
+
+	// if r_monitor is 0 and we're already on the primary monitor,
+	// don't change the cvar to a non-zero number
+	if ( Cvar_VariableIntegerValue( "r_monitor" ) == 0 &&
+		 g_wv.monitor == g_wv.primaryMonitor )
+	{
+		return;
+	}
+
+	// use the function to apply the change properly
+	Cvar_Set( "r_monitor", va( "%d", g_wv.monitor + 1 ) );
 }
 
 
@@ -642,7 +645,7 @@ int WINAPI WinMainImpl( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCm
 
 	g_wv.hInstance = hInstance;
 
-	WIN_GetMonitorList();
+	WIN_InitMonitorList();
 
 	// done before Com/Sys_Init since we need this for error output
 	Sys_CreateConsole();

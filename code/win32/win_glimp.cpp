@@ -471,7 +471,6 @@ static qbool GLW_CreateWindow( int width, int height, int colorbits )
 		const int w = r.right - r.left;
 		const int h = r.bottom - r.top;
 
-		WIN_GetStartUpMonitorIndex();
 		const RECT monRect = g_wv.monitorRects[g_wv.monitor];
 
 		int dx = 0;
@@ -549,14 +548,14 @@ static qbool GLW_SetMode( qbool cdsFullscreen )
 {
 	HDC hDC = GetDC( GetDesktopWindow() );
 	glw_state.desktopBPP = GetDeviceCaps( hDC, BITSPIXEL );
-	glw_state.desktopWidth = GetDeviceCaps( hDC, HORZRES );
-	glw_state.desktopHeight = GetDeviceCaps( hDC, VERTRES );
 	ReleaseDC( GetDesktopWindow(), hDC );
 
 	glInfo.isFullscreen = cdsFullscreen;
+	WIN_UpdateMonitorIndexFromCvar();
 	if ( !R_GetModeInfo( &glConfig.vidWidth, &glConfig.vidHeight, &glConfig.windowAspect ) ) {
-		glConfig.vidWidth = glw_state.desktopWidth;
-		glConfig.vidHeight = glw_state.desktopHeight;
+		const RECT monRect = g_wv.monitorRects[g_wv.monitor];
+		glConfig.vidWidth = monRect.right - monRect.left;
+		glConfig.vidHeight = monRect.bottom - monRect.top;
 		glConfig.windowAspect = (float)glConfig.vidWidth / glConfig.vidHeight;
 		cdsFullscreen = qfalse;
 	}

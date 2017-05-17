@@ -40,8 +40,8 @@ qbool	IN_ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam ); // returns tr
 void	IN_Frame();
 void	IN_Shutdown();
 
-void WIN_GetStartUpMonitorIndex();
-void WIN_GetMonitorIndexFromMainWindow();
+void WIN_UpdateMonitorIndexFromCvar();
+void WIN_UpdateMonitorIndexFromMainWindow();
 void WIN_UpdateResolution( int width, int height );
 
 void SNDDMA_Activate();
@@ -68,9 +68,9 @@ typedef struct
 
 	RECT		monitorRects[MAX_MONITOR_COUNT];
 	HMONITOR	hMonitors[MAX_MONITOR_COUNT];
-	int			monitor; // index of the monitor currently used for display
-	int			primaryMonitor;
+	int			monitor;		// 0-based index of the monitor currently used for display
+	int			primaryMonitor;	// 0-based index of the primary monitor
 	int			monitorCount;
 } WinVars_t;
 
-extern WinVars_t	g_wv;
+extern WinVars_t g_wv;

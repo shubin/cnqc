@@ -245,6 +245,7 @@ LRESULT CALLBACK MainWndProc (
 		vid_xpos = Cvar_Get( "vid_xpos", "3", CVAR_ARCHIVE );
 		vid_ypos = Cvar_Get( "vid_ypos", "22", CVAR_ARCHIVE );
 		r_fullscreen = Cvar_Get( "r_fullscreen", "1", CVAR_ARCHIVE | CVAR_LATCH );
+		Cvar_Get( "r_monitor", "0", CVAR_ARCHIVE | CVAR_LATCH ); // 1-based monitor index, 0 means primary
 
 		if ( r_fullscreen->integer )
 			WIN_DisableAltTab();
@@ -273,7 +274,7 @@ LRESULT CALLBACK MainWndProc (
 		{
 			if (!r_fullscreen->integer )
 			{
-				WIN_GetMonitorIndexFromMainWindow();
+				WIN_UpdateMonitorIndexFromMainWindow();
 
 				RECT r;
 				r.left   = 0;

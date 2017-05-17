@@ -37,7 +37,7 @@ typedef struct
 	HDC			hDC;
 	HGLRC		hGLRC;
 	HINSTANCE	hinstOpenGL;
-	int			desktopWidth, desktopHeight, desktopBPP;
+	int			desktopBPP;
 	qbool		cdsFullscreen;
 	qbool		pixelFormatSet;
 	int			nPendingPF;
