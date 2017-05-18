@@ -657,7 +657,7 @@ typedef struct {
 } field_t;
 
 void Field_Clear( field_t *edit );
-void Field_AutoComplete( field_t *edit ); // should only be called by Console_Key
+void Field_AutoComplete( field_t *edit, qbool insertBackslash ); // should only be called by Console_Key
 
 // these are the functions you can use from your own command argument auto-completion callbacks
 void Field_AutoCompleteFrom( int startArg, int compArg, qbool searchCmds, qbool searchVars );

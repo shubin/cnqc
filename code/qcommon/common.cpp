@@ -2804,20 +2804,14 @@ void Field_AutoCompleteFrom( int startArg, int compArg, qbool searchCmds, qbool 
 }
 
 
-// returns qtrue if there already was a leading slash
-static qbool Field_EnsureLeadingSlash( field_t *field )
+static void Field_AddLeadingSlash( field_t *field )
 {
-	if ( String_HasLeadingSlash( field->buffer ) )
-		return qtrue;
-
 	const size_t length = strlen( field->buffer );
 	if ( length + 1 < sizeof( field->buffer ) ) {
 		memmove( field->buffer + 1, field->buffer, length + 1 );
 		*field->buffer = '\\';
 		field->cursor++;
 	}
-
-	return qfalse;
 }
 
 
@@ -2855,10 +2849,12 @@ static qbool Field_AutoCompleteNoLeadingSlash( field_t *field )
 }
 
 
-void Field_AutoComplete( field_t *field )
+void Field_AutoComplete( field_t *field, qbool insertBackslash )
 {
 	const qbool ranComp = Field_AutoCompleteNoLeadingSlash( field );
-	const qbool hadSlash = Field_EnsureLeadingSlash( field );
+	const qbool hadSlash = String_HasLeadingSlash( field->buffer );
+	if ( !hadSlash && insertBackslash )
+		Field_AddLeadingSlash( field );
 	if ( ranComp )
 		return;
 

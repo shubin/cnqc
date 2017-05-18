@@ -135,6 +135,7 @@ static void tty_Hide()
       tty_Back();
     }
   }
+  tty_Back(); // delete the leading "]"
   ttycon_hide++;
 }
 
@@ -148,6 +149,7 @@ static void tty_Show()
   ttycon_hide--;
   if (ttycon_hide == 0)
   {
+    write(STDOUT_FILENO, "]", 1);
     if (tty_con.cursor)
     {
       for (i=0; i<tty_con.cursor; i++)
@@ -341,7 +343,11 @@ const char* Sys_ConsoleInput()
         if (key == '\t')
         {
           tty_Hide();
-          Field_AutoComplete( &tty_con );
+#ifdef DEDICATED
+          Field_AutoComplete( &tty_con, qfalse );
+#else
+          Field_AutoComplete( &tty_con, qtrue );
+#endif
           tty_Show();
           return NULL;
         }
@@ -442,6 +448,7 @@ void Sys_ConsoleInputShutdown()
 {
 	if (ttycon_on)
 	{
+		tty_Back(); // delete the leading "]"
 		tcsetattr (0, TCSADRAIN, &tty_tc);
 		ttycon_on = qfalse;
 	}

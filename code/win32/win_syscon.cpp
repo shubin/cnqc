@@ -68,11 +68,12 @@ typedef struct
 
 	char		consoleText[512], returnedText[512];
 	int			visLevel;
-	qbool	quitOnClose;
+	qbool		quitOnClose;
 	int			windowWidth, windowHeight;
 	
 	WNDPROC		SysInputLineWndProc;
 
+	field_t		inputField;
 } WinConData;
 
 static WinConData s_wcd;
@@ -273,14 +274,28 @@ LONG WINAPI InputLineWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 		break;
 
 	case WM_CHAR:
-		if ( wParam == 13 )
+		if ( wParam == VK_RETURN )
 		{
 			GetWindowText( s_wcd.hwndInputLine, inputBuffer, sizeof( inputBuffer ) );
 			strncat( s_wcd.consoleText, inputBuffer, sizeof( s_wcd.consoleText ) - strlen( s_wcd.consoleText ) - 5 );
-			strcat( s_wcd.consoleText, "\n" );
+			Q_strcat( s_wcd.consoleText, sizeof(s_wcd.consoleText), "\n" );
 			SetWindowText( s_wcd.hwndInputLine, "" );
 
 			Sys_Print( va( "]%s\n", inputBuffer ) );
+
+			return 0;
+		}
+		if ( wParam == VK_TAB )
+		{	
+			GetWindowText( s_wcd.hwndInputLine, s_wcd.inputField.buffer, sizeof( s_wcd.inputField.buffer ) );
+			SendMessage( s_wcd.hwndInputLine, EM_GETSEL, (WPARAM)&s_wcd.inputField.cursor, (LPARAM)NULL );
+			s_wcd.inputField.cursor = max( s_wcd.inputField.cursor, 0 );
+			s_wcd.inputField.scroll = 0;
+			s_wcd.inputField.widthInChars = 0;
+			Field_AutoComplete( &s_wcd.inputField, qfalse );
+
+			SetWindowText( s_wcd.hwndInputLine, s_wcd.inputField.buffer );
+			SendMessage( s_wcd.hwndInputLine, EM_SETSEL, (WPARAM)s_wcd.inputField.cursor, (LPARAM)s_wcd.inputField.cursor );
 
 			return 0;
 		}

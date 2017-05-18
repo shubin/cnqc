@@ -494,7 +494,7 @@ static void Console_Key( int key )
 	// command completion
 
 	if (key == K_TAB) {
-		Field_AutoComplete(&g_consoleField);
+		Field_AutoComplete( &g_consoleField, qtrue );
 		return;
 	}
 

@@ -55,6 +55,8 @@ chg: remove the byzantine r_mode usage added in 1.47
 
 Windows:
 
+add: auto-completion in the dedicated server console window
+
 add: new bindable key: BACKSLASH (the key to the right of the left shift button)
 
 fix: the crash handler will reset the system timer resolution
@@ -67,6 +69,10 @@ chg: reduced raw mouse input latency and added cl_drawMouseLag
 
 
 Linux:
+
+fix: tty handling of the leading "]" character
+
+fix: dedicated servers no longer insert a leading backslash when running auto-completion
 
 fix: the crash handler will reset tty input mode correctly
 
