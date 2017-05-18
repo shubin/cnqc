@@ -24,9 +24,17 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_local.h"
 
 
-#define	WAVEVALUE( table, base, amplitude, phase, freq )  ((base) + table[ myftol( ( ( (phase) + tess.shaderTime * (freq) ) * FUNCTABLE_SIZE ) ) & FUNCTABLE_MASK ] * (amplitude))
+static double WaveValue( const float* table, double base, double amplitude, double phase, double freq )
+{
+	// the original code did a double to 32-bit int conversion of x
+	const double x = (phase + tess.shaderTime * freq) * FUNCTABLE_SIZE;
+	const int i = (int)((int64_t)x & (int64_t)FUNCTABLE_MASK);
+	const double r = base + table[i] * amplitude;
 
-static float *TableForFunc( genFunc_t func ) 
+	return r;
+}
+
+static const float* TableForFunc( genFunc_t func ) 
 {
 	switch ( func )
 	{
@@ -56,11 +64,7 @@ static float *TableForFunc( genFunc_t func )
 */
 static float EvalWaveForm( const waveForm_t *wf ) 
 {
-	float	*table;
-
-	table = TableForFunc( wf->func );
-
-	return WAVEVALUE( table, wf->base, wf->amplitude, wf->phase, wf->frequency );
+	return WaveValue( TableForFunc( wf->func ), wf->base, wf->amplitude, wf->phase, wf->frequency );
 }
 
 static float EvalWaveFormClamped( const waveForm_t *wf )
@@ -112,18 +116,15 @@ DEFORMATIONS
 
 static void RB_CalcDeformVertexes( const deformStage_t* ds )
 {
-	int i;
-	vec3_t	offset;
-	float	scale;
-	float	*xyz = ( float * ) tess.xyz;
-	float	*normal = ( float * ) tess.normal;
-	float	*table;
+	float* xyz = (float*)tess.xyz;
+	float* normal = (float*)tess.normal;
+	vec3_t offset;
 
 	if ( ds->deformationWave.frequency == 0 )
 	{
-		scale = EvalWaveForm( &ds->deformationWave );
+		const float scale = EvalWaveForm( &ds->deformationWave );
 
-		for ( i = 0; i < tess.numVertexes; i++, xyz += 4, normal += 4 )
+		for ( int i = 0; i < tess.numVertexes; i++, xyz += 4, normal += 4 )
 		{
 			VectorScale( normal, scale, offset );
 			
@@ -134,13 +135,12 @@ static void RB_CalcDeformVertexes( const deformStage_t* ds )
 	}
 	else
 	{
-		table = TableForFunc( ds->deformationWave.func );
+		const float* table = TableForFunc(ds->deformationWave.func);
 
-		for ( i = 0; i < tess.numVertexes; i++, xyz += 4, normal += 4 )
+		for ( int i = 0; i < tess.numVertexes; i++, xyz += 4, normal += 4 )
 		{
-			float off = ( xyz[0] + xyz[1] + xyz[2] ) * ds->deformationSpread;
-
-			scale = WAVEVALUE( table, ds->deformationWave.base, 
+			const float off = ( xyz[0] + xyz[1] + xyz[2] ) * ds->deformationSpread;
+			const float scale = WaveValue( table, ds->deformationWave.base, 
 				ds->deformationWave.amplitude,
 				ds->deformationWave.phase + off,
 				ds->deformationWave.frequency );
@@ -214,23 +214,17 @@ static void RB_CalcBulgeVertexes( const deformStage_t* ds )
 
 static void RB_CalcMoveVertexes( const deformStage_t* ds )
 {
-	int			i;
-	float		*xyz;
-	float		*table;
-	double		scale;
-	vec3_t		offset;
-
-	table = TableForFunc( ds->deformationWave.func );
-
-	scale = WAVEVALUE( table, ds->deformationWave.base, 
+	const float* table = TableForFunc( ds->deformationWave.func );
+	const double scale = WaveValue( table, ds->deformationWave.base, 
 		ds->deformationWave.amplitude,
 		ds->deformationWave.phase,
 		ds->deformationWave.frequency );
 
+	vec3_t offset;
 	VectorScale( ds->moveVector, scale, offset );
 
-	xyz = ( float * ) tess.xyz;
-	for ( i = 0; i < tess.numVertexes; i++, xyz += 4 ) {
+	float* xyz = (float*)tess.xyz;
+	for ( int i = 0; i < tess.numVertexes; i++, xyz += 4 ) {
 		VectorAdd( xyz, offset, xyz );
 	}
 }
