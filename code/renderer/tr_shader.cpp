@@ -1697,7 +1697,6 @@ static void CollapseStages()
 	int numStages = shader.numStages;
 	shaderStage_t* aStages = &stages[0];
 
-#define CollapseSuccess { aStages[0].mtStages = 1; aStages += 2; numStages -= 2; continue; }
 #define CollapseFailure { ++aStages; --numStages; continue; }
 
 	while (numStages >= 2) {
@@ -1723,13 +1722,30 @@ static void CollapseStages()
 		if ( collapse[i].blendA == -1 )
 			CollapseFailure;
 
+		// Check that all colors are pure white on the second stage
+		// because the stage iterator can't currently specify
+		// another color array.
+		// Example shader broken without this extra test:
+		// "textures/sfx/diamond2cjumppad"
+		// The ring pulses in and out instead of only out.
+		static stageVars_t svarsMT;
+		R_ComputeColors( &aStages[1], svarsMT );
+		const int* colors = (const int*)svarsMT.colors;
+		const int colorCount = tess.numVertexes;
+		int allOnes = -1;
+		for ( int c = 0; c < colorCount; ++c )
+			allOnes &= colors[c];
+		if ( allOnes != -1 )
+			CollapseFailure;
+
 		aStages[0].stateBits &= ~GLS_BLEND_BITS;
 		aStages[0].stateBits |= collapse[i].multitextureBlend;
 		aStages[1].mtEnv = collapse[i].multitextureEnv;
-		CollapseSuccess;
+		aStages[0].mtStages = 1;
+		aStages += 2;
+		numStages -= 2;
 	}
 
-#undef CollapseSuccess
 #undef CollapseFailure
 }
 

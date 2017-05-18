@@ -185,7 +185,7 @@ static void GL2_DynLights_MultitextureStage( int stage )
 	GL_TexEnv( pStage->mtEnv );
 	R_BindAnimatedImage( &pStage->bundle );
 
-	stageVars_t svarsMT;
+	static stageVars_t svarsMT; // this is a huge struct
 	R_ComputeTexCoords( pStage, svarsMT );
 	qglEnableClientState( GL_TEXTURE_COORD_ARRAY );
 	qglTexCoordPointer( 2, GL_FLOAT, 0, svarsMT.texcoords );
