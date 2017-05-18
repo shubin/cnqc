@@ -29,14 +29,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../qcommon/cg_public.h"
 #include "../qcommon/ui_public.h"
 
-/* fucking amateur hour garbage code - best to just externC the whole pile i expect
-#define USE_CURL
-// note: we REALLY don't want to use a dll for curl, but the .lib is SO bloated  >:(
-//#define CURL_STATICLIB
-#define USE_CURL_DLOPEN
-#include "cl_curl.h"
-*/
-
 
 // snapshots are a view of the server at a given time
 typedef struct {
@@ -195,17 +187,6 @@ typedef struct {
 	int		downloadSize;	// how many bytes we got
 	char	downloadList[MAX_INFO_STRING]; // list of paks we need to download
 	qbool	downloadRestart;	// if true, we need to do another FS_Restart because we downloaded a pak
-
-#if defined(USE_CURL)
-	qbool	cURLEnabled;
-	qbool	cURLUsed;
-	qbool	cURLDisconnected;
-	int		sv_allowDownload;
-	char	sv_dlURL[MAX_CVAR_VALUE_STRING];
-	char	downloadURL[MAX_OSPATH];
-	CURL	*downloadCURL;
-	CURLM	*downloadCURLM;
-#endif
 
 	// demo information
 	char	demoName[MAX_OSPATH];

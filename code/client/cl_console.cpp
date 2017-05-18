@@ -265,7 +265,7 @@ static void Con_ResizeFont()
 	// bugs in the renderer's overflow handling will cause crashes
 	// if the console has too many polys/verts because of too small a font
 	// this is a fairly arbitrary lower bound, but better than nothing
-	const float scale = max( 0.25f, fabs( con_scale->value ) );
+	const float scale = max( 0.25f, fabsf( con_scale->value ) );
 	con.cw *= scale;
 	con.ch *= scale;
 

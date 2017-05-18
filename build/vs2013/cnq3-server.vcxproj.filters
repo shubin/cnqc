@@ -120,9 +120,6 @@
     <ClInclude Include="..\..\code\botlib\l_struct.h">
       <Filter>botlib</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\code\client\cl_curl.h">
-      <Filter>client</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\code\client\client.h">
       <Filter>client</Filter>
     </ClInclude>

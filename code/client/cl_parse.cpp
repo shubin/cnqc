@@ -385,19 +385,6 @@ void CL_SystemInfoChanged()
 }
 
 
-#if defined(USE_CURL)
-
-static void CL_ParseServerInfo()
-{
-	const char *serverInfo = cl.gameState.stringData + cl.gameState.stringOffsets[ CS_SERVERINFO ];
-
-	clc.sv_allowDownload = atoi(Info_ValueForKey(serverInfo, "sv_allowDownload"));
-	Q_strncpyz(clc.sv_dlURL, Info_ValueForKey(serverInfo, "sv_dlURL"), sizeof(clc.sv_dlURL));
-}
-
-#endif
-
-
 static void CL_ParseGamestate( msg_t *msg )
 {
 	int				i;
@@ -460,11 +447,6 @@ static void CL_ParseGamestate( msg_t *msg )
 	clc.clientNum = MSG_ReadLong(msg);
 	// read the checksum feed
 	clc.checksumFeed = MSG_ReadLong( msg );
-
-#if defined(USE_CURL)
-	// Parse values for cURL downloads
-	CL_ParseServerInfo();
-#endif
 
 	// parse serverId and other cvars
 	CL_SystemInfoChanged();

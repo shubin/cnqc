@@ -48,10 +48,6 @@ static cvar_t* cl_motdString;
 cvar_t	*cl_allowDownload;
 cvar_t	*cl_inGameVideo;
 
-#if defined(USE_CURL)
-cvar_t	*cl_dlURL;
-#endif
-
 clientActive_t		cl;
 clientConnection_t	clc;
 clientStatic_t		cls;
@@ -487,9 +483,6 @@ CL_ShutdownAll
 */
 void CL_ShutdownAll(void)
 {
-#if defined(USE_CURL)
-	CL_cURL_Shutdown();
-#endif
 	// clear sounds
 	S_DisableSounds();
 	// shutdown CGame
@@ -1082,23 +1075,6 @@ static void CL_Clientinfo_f( void )
 
 static void CL_DownloadsComplete()
 {
-#if defined(USE_CURL)
-	// if we downloaded using cURL
-	if( clc.cURLUsed ) {
-		clc.cURLUsed = qfalse;
-		CL_cURL_Shutdown();
-		if( clc.cURLDisconnected ) {
-			if( clc.downloadRestart ) {
-				FS_Restart( clc.checksumFeed );
-				clc.downloadRestart = qfalse;
-			}
-			clc.cURLDisconnected = qfalse;
-			CL_Reconnect_f();
-			return;
-		}
-	}
-#endif
-
 	// if we downloaded files we need to restart the file system
 	if (clc.downloadRestart) {
 		clc.downloadRestart = qfalse;
@@ -1183,11 +1159,7 @@ A download completed or failed
 void CL_NextDownload(void) {
 	char *s;
 	char *remoteName, *localName;
-#if defined(USE_CURL)
-	char *dlURL;
-#endif
 
-	qbool useCURL = qfalse;
 	// We are looking to start a download here
 	if (*clc.downloadList) {
 		s = clc.downloadList;
@@ -1211,42 +1183,17 @@ void CL_NextDownload(void) {
 		else
 			s = localName + strlen(localName); // point at the nul byte
 
-#if defined(USE_CURL)
-		dlURL = clc.sv_dlURL;
-		if( !*dlURL || ( cl_allowDownload->integer == 2 )) {
-			dlURL = Cvar_VariableString( "cl_dlURL" );
-		}
-
-		if(!*dlURL) {
-			Com_Printf("WARNING: no valid download URL.\n"
-				"cl_allowDownload is %d\n"
-				"To force, enter a valid cl_dlURL and set "
-				"cl_allowdownload to 2.\n",
+		if( !cl_allowDownload->integer ) {
+			Com_Error(ERR_DROP, "UDP Downloads are "
+				"disabled on your client. "
+				"(cl_allowDownload is %d)",
 				cl_allowDownload->integer);
-		}
-		else if(!CL_cURL_Init()) {
-			Com_Printf("WARNING: could not load "
-				"cURL library\n");
+		return;
 		}
 		else {
-			CL_cURL_BeginDownload(localName, va("%s/%s",
-				dlURL, remoteName));
-			useCURL = qtrue;
+			CL_BeginDownload( localName, remoteName );
 		}
-#endif
 
-		if( !useCURL ) {
-			if( !cl_allowDownload->integer ) {
-				Com_Error(ERR_DROP, "UDP Downloads are "
-					"disabled on your client. "
-					"(cl_allowDownload is %d)",
-					cl_allowDownload->integer);
-			return;
-			}
-			else {
-				CL_BeginDownload( localName, remoteName );
-			}
-		}
 		clc.downloadRestart = qtrue;
 
 		// move over the rest
@@ -1560,25 +1507,6 @@ void CL_Frame( int msec )
 	if ( !com_cl_running->integer ) {
 		return;
 	}
-
-#if defined(USE_CURL)
-	if( clc.downloadCURLM ) {
-		CL_cURL_PerformDownload();
-		// we can't process frames normally when in disconnected
-		// download mode since the ui vm expects cls.state to be
-		// CA_CONNECTED
-		if( clc.cURLDisconnected ) {
-			cls.realFrametime = msec;
-			cls.frametime = msec;
-			cls.realtime += cls.frametime;
-			SCR_UpdateScreen();
-			S_Update();
-			Con_RunConsole();
-			cls.framecount++;
-			return;
-		}
-	}
-#endif
 
 	if ( cls.cddialog ) {
 		// bring up the cd error dialog if needed
@@ -2015,12 +1943,6 @@ void CL_Init()
 	cl_packetdup = Cvar_Get ("cl_packetdup", "1", CVAR_ARCHIVE );
 
 	cl_allowDownload = Cvar_Get ("cl_allowDownload", "0", CVAR_ARCHIVE);
-#if defined(USE_CURL)
-	cl_dlURL = Cvar_Get( "cl_dlURL", "", 0 );
-#if defined(USE_CURL_DLOPEN)
-	cl_cURLLib = Cvar_Get( "cl_cURLLib", DEFAULT_CURL_LIB, 0 );
-#endif
-#endif
 
 #ifdef MACOS_X
 	// In game video is REALLY slow in Mac OS X right now due to driver slowness

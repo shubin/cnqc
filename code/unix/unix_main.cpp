@@ -36,17 +36,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <sys/wait.h>
 #include <sys/mman.h>
 #include <errno.h>
-
-#if (defined(DEDICATED) && defined(USE_SDL_VIDEO))
-#undef USE_SDL_VIDEO
-#endif
-
-#if USE_SDL_VIDEO
-#include "SDL.h"
-#include "SDL_loadso.h"
-#else
 #include <dlfcn.h>
-#endif
 
 #if defined(__sun)
   #include <sys/file.h>
@@ -506,11 +496,7 @@ void Sys_Quit()
 
 const char* Sys_DllError()
 {
-#if USE_SDL_VIDEO
-	return SDL_GetError();
-#else
 	return dlerror();
-#endif
 }
 
 
@@ -519,11 +505,7 @@ void Sys_UnloadDll( void* dllHandle )
 	if ( !dllHandle )
 		return;
 
-#if USE_SDL_VIDEO
-	SDL_UnloadObject( dllHandle );
-#else
 	dlclose( dllHandle );
-#endif
 
 	const char* err = Sys_DllError();
 	if ( err ) {
@@ -534,14 +516,8 @@ void Sys_UnloadDll( void* dllHandle )
 
 static void* try_dlopen( const char* base, const char* gamedir, const char* filename )
 {
-	void* libHandle;
 	const char* fn = FS_BuildOSPath( base, gamedir, filename );
-
-#if USE_SDL_VIDEO
-	libHandle = SDL_LoadObject(fn);
-#else
-	libHandle = dlopen( fn, RTLD_NOW );
-#endif
+	void* libHandle = dlopen( fn, RTLD_NOW );
 
 	if (!libHandle) {
 		Com_Printf( "Sys_LoadDll(%s) failed: %s\n", fn, Sys_DllError() );
@@ -581,13 +557,8 @@ void* QDECL Sys_LoadDll( const char* name, dllSyscall_t *entryPoint, dllSyscall_
 	if ( !libHandle )
 		return NULL;
 
-#if USE_SDL_VIDEO
-	dllEntry_t dllEntry = (dllEntry_t)SDL_LoadFunction( libHandle, "dllEntry" );
-	*entryPoint = (dllSyscall_t)SDL_LoadFunction( libHandle, "vmMain" );
-#else
 	dllEntry_t dllEntry = (dllEntry_t)dlsym( libHandle, "dllEntry" );
 	*entryPoint = (dllSyscall_t)dlsym( libHandle, "vmMain" );
-#endif
 
 	if ( !*entryPoint || !dllEntry ) {
 		const char* err = Sys_DllError();
@@ -857,16 +828,6 @@ int main( int argc, const char** argv )
 	Sys_ConsoleInputInit();
 
 	while (qtrue) {
-		// if running as a client but not focused, sleep a bit
-		// (servers have their own sleep path)
-#if !defined( DEDICATED ) && USE_SDL_VIDEO
-		int appState = SDL_GetAppState();
-		if ( !( appState & SDL_APPACTIVE ) )
-			usleep( 20000 ); // minimised: sleep a lot
-		if ( !( appState & ( SDL_APPMOUSEFOCUS | SDL_APPINPUTFOCUS ) ) )
-			usleep( 10000 );
-#endif
-
 		Com_Frame();
 	}
 

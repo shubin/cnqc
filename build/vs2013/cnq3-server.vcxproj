@@ -266,7 +266,6 @@ copy "..\..\..\.bin\release_x64\cnq3-server-x64.pdb" "$(QUAKE3DIR)"</Command>
     <ClInclude Include="..\..\code\botlib\l_precomp.h" />
     <ClInclude Include="..\..\code\botlib\l_script.h" />
     <ClInclude Include="..\..\code\botlib\l_struct.h" />
-    <ClInclude Include="..\..\code\client\cl_curl.h" />
     <ClInclude Include="..\..\code\client\client.h" />
     <ClInclude Include="..\..\code\client\keycodes.h" />
     <ClInclude Include="..\..\code\client\keys.h" />

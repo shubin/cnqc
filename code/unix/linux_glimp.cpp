@@ -55,11 +55,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "linux_local.h"
 #include "unix_glw.h"
 
-//#if !defined(__sun)
-//#include <X11/extensions/xf86dga.h>
-//#include <X11/extensions/xf86vmode.h>
-//#endif
-
 
 static Display *dpy = NULL;
 static Window win = 0;
@@ -386,79 +381,6 @@ qbool rawmouse_t::ProcessEvent( XEvent& event )
 	XFreeEventData(dpy, &event.xcookie);
 	return qtrue;
 }
-
-
-///////////////////////////////////////////////////////////////
-
-
-#if 0
-
-static KeySym keys[255];
-
-
-static void IN_InitKeyboard()
-{
-	int min, max;
-	XDisplayKeycodes( dpy, &min, &max );
-
-/*
-	for (int i = min; i < max; ++i) {
-		KeySym keysym = XkbKeycodeToKeysym( dpy, i, 0, 0 );
-		if ((keysym > 32) && (keysym < 127)) {
-			Com_Printf( "key[%d] : sym %04X %c \n", i, keysym, keysym );
-		} else {
-			Com_Printf( "key[%d] : sym %04X %s \n", i, keysym, XKeysymToString(keysym) );
-		}
-	}
-*/
-
-	for (int i = min; i < max; ++i) {
-		KeySym keysym = XkbKeycodeToKeysym( dpy, i, 0, 0 );
-		keys[i] = keysym;
-	}
-}
-
-
-static int TranslateKey( XKeyEvent* ev )
-{
-	static char buf[64];
-	KeySym keysym;
-	int XLookupRet = XLookupString( ev, buf, sizeof buf, &keysym, 0 );
-
-	switch (ev->keycode) {
-		//case XK_grave: return '~';
-		case XK_Tab: return K_TAB;
-		case XK_Return: return K_ENTER;
-
-		case XK_F1:  return K_F1;
-		case XK_F2:  return K_F2;
-		case XK_F3:  return K_F3;
-		case XK_F4:  return K_F4;
-		case XK_F5:  return K_F5;
-		case XK_F6:  return K_F6;
-		case XK_F7:  return K_F7;
-		case XK_F8:  return K_F8;
-		case XK_F9:  return K_F9;
-		case XK_F10: return K_F10;
-		case XK_F11: return K_F11;
-		case XK_F12: return K_F12;
-	}
-
-	if (ev->keycode > 255) {
-		Com_Printf( "key %ul out of range \n", ev->keycode );
-		return 0;	// whatever it is, it's a Magic Key that's not in our list
-	}
-
-	// the keyCODE is just the key number, so map to ascii first
-	int key = (int)keys[ev->keycode];
-
-	if ((key >= 'A') && (key <= 'Z'))
-		return (key - 'A' + 'a');
-
-	return key;
-}
-
-#endif
 
 
 ///////////////////////////////////////////////////////////////
@@ -826,16 +748,6 @@ static void IN_DeactivateMouse()
 ///////////////////////////////////////////////////////////////
 
 
-
-
-
-
-
-
-#ifdef _XF86DGA_H_
-#define HAVE_XF86DGA
-#endif
-
 #define	WINDOW_CLASS_NAME "CNQ3"
 
 // OpenGL driver
@@ -866,15 +778,6 @@ cvar_t   *joy_threshold    = NULL;
 
 cvar_t	*r_fullscreen;
 
-qboolean vidmode_ext = qfalse;
-#ifdef HAVE_XF86DGA
-static int vidmode_MajorVersion = 0, vidmode_MinorVersion = 0; // major and minor of XF86VidExtensions
-#endif /* HAVE_XF86DGA */
-
-#ifdef HAVE_XF86DGA
-static XF86VidModeModeInfo **vidmodes = NULL;  // drakkar - initialized to NULL
-#endif /* HAVE_XF86DGA */
-static int num_vidmodes;
 static qboolean vidmode_active = qfalse;
 
 static int scrnum;
@@ -906,11 +809,6 @@ void GLimp_Shutdown( void )
 		win = 0;
 	}
 
-#ifdef HAVE_XF86DGA
-    if (vidmode_active)
-      XF86VidModeSwitchToMode(dpy, scrnum, vidmodes[0]);
-#endif /* HAVE_XF86DGA */
-
 	// NOTE TTimo opening/closing the display should be necessary only once per run
 	//   but it seems QGL_Shutdown gets called in a lot of occasion
 	//   in some cases, this XCloseDisplay is known to raise some X errors
@@ -919,12 +817,6 @@ void GLimp_Shutdown( void )
 	dpy = NULL;
 
   vidmode_active = qfalse;
-  // drakkar
-#ifdef HAVE_XF86DGA
-  if( vidmodes ) XFree( vidmodes );
-  vidmodes = NULL;
-#endif
-  // !drakkar
 
 	QGL_Shutdown();
 
@@ -983,79 +875,6 @@ static rserr_t GLW_SetMode( qboolean fullscreen )
 
   actualWidth = glConfig.vidWidth;
   actualHeight = glConfig.vidHeight;
-
-  // Get video mode list
-#ifdef HAVE_XF86DGA
-  if (!XF86VidModeQueryVersion(dpy, &vidmode_MajorVersion, &vidmode_MinorVersion))
-  {
-#endif /* HAVE_XF86DGA */
-    vidmode_ext = qfalse;
-#ifdef HAVE_XF86DGA
-  } else
-  {
-    ri.Printf(PRINT_ALL, "Using XFree86-VidModeExtension Version %d.%d\n",
-              vidmode_MajorVersion, vidmode_MinorVersion);
-    vidmode_ext = qtrue;
-  }
-#endif /* HAVE_XF86DGA */
-
-
-#ifdef HAVE_XF86DGA
-  if (vidmode_ext)
-  {
-    int best_fit, best_dist, dist, x, y;
-
-    XF86VidModeGetAllModeLines(dpy, scrnum, &num_vidmodes, &vidmodes);
-
-    // Are we going fullscreen?  If so, let's change video mode
-    if (fullscreen)
-    {
-      best_dist = 9999999;
-      best_fit = -1;
-
-      for (i = 0; i < num_vidmodes; i++)
-      {
-        if (glConfig.vidWidth > vidmodes[i]->hdisplay ||
-            glConfig.vidHeight > vidmodes[i]->vdisplay)
-          continue;
-
-        x = glConfig.vidWidth - vidmodes[i]->hdisplay;
-        y = glConfig.vidHeight - vidmodes[i]->vdisplay;
-        dist = (x * x) + (y * y);
-        if (dist < best_dist)
-        {
-          best_dist = dist;
-          best_fit = i;
-        }
-      }
-
-      if (best_fit != -1)
-      {
-        actualWidth = vidmodes[best_fit]->hdisplay;
-        actualHeight = vidmodes[best_fit]->vdisplay;
-
-        // change to the mode
-        XF86VidModeSwitchToMode(dpy, scrnum, vidmodes[best_fit]);
-        vidmode_active = qtrue;
-
-        // Move the viewport to top left
-        XF86VidModeSetViewPort(dpy, scrnum, 0, 0);
-
-        ri.Printf(PRINT_ALL, "XFree86-VidModeExtension Activated at %dx%d\n",
-                  actualWidth, actualHeight);
-
-      } else
-      {
-        fullscreen = 0;
-        ri.Printf(PRINT_ALL, "XFree86-VidModeExtension: No acceptable modes found\n");
-      }
-    } else
-    {
-      ri.Printf(PRINT_ALL, "XFree86-VidModeExtension:  Ignored on non-fullscreen\n");
-    }
-  }
-#endif /* HAVE_XF86DGA */
-
 
   if (!r_colorbits->value)
     colorbits = 24;

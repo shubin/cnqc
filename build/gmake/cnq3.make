@@ -140,7 +140,6 @@ OBJECTS := \
 	$(OBJDIR)/cl_cgame.o \
 	$(OBJDIR)/cl_cin.o \
 	$(OBJDIR)/cl_console.o \
-	$(OBJDIR)/cl_curl.o \
 	$(OBJDIR)/cl_input.o \
 	$(OBJDIR)/cl_keys.o \
 	$(OBJDIR)/cl_main.o \
@@ -264,9 +263,6 @@ $(OBJDIR)/cl_cin.o: ../../code/client/cl_cin.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/cl_console.o: ../../code/client/cl_console.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/cl_curl.o: ../../code/client/cl_curl.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/cl_input.o: ../../code/client/cl_input.cpp
