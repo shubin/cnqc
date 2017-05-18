@@ -483,7 +483,7 @@ static void RB_RenderDrawSurfList( const drawSurf_t* drawSurfs, int numDrawSurfs
 			if ( entityNum != ENTITYNUM_WORLD ) {
 				backEnd.currentEntity = &backEnd.refdef.entities[entityNum];
 				if (backEnd.isShaderTimeInSec)
-				    backEnd.refdef.floatTime = originalTime - (double)(backEnd.currentEntity->e.shaderTime.iShaderTime) * 0.001;
+				    backEnd.refdef.floatTime = originalTime - (double)(backEnd.currentEntity->e.shaderTime.iShaderTime) / 1000.0;
 				else
 				    backEnd.refdef.floatTime = originalTime - backEnd.currentEntity->e.shaderTime.fShaderTime;
 				// we have to reset the shaderTime as well otherwise image animations start
@@ -698,7 +698,7 @@ static void RB_SetGL2D()
 
 	// set time for 2D shaders
 	backEnd.refdef.time = ri.Milliseconds();
-	backEnd.refdef.floatTime = (double)backEnd.refdef.time * 0.001;
+	backEnd.refdef.floatTime = (double)backEnd.refdef.time / 1000.0;
 }
 
 

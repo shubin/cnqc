@@ -226,9 +226,9 @@ static void CL_AdjustAngles()
 	float	speed;
 
 	if ( in_speed.active ) {
-		speed = 0.001 * cls.frametime * cl_anglespeedkey->value;
+		speed = ((float)cls.frametime / 1000.0f) * cl_anglespeedkey->value;
 	} else {
-		speed = 0.001 * cls.frametime;
+		speed = (float)cls.frametime / 1000.0f;
 	}
 
 	if ( !in_strafe.active ) {
@@ -324,9 +324,9 @@ static void CL_JoystickMove( usercmd_t *cmd )
 	}
 
 	if ( in_speed.active ) {
-		anglespeed = 0.001 * cls.frametime * cl_anglespeedkey->value;
+		anglespeed = ((float)cls.frametime / 1000.0f) * cl_anglespeedkey->value;
 	} else {
-		anglespeed = 0.001 * cls.frametime;
+		anglespeed = (float)cls.frametime / 1000.0f;
 	}
 
 	if ( !in_strafe.active ) {

@@ -623,20 +623,20 @@ void Con_RunConsole()
 {
 	// decide on the destination height of the console
 	if ( cls.keyCatchers & KEYCATCH_CONSOLE )
-		con.finalFrac = 0.5;		// half screen
+		con.finalFrac = 0.5f;		// half screen
 	else
-		con.finalFrac = 0;			// none visible
+		con.finalFrac = 0.0f;		// none visible
 
 	// scroll towards the destination height
 	if (con.finalFrac < con.displayFrac)
 	{
-		con.displayFrac -= con_speed->value * cls.realFrametime * 0.001;
+		con.displayFrac -= con_speed->value * (float)cls.realFrametime / 1000.0f;
 		if (con.finalFrac > con.displayFrac)
 			con.displayFrac = con.finalFrac;
 	}
 	else if (con.finalFrac > con.displayFrac)
 	{
-		con.displayFrac += con_speed->value * cls.realFrametime * 0.001;
+		con.displayFrac += con_speed->value * (float)cls.realFrametime / 1000.0f;
 		if (con.finalFrac < con.displayFrac)
 			con.displayFrac = con.finalFrac;
 	}

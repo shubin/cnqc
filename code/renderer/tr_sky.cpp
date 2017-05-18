@@ -106,7 +106,7 @@ static void AddSkyPolygon (int nump, vec3_t vecs)
 			dv = vecs[j - 1];
 		else
 			dv = -vecs[-j - 1];
-		if (dv < 0.001)
+		if (dv < 0.001f)
 			continue;	// don't divide by zero
 		j = vec_to_st[axis][0];
 		if (j < 0)

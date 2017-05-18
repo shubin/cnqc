@@ -1919,7 +1919,7 @@ static void Com_Freeze_f( void )
 	float s = atof( Cmd_Argv(1) );
 
 	int start = Com_Milliseconds();
-	while ( ( Com_Milliseconds() - start ) * 0.001 < s )
+	while ( ( Com_Milliseconds() - start ) / 1000.0f < s )
 		;
 }
 
