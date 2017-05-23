@@ -716,6 +716,18 @@ qbool SV_CheckPaused( void ) {
 	return qtrue;
 }
 
+
+static void SV_IntegerOverflowShutDown( const char* msg )
+{
+	// save the map name in case it gets cleared during the shut down
+	char mapName[MAX_QPATH];
+	Q_strncpyz( mapName, Cvar_VariableString("mapname"), sizeof(mapName) );
+
+	SV_Shutdown( msg );
+	Cbuf_AddText( va("map %s\n", mapName) );
+}
+
+
 /*
 ==================
 SV_Frame
@@ -761,36 +773,45 @@ void SV_Frame( int msec ) {
 		return;
 	}
 
-    int activeClients = 0;
+    qbool hasHuman = qfalse;
     for (int i=0; i < sv_maxclients->integer ; ++i) {
-        client_t *cl = &svs.clients[i];;
+        client_t *cl = &svs.clients[i];
         if ( cl->state >= CS_CONNECTED ) {
-            qbool isBot = (cl->netchan.remoteAddress.type == NA_BOT) || (cl->gentity && (cl->gentity->r.svFlags & SVF_BOT));
-            if (!isBot)
-            {
-                ++activeClients;
+            const qbool isBot = (cl->netchan.remoteAddress.type == NA_BOT) || (cl->gentity && (cl->gentity->r.svFlags & SVF_BOT));
+            if ( !isBot ) {
+				hasHuman = qtrue;
                 break;
             }
         }
     }
-    
-	// if time is about to hit the 32nd bit, kick all clients and clear svs.time
-	// rather than checking for negative time wraparound everywhere.
-	// 2giga-milliseconds = 23 days, so it won't be too often
-	//
-	// shader startTime is float. And for animation CPMA use sin(cg.time / float).
-	// float have 23-bit integer part. Round error start after 2:20 hours
-	// lets check 24 hours work
-	unsigned timeLimit = activeClients ? 24 * 60 * 60 * 1000 : 10 * 60 * 1000;
-	if ( (unsigned)svs.time >= timeLimit ) {
-		SV_Shutdown( "Restarting server due to time wrapping" );
-		Cbuf_AddText( va( "map %s\n", Cvar_VariableString( "mapname" ) ) );
+
+	// The shader time is stored as a floating-point number.
+	// Some mods may still have code like "sin(cg.time / 1000.0f)".
+	// IEEE 754 floats have a 23-bit mantissa.
+	// Rounding errors will start after roughly ((1<<23) / (60*1000)) ~ 139.8 minutes.
+	const int minRebootTimeCvar = 60 * 1000 * Cvar_Get( "sv_minRebootDelayMins", "1440", 0 )->integer;
+	const int minRebootTimeConst = 60 * 60 * 1000;	// absolute min. time: 1 hour
+	const int maxRebootTime = 0x7FFFFFFF;			// absolute max. time: ~ 24.86 days
+	const int minRebootTime = max( minRebootTimeCvar, minRebootTimeConst );
+	if ( svs.time >= minRebootTime && !hasHuman ) {
+		SV_IntegerOverflowShutDown( "Restarting server early to avoid time wrapping and/or precision issues" );
 		return;
 	}
+
+	if ( minRebootTimeCvar < minRebootTimeConst )
+		Cvar_Set( "sv_minRebootDelayMins", va( "%d", minRebootTimeConst / (60 * 1000) ) );
+    
+	// If the time is close to hitting the 32nd bit, kick all clients and clear svs.time
+	// rather than checking for negative time wraparound everywhere.
+	// No, resetting the time on map change like ioq3 does is not on the cards. It breaks stuff.
+	if ( svs.time >= maxRebootTime ) {
+		SV_IntegerOverflowShutDown( "Restarting server due to time wrapping" );		
+		return;
+	}
+
 	// this can happen considerably earlier when lots of clients play and the map doesn't change
 	if ( svs.nextSnapshotEntities >= 0x7FFFFFFE - svs.numSnapshotEntities ) {
-		SV_Shutdown( "Restarting server due to numSnapshotEntities wrapping" );
-		Cbuf_AddText( va( "map %s\n", Cvar_VariableString( "mapname" ) ) );
+		SV_IntegerOverflowShutDown( "Restarting server due to numSnapshotEntities wrapping" );
 		return;
 	}
 

@@ -1,6 +1,8 @@
 
 DD Mmm 17 - 1.49
 
+add: sv_minRebootDelayMins to control early server reboots (default: 1440, minimum: 60)
+
 fix: broken rendering when the 2nd stage of a collapsed shader stage pair had non-white colors
 
 fix: shader stages using "wave" were not animated when the server time was too large
