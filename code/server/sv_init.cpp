@@ -42,6 +42,10 @@ void SV_SetConfigstring (int index, const char *val) {
 		val = "";
 	}
 
+	if ( strlen(val) >= BIG_INFO_STRING ) {
+		Com_Error( ERR_DROP, "SV_SetConfigstring: CS %d is too long\n", index );
+	}
+
 	// don't bother broadcasting an update if no change
 	if ( !strcmp( val, sv.configstrings[ index ] ) ) {
 		return;

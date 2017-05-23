@@ -630,6 +630,10 @@ static void SV_SendClientGameState( client_t* client )
 
 	MSG_WriteLong( &msg, sv.checksumFeed );
 
+	if ( msg.overflowed ) {
+		Com_Printf( "ERROR: gamestate message buffer overflow\n" );
+	}
+
 	SV_SendMessageToClient( &msg, client );
 }
 
