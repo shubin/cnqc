@@ -480,8 +480,6 @@ void SV_SpawnServer( const char* mapname )
 		if (!p[0]) {
 			Com_Printf( "WARNING: sv_pure set but no PK3 files loaded\n" );
 		}
-		p = FS_LoadedPakNames();
-		Cvar_Set( "sv_pakNames", p );
 
 		// if a dedicated pure server we need to touch the cgame because it could be in a
 		// seperate pk3 file and the client will need to load the latest cgame.qvm
@@ -491,8 +489,12 @@ void SV_SpawnServer( const char* mapname )
 	}
 	else {
 		Cvar_Set( "sv_paks", "" );
-		Cvar_Set( "sv_pakNames", "" );
 	}
+
+	// the CNQ3 server doesn't set this anymore as it's of no real use
+	// even for the original id download code
+	Cvar_Set( "sv_pakNames", "" );
+
 	// the server sends these to the clients so they can figure
 	// out which pk3s should be auto-downloaded
 	p = FS_ReferencedPakChecksums();

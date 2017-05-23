@@ -337,9 +337,9 @@ void CL_SystemInfoChanged()
 	}
 
 	// check pure server string
+	// note: the CNQ3 client doesn't even read sv_pakNames anymore since it's of no use
 	s = Info_ValueForKey( systemInfo, "sv_paks" );
-	t = Info_ValueForKey( systemInfo, "sv_pakNames" );
-	FS_PureServerSetLoadedPaks( s, t );
+	FS_PureServerSetLoadedPaks( s );
 
 	s = Info_ValueForKey( systemInfo, "sv_referencedPaks" );
 	t = Info_ValueForKey( systemInfo, "sv_referencedPakNames" );

@@ -601,7 +601,6 @@ int		FS_Seek( fileHandle_t f, long offset, int origin );
 
 qbool FS_FilenameCompare( const char *s1, const char *s2 );
 
-const char *FS_LoadedPakNames( void );
 const char *FS_LoadedPakChecksums( void );
 const char *FS_LoadedPakPureChecksums( void );
 // Returns a space separated string containing the checksums of all loaded pk3 files.
@@ -618,7 +617,7 @@ void FS_ClearPakReferences( int flags );
 // clears referenced booleans on loaded pk3s
 
 void FS_PureServerSetReferencedPaks( const char *pakSums, const char *pakNames );
-void FS_PureServerSetLoadedPaks( const char *pakSums, const char *pakNames );
+void FS_PureServerSetLoadedPaks( const char *pakSums );
 // If the string is empty, all data sources will be allowed.
 // If not empty, only pk3 files that match one of the space
 // separated checksums will be checked for files, with the

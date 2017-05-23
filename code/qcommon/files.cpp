@@ -250,7 +250,6 @@ static qbool fs_reordered;
 // never load anything from pk3 files that are not present at the server when pure
 static int		fs_numServerPaks;
 static int		fs_serverPaks[MAX_SEARCH_PATHS];				// checksums
-static char		*fs_serverPakNames[MAX_SEARCH_PATHS];			// pk3 names
 
 // only used for autodownload, to make sure the client has at least
 // all the pk3 files that are referenced at the server side
@@ -2690,35 +2689,6 @@ const char *FS_LoadedPakChecksums( void ) {
 
 /*
 =====================
-FS_LoadedPakNames
-
-Returns a space separated string containing the names of all loaded pk3 files.
-Servers with sv_pure set will get this string and pass it to clients.
-=====================
-*/
-const char *FS_LoadedPakNames( void ) {
-	static char	info[BIG_INFO_STRING];
-	searchpath_t	*search;
-
-	info[0] = 0;
-
-	for ( search = fs_searchpaths ; search ; search = search->next ) {
-		// is the element a pak file?
-		if ( !search->pack ) {
-			continue;
-		}
-
-		if (*info) {
-			Q_strcat(info, sizeof( info ), " " );
-		}
-		Q_strcat( info, sizeof( info ), search->pack->pakBasename );
-	}
-
-	return info;
-}
-
-/*
-=====================
 FS_LoadedPakPureChecksums
 
 Returns a space separated string containing the pure checksums of all loaded pk3 files.
@@ -2872,19 +2842,17 @@ separated checksums will be checked for files, with the
 exception of .cfg and .dat files.
 =====================
 */
-void FS_PureServerSetLoadedPaks( const char *pakSums, const char *pakNames ) {
-	int		i, c, d;
-
+void FS_PureServerSetLoadedPaks( const char *pakSums ) {
 	Cmd_TokenizeString( pakSums );
 
-	c = Cmd_Argc();
+	int c = Cmd_Argc();
 	if ( c > MAX_SEARCH_PATHS ) {
 		c = MAX_SEARCH_PATHS;
 	}
 
 	fs_numServerPaks = c;
 
-	for ( i = 0 ; i < c ; i++ ) {
+	for ( int i = 0 ; i < c ; i++ ) {
 		fs_serverPaks[i] = atoi( Cmd_Argv( i ) );
 	}
 
@@ -2900,25 +2868,6 @@ void FS_PureServerSetLoadedPaks( const char *pakSums, const char *pakNames ) {
 			Com_DPrintf( "FS search reorder is required\n" );
 			FS_Restart(fs_checksumFeed);
 			return;
-		}
-	}
-
-	for ( i = 0 ; i < c ; i++ ) {
-		if (fs_serverPakNames[i]) {
-			Z_Free(fs_serverPakNames[i]);
-		}
-		fs_serverPakNames[i] = NULL;
-	}
-	if ( pakNames && *pakNames ) {
-		Cmd_TokenizeString( pakNames );
-
-		d = Cmd_Argc();
-		if ( d > MAX_SEARCH_PATHS ) {
-			d = MAX_SEARCH_PATHS;
-		}
-
-		for ( i = 0 ; i < d ; i++ ) {
-			fs_serverPakNames[i] = CopyString( Cmd_Argv( i ) );
 		}
 	}
 }
@@ -3033,7 +2982,7 @@ void FS_Restart( int checksumFeed ) {
 		// this might happen when connecting to a pure server not using BASEGAME/pak0.pk3
 		// (for instance a TA demo server)
 		if (lastValidBase[0]) {
-			FS_PureServerSetLoadedPaks("", "");
+			FS_PureServerSetLoadedPaks("");
 			Cvar_Set("fs_basepath", lastValidBase);
 			Cvar_Set("fs_gamedirvar", lastValidGame);
 			lastValidBase[0] = '\0';

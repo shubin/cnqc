@@ -1027,12 +1027,6 @@ static void CL_ResetPureClientAtServer()
 }
 
 
-static void CL_OpenedPK3List_f( void )
-{
-	Com_Printf( "Opened PK3 Names: %s\n", FS_LoadedPakNames() );
-}
-
-
 static void CL_ReferencedPK3List_f( void )
 {
 	Com_Printf( "Referenced PK3 Names: %s\n", FS_ReferencedPakNames() );
@@ -1989,7 +1983,6 @@ void CL_Init()
 	Cmd_AddCommand ("ping", CL_Ping_f );
 	Cmd_AddCommand ("serverstatus", CL_ServerStatus_f );
 	Cmd_AddCommand ("showip", CL_ShowIP_f );
-	Cmd_AddCommand ("fs_openedList", CL_OpenedPK3List_f );
 	Cmd_AddCommand ("fs_referencedList", CL_ReferencedPK3List_f );
 	Cmd_AddCommand ("model", CL_SetModel_f );
 	Cmd_AddCommand ("video", CL_Video_f );

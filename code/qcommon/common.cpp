@@ -235,7 +235,7 @@ void QDECL Com_Error( int code, const char *fmt, ... )
 	}
 
 	// make sure we can get at our local stuff
-	FS_PureServerSetLoadedPaks( "", "" );
+	FS_PureServerSetLoadedPaks( "" );
 
 	// if we are getting a solid stream of ERR_DROP, do an ERR_FATAL
 	int currentTime = Sys_Milliseconds();
