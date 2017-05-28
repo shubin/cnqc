@@ -41,6 +41,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define EDIT_ID			100
 #define INPUT_ID		101
 
+#define CONSOLE_WIDTH	78
+
 typedef struct
 {
 	HWND		hWnd;
@@ -74,9 +76,33 @@ typedef struct
 	WNDPROC		SysInputLineWndProc;
 
 	field_t		inputField;
+
+	field_t		historyEditLines[COMMAND_HISTORY];
+	int			nextHistoryLine;	// the last line in the history buffer, not masked
+	int			historyLine;		// the line being displayed from history buffer
 } WinConData;
 
 static WinConData s_wcd;
+
+void Con_StoreCommand( const char* inputBuffer ) {
+	field_t& field = s_wcd.historyEditLines[ s_wcd.nextHistoryLine % COMMAND_HISTORY ];
+	Q_strncpyz( field.buffer, inputBuffer, sizeof(field.buffer) );
+	field.cursor = strlen( inputBuffer );
+	field.scroll = 0;
+	field.widthInChars = field.cursor;
+	
+	// avoid having the same command twice in a row
+	if ( s_wcd.nextHistoryLine > 0 ) {
+		const int prevLine = (s_wcd.nextHistoryLine - 1) % COMMAND_HISTORY;
+		if ( !memcmp(&field, &s_wcd.historyEditLines[prevLine], sizeof(field)) ) {
+			s_wcd.historyLine = s_wcd.nextHistoryLine;
+			return;
+		}
+	}
+	
+	s_wcd.nextHistoryLine++;
+	s_wcd.historyLine = s_wcd.nextHistoryLine;
+}
 
 static LONG WINAPI ConWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
@@ -273,11 +299,41 @@ LONG WINAPI InputLineWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 		}
 		break;
 
+	case WM_KEYDOWN:
+		if ( wParam == VK_UP ) {
+			if ( s_wcd.nextHistoryLine - s_wcd.historyLine < COMMAND_HISTORY && s_wcd.historyLine > 0 )
+				s_wcd.historyLine--;
+			const field_t& field = s_wcd.historyEditLines[ s_wcd.historyLine % COMMAND_HISTORY ];
+			SetWindowText( hWnd, field.buffer );
+			SendMessage( hWnd, EM_SETSEL, (WPARAM)field.cursor, (LPARAM)field.cursor );
+			return 0;
+		}
+
+		if ( wParam == VK_DOWN ) {
+			s_wcd.historyLine++;
+
+			if ( s_wcd.historyLine >= s_wcd.nextHistoryLine ) {
+				s_wcd.historyLine = s_wcd.nextHistoryLine;
+				SetWindowText( s_wcd.hwndInputLine, "" );
+				return 0;
+			}
+
+			const field_t& field = s_wcd.historyEditLines[ s_wcd.historyLine % COMMAND_HISTORY ];
+			SetWindowText( hWnd, field.buffer );
+			SendMessage( hWnd, EM_SETSEL, (WPARAM)field.cursor, (LPARAM)field.cursor );
+			return 0;
+		}
+
+		break;
+
 	case WM_CHAR:
 		if ( wParam == VK_RETURN )
 		{
 			GetWindowText( s_wcd.hwndInputLine, inputBuffer, sizeof( inputBuffer ) );
 			strncat( s_wcd.consoleText, inputBuffer, sizeof( s_wcd.consoleText ) - strlen( s_wcd.consoleText ) - 5 );
+
+			Con_StoreCommand(inputBuffer);
+
 			Q_strcat( s_wcd.consoleText, sizeof(s_wcd.consoleText), "\n" );
 			SetWindowText( s_wcd.hwndInputLine, "" );
 
@@ -285,6 +341,7 @@ LONG WINAPI InputLineWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 
 			return 0;
 		}
+
 		if ( wParam == VK_TAB )
 		{	
 			GetWindowText( s_wcd.hwndInputLine, s_wcd.inputField.buffer, sizeof( s_wcd.inputField.buffer ) );
@@ -299,6 +356,8 @@ LONG WINAPI InputLineWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 
 			return 0;
 		}
+
+		break;
 	}
 
 	return CallWindowProc( s_wcd.SysInputLineWndProc, hWnd, uMsg, wParam, lParam );
@@ -441,6 +500,14 @@ void Sys_CreateConsole( void )
 	UpdateWindow( s_wcd.hWnd );
 	SetForegroundWindow( s_wcd.hWnd );
 	SetFocus( s_wcd.hwndInputLine );
+
+	for ( int i = 0; i < COMMAND_HISTORY; ++i ) {
+		Field_Clear( &s_wcd.historyEditLines[i] );
+		s_wcd.historyEditLines[i].widthInChars = CONSOLE_WIDTH;
+	}
+
+	s_wcd.historyLine = 0;
+	s_wcd.nextHistoryLine = 0;
 
 	s_wcd.visLevel = 1;
 }
