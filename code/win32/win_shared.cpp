@@ -36,12 +36,6 @@ int Sys_Milliseconds()
 }
 
 
-const char* Sys_GetCurrentUser()
-{
-	return "player";
-}
-
-
 const char* Sys_DefaultHomePath()
 {
 	return NULL;

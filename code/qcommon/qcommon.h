@@ -967,7 +967,6 @@ void	Sys_ShowIP();
 
 void Sys_Mkdir( const char* path );
 const char* Sys_Cwd();
-const char* Sys_GetCurrentUser();
 const char* Sys_DefaultHomePath();
 
 char** Sys_ListFiles( const char *directory, const char *extension, const char *filter, int *numfiles, qbool wantsubs );

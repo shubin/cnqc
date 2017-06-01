@@ -261,14 +261,3 @@ const char* Sys_DefaultHomePath()
 void Sys_ShowConsole( int visLevel, qboolean quitOnClose )
 {
 }
-
-
-const char* Sys_GetCurrentUser()
-{
-	const struct passwd* p;
-
-	if (!(p = getpwuid(getuid())))
-		return "player";
-
-	return p->pw_name;
-}

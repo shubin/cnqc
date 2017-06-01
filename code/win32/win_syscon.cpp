@@ -41,8 +41,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define EDIT_ID			100
 #define INPUT_ID		101
 
-#define CONSOLE_WIDTH	78
-
 typedef struct
 {
 	HWND		hWnd;
@@ -501,11 +499,8 @@ void Sys_CreateConsole( void )
 	SetForegroundWindow( s_wcd.hWnd );
 	SetFocus( s_wcd.hwndInputLine );
 
-	for ( int i = 0; i < COMMAND_HISTORY; ++i ) {
+	for ( int i = 0; i < COMMAND_HISTORY; ++i )
 		Field_Clear( &s_wcd.historyEditLines[i] );
-		s_wcd.historyEditLines[i].widthInChars = CONSOLE_WIDTH;
-	}
-
 	s_wcd.historyLine = 0;
 	s_wcd.nextHistoryLine = 0;
 
