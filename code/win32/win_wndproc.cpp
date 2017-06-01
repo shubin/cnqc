@@ -252,10 +252,12 @@ LRESULT CALLBACK MainWndProc (
 		else
 			WIN_EnableAltTab();
 
+		WIN_RegisterLastValidHotKey();
+
 		break;
 
 	case WM_DESTROY:
-		// let sound and input know about this?
+		WIN_UnregisterHotKey();
 		g_wv.hWnd = NULL;
 		if ( r_fullscreen->integer )
 			WIN_EnableAltTab();
@@ -332,6 +334,22 @@ LRESULT CALLBACK MainWndProc (
 			const char scanCode = (char)( ( lParam >> 16 ) & 0xFF );
 			if ( scanCode != 0x29 ) // never send an event for the console key ('~' or '`')
 				Sys_QueEvent( g_wv.sysMsgTime, SE_CHAR, wParam, 0, 0, NULL );
+		}
+		break;
+
+	case WM_HOTKEY:
+		if ( g_wv.minimizeHotKeyValid && (int)wParam == g_wv.minimizeHotKeyId )
+		{
+			if ( g_wv.activeApp && !CL_VideoRecording() )
+			{
+				ShowWindow( hWnd, SW_MINIMIZE );
+			}
+			else
+			{
+				ShowWindow( hWnd, SW_RESTORE );
+				SetForegroundWindow( hWnd );
+				SetFocus( hWnd );
+			}
 		}
 		break;
 

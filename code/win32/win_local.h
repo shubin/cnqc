@@ -43,6 +43,8 @@ void	IN_Shutdown();
 void WIN_UpdateMonitorIndexFromCvar();
 void WIN_UpdateMonitorIndexFromMainWindow();
 void WIN_UpdateResolution( int width, int height );
+void WIN_RegisterLastValidHotKey();
+void WIN_UnregisterHotKey();
 
 void SNDDMA_Activate();
 
@@ -71,6 +73,11 @@ typedef struct
 	int			monitor;		// 0-based index of the monitor currently used for display
 	int			primaryMonitor;	// 0-based index of the primary monitor
 	int			monitorCount;
+
+	int			minimizeHotKeyId;
+	qbool		minimizeHotKeyValid;
+	UINT		minimizeHotKeyKey;
+	UINT		minimizeHotKeyMods;
 } WinVars_t;
 
 extern WinVars_t g_wv;

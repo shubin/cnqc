@@ -307,9 +307,14 @@ static void IN_ShutdownMIDI();
 static void IN_StartupJoystick();
 static void IN_JoyMove();
 
+static void IN_StartupHotKey( qbool fullStartUp );
+static void IN_ShutDownHotKey();
+static void IN_UpdateHotKey();
+
 
 cvar_t* in_joystick;
 cvar_t* in_midi;
+cvar_t* in_minimize;
 
 
 static void IN_Startup()
@@ -318,9 +323,8 @@ static void IN_Startup()
 	IN_StartupMouse();
 	IN_StartupJoystick();
 	IN_StartupMIDI();
+	IN_StartupHotKey( qtrue );
 	QSUBSYSTEM_INIT_DONE( "Input" );
-
-	in_joystick->modified = qfalse;
 }
 
 
@@ -328,6 +332,7 @@ void IN_Init()
 {
 	in_midi		= Cvar_Get( "in_midi",		"0", CVAR_ARCHIVE );
 	in_joystick	= Cvar_Get( "in_joystick",	"0", CVAR_ARCHIVE|CVAR_LATCH );
+	in_joystick->modified = qfalse;
 
 	IN_Startup();
 }
@@ -339,10 +344,11 @@ void IN_Shutdown()
 
 	if (mouse) {
 		mouse->Shutdown();
-		mouse = 0;
+		mouse = NULL;
 	}
 
 	IN_ShutdownMIDI();
+	IN_ShutDownHotKey();
 }
 
 
@@ -392,6 +398,7 @@ qbool IN_ShouldBeActive()
 void IN_Frame()
 {
 	IN_JoyMove();
+	IN_UpdateHotKey();
 
 	if (!mouse)
 		return;
@@ -797,3 +804,520 @@ static void IN_ShutdownMIDI()
 	Cmd_RemoveCommand( "midiinfo" );
 }
 
+
+/*
+=========================================================================
+
+MINIMIZE HOTKEY
+
+=========================================================================
+*/
+
+
+#ifndef MOD_NOREPEAT
+#define MOD_NOREPEAT 0x4000
+#endif
+
+
+static void WIN_RegisterHotKey( UINT modifiers, UINT key )
+{
+	if ( g_wv.minimizeHotKeyValid )
+		return;
+
+	// the return value, when not 0, is guaranteed to be in
+	// the proper range for RegisterHotKey
+	const int atom = (int)GlobalAddAtom( "cnq3_minimize_hotkey" );
+	if ( atom == 0 )
+		return;
+
+	if ( RegisterHotKey(g_wv.hWnd, atom, modifiers | MOD_NOREPEAT, key) == 0 )
+	{
+		GlobalDeleteAtom( (ATOM)atom );
+		Com_Printf( "ERROR: the in_minimize hotkey registration failed\n" );
+		return;
+	}
+
+	g_wv.minimizeHotKeyValid = qtrue;
+	g_wv.minimizeHotKeyId = atom;
+	g_wv.minimizeHotKeyKey = key;
+	g_wv.minimizeHotKeyMods = modifiers;
+}
+
+
+void WIN_RegisterLastValidHotKey()
+{
+	if ( g_wv.minimizeHotKeyKey != 0 )
+		WIN_RegisterHotKey( g_wv.minimizeHotKeyMods, g_wv.minimizeHotKeyKey );
+}
+
+
+void WIN_UnregisterHotKey()
+{
+	if ( !g_wv.minimizeHotKeyValid )
+		return;
+
+	UnregisterHotKey( g_wv.hWnd, g_wv.minimizeHotKeyId );
+	GlobalDeleteAtom( (ATOM)g_wv.minimizeHotKeyId );
+	g_wv.minimizeHotKeyValid = qfalse;
+	g_wv.minimizeHotKeyId = 0;
+}
+
+
+typedef struct {
+	const char*	name;
+	UINT		key; // or flag
+	qbool		reserved;
+} win_keyMap_t;
+
+
+#define KEY(Name, Key) { Name, Key, qfalse }
+#define KEYR(Name, Key) { Name, Key, qtrue }
+static const win_keyMap_t win_stdKeyMaps[] =
+{
+	KEYR("back",		VK_BACK),
+	KEYR("backspace",	VK_BACK),
+	KEY("tab",			VK_TAB),
+	KEYR("return",		VK_RETURN),
+	KEYR("enter",		VK_RETURN),
+	KEY("pause",		VK_PAUSE),
+	KEY("capital",		VK_CAPITAL),
+	KEY("caps",			VK_CAPITAL),
+	KEY("capslock",		VK_CAPITAL),
+	KEYR("esc",			VK_ESCAPE),
+	KEYR("escape",		VK_ESCAPE),
+	KEYR("space",		VK_SPACE),
+	KEY("pageup",		VK_PRIOR),
+	KEY("pgup",			VK_PRIOR),
+	KEY("pagedown",		VK_NEXT),
+	KEY("pgdn",			VK_NEXT),
+	KEY("end",			VK_END),
+	KEY("home",			VK_HOME),
+	KEY("left",			VK_LEFT),
+	KEY("leftarrow",	VK_LEFT),
+	KEY("up",			VK_UP),
+	KEY("uparrow",		VK_UP),
+	KEY("right",		VK_RIGHT),
+	KEY("rightarrow",	VK_RIGHT),
+	KEY("down",			VK_DOWN),
+	KEY("downarrow",	VK_DOWN),
+	KEY("select",		VK_SELECT),
+	KEY("print",		VK_PRINT),
+	KEY("snapshot",		VK_SNAPSHOT),
+	KEY("printscreen",	VK_SNAPSHOT),
+	KEY("prtsc",		VK_SNAPSHOT),
+	KEY("insert",		VK_INSERT),
+	KEY("ins",			VK_INSERT),
+	KEYR("delete",		VK_DELETE),
+	KEYR("del",			VK_DELETE),
+	KEY("kpmultiply",	VK_MULTIPLY),
+	KEY("kpmul",		VK_MULTIPLY),
+	KEY("kpadd",		VK_ADD),
+	KEY("kpsubtract",	VK_SUBTRACT),
+	KEY("kpsub",		VK_SUBTRACT),
+	KEY("kpdecimal",	VK_DECIMAL),
+	KEY("kpdec",		VK_DECIMAL),
+	KEY("kpdelete",		VK_DECIMAL),
+	KEY("kpdel",		VK_DECIMAL),
+	KEY("kpdivide",		VK_DIVIDE),
+	KEY("kpdiv",		VK_DIVIDE),
+	KEY("numlock",		VK_NUMLOCK),
+	KEY("kpnumlock",	VK_NUMLOCK),
+	KEY("kplock",		VK_NUMLOCK),
+	KEY("scrolllock",	VK_SCROLL),
+	KEY("scroll",		VK_SCROLL),
+	KEY("oem1",			VK_OEM_1),
+	KEY(";",			VK_OEM_1),
+	KEY(":",			VK_OEM_1),
+	KEY("oem2",			VK_OEM_2),
+	KEY("/",			VK_OEM_2),
+	KEY("?",			VK_OEM_2),
+	KEY("oem3",			VK_OEM_3),
+	KEY("backtick",		VK_OEM_3),
+	KEY("tilde",		VK_OEM_3),
+	KEY("oem4",			VK_OEM_4),
+	KEY("[",			VK_OEM_4),
+	KEY("{",			VK_OEM_4),
+	KEY("oem5",			VK_OEM_5),
+	KEY("\\",			VK_OEM_5),
+	KEY("|",			VK_OEM_5),
+	KEY("oem6",			VK_OEM_6),
+	KEY("]",			VK_OEM_6),
+	KEY("}",			VK_OEM_6),
+	KEY("oem7",			VK_OEM_7),
+	KEY("\"",			VK_OEM_7),
+	KEY("'",			VK_OEM_7),
+	KEY("oem8",			VK_OEM_8),
+	KEY("oem102",		VK_OEM_102),
+	KEY("+",			VK_OEM_PLUS),
+	KEY("=",			VK_OEM_PLUS),
+	KEY(",",			VK_OEM_COMMA),
+	KEY("<",			VK_OEM_COMMA),
+	KEY("-",			VK_OEM_MINUS),
+	KEY("_",			VK_OEM_MINUS),
+	KEY(".",			VK_OEM_PERIOD),
+	KEY(">",			VK_OEM_PERIOD),
+	KEY("!",			'1'),
+	KEY("@",			'2'),
+	KEY("#",			'3'),
+	KEY("$",			'4'),
+	KEY("%",			'5'),
+	KEY("^",			'6'),
+	KEY("&",			'7'),
+	KEY("*",			'8'),
+	KEY("(",			'9'),
+	KEY(")",			'0'),
+	KEY("kp0",			0x60),
+	KEY("kp1",			0x61),
+	KEY("kp2",			0x62),
+	KEY("kp3",			0x63),
+	KEY("kp4",			0x64),
+	KEY("kp5",			0x65),
+	KEY("kp6",			0x66),
+	KEY("kp7",			0x67),
+	KEY("kp8",			0x68),
+	KEY("kp9",			0x69),
+	KEY("f1",			0x70),
+	KEY("f2",			0x71),
+	KEY("f3",			0x72),
+	KEY("f4",			0x73),
+	KEY("f5",			0x74),
+	KEY("f6",			0x75),
+	KEY("f7",			0x76),
+	KEY("f8",			0x77),
+	KEY("f9",			0x78),
+	KEY("f10",			0x79),
+	KEY("f11",			0x7A),
+	KEY("f12",			0x7B)
+};
+#undef KEY
+
+
+#define MOD(Name, Flag) { Name, Flag }
+static const win_keyMap_t win_modKeyMaps[] =
+{
+	MOD("alt",		MOD_ALT),
+	MOD("ctl",		MOD_CONTROL),
+	MOD("ctrl",		MOD_CONTROL),
+	MOD("control",	MOD_CONTROL),
+	MOD("shift",	MOD_SHIFT),
+	MOD("win",		MOD_WIN),
+	MOD("windows",	MOD_WIN)
+};
+#undef MOD
+
+
+typedef struct {
+	const char*	name;
+	UINT		key;
+	UINT		mod;
+} win_hotKey_t;
+
+
+#define KEY(Name, Key, Mod) { Name, Key, Mod }
+static const win_hotKey_t win_allowedSingleKeys[] =
+{
+	KEY("alt",		VK_MENU,	MOD_ALT),
+	KEY("ctl",		VK_CONTROL,	MOD_CONTROL),
+	KEY("ctrl",		VK_CONTROL,	MOD_CONTROL),
+	KEY("control",	VK_CONTROL,	MOD_CONTROL),
+	KEY("shift",	VK_SHIFT,	MOD_SHIFT)
+};
+#undef KEY
+
+
+#define KEY(Mod, Key, Name) { Name, Key, Mod }
+static const win_hotKey_t win_reservedHotkeys[] =
+{
+	KEY(MOD_ALT,				VK_RETURN,	"fullscreen toggle"),
+	KEY(MOD_ALT,				VK_TAB,		"task switch"),
+	KEY(MOD_WIN,				'D',		"show desktop toggle"),
+	KEY(MOD_WIN,				'M',		"minimize everything"),
+	KEY(MOD_CONTROL | MOD_ALT,	VK_DELETE,	"log-in screen / task manager")
+};
+#undef KEY
+
+
+static qbool WIN_ParseKey( UINT* key, qbool* reserved, const char* name, const win_keyMap_t* keyMaps, int keyCount, qbool modsOnly )
+{
+	if ( !modsOnly )
+	{
+		const int l = (int)strlen( name );
+
+		if ( l == 1 )
+		{
+			const char c = name[0];
+
+			// digits
+			if ( c >= 0x30 && c <= 0x39 )
+			{
+				*key = (UINT)c;
+				*reserved = qtrue;
+				return qtrue;
+			}
+			// uppercase letters
+			else if ( c >= 0x41 && c <= 0x5A )
+			{
+				*key = (UINT)c;
+				*reserved = qtrue;
+				return qtrue;
+			}
+			// lowercase letters
+			else if ( c >= 0x61 && c <= 0x7A )
+			{
+				*key = (UINT)c - 0x20;
+				*reserved = qtrue;
+				return qtrue;
+			}
+		}
+	}
+
+	for ( int i = 0; i < keyCount; ++i )
+	{
+		if ( Q_stricmp( name, keyMaps[i].name ) == 0 )
+		{
+			*key = keyMaps[i].key;
+			*reserved = keyMaps[i].reserved;
+			return qtrue;
+		}
+	}
+
+	return qfalse;
+}
+
+
+static qbool WIN_IsAllowedSingleHotKey( win_hotKey_t* hotKey, const char* name )
+{
+	const int keyCount = ARRAY_LEN( win_allowedSingleKeys );
+	for(int i = 0; i < keyCount; ++i)
+	{
+		if ( Q_stricmp( name, win_allowedSingleKeys[i].name ) == 0 )
+		{
+			*hotKey = win_allowedSingleKeys[i];
+			return qtrue;
+		}
+	}
+
+	UINT key;
+	qbool reserved;
+	if ( WIN_ParseKey( &key, &reserved, name, win_stdKeyMaps, ARRAY_LEN(win_stdKeyMaps), qfalse ) &&
+		!reserved )
+	{
+		hotKey->key = key;
+		hotKey->mod = 0;
+		hotKey->name = "";
+		return qtrue;
+	}
+
+	return qfalse;
+}
+
+
+static qbool WIN_IsReservedHotKey( win_hotKey_t* hotKey, UINT key, UINT mods )
+{
+	const int keyCount = ARRAY_LEN( win_reservedHotkeys );
+	for(int i = 0; i < keyCount; ++i)
+	{
+		if ( key == win_reservedHotkeys[i].key &&
+			 mods == win_reservedHotkeys[i].mod )
+		{
+			*hotKey = win_reservedHotkeys[i];
+			return qtrue;
+		}
+	}
+
+	return qfalse;
+}
+
+
+static void WIN_PrintHotKeyHelp()
+{
+	Com_Printf( "The key names must be separated by whitespace,\n" );
+	Com_Printf( "so use double quotes to enclose the key list.\n" );
+	Com_Printf( "To print the key names, use the minimizekeynames command.\n" );
+}
+
+
+static qbool WIN_ParseHotKey( UINT* key, UINT* modifiers )
+{
+	Cmd_TokenizeString( in_minimize->string );
+	const int count = Cmd_Argc();
+	if ( count <= 0 )
+		return qfalse;
+
+	if ( count == 1 )
+	{
+		win_hotKey_t hotKey;
+		if( !WIN_IsAllowedSingleHotKey( &hotKey, Cmd_Argv(0) ) )
+		{
+			Com_Printf( "ERROR: this key can't be used alone\n" );
+			WIN_PrintHotKeyHelp();
+			return qfalse;
+		}
+
+		Com_Printf( "the key '%s' will be registered alone as a hotkey\n", Cmd_Argv(0) );
+		*key = hotKey.key;
+		*modifiers = hotKey.mod;
+		return qtrue;
+	}
+
+	*modifiers = 0;
+	qbool keyFound = qfalse;
+	for ( int i = 0; i < count; ++i )
+	{
+		const char* const keyName = Cmd_Argv(i);
+		if ( *keyName == '\0' )
+			continue;
+
+		qbool reserved;
+		if ( WIN_ParseKey( key, &reserved, keyName, win_stdKeyMaps, ARRAY_LEN(win_stdKeyMaps), qfalse ) )
+		{
+			if ( keyFound ) // we allow at most 1 normal key
+			{
+				Com_Printf( "ERROR: in_minimize specified more than 1 non-modifier key\n" );
+				WIN_PrintHotKeyHelp();
+				return qfalse;
+			}
+			keyFound = qtrue;
+			continue;
+		}
+
+		UINT mod;
+		if ( WIN_ParseKey( &mod, &reserved, keyName, win_modKeyMaps, ARRAY_LEN(win_modKeyMaps), qtrue ) )
+		{
+			*modifiers |= mod;
+		}
+		else
+		{
+			Com_Printf( "ERROR: in_minimize doesn't recognize key name '%s'\n", keyName );
+			WIN_PrintHotKeyHelp();
+			return qfalse;
+		}
+	}
+
+	if ( !keyFound )
+	{
+		Com_Printf("ERROR: in_minimize didn't specify a non-modifier key\n");
+		WIN_PrintHotKeyHelp();
+		return qfalse;
+	}
+
+	int modCount = 0;
+	UINT mods = *modifiers;
+	for ( UINT i = 0; i < 32; ++i )
+	{
+		if ((mods & 1) != 0 )
+			++modCount;
+		mods >>= 1;
+	}
+
+	// we require either 1 or 2 modifier keys
+	if ( modCount < 1 || modCount > 2 )
+	{
+		Com_Printf("ERROR: in_minimize must specify at most 2 modifier keys\n");
+		WIN_PrintHotKeyHelp();
+		return qfalse;
+	}
+
+	// don't use reserved key combos
+	win_hotKey_t hotKey;
+	if( WIN_IsReservedHotKey( &hotKey, *key, *modifiers ) )
+	{
+		Com_Printf( "ERROR: this combo is reserved for: %s\n", hotKey.name );
+		return qfalse;
+	}
+
+	return qtrue;
+}
+
+
+static void WIN_PrintKeyNames( const win_keyMap_t* keys, int keyCount )
+{
+	const int columnCount = 4;
+	const int lineCount = (keyCount + columnCount - 1) / columnCount;
+
+	int maxColumnWidths[columnCount];
+	for ( int x = 0; x < columnCount; ++x )
+	{
+		int maxWidth = 0;
+		for ( int y = 0; y < lineCount; ++y )
+		{
+			const int k = x * lineCount + y;
+			if ( k >= keyCount )
+				break;
+
+			const int l = (int)strlen( keys[k].name );
+			maxWidth = max( maxWidth, l );
+		}
+
+		maxColumnWidths[x] = maxWidth;
+	}
+
+	for ( int y = 0; y < lineCount; ++y )
+	{
+		Com_Printf( "  " );
+
+		for ( int x = 0; x < columnCount; ++x )
+		{
+			const int k = x * lineCount + y;
+			if ( k >= keyCount )
+				break;
+
+			const char* n = keys[k].name;
+			const int l = (int)strlen(n);
+			Com_Printf(n);
+
+			const int spaceCount = maxColumnWidths[x] - l + 2;
+			for ( int s = 0; s < spaceCount; ++s )
+				Com_Printf( " " );
+		}
+
+		Com_Printf( "\n" );
+	}
+}
+
+
+static void WIN_PrintMinimizeKeyNames()
+{
+	Com_Printf( "Key Names:\n" );
+	WIN_PrintKeyNames( win_stdKeyMaps, ARRAY_LEN( win_stdKeyMaps ) );
+	Com_Printf( "\n" );
+	Com_Printf( "Modifier Key Names:\n" );
+	WIN_PrintKeyNames( win_modKeyMaps, ARRAY_LEN( win_modKeyMaps ) );
+}
+
+
+static void IN_StartupHotKey( qbool fullStartUp )
+{
+	in_minimize = Cvar_Get( "in_minimize", "", CVAR_ARCHIVE );
+	in_minimize->modified = qfalse;
+
+	if ( fullStartUp )
+		Cmd_AddCommand( "minimizekeynames", &WIN_PrintMinimizeKeyNames );
+
+	WIN_UnregisterHotKey();
+
+	if ( in_minimize->string[0] == '\0' )
+		return;
+
+	UINT key, modifiers;
+	if ( !WIN_ParseHotKey( &key, &modifiers ) )
+		return;
+
+	WIN_RegisterHotKey( modifiers, key );
+}
+
+
+static void IN_ShutDownHotKey()
+{
+	WIN_UnregisterHotKey();
+}
+
+
+static void IN_UpdateHotKey()
+{
+	if ( !in_minimize->modified )
+		return;
+
+	in_minimize->modified = qtrue;
+	IN_StartupHotKey( qfalse );
+}

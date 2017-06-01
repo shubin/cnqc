@@ -61,6 +61,9 @@ chg: remove the byzantine r_mode usage added in 1.47
 
 Windows:
 
+add: in_minimize registers a hotkey to minimize/restore the client
+  key names must be separated by white space and there can be at most 2 modifier keys
+	
 add: auto-completion and command history in the dedicated server console window
 
 add: new bindable key: BACKSLASH (the key to the right of the left shift button)
