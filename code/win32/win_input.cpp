@@ -27,7 +27,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 struct Mouse {
 	virtual qbool Init() { return qtrue; }
 	virtual qbool Activate( qbool active );
-	virtual void OnWindowMoved() {}
 	virtual void Shutdown() {}
 	virtual qbool ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam ) { return qfalse; } // returns true if the event was handled
 
@@ -91,17 +90,14 @@ qbool rawmouse_t::Init()
 
 qbool rawmouse_t::Activate( qbool active )
 {
+	// RIDEV_NOLEGACY means we only get WM_INPUT and not WM_LBUTTONDOWN etc
 	RAWINPUTDEVICE rid;
+	rid.usUsagePage = 1;
+	rid.usUsage = 2;
+	rid.dwFlags = active ? RIDEV_NOLEGACY : RIDEV_REMOVE;
+	rid.hwndTarget = NULL;
 
-	rid.usUsagePage = 0x01;
-	rid.usUsage = 0x02; // page 1 item 2 = mouse, gg constants you asswipes  >:(
-	if (active)
-		rid.dwFlags = RIDEV_NOLEGACY;
-	else
-		rid.dwFlags = RIDEV_REMOVE;
-	rid.hwndTarget = 0;
-
-	return RegisterRawInputDevices( &rid, 1, sizeof(rid) );
+	return !!RegisterRawInputDevices( &rid, 1, sizeof(rid) );
 }
 
 
@@ -162,7 +158,6 @@ qbool rawmouse_t::ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam )
 
 struct winmouse_t : public Mouse {
 	virtual qbool Activate( qbool active );
-	virtual void OnWindowMoved();
 	virtual qbool ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam );
 
 	void UpdateWindowCenter();
@@ -176,14 +171,9 @@ static winmouse_t winmouse;
 
 void winmouse_t::UpdateWindowCenter()
 {
-	const int sw = GetSystemMetrics( SM_CXSCREEN );
-	const int sh = GetSystemMetrics( SM_CYSCREEN );
-
-	RECT rc;
-	GetWindowRect( g_wv.hWnd, &rc );
-
-	window_center_x = ( max(rc.left, 0) + min(rc.right,  sw) ) / 2;
-	window_center_y = ( max(rc.top,  0) + min(rc.bottom, sh) ) / 2;
+	const RECT& rect = g_wv.monitorRects[g_wv.monitor];
+	window_center_x = (int)( rect.left + rect.right ) / 2;
+	window_center_y = (int)( rect.top + rect.bottom ) / 2;
 }
 
 
@@ -201,16 +191,12 @@ qbool winmouse_t::Activate( qbool _active )
 }
 
 
-void winmouse_t::OnWindowMoved()
-{
-	UpdateWindowCenter();
-}
-
-
 qbool winmouse_t::ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam )
 {
 	if ( !active )
 		return qfalse;
+
+	UpdateWindowCenter();
 
 #define QUEUE_WM_BUTTON( qbutton, mask ) \
 	Sys_QueEvent( g_wv.sysMsgTime, SE_KEY, qbutton, (wParam & mask), 0, NULL );
@@ -352,14 +338,8 @@ void IN_Shutdown()
 }
 
 
-// called when the window gains or loses focus or changes in some way
-// the window may have been destroyed and recreated between a deactivate and an activate
-
-void IN_Activate( qbool active )
+void IN_SetCursorSettings( qbool active )
 {
-	if ( !mouse || !mouse->Mouse::Activate( active ) )
-		return;
-
 	if (active) {
 		while (ShowCursor(FALSE) >= 0)
 			;
@@ -373,17 +353,20 @@ void IN_Activate( qbool active )
 		ClipCursor( NULL );
 		ReleaseCapture();
 	}
-
-	mouse->Activate( active );
 }
 
 
-void IN_WindowMoved()
+// called when the window gains or loses focus or changes in some way
+// the window may have been destroyed and recreated between a deactivate and an activate
+
+void IN_Activate( qbool active )
 {
-	if (!mouse)
+	if ( !mouse || !mouse->Mouse::Activate( active ) )
 		return;
 
-	mouse->OnWindowMoved();
+	IN_SetCursorSettings( active );
+
+	mouse->Activate( active );
 }
 
 
@@ -403,12 +386,7 @@ void IN_Frame()
 	if (!mouse)
 		return;
 
-	if (!IN_ShouldBeActive()) {
-		IN_Activate( qfalse );
-		return;
-	}
-
-	IN_Activate( qtrue );
+	IN_Activate( IN_ShouldBeActive() );
 }
 
 

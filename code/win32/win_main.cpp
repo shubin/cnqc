@@ -605,7 +605,7 @@ void WIN_UpdateMonitorIndexFromCvar()
 		return;
 	}
 
-	g_wv.monitor = monitor - 1;
+	g_wv.monitor = Com_ClampInt( 0, g_wv.monitorCount - 1, monitor - 1 );
 }
 
 

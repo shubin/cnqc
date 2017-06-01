@@ -33,8 +33,8 @@ void Conbuf_AppendText( const char *msg );
 
 
 void	IN_Init();
+void	IN_SetCursorSettings( qbool active );
 void	IN_Activate( qbool active );
-void	IN_WindowMoved();
 qbool	IN_ShouldBeActive();
 qbool	IN_ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam ); // returns true if the event was handled
 void	IN_Frame();
@@ -45,6 +45,8 @@ void WIN_UpdateMonitorIndexFromMainWindow();
 void WIN_UpdateResolution( int width, int height );
 void WIN_RegisterLastValidHotKey();
 void WIN_UnregisterHotKey();
+void WIN_SetGameDisplaySettings();
+void WIN_SetDesktopDisplaySettings();
 
 void SNDDMA_Activate();
 
@@ -62,7 +64,6 @@ typedef struct
 	HWND		hWnd;
 	HINSTANCE	hInstance;
 	qbool		activeApp;
-	qbool		isMinimized;
 
 	// when we get a windows message, we store the time off
 	// using Sys_Milliseconds

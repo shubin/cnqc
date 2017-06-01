@@ -22,6 +22,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "../client/client.h"
 #include "win_local.h"
+#include "glw_win.h"
 
 
 // Console variables that we need to access from this module
@@ -72,19 +73,19 @@ static void WIN_EnableAltTab()
 }
 
 
-static void VID_AppActivate( BOOL fActive, BOOL minimize )
+static void WIN_AppActivate( BOOL fActive, BOOL fMinimized )
 {
-	if (r_fullscreen->integer)
-		SetWindowPos( g_wv.hWnd, fActive ? HWND_TOPMOST : HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE );
+	const qbool active = fActive && !fMinimized;
 
-	g_wv.isMinimized = (minimize == TRUE);
+	if (r_fullscreen->integer)
+		SetWindowPos( g_wv.hWnd, active ? HWND_TOPMOST : HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE );
 
 	Com_DPrintf("VID_AppActivate: %i\n", fActive );
 
 	Key_ClearStates();	// FIXME!!!
 
 	// we don't want to act like we're active if we're minimized
-	g_wv.activeApp = (fActive && !g_wv.isMinimized);
+	g_wv.activeApp = active;
 
 	IN_Activate( IN_ShouldBeActive() );
 }
@@ -268,7 +269,7 @@ LRESULT CALLBACK MainWndProc (
 		break;
 
 	case WM_ACTIVATE:
-		VID_AppActivate( (LOWORD(wParam) != WA_INACTIVE), (BOOL)HIWORD(wParam) );
+		WIN_AppActivate( (LOWORD(wParam) != WA_INACTIVE), !!(BOOL)HIWORD(wParam) );
 		SNDDMA_Activate();
 		break;
 
@@ -285,17 +286,13 @@ LRESULT CALLBACK MainWndProc (
 				r.bottom = 1;
 				AdjustWindowRect( &r, GetWindowLong( hWnd, GWL_STYLE ), FALSE );
 				
-				const RECT monRect = g_wv.monitorRects[g_wv.monitor];
+				const RECT& monRect = g_wv.monitorRects[g_wv.monitor];
 				const int x = LOWORD( lParam );
 				const int y = HIWORD( lParam );
 				Cvar_SetValue( "vid_xpos", x + r.left - monRect.left );
 				Cvar_SetValue( "vid_ypos", y + r.top - monRect.top );
 				vid_xpos->modified = qfalse;
 				vid_ypos->modified = qfalse;
-                if ( g_wv.activeApp )
-                {
-					IN_WindowMoved();
-                }
 			}
 		}
 		break;
@@ -351,6 +348,29 @@ LRESULT CALLBACK MainWndProc (
 				SetFocus( hWnd );
 			}
 		}
+		break;
+
+	case WM_SETFOCUS:
+		if ( glw_state.cdsDevModeValid ) // is there a valid mode to restore?
+		{
+			WIN_SetGameDisplaySettings();
+			if ( glw_state.cdsDevModeValid ) // was the mode successfully restored?
+			{
+				const RECT& rect = g_wv.monitorRects[g_wv.monitor];
+				const DEVMODE& dm = glw_state.cdsDevMode;
+				SetWindowPos( hWnd, NULL, (int)rect.left, (int)rect.top, (int)dm.dmPelsWidth, (int)dm.dmPelsHeight, SWP_NOZORDER );
+			}
+		}
+		g_wv.activeApp = (qbool)!IsIconic( hWnd );
+		IN_SetCursorSettings( IN_ShouldBeActive() );
+			
+		break;
+
+	case WM_KILLFOCUS:
+		g_wv.activeApp = qfalse;
+		IN_SetCursorSettings( qfalse );
+		if ( glw_state.cdsDevModeValid )
+			WIN_SetDesktopDisplaySettings();
 		break;
 
 	default:

@@ -471,7 +471,7 @@ static qbool GLW_CreateWindow( int width, int height, int colorbits )
 		const int w = r.right - r.left;
 		const int h = r.bottom - r.top;
 
-		const RECT monRect = g_wv.monitorRects[g_wv.monitor];
+		const RECT& monRect = g_wv.monitorRects[g_wv.monitor];
 
 		int dx = 0;
 		int dy = 0;
@@ -517,19 +517,72 @@ static qbool GLW_CreateWindow( int width, int height, int colorbits )
 }
 
 
-static qbool GLW_Fullscreen( DEVMODE& dm )
+static const char* GLW_GetCurrentDisplayDeviceName()
 {
-	int cds = ChangeDisplaySettings( &dm, CDS_FULLSCREEN );
+	static char deviceName[CCHDEVICENAME + 1];
 
-	if (cds == DISP_CHANGE_SUCCESSFUL)
+	const HMONITOR hMonitor = g_wv.hMonitors[g_wv.monitor];
+	if ( hMonitor == NULL )
+		return NULL;
+
+	MONITORINFOEXA info;
+	ZeroMemory( &info, sizeof(info) );
+	info.cbSize = sizeof(info);
+	if ( GetMonitorInfoA(hMonitor, &info) == 0 )
+		return NULL;
+
+	Q_strncpyz( deviceName, info.szDevice, sizeof(deviceName) );
+	
+	return deviceName;
+}
+
+
+static void GLW_UpdateMonitorRect( const char* deviceName )
+{
+	if ( deviceName == NULL )
+		return;
+
+	DEVMODEA dm;
+	ZeroMemory( &dm, sizeof(dm) );
+	dm.dmSize = sizeof(dm);
+	if ( EnumDisplaySettingsExA(deviceName, ENUM_CURRENT_SETTINGS, &dm, 0) == 0 )
+		return;
+
+	if ( dm.dmPelsWidth == 0 || dm.dmPelsHeight == 0 )
+		return;
+
+	// Normally, we should check dm.dmFields for the following flags:
+	// DM_POSITION DM_PELSWIDTH DM_PELSHEIGHT
+	// EnumDisplaySettingsExA doesn't always set up the flags properly.
+
+	RECT& rect = g_wv.monitorRects[g_wv.monitor];
+	rect.left = dm.dmPosition.x;
+	rect.top = dm.dmPosition.y;
+	rect.right = dm.dmPosition.x + dm.dmPelsWidth;
+	rect.bottom = dm.dmPosition.y + dm.dmPelsHeight;
+}
+
+
+static qbool GLW_SetDisplaySettings( DEVMODE& dm )
+{
+	const char* deviceName = GLW_GetCurrentDisplayDeviceName();
+	const int ec = ChangeDisplaySettingsExA( deviceName, &dm, NULL, CDS_FULLSCREEN, NULL );
+	if ( ec == DISP_CHANGE_SUCCESSFUL )
+	{
+		glw_state.cdsDevMode = dm;
+		glw_state.cdsDevModeValid = qtrue;
+		GLW_UpdateMonitorRect( deviceName );
 		return qtrue;
+	}
 
-	ri.Printf( PRINT_ALL, "...CDS: %ix%i (C%i) failed: ", dm.dmPelsWidth, dm.dmPelsHeight, dm.dmBitsPerPel );
+	glw_state.cdsDevModeValid = qfalse;
+
+	ri.Printf( PRINT_ALL, "...CDS: %ix%i (C%i) failed: ", (int)dm.dmPelsWidth, (int)dm.dmPelsHeight, (int)dm.dmBitsPerPel );
 
 #define CDS_ERROR(x) case x: ri.Printf( PRINT_ALL, #x##"\n" ); break;
-	switch (cds) {
+	switch (ec) {
 		default:
-			ri.Printf( PRINT_ALL, "unknown error %d\n", cds );
+			ri.Printf( PRINT_ALL, "unknown error %d\n", ec );
 			break;
 		CDS_ERROR( DISP_CHANGE_RESTART );
 		CDS_ERROR( DISP_CHANGE_BADPARAM );
@@ -544,6 +597,31 @@ static qbool GLW_Fullscreen( DEVMODE& dm )
 }
 
 
+static void GLW_ResetDisplaySettings( qbool invalidate )
+{
+	const char* deviceName = GLW_GetCurrentDisplayDeviceName();
+	ChangeDisplaySettingsEx( deviceName, NULL, NULL, 0, NULL );
+	GLW_UpdateMonitorRect( deviceName );
+	if ( invalidate )
+		glw_state.cdsDevModeValid = qfalse;
+}
+
+
+void WIN_SetGameDisplaySettings()
+{
+	if ( glw_state.cdsDevModeValid )
+		GLW_SetDisplaySettings( glw_state.cdsDevMode );
+}
+
+
+void WIN_SetDesktopDisplaySettings()
+{
+	// We don't invalidate glw_state.cdsDevModeValid so we can
+	// return to the previous mode later.
+	GLW_ResetDisplaySettings( qfalse );
+}
+
+
 static qbool GLW_SetMode( qbool cdsFullscreen )
 {
 	HDC hDC = GetDC( GetDesktopWindow() );
@@ -553,7 +631,7 @@ static qbool GLW_SetMode( qbool cdsFullscreen )
 	glInfo.isFullscreen = cdsFullscreen;
 	WIN_UpdateMonitorIndexFromCvar();
 	if ( !R_GetModeInfo( &glConfig.vidWidth, &glConfig.vidHeight, &glConfig.windowAspect ) ) {
-		const RECT monRect = g_wv.monitorRects[g_wv.monitor];
+		const RECT& monRect = g_wv.monitorRects[g_wv.monitor];
 		glConfig.vidWidth = monRect.right - monRect.left;
 		glConfig.vidHeight = monRect.bottom - monRect.top;
 		glConfig.windowAspect = (float)glConfig.vidWidth / glConfig.vidHeight;
@@ -562,10 +640,10 @@ static qbool GLW_SetMode( qbool cdsFullscreen )
 	//ri.Printf( PRINT_DEVELOPER, "...setting mode %dx%d %s\n", glConfig.vidWidth, glConfig.vidHeight, cdsFullscreen ? "FS" : "W" );
 
 	DEVMODE dm;
-	memset( &dm, 0, sizeof( dm ) );
+	ZeroMemory( &dm, sizeof( dm ) );
 	dm.dmSize = sizeof( dm );
 
-	if (cdsFullscreen != glw_state.cdsFullscreen) {
+	if (cdsFullscreen != glw_state.cdsDevModeValid) {
 		if (cdsFullscreen) {
 			dm.dmPelsWidth  = glConfig.vidWidth;
 			dm.dmPelsHeight = glConfig.vidHeight;
@@ -581,25 +659,23 @@ static qbool GLW_SetMode( qbool cdsFullscreen )
 				dm.dmFields |= DM_BITSPERPEL;
 			}
 
-			glInfo.isFullscreen = qtrue;
-			glw_state.cdsFullscreen = qtrue;
+			const RECT& monRect = g_wv.monitorRects[g_wv.monitor];
+			dm.dmPosition.x = monRect.left;
+			dm.dmPosition.y = monRect.top;
+			dm.dmFields |= DM_POSITION;
 
-			if (!GLW_Fullscreen( dm )) {
-				glInfo.isFullscreen = qfalse;
-				glw_state.cdsFullscreen = qfalse;
-			}
+			glInfo.isFullscreen = GLW_SetDisplaySettings( dm );
 		}
 		else
 		{
-			ChangeDisplaySettings( 0, 0 );
-			glw_state.cdsFullscreen = qfalse;
+			GLW_ResetDisplaySettings( qtrue );
 		}
 	}
 
 	if (!GLW_CreateWindow( glConfig.vidWidth, glConfig.vidHeight, glConfig.colorBits ))
 		return qfalse;
 
-	if (EnumDisplaySettings( NULL, ENUM_CURRENT_SETTINGS, &dm ))
+	if (EnumDisplaySettingsA( GLW_GetCurrentDisplayDeviceName(), ENUM_CURRENT_SETTINGS, &dm ))
 		glInfo.displayFrequency = dm.dmDisplayFrequency;
 
 	return qtrue;
@@ -668,7 +744,7 @@ static qbool GLW_LoadOpenGL()
 	// load the driver and bind our function pointers to it
 	if ( QGL_Init( OPENGL_DRIVER_NAME ) ) {
 		// create the window and set up the context
-		if ( GLW_SetMode( (qbool)r_fullscreen->integer ) ) {
+		if ( GLW_SetMode( (qbool)!!r_fullscreen->integer ) ) {
 			return qtrue;
 		}
 	}
@@ -783,11 +859,10 @@ void GLimp_Shutdown()
 	}
 
 	// reset display settings
-	if ( glw_state.cdsFullscreen )
+	if ( glw_state.cdsDevModeValid )
 	{
 		ri.Printf( PRINT_DEVELOPER, "...resetting display\n" );
-		ChangeDisplaySettings( 0, 0 );
-		glw_state.cdsFullscreen = qfalse;
+		GLW_ResetDisplaySettings( qtrue );
 	}
 
 	// shutdown QGL subsystem
