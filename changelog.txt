@@ -1,6 +1,10 @@
 
 DD Mmm 17 - 1.49
 
+add: m_accelStyle to control the mouse accel style and m_accelOffset for style 1
+  m_accelStyle 0 (default) = legacy CNQ3 accel style
+  m_accelStyle 1 = new accel style, similar to quake3e's cl_mouseAccelStyle 1
+
 add: sv_minRebootDelayMins to control early server reboots (default: 1440, minimum: 60)
 
 fix: broken rendering when the 2nd stage of a collapsed shader stage pair had non-white colors
@@ -8,9 +12,9 @@ fix: broken rendering when the 2nd stage of a collapsed shader stage pair had no
 fix: shader stages using "wave" were not animated when the server time was too large
 
 add: con_scaleMode specifies the console text scaling mode
-	con_scaleMode 0 (default) = text size scales with con_scale but not the resolution
-	con_scaleMode 1 = text size scales with con_scale and the resolution
-	con_scaleMode 2 = text size is always 8x12
+  con_scaleMode 0 (default) = text size scales with con_scale but not the resolution
+  con_scaleMode 1 = text size scales with con_scale and the resolution
+  con_scaleMode 2 = text size is always 8x12
 
 chg: con_scale only specifies the console text scaling factor and nothing else
 

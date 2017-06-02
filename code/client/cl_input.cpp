@@ -26,7 +26,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 static const cvar_t* m_speed;
 static const cvar_t* m_accel;
-static const cvar_t* m_limit;
+static const cvar_t* m_accelStyle;	// 0=original, 1=new
+static const cvar_t* m_accelOffset;	// for style 1 only
+static const cvar_t* m_limit;		// for style 0 only
 static const cvar_t* m_pitch;
 static const cvar_t* m_yaw;
 static const cvar_t* m_forward;
@@ -361,23 +363,52 @@ static void CL_MouseMove( usercmd_t* cmd )
 	cl.mouseDx[cl.mouseIndex] = 0;
 	cl.mouseDy[cl.mouseIndex] = 0;
 
-	if (!mx && !my)
+	if (mx == 0.0f && my == 0.0f)
 		return;
 
-	float rate = sqrt( mx * mx + my * my ) / (float)frame_msec;
-	float speed = m_speed->value + rate * m_accel->value;
+	if (m_accel->value != 0.0f) {
+		// legacy style
+		if (m_accelStyle->integer == 0) {
+			const float rate = sqrtf( mx * mx + my * my ) / (float)frame_msec;
+			float speed = m_speed->value + rate * m_accel->value;
 
-	if (m_limit->value && (speed > m_limit->value))
-		speed = m_limit->value;
+			if (m_limit->value != 0.0f && (speed > m_limit->value))
+				speed = m_limit->value;
+
+			if (cl_showMouseRate->integer)
+				Com_Printf( "rate: %f, speed: %f\n", rate, speed );
+
+			mx *= speed;
+			my *= speed;
+		// new style, similar to quake3e's cl_mouseAccelStyle 1
+		} else {
+			const float offset = Com_Clamp( 0.001f, 5000.0f, m_accelOffset->value );
+			const float rateXa = fabsf( mx ) / (float)frame_msec;
+			const float rateYa = fabsf( my ) / (float)frame_msec;
+			const float powerXa = powf( rateXa / offset, m_accel->value );
+			const float powerYa = powf( rateYa / offset, m_accel->value );
+			const float powerX = mx >= 0 ? powerXa : -powerXa;
+			const float powerY = my >= 0 ? powerYa : -powerYa;
+
+			mx = m_speed->value * ( mx + powerX * offset );
+			my = m_speed->value * ( my + powerY * offset );
+
+			if (cl_showMouseRate->integer)
+				Com_Printf( "ratex: %f, ratey: %f, powx: %f, powy: %f\n", rateXa, rateYa, powerX, powerY );
+		}
+	} else {
+		float speed = m_speed->value;
+
+		if (m_limit->value != 0.0f && speed > m_limit->value)
+			speed = m_limit->value;
+
+		mx *= speed;
+		my *= speed;
+	}
 
 	// scale by FOV (+zoom only)
-	speed *= cl.cgameSensitivity;
-
-	if ( cl_showMouseRate->integer )
-		Com_Printf( "%f %f : %f\n", mx, my, speed );
-
-	mx *= speed;
-	my *= speed;
+	mx *= cl.cgameSensitivity;
+	my *= cl.cgameSensitivity;
 
 	// add mouse X/Y movement to cmd
 	if ( in_strafe.active ) {
@@ -871,6 +902,8 @@ void CL_InitInput()
 
 	m_speed = Cvar_Get( "m_speed", "8", CVAR_ARCHIVE );
 	m_accel = Cvar_Get( "m_accel", "0", CVAR_ARCHIVE );
+	m_accelStyle = Cvar_Get( "m_accelStyle", "0", CVAR_ARCHIVE );
+	m_accelOffset = Cvar_Get( "m_accelOffset", "5", CVAR_ARCHIVE );
 	m_limit = Cvar_Get( "m_limit", "0", CVAR_ARCHIVE );
 	m_pitch = Cvar_Get( "m_pitch", "0.022", CVAR_ARCHIVE );
 	m_yaw = Cvar_Get( "m_yaw", "0.022", CVAR_ARCHIVE );
