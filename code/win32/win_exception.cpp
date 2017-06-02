@@ -2,6 +2,7 @@
 #include "../qcommon/qcommon.h"
 #include "../qcommon/crash.h"
 #include "win_local.h"
+#include "glw_win.h"
 #include <DbgHelp.h>
 #include <strsafe.h>
 
@@ -249,6 +250,10 @@ static const char* WIN_GetAccessViolationCodeString( DWORD avCode )
 	}
 }
 
+// We save those separately because the handler might change related state before writing the report.
+static qbool wasDevModeValid = qfalse;
+static qbool wasMinimized = qfalse;
+
 static void WIN_WriteTextData( const char* filePath, debug_help_t* debugHelp, EXCEPTION_RECORD* pExceptionRecord )
 {
 	FILE* const file = fopen(filePath, "w");
@@ -272,6 +277,9 @@ static void WIN_WriteTextData( const char* filePath, debug_help_t* debugHelp, EX
 	if (WIN_GetOSVersion(osVersion, osVersion + 1, osVersion + 2)) {
 		JSONW_StringValue("windows_version", "%d.%d.%d", osVersion[0], osVersion[1], osVersion[2]);
 	}
+
+	JSONW_BooleanValue("device_mode_changed", wasDevModeValid);
+	JSONW_BooleanValue("minimized", wasMinimized);
 
 	Crash_PrintToFile(__argv[0]);
 
@@ -407,6 +415,23 @@ static qbool WIN_ShouldContinueSearch( DWORD exceptionCode )
 	}
 }
 
+// Debugging a full-screen app with a single screen is a horrendous experience.
+// With our custom handler, we can handle crashes by restoring the desktop settings
+// and hiding the main window before letting the debugger take over.
+// This will only help for crashes though, breakpoints will still be fucked up.
+// Work-around for breakpoints: use __debugbreak(); and don't launch the app through the debugger.
+static qbool WIN_WouldDebuggingBeOkay()
+{
+	if (g_wv.monitorCount >= 2 || g_wv.hWnd == NULL)
+		return qtrue;
+
+	const qbool fullScreen = (GetWindowLongA(g_wv.hWnd, GWL_STYLE) & WS_POPUP) != 0;
+	if (!fullScreen)
+		return qtrue;
+
+	return qfalse;
+}
+
 //
 // The exception handler's job is to reset system settings that won't get reset
 // as part of the normal process clean-up by the OS.
@@ -440,15 +465,34 @@ LONG CALLBACK WIN_HandleException( EXCEPTION_POINTERS* ep )
 	}
 
 	__try {
-		WIN_EndTimePeriod();
-	} __except(EXCEPTION_EXECUTE_HANDLER) {}
+		WIN_EndTimePeriod(); // system timer resolution
+	} __except (EXCEPTION_EXECUTE_HANDLER) {}
+
+	if (IsDebuggerPresent() && WIN_WouldDebuggingBeOkay())
+		return EXCEPTION_CONTINUE_SEARCH;
+
+	__try {
+		wasDevModeValid = glw_state.cdsDevModeValid;
+		if (glw_state.cdsDevModeValid)
+			WIN_SetDesktopDisplaySettings();
+	} __except (EXCEPTION_EXECUTE_HANDLER) {}
+
+	if (g_wv.hWnd != NULL) {
+		__try {
+			wasMinimized = (qbool)!!IsIconic(g_wv.hWnd);
+		} __except(EXCEPTION_EXECUTE_HANDLER) {}
+
+		__try {
+			ShowWindow(g_wv.hWnd, SW_MINIMIZE);
+		} __except(EXCEPTION_EXECUTE_HANDLER) {}
+	}
 
 	if (exc_exitCalled || IsDebuggerPresent())
 		return EXCEPTION_CONTINUE_SEARCH;
 
 	static const char* mbTitle = "CNQ3 Crash";
 	static const char* mbMsg = "CNQ3 crashed!\n\nYes to generate a crash report\nNo to continue after attaching a debugger\nCancel to quit";
-	const int result = MessageBoxA(NULL, mbMsg, mbTitle, MB_YESNOCANCEL | MB_ICONERROR);
+	const int result = MessageBoxA(NULL, mbMsg, mbTitle, MB_YESNOCANCEL | MB_ICONERROR | MB_TOPMOST);
 	if (result == IDYES) {
 		WIN_WriteExceptionFiles(ep);
 		if (exc_reportWritten)
