@@ -250,9 +250,11 @@ static const char* WIN_GetAccessViolationCodeString( DWORD avCode )
 	}
 }
 
+#ifndef DEDICATED
 // We save those separately because the handler might change related state before writing the report.
 static qbool wasDevModeValid = qfalse;
 static qbool wasMinimized = qfalse;
+#endif
 
 static void WIN_WriteTextData( const char* filePath, debug_help_t* debugHelp, EXCEPTION_RECORD* pExceptionRecord )
 {
@@ -278,8 +280,10 @@ static void WIN_WriteTextData( const char* filePath, debug_help_t* debugHelp, EX
 		JSONW_StringValue("windows_version", "%d.%d.%d", osVersion[0], osVersion[1], osVersion[2]);
 	}
 
+#ifndef DEDICATED
 	JSONW_BooleanValue("device_mode_changed", wasDevModeValid);
 	JSONW_BooleanValue("minimized", wasMinimized);
+#endif
 
 	Crash_PrintToFile(__argv[0]);
 
@@ -471,6 +475,7 @@ LONG CALLBACK WIN_HandleException( EXCEPTION_POINTERS* ep )
 	if (IsDebuggerPresent() && WIN_WouldDebuggingBeOkay())
 		return EXCEPTION_CONTINUE_SEARCH;
 
+#ifndef DEDICATED
 	__try {
 		wasDevModeValid = glw_state.cdsDevModeValid;
 		if (glw_state.cdsDevModeValid)
@@ -486,6 +491,7 @@ LONG CALLBACK WIN_HandleException( EXCEPTION_POINTERS* ep )
 			ShowWindow(g_wv.hWnd, SW_MINIMIZE);
 		} __except(EXCEPTION_EXECUTE_HANDLER) {}
 	}
+#endif
 
 	if (exc_exitCalled || IsDebuggerPresent())
 		return EXCEPTION_CONTINUE_SEARCH;
