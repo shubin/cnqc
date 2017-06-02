@@ -282,7 +282,7 @@ static qbool GL2_CreateShader( GLuint* shaderPtr, GLenum shaderType, const char*
 
 	static char log[1024];
 	qglGetShaderInfoLog( shader, logLength, NULL, log );
-	ri.Error( ERR_FATAL, "%s Shader Compile Error: %s", shaderType == GL_VERTEX_SHADER ? "Vertex" : "Fragment", log );
+	Com_Printf( "ERROR: %s shader: %s", shaderType == GL_VERTEX_SHADER ? "vertex" : "fragment", log );
 
 	return qfalse;
 }
@@ -365,33 +365,100 @@ static unsigned int frameBufferReadIndex = 0; // read this for the latest color/
 static qbool frameBufferMultiSampling = qfalse;
 
 
-static qbool GL2_FBO_CreateSS( FrameBuffer& fb, qbool depthStencil )
+#define CASE( x )		case x: return #x
+#define GL( call )		call; GL2_CheckError( #call, __FUNCTION__, __FILE__, __LINE__ )
+
+
+static const char* GL2_GetErrorString( GLenum ec )
 {
-	if ( depthStencil )
+	switch ( ec )
 	{
-		qglGenTextures( 1, &fb.depthStencil );
-		qglBindTexture( GL_TEXTURE_2D, fb.depthStencil );
-		qglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
-		qglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
-		qglTexImage2D( GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, glConfig.vidWidth, glConfig.vidHeight, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL );
+		CASE( GL_NO_ERROR );
+		CASE( GL_INVALID_ENUM );
+		CASE( GL_INVALID_VALUE );
+		CASE( GL_INVALID_OPERATION );
+		CASE( GL_INVALID_FRAMEBUFFER_OPERATION );
+		CASE( GL_OUT_OF_MEMORY );
+		CASE( GL_STACK_UNDERFLOW );
+		CASE( GL_STACK_OVERFLOW );
+		default: return "?";
+	}		
+}
+
+
+static void GL2_CheckError( const char* call, const char* function, const char* file, int line )
+{
+	const GLenum ec = qglGetError();
+	if ( ec == GL_NO_ERROR )
+		return;
+
+	const char* fileName = file;
+	while ( *file )
+	{
+		if ( *file == '/' || *file == '\\' )
+			fileName = file + 1;
+
+		++file;
 	}
 
-	qglGenTextures( 1, &fb.color );
-	qglBindTexture( GL_TEXTURE_2D, fb.color );
-	qglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-	qglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-	qglTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA8, glConfig.vidWidth, glConfig.vidHeight, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL );
+	Com_Printf( "%s failed\n", call );
+	Com_Printf( "%s:%d in %s\n", fileName, line, function );
+	Com_Printf( "Error code: 0x%X (%d)\n", (unsigned int)ec, (int)ec );
+	Com_Printf( "Error message: %s\n", GL2_GetErrorString(ec) );
+}
 
-	qglGenFramebuffers( 1, &fb.fbo );
-	qglBindFramebuffer( GL_FRAMEBUFFER, fb.fbo );
-	qglFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fb.color, 0 );
+
+static const char* GL2_GetFBOStatusString( GLenum status )
+{
+	switch ( status )
+	{
+		CASE( GL_FRAMEBUFFER_COMPLETE );
+		CASE( GL_FRAMEBUFFER_UNDEFINED );
+		CASE( GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT );
+		CASE( GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT );
+		CASE( GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER );
+		CASE( GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER );
+		CASE( GL_FRAMEBUFFER_UNSUPPORTED );
+		CASE( GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE );
+		CASE( GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS );
+		default: return "?";
+	}
+}
+
+
+#undef CASE
+
+
+static qbool GL2_FBO_CreateSS( FrameBuffer& fb, qbool depthStencil )
+{
+	while ( glGetError() != GL_NO_ERROR ) {} // clear the error queue
+
 	if ( depthStencil )
-		qglFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, fb.depthStencil, 0 );
+	{
+		GL(qglGenTextures( 1, &fb.depthStencil ));
+		GL(qglBindTexture( GL_TEXTURE_2D, fb.depthStencil ));
+		GL(qglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST ));
+		GL(qglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST ));
+		GL(qglTexImage2D( GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, glConfig.vidWidth, glConfig.vidHeight, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL ));
+	}
 
-	const int fboStatus = qglCheckFramebufferStatus( GL_FRAMEBUFFER );
+	GL(qglGenTextures( 1, &fb.color ));
+	GL(qglBindTexture( GL_TEXTURE_2D, fb.color ));
+	GL(qglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR ));
+	GL(qglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR ));
+	GL(qglTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA8, glConfig.vidWidth, glConfig.vidHeight, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL ));
+
+	GL(qglGenFramebuffers( 1, &fb.fbo ));
+	GL(qglBindFramebuffer( GL_FRAMEBUFFER, fb.fbo ));
+	GL(qglFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fb.color, 0 ));
+	if ( depthStencil )
+		GL(qglFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, fb.depthStencil, 0 ));
+
+	const GLenum fboStatus = qglCheckFramebufferStatus( GL_FRAMEBUFFER );
 	if ( fboStatus != GL_FRAMEBUFFER_COMPLETE )
 	{
-		Com_Printf( "Failed to create FBO (status %d, error %d)\n", fboStatus, (int)qglGetError() );
+		Com_Printf( "Failed to create FBO (status 0x%X, error 0x%X)\n", (unsigned int)fboStatus, (unsigned int)qglGetError() );
+		Com_Printf( "FBO status string: %s\n", GL2_GetFBOStatusString(fboStatus) );
 		return qfalse;
 	}
 
@@ -405,25 +472,28 @@ static qbool GL2_FBO_CreateSS( FrameBuffer& fb, qbool depthStencil )
 
 static qbool GL2_FBO_CreateMS( FrameBuffer& fb )
 {
-	qglGenFramebuffers( 1, &fb.fbo );
-	qglBindFramebuffer( GL_FRAMEBUFFER, fb.fbo );
+	while ( glGetError() != GL_NO_ERROR ) {} // clear the error queue
 
-	qglGenRenderbuffers( 1, &fb.color );
-	qglBindRenderbuffer( GL_RENDERBUFFER, fb.color );
-	qglRenderbufferStorageMultisample( GL_RENDERBUFFER, 4, GL_RGBA8, glConfig.vidWidth, glConfig.vidHeight );
-	qglFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, fb.color );
+	GL(qglGenFramebuffers( 1, &fb.fbo ));
+	GL(qglBindFramebuffer( GL_FRAMEBUFFER, fb.fbo ));
 
-	qglGenRenderbuffers( 1, &fb.depthStencil );
-	qglBindRenderbuffer( GL_RENDERBUFFER, fb.depthStencil );
-	qglRenderbufferStorageMultisample( GL_RENDERBUFFER, 4, GL_DEPTH24_STENCIL8, glConfig.vidWidth, glConfig.vidHeight );
+	GL(qglGenRenderbuffers( 1, &fb.color ));
+	GL(qglBindRenderbuffer( GL_RENDERBUFFER, fb.color ));
+	GL(qglRenderbufferStorageMultisample( GL_RENDERBUFFER, 4, GL_RGBA8, glConfig.vidWidth, glConfig.vidHeight ));
+	GL(qglFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, fb.color ));
 
-	qglFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, fb.color );
-	qglFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, fb.depthStencil );
+	GL(qglGenRenderbuffers( 1, &fb.depthStencil ));
+	GL(qglBindRenderbuffer( GL_RENDERBUFFER, fb.depthStencil ));
+	GL(qglRenderbufferStorageMultisample( GL_RENDERBUFFER, 4, GL_DEPTH24_STENCIL8, glConfig.vidWidth, glConfig.vidHeight ));
 
-	const int fboStatus = qglCheckFramebufferStatus( GL_FRAMEBUFFER );
-	if(fboStatus != GL_FRAMEBUFFER_COMPLETE)
+	GL(qglFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, fb.color ));
+	GL(qglFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, fb.depthStencil ));
+
+	const GLenum fboStatus = qglCheckFramebufferStatus( GL_FRAMEBUFFER );
+	if ( fboStatus != GL_FRAMEBUFFER_COMPLETE )
 	{
-		Com_Printf( "Failed to create FBO (status %d, error %d)\n", fboStatus, (int)qglGetError() );
+		Com_Printf( "Failed to create FBO (status 0x%X, error 0x%X)\n", (unsigned int)fboStatus, (unsigned int)qglGetError() );
+		Com_Printf( "FBO status string: %s\n", GL2_GetFBOStatusString(fboStatus) );
 		return qfalse;
 	}
 
@@ -566,24 +636,26 @@ static const char* gammaFS =
 
 qbool QGL_InitGL2()
 {
-	if ( GL2_CreateProgram( dynLightProg, dynLightVS, dynLightFS ) ) {
-		dynLightProgAttribs.osEyePos = qglGetUniformLocation( dynLightProg.p, "osEyePos" );
-		dynLightProgAttribs.osLightPos = qglGetUniformLocation( dynLightProg.p, "osLightPos" );
-		dynLightProgAttribs.texture = qglGetUniformLocation( dynLightProg.p, "texture" );
-		dynLightProgAttribs.lightColorRadius = qglGetUniformLocation( dynLightProg.p, "lightColorRadius" );
-	} else {
+	if ( !GL2_FBO_Init() ) {
+		Com_Printf( "ERROR: failed to create framebuffer objects\n" );
 		return qfalse;
 	}
 
-	if ( !GL2_FBO_Init() )
-		return qfalse;
+	if ( !GL2_CreateProgram( dynLightProg, dynLightVS, dynLightFS ) ) {
+		Com_Printf( "ERROR: failed to compile dynamic light shaders\n" );
+		return qfalse;	
+	}
+	dynLightProgAttribs.osEyePos = qglGetUniformLocation( dynLightProg.p, "osEyePos" );
+	dynLightProgAttribs.osLightPos = qglGetUniformLocation( dynLightProg.p, "osLightPos" );
+	dynLightProgAttribs.texture = qglGetUniformLocation( dynLightProg.p, "texture" );
+	dynLightProgAttribs.lightColorRadius = qglGetUniformLocation( dynLightProg.p, "lightColorRadius" );
 
-	if ( GL2_CreateProgram( gammaProg, gammaVS, gammaFS ) ) {
-		gammaProgAttribs.texture = qglGetUniformLocation( gammaProg.p, "texture" );
-		gammaProgAttribs.gammaOverbright = qglGetUniformLocation( gammaProg.p, "gammaOverbright" );
-	} else {
+	if ( !GL2_CreateProgram( gammaProg, gammaVS, gammaFS ) ) {
+		Com_Printf( "ERROR: failed to compile gamma correction shaders\n" );
 		return qfalse;
 	}
+	gammaProgAttribs.texture = qglGetUniformLocation( gammaProg.p, "texture" );
+	gammaProgAttribs.gammaOverbright = qglGetUniformLocation( gammaProg.p, "gammaOverbright" );
 
 	return qtrue;
 }
