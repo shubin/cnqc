@@ -431,7 +431,7 @@ static const char* GL2_GetFBOStatusString( GLenum status )
 
 static qbool GL2_FBO_CreateSS( FrameBuffer& fb, qbool depthStencil )
 {
-	while ( glGetError() != GL_NO_ERROR ) {} // clear the error queue
+	while ( qglGetError() != GL_NO_ERROR ) {} // clear the error queue
 
 	if ( depthStencil )
 	{
@@ -472,7 +472,7 @@ static qbool GL2_FBO_CreateSS( FrameBuffer& fb, qbool depthStencil )
 
 static qbool GL2_FBO_CreateMS( FrameBuffer& fb )
 {
-	while ( glGetError() != GL_NO_ERROR ) {} // clear the error queue
+	while ( qglGetError() != GL_NO_ERROR ) {} // clear the error queue
 
 	GL(qglGenFramebuffers( 1, &fb.fbo ));
 	GL(qglBindFramebuffer( GL_FRAMEBUFFER, fb.fbo ));
