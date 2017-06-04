@@ -1,6 +1,10 @@
 
 DD Mmm 17 - 1.49
 
+chg: using stb_image to load png and tga images
+
+fix: libjpeg errors no longer shut down the engine
+
 add: m_accelStyle to control the mouse accel style and m_accelOffset for style 1
   m_accelStyle 0 (default) = legacy CNQ3 accel style
   m_accelStyle 1 = new accel style, similar to quake3e's cl_mouseAccelStyle 1

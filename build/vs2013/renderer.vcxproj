@@ -207,10 +207,12 @@
   <ItemGroup>
     <ClInclude Include="..\..\code\renderer\qgl.h" />
     <ClInclude Include="..\..\code\renderer\qgl_linked.h" />
+    <ClInclude Include="..\..\code\renderer\stb_image.h" />
     <ClInclude Include="..\..\code\renderer\tr_local.h" />
     <ClInclude Include="..\..\code\renderer\tr_public.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\code\renderer\stb_image.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_backend.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_bsp.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_cmds.cpp" />

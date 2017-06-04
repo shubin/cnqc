@@ -297,6 +297,7 @@ copy "..\..\..\.bin\release_x64\cnq3-x64.pdb" "$(QUAKE3DIR)"</Command>
     <ClInclude Include="..\..\code\qcommon\vm_shim.h" />
     <ClInclude Include="..\..\code\renderer\qgl.h" />
     <ClInclude Include="..\..\code\renderer\qgl_linked.h" />
+    <ClInclude Include="..\..\code\renderer\stb_image.h" />
     <ClInclude Include="..\..\code\renderer\tr_local.h" />
     <ClInclude Include="..\..\code\renderer\tr_public.h" />
     <ClInclude Include="..\..\code\server\server.h" />

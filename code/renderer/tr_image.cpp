@@ -21,6 +21,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 // tr_image.c
 #include "tr_local.h"
+#include <setjmp.h>
+
+
+#if defined (_MSC_VER)
+#	pragma warning (disable: 4611) // setjmp and C++ destructors
+#endif
 
 
 #define IMAGE_HASH_SIZE 1024
@@ -478,126 +484,14 @@ image_t* R_CreateImage( const char* name, byte* pic, int width, int height, GLen
 }
 
 
-static qbool LoadTGA( const char* name, byte** pic, int* w, int* h, GLenum* format )
-{
-	*pic = NULL;
-
-	byte* buffer;
-	ri.FS_ReadFile( name, (void**)&buffer );
-	if (!buffer)
-		return qfalse;
-
-	byte* p = buffer;
-
-	TargaHeader targa_header;
-	targa_header.id_length = p[0];
-	targa_header.colormap_type = p[1];
-	targa_header.image_type = p[2];
-	targa_header.width = LittleShort( *(short*)&p[12] );
-	targa_header.height = LittleShort( *(short*)&p[14] );
-	targa_header.pixel_size = p[16];
-	targa_header.attributes = p[17];
-
-	p += sizeof(TargaHeader);
-
-	if ((targa_header.image_type != 2) && (targa_header.image_type != 10) && (targa_header.image_type != 3))
-		ri.Error( ERR_DROP, "LoadTGA %s: Only type 2 and 10 (RGB/A) and 3 (gray) images supported\n", name );
-
-	if ( targa_header.colormap_type )
-		ri.Error( ERR_DROP, "LoadTGA %s: Colormaps not supported\n", name );
-
-	if ( ( targa_header.pixel_size != 32 && targa_header.pixel_size != 24 ) && targa_header.image_type != 3 )
-		ri.Error( ERR_DROP, "LoadTGA %s: Only 32 or 24 bit color images supported\n", name );
-
-	*format = (targa_header.pixel_size == 32) ? GL_RGBA : GL_RGB;
-
-	int columns = targa_header.width;
-	int rows = targa_header.height;
-	unsigned numBytes = columns * rows * 4;
-
-	*w = columns;
-	*h = rows;
-
-	if ( !columns || !rows || (numBytes > 0x7FFFFFFF) || (numBytes / columns / 4 != rows) )
-		ri.Error( ERR_DROP, "LoadTGA: %s has an invalid image size\n", name );
-
-	*pic = (byte*)ri.Malloc(numBytes);
-	byte* dst;
-
-	if (targa_header.id_length != 0)
-		p += targa_header.id_length;  // skip TARGA image comment
-
-	byte pixel[4] = { 0, 0, 0, 255 };
-	int bpp = (targa_header.pixel_size >> 3);
-
-	// uncompressed greyscale - expand it into fake-RGB
-	if (targa_header.image_type == 3) {
-		for (int y = rows-1; y >= 0; --y) {
-			dst = *pic + y*columns*4;
-			for (int x = 0; x < columns; ++x) {
-				pixel[0] = pixel[1] = pixel[2] = *p++;
-			}
-		}
-	}
-
-	// one of these days we'll actually just use GL_BGRA_EXT, but until then...
-	#define UNMUNGE_TGA_PIXEL { *dst++ = pixel[2]; *dst++ = pixel[1]; *dst++ = pixel[0]; *dst++ = pixel[3]; }
-
-	// uncompressed BGR(A)
-	if (targa_header.image_type == 2) {
-		for (int y = rows-1; y >= 0; --y) {
-			dst = *pic + y*columns*4;
-			for (int x = 0; x < columns; ++x) {
-				for (int i = 0; i < bpp; ++i)
-					pixel[i] = *p++;
-				UNMUNGE_TGA_PIXEL;
-			}
-		}
-	}
-
-	#define WRAP_TGA if ((++x == columns) && y--) { x = 0; dst = *pic + y*columns*4; }
-
-	// RLE BGR(A)
-	if (targa_header.image_type == 10) {
-		int y = rows-1;
-		while (y >= 0) {
-			dst = *pic + y*columns*4;
-			int x = 0;
-			while (x < columns) {
-				int rle = *p++;
-				int n = 1 + (rle & 0x7F);
-				if (rle & 0x80) { // RLE packet, 1 pixel n times
-					for (int i = 0; i < bpp; ++i)
-						pixel[i] = *p++;
-					while (n--) {
-						UNMUNGE_TGA_PIXEL;
-						WRAP_TGA;
-					}
-				}
-				else while (n--) { // n distinct pixels
-					for (int i = 0; i < bpp; ++i)
-						pixel[i] = *p++;
-					UNMUNGE_TGA_PIXEL;
-					WRAP_TGA;
-				}
-			}
-		}
-	}
-
-	#undef WRAP_TGA
-
-	#undef UNMUNGE_TGA_PIXEL
-
-	if (targa_header.attributes & 0x20)
-		ri.Printf( PRINT_WARNING, "WARNING: '%s' TGA file header declares top-down image, ignoring\n", name );
-
-	ri.FS_FreeFile( buffer );
-	return qtrue;
-}
-
-
 ///////////////////////////////////////////////////////////////
 
+
+typedef struct {
+	jmp_buf		jumpBuffer;
+	const char*	fileName;
+	qbool		load;
+} engineJPEGInfo_t;
 
 // The only memory allocation function pointers we can override are the ones exposed in jpeg_memory_mgr.
 // The problem is that it's the wrong layer for us: we want to replace malloc and free,
@@ -623,34 +517,38 @@ extern "C"
 	{
 		char buffer[JMSG_LENGTH_MAX];
 		(*cinfo->err->format_message)(cinfo, buffer);
+		engineJPEGInfo_t* const extra = (engineJPEGInfo_t*)cinfo->client_data;
+		ri.Printf(PRINT_WARNING, "libjpeg-turbo: couldn't %s %s: %s\n", extra->load ? "load" : "save", extra->fileName, buffer);
 		jpeg_destroy(cinfo);
-		ri.Error( ERR_FATAL, "%s\n", buffer );
+		longjmp(extra->jumpBuffer, -1);
 	}
 
 	void output_message( j_common_ptr cinfo )
 	{
 		char buffer[JMSG_LENGTH_MAX];
 		(*cinfo->err->format_message)(cinfo, buffer);
-		ri.Printf(PRINT_ALL, "%s\n", buffer);
+		const engineJPEGInfo_t* const extra = (const engineJPEGInfo_t*)cinfo->client_data;
+		ri.Printf(PRINT_ALL, "libjpeg-turbo: while %s %s: %s\n", extra->load ? "loading" : "saving", extra->fileName, buffer);
 	}
 };
 
 
-static qbool LoadJPG( const char* name, byte** pic, int* w, int* h )
+static qbool LoadJPG( const char* fileName, byte* buffer, int len, byte** pic, int* w, int* h, GLenum* format )
 {
 	jpeg_decompress_struct cinfo;
 	jpeg_error_mgr jerr;
+	engineJPEGInfo_t extra;
 
+	if (setjmp(extra.jumpBuffer))
+		return qfalse;
+
+	extra.load = qtrue;
+	extra.fileName = fileName;
 	cinfo.err = jpeg_std_error( &jerr );
 	cinfo.err->error_exit = &error_exit;
 	cinfo.err->output_message = &output_message;
-
+	cinfo.client_data = &extra;
 	jpeg_create_decompress( &cinfo );
-
-	byte* buffer;
-	const int len = ri.FS_ReadFile( name, (void**)&buffer );
-	if (!buffer)
-		return qfalse;
 
 	jpeg_mem_src( &cinfo, buffer, len );
 
@@ -682,19 +580,29 @@ static qbool LoadJPG( const char* name, byte** pic, int* w, int* h )
 	jpeg_finish_decompress( &cinfo );
 	jpeg_destroy_decompress( &cinfo );
 
-	ri.FS_FreeFile( buffer );
+	*format = GL_RGB;
+
 	return qtrue;
 }
 
 
 int SaveJPGToBuffer( byte* out, int quality, int image_width, int image_height, byte* image_buffer )
 {
+	static const char* fileName = "memory buffer";
+
 	jpeg_compress_struct cinfo;
 	jpeg_error_mgr jerr;
+	engineJPEGInfo_t extra;
 
+	if (setjmp(extra.jumpBuffer))
+		return qfalse;
+
+	extra.load = qfalse;
+	extra.fileName = fileName;
 	cinfo.err = jpeg_std_error( &jerr );
 	cinfo.err->error_exit = &error_exit;
 	cinfo.err->output_message = &output_message;
+	cinfo.client_data = &extra;
 	jpeg_create_compress( &cinfo );
 
 	// jpeg_mem_dest only calls malloc if both outSize and outBuffer are 0
@@ -732,40 +640,66 @@ int SaveJPGToBuffer( byte* out, int quality, int image_width, int image_height, 
 ///////////////////////////////////////////////////////////////
 
 
+extern qbool LoadSTB( const char* fileName, byte* buffer, int len, byte** pic, int* w, int* h, GLenum* format );
+
+typedef qbool (*imageLoaderFunc)( const char* fileName, byte* buffer, int len, byte** pic, int* w, int* h, GLenum* format );
+
+typedef struct {
+	const char*		extension;
+	imageLoaderFunc	function;
+} imageLoader_t;
+
+static const imageLoader_t imageLoaders[] = {
+	{ ".jpg",	&LoadJPG },
+	{ ".tga",	&LoadSTB },
+	{ ".png",	&LoadSTB },
+	{ ".jpeg",	&LoadJPG }
+};
+
+
 static void R_LoadImage( const char* name, byte** pic, int* w, int* h, GLenum* format )
 {
 	*pic = NULL;
-
 	*w = 0;
 	*h = 0;
 
-	int len = strlen(name);
-	if (len < 5) {
-		ri.Printf( PRINT_ALL, "ERROR: invalid image name %s\n", name );
-		return;
+	const int loaderCount = ARRAY_LEN( imageLoaders );
+	char altName[MAX_QPATH];
+
+	byte* buffer;
+	int bufferSize = ri.FS_ReadFile( name, (void**)&buffer );
+	if ( buffer == NULL ) {
+		const char* lastDot = strrchr( name, '.' );
+		const int nameLength = lastDot != NULL ? (int)(lastDot - name) : (int)strlen( name );
+		if ( nameLength >= MAX_QPATH )
+			return;
+
+		for ( int i = 0; i < loaderCount; ++i ) {
+			memcpy( altName, name, nameLength );
+			altName[nameLength] = '\0';
+			Q_strcat( altName, sizeof(altName), imageLoaders[i].extension );
+			bufferSize = ri.FS_ReadFile( altName, (void**)&buffer );
+			if ( buffer != NULL ) {
+				name = altName;
+				break;
+			}
+		}
+
+		if ( buffer == NULL )
+			return;
 	}
 
-	if (!Q_stricmp( name+len-4, ".tga" ) && LoadTGA( name, pic, w, h, format ))
-		return;
+	const int nameLength = (int)strlen( name );
+	for ( int i = 0; i < loaderCount; ++i ) {
+		const int extLength = (int)strlen( imageLoaders[i].extension );
+		if ( extLength < nameLength &&
+			 Q_stricmp(name + nameLength - extLength, imageLoaders[i].extension) == 0 ) {
+			(*imageLoaders[i].function)( name, buffer, bufferSize, pic, w, h, format );
+			break;
+		}
+	}
 
-	*format = GL_RGB;
-#if defined(_DEBUG)
-	// either this is REALLY a jpg, or just as likely some moron got the extension wrong
-	if (!Q_stricmp( name+len-4, ".jpg" ) && LoadJPG( name, pic, w, h ))
-		return;
-
-	ri.Printf( PRINT_DEVELOPER, "WARNING: idiot has misnamed %s\n", name );
-#endif
-
-	char altname[MAX_QPATH];
-	Q_strncpyz( altname, name, sizeof(altname) );
-	len = strlen( altname );
-	altname[len-3] = 'j';
-	altname[len-2] = 'p';
-	altname[len-1] = 'g';
-	LoadJPG( altname, pic, w, h );
-
-	return;
+	ri.FS_FreeFile( buffer );
 }
 
 
