@@ -2868,7 +2868,7 @@ void Field_AutoComplete( field_t *field, qbool insertBackslash )
 			field->cursor = max;
 	} else {
 		// the input line is pure whitespace so we rewrite it
-		Q_strncpyz ( field->buffer, "\\", sizeof( field->buffer ) );
+		Q_strncpyz ( field->buffer, insertBackslash ? "\\" : "", sizeof( field->buffer ) );
 		field->cursor = strlen( field->buffer );
 	}
 }
