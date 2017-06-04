@@ -79,12 +79,7 @@ static field_t tty_con;
 static cvar_t *ttycon_ansicolor = NULL;
 static qboolean ttycon_color_on = qfalse;
 
-// history
-// NOTE TTimo this is a bit duplicate of the graphical console history
-//   but it's safer and faster to write our own here
-#define TTY_HISTORY 32
-static field_t ttyEditLines[TTY_HISTORY];
-static int hist_current = -1, hist_count = 0;
+static history_t tty_history;
 
 
 
@@ -110,27 +105,33 @@ static void tty_Back()
 {
   char key;
   key = '\b';
-  write(1, &key, 1);
+  write(STDOUT_FILENO, &key, 1);
   key = ' ';
-  write(1, &key, 1);
+  write(STDOUT_FILENO, &key, 1);
   key = '\b';
-  write(1, &key, 1);
+  write(STDOUT_FILENO, &key, 1);
 }
 
 // clear the display of the line currently edited
 // bring cursor back to beginning of line
 static void tty_Hide()
 {
-  int i;
   assert(ttycon_on);
   if (ttycon_hide)
   {
     ttycon_hide++;
     return;
   }
-  if (tty_con.cursor>0)
+  const int length = strlen(tty_con.buffer);
+  if (length > 0)
   {
-    for (i=0; i<tty_con.cursor; i++)
+    const int stepsForward = length - tty_con.cursor;
+    // a single write call for this didn't work on my terminal
+    for (int i = 0; i < stepsForward; ++i)
+    {
+      write(STDOUT_FILENO, "\033[1C", 4);
+    }
+    for (int i = 0; i < length; ++i)
     {
       tty_Back();
     }
@@ -143,74 +144,24 @@ static void tty_Hide()
 // FIXME TTimo need to position the cursor if needed??
 static void tty_Show()
 {
-  int i;
   assert(ttycon_on);
   assert(ttycon_hide>0);
   ttycon_hide--;
   if (ttycon_hide == 0)
   {
     write(STDOUT_FILENO, "]", 1);
-    if (tty_con.cursor)
+    const int length = strlen(tty_con.buffer);
+    if (length > 0)
     {
-      for (i=0; i<tty_con.cursor; i++)
+      const int stepsBack = length - tty_con.cursor;
+      write(STDOUT_FILENO, tty_con.buffer, length);
+      // a single write call for this didn't work on my terminal
+      for (int i = 0; i < stepsBack; ++i)
       {
-        write(1, tty_con.buffer+i, 1);
-      }
+		write(STDOUT_FILENO, "\033[1D", 4);
+	  }
     }
   }
-}
-
-static void tty_Hist_Add(field_t *field)
-{
-  int i;
-  assert(hist_count <= TTY_HISTORY);
-  assert(hist_count >= 0);
-  assert(hist_current >= -1);
-  assert(hist_current <= hist_count);
-  // make some room
-  for (i=TTY_HISTORY-1; i>0; i--)
-  {
-    ttyEditLines[i] = ttyEditLines[i-1];
-  }
-  ttyEditLines[0] = *field;
-  if (hist_count<TTY_HISTORY)
-  {
-    hist_count++;
-  }
-  hist_current = -1; // re-init
-}
-
-static field_t* tty_Hist_Prev()
-{
-  int hist_prev;
-  assert(hist_count <= TTY_HISTORY);
-  assert(hist_count >= 0);
-  assert(hist_current >= -1);
-  assert(hist_current <= hist_count);
-  hist_prev = hist_current + 1;
-  if (hist_prev >= hist_count)
-  {
-    return NULL;
-  }
-  hist_current++;
-  return &(ttyEditLines[hist_current]);
-}
-
-static field_t* tty_Hist_Next()
-{
-  assert(hist_count <= TTY_HISTORY);
-  assert(hist_count >= 0);
-  assert(hist_current >= -1);
-  assert(hist_current <= hist_count);
-  if (hist_current >= 0)
-  {
-    hist_current--;
-  }
-  if (hist_current == -1)
-  {
-    return NULL;
-  }
-  return &(ttyEditLines[hist_current]);
 }
 
 
@@ -281,7 +232,7 @@ const char* Sys_ConsoleInput()
   static char text[256];
   int avail;
   char key;
-  field_t *history;
+  field_t field;
 
   if (ttycon && ttycon->value)
   {
@@ -289,50 +240,68 @@ const char* Sys_ConsoleInput()
     if (avail != -1)
     {
       // we have something
-      // backspace?
-      // NOTE TTimo testing a lot of values .. seems it's the only way to get it to work everywhere
-      if ((key == tty_erase) || (key == 127) || (key == 8))
+      if (key == tty_erase || key == 127 || key == 8) // backspace
       {
-        if (tty_con.cursor > 0)
+		const int length = strlen(tty_con.buffer);
+        if (length > 0)
         {
-          tty_con.cursor--;
-          tty_con.buffer[tty_con.cursor] = '\0';
-          tty_Back();
+		  if (tty_con.cursor == length)
+		  {
+            tty_con.buffer[length - 1] = '\0';
+            tty_con.cursor--;
+            tty_Back();
+		  }
+		  else if (tty_con.cursor > 0)
+		  {
+			tty_Hide();
+			const int toMove = length + 1 - tty_con.cursor; // with the null terminator
+			memmove(tty_con.buffer + tty_con.cursor - 1, tty_con.buffer + tty_con.cursor, toMove);
+			tty_con.cursor--;
+			tty_Show();
+		  }
         }
         return NULL;
       }
+
       // check if this is a control char
       if ((key) && (key) < ' ')
       {
         if (key == '\n')
         {
 #ifdef DEDICATED
-          // push it in history
-          tty_Hist_Add(&tty_con);
+          History_SaveCommand(&tty_history, &tty_con);
           Q_strncpyz(text, tty_con.buffer, sizeof(text));
           Field_Clear(&tty_con);
           write(STDOUT_FILENO, "\n]", 2);
 #else
           // not in a game yet and no leading slash?
-          if (cls.state != CA_ACTIVE && tty_con.cursor > 0 &&
+          if (cls.state != CA_ACTIVE &&
               tty_con.buffer[0] != '/' && tty_con.buffer[0] != '\\')
           {
             // there's no one to chat with, so we consider this a command
-            memmove(tty_con.buffer + 1, tty_con.buffer, strlen(tty_con.buffer) + 1);
-            tty_con.buffer[0] = '\\';
+            const int length = strlen(tty_con.buffer);
+            if (length > 0)
+            {
+			  memmove(tty_con.buffer + 1, tty_con.buffer, length + 1);
+			}
+			else
+			{
+			  tty_con.buffer[1] = '\0';
+			}
+			tty_con.buffer[0] = '\\';
             tty_con.cursor++;
           }
 
           // decide what the final command will be
+          const int length = strlen(tty_con.buffer);
           if (tty_con.buffer[0] == '/' || tty_con.buffer[0] == '\\')
             Q_strncpyz(text, tty_con.buffer + 1, sizeof(text));
-          else if (tty_con.cursor)
+          else if (length > 0)
             Com_sprintf(text, sizeof(text), "say %s", tty_con.buffer);
           else
             *text = '\0';
             
-          // push it in history
-          tty_Hist_Add(&tty_con);
+          History_SaveCommand(&tty_history, &tty_con);
           tty_Hide();
           Com_Printf("tty]%s\n", tty_con.buffer);
           Field_Clear(&tty_con);
@@ -359,27 +328,28 @@ const char* Sys_ConsoleInput()
           {
             avail = read(0, &key, 1);
             if (avail != -1)
-            {
+            {			
               switch (key)
               {
-              case 'A':
-                history = tty_Hist_Prev();
-                if (history)
+              case 'A': // up arrow (move cursor up)
+                History_GetPreviousCommand(&field, &tty_history);
+                if (field.buffer[0] != '\0')
                 {
                   tty_Hide();
-                  tty_con = *history;
+                  tty_con = field;
                   tty_Show();
                 }
                 tty_FlushIn();
                 return NULL;
                 break;
-              case 'B':
-                history = tty_Hist_Next();
+              case 'B': // down arrow (move cursor down)
+                History_GetNextCommand(&field, &tty_history, 0);
                 tty_Hide();
-                if (history)
+                if (tty_con.buffer[0] != '\0')
                 {
-                  tty_con = *history;
-                } else
+                  tty_con = field;
+                }
+                else
                 {
                   Field_Clear(&tty_con);
                 }
@@ -387,10 +357,52 @@ const char* Sys_ConsoleInput()
                 tty_FlushIn();
                 return NULL;
                 break;
-              case 'C':
+              case 'C': // right arrow (move cursor right)
+                if (tty_con.cursor < strlen(tty_con.buffer))
+                {
+				  write(STDOUT_FILENO, "\033[1C", 4);
+                  tty_con.cursor++;
+				}
                 return NULL;
-              case 'D':
+              case 'D': // left arrow (move cursor left)
+                if (tty_con.cursor > 0)
+                {
+				  write(STDOUT_FILENO, "\033[1D", 4);
+                  tty_con.cursor--;
+				}
                 return NULL;
+              case '3': // delete (might not work on all terminals)
+                {
+                  const int length = strlen(tty_con.buffer);
+                  if (tty_con.cursor < length)
+                  {
+	                tty_Hide();
+	                const int toMove = length - tty_con.cursor; // with terminating NULL
+	                memmove(tty_con.buffer + tty_con.cursor, tty_con.buffer + tty_con.cursor + 1, toMove);
+	                tty_Show();  
+                  }
+			    }
+			    tty_FlushIn();
+			    return NULL;
+              case 'H': // home (move cursor to upper left corner)
+                if (tty_con.cursor > 0)
+                {
+				  tty_Hide();
+	              tty_con.cursor = 0;
+	              tty_Show();  
+				}
+			    return NULL;
+			  case 'F': // end (might not work on all terminals)
+                {
+			      const int length = strlen(tty_con.buffer);
+                  if (tty_con.cursor < length)
+                  {
+	                tty_Hide();
+	                tty_con.cursor = length;
+	                tty_Show();  
+                  }
+				}
+			    return NULL;
               }
             }
           }
@@ -399,11 +411,25 @@ const char* Sys_ConsoleInput()
         tty_FlushIn();
         return NULL;
       }
-      // push regular character
-      tty_con.buffer[tty_con.cursor] = key;
-      tty_con.cursor++;
-      // print the current line (this is differential)
-      write(1, &key, 1);
+      
+      // if we get here, key is a regular character
+      const int length = strlen(tty_con.buffer);
+      if (tty_con.cursor == length)
+      {
+        write(STDOUT_FILENO, &key, 1);
+        tty_con.buffer[tty_con.cursor + 0] = key;
+        tty_con.buffer[tty_con.cursor + 1] = '\0';
+        tty_con.cursor++;
+	  }
+      else
+      {
+        tty_Hide();
+        const int toMove = length + 1 - tty_con.cursor; // need to move the null terminator too
+		memmove(tty_con.buffer + tty_con.cursor + 1, tty_con.buffer + tty_con.cursor, toMove);
+		tty_con.buffer[tty_con.cursor] = key;
+		tty_con.cursor++;
+        tty_Show();
+      }
     }
     return NULL;
   } else

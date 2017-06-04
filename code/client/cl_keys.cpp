@@ -27,22 +27,15 @@ key up events are sent even if in console mode
 
 */
 
-field_t	historyEditLines[COMMAND_HISTORY];
-
-int			nextHistoryLine;		// the last line in the history buffer, not masked
-int			historyLine;	// the line being displayed from history buffer
-							// will be <= nextHistoryLine
-
+history_t	g_history;
 field_t		g_consoleField;
 field_t		chatField;
-qbool	chat_team;
-
+qbool		chat_team;
 int			chat_playerNum;
+int			anykeydown;
 
 
 static qbool key_overstrikeMode;
-
-int				anykeydown;
 
 
 typedef struct {
@@ -476,10 +469,7 @@ static void Console_Key( int key )
 			}
 		}
 
-		// copy line to history buffer
-		historyEditLines[nextHistoryLine % COMMAND_HISTORY] = g_consoleField;
-		nextHistoryLine++;
-		historyLine = nextHistoryLine;
+		History_SaveCommand( &g_history, &g_consoleField );
 
 		Field_Clear( &g_consoleField );
 		g_consoleField.widthInChars = g_console_field_width;
@@ -502,24 +492,13 @@ static void Console_Key( int key )
 
 	if ( ( key == K_UPARROW ) ||
 			( ( tolower(key) == 'p' ) && keys[K_CTRL].down ) ) {
-		if ( nextHistoryLine - historyLine < COMMAND_HISTORY 
-			&& historyLine > 0 ) {
-			historyLine--;
-		}
-		g_consoleField = historyEditLines[ historyLine % COMMAND_HISTORY ];
+		History_GetPreviousCommand( &g_consoleField, &g_history );
 		return;
 	}
 
 	if ( ( key == K_DOWNARROW ) ||
 			( ( tolower(key) == 'n' ) && keys[K_CTRL].down ) ) {
-		historyLine++;
-		if (historyLine >= nextHistoryLine) {
-			historyLine = nextHistoryLine;
-			Field_Clear( &g_consoleField );
-			g_consoleField.widthInChars = g_console_field_width;
-			return;
-		}
-		g_consoleField = historyEditLines[ historyLine % COMMAND_HISTORY ];
+		History_GetNextCommand( &g_consoleField, &g_history, g_console_field_width );
 		return;
 	}
 
@@ -1177,19 +1156,19 @@ void CL_LoadCommandHistory()
 	for ( int i = 0; i < count; ++i ) {
 		const int l = lengths[i];
 		if ( l <= 0 ||
-			FS_Read( historyEditLines[i].buffer, l, f ) != l ) {
+			FS_Read( g_history.commands[i].buffer, l, f ) != l ) {
 			FS_FCloseFile( f );
 			return;
 		}
-		historyEditLines[i].buffer[l] = '\0';
-		historyEditLines[i].cursor = l;
+		g_history.commands[i].buffer[l] = '\0';
+		g_history.commands[i].cursor = l;
 	}
 
-	nextHistoryLine = count;
-	historyLine = count;
-	const int totalCount = ARRAY_LEN( historyEditLines );
+	g_history.next = count;
+	g_history.display = count;
+	const int totalCount = ARRAY_LEN( g_history.commands );
 	for ( int i = count; i < totalCount; ++i ) {
-		historyEditLines[i].buffer[0] = '\0';
+		g_history.commands[i].buffer[0] = '\0';
 	}
 
 	FS_FCloseFile(f);
@@ -1207,9 +1186,9 @@ void CL_SaveCommandHistory()
 
 	int count = 0;
 	int lengths[COMMAND_HISTORY];
-	const int totalCount = ARRAY_LEN( historyEditLines );
+	const int totalCount = ARRAY_LEN( g_history.commands );
 	for ( int i = 0; i < totalCount; ++i ) {
-		const char* const s = historyEditLines[(historyLine + i) % COMMAND_HISTORY].buffer;
+		const char* const s = g_history.commands[(g_history.display + i) % COMMAND_HISTORY].buffer;
 		if ( *s == '\0' )
 			continue;
 
@@ -1219,7 +1198,7 @@ void CL_SaveCommandHistory()
 	FS_Write( &count, sizeof(count), f );
 	FS_Write( lengths, sizeof(int) * count, f );
 	for ( int i = 0, j = 0; i < totalCount; ++i ) {
-		const char* const s = historyEditLines[(historyLine + i) % COMMAND_HISTORY].buffer;
+		const char* const s = g_history.commands[(g_history.display + i) % COMMAND_HISTORY].buffer;
 		if ( *s == '\0' )
 			continue;
 

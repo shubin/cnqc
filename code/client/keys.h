@@ -24,13 +24,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 void Field_Draw( field_t* edit, int x, int y, int cw, int ch );
 
-#define COMMAND_HISTORY		32
-extern	field_t	historyEditLines[COMMAND_HISTORY];
-
-extern	field_t	g_consoleField;
-extern	field_t	chatField;
-extern	int				anykeydown;
-extern	qbool	chat_team;
+extern	history_t	g_history;
+extern	field_t		g_consoleField;
+extern	field_t		chatField;
+extern	int			anykeydown;
+extern	qbool		chat_team;
 extern	int			chat_playerNum;
 
 void Key_WriteBindings( fileHandle_t f );

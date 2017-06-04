@@ -280,8 +280,6 @@ static void Con_ResizeFont()
 
 void CL_ConInit()
 {
-	int i;
-
 	con_noprint = Cvar_Get( "con_noprint", "0", 0 );
 	con_notifytime = Cvar_Get( "con_notifytime", "3", CVAR_ARCHIVE );
 	con_scale = Cvar_Get( "con_scale", "1", CVAR_ARCHIVE );
@@ -290,10 +288,7 @@ void CL_ConInit()
 
 	Field_Clear( &g_consoleField );
 	g_consoleField.widthInChars = g_console_field_width;
-	for ( i = 0 ; i < COMMAND_HISTORY ; i++ ) {
-		Field_Clear( &historyEditLines[i] );
-		historyEditLines[i].widthInChars = g_console_field_width;
-	}
+	History_Clear( &g_history, g_console_field_width );
 	Con_ClearNotify();
 
 	CL_LoadCommandHistory();

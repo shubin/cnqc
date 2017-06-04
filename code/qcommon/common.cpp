@@ -2930,6 +2930,75 @@ void Field_AutoCompleteKeyName( int startArg, int compArg )
 #endif
 
 
+void History_Clear( history_t* history, int width )
+{
+	for ( int i = 0; i < COMMAND_HISTORY; ++i ) {
+		Field_Clear( &history->commands[i] );
+		history->commands[i].widthInChars = width;
+	}
+}
+
+
+static int LengthWithoutTrailingWhitespace( const char* s )
+{
+	int i = (int)strlen(s);
+	while ( i-- ) {
+		if ( s[i] != ' ' && s[i] != '\t' )
+			return i;
+	}
+
+	return 0;
+}
+
+
+void History_SaveCommand( history_t* history, const field_t* edit )
+{
+	// Avoid having the same command twice in a row.
+	// Unfortunately, this has to be case sensitive since case might matter for some commands.
+	if ( history->next > 0 ) {
+		// The real proper way to ignore whitespace is to tokenize both strings and compare the
+		// argument count and then each argument with a case sensitive comparison,
+		// but there's only one tokenizer data instance...
+		// Instead, we only ignore the trailing whitespace.
+		const int prevLine = (history->next - 1) % COMMAND_HISTORY;
+		const int length1 = LengthWithoutTrailingWhitespace( edit->buffer );
+		const int length2 = LengthWithoutTrailingWhitespace( history->commands[prevLine].buffer );
+		const int maxLength = min( length1, length2 );
+		if ( maxLength <= 0 || strncmp(edit->buffer, history->commands[prevLine].buffer, maxLength) == 0 ) {
+			history->display = history->next;
+			return;
+		}
+	}
+
+	// copy the line
+	history->commands[history->next % COMMAND_HISTORY] = *edit;
+	++history->next;
+	history->display = history->next;
+}
+
+
+void History_GetPreviousCommand( field_t* edit, history_t* history )
+{
+	if ( history->next - history->display < COMMAND_HISTORY && history->display > 0 )
+		--history->display;
+	*edit = history->commands[history->display % COMMAND_HISTORY];
+}
+
+
+void History_GetNextCommand( field_t* edit, history_t* history, int width )
+{
+	++history->display;
+	if ( history->display < history->next ) {
+		*edit = history->commands[history->display % COMMAND_HISTORY];
+		return;
+	}
+	
+	history->display = history->next;
+	Field_Clear( edit );
+	edit->widthInChars = width;
+}
+
+
 const char* Q_itohex( uint64_t number, qbool uppercase, qbool prefix )
 {
 	static const char* luts[2] = { "0123456789abcdef", "0123456789ABCDEF" };

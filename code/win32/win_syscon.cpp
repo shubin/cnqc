@@ -75,31 +75,18 @@ typedef struct
 
 	field_t		inputField;
 
-	field_t		historyEditLines[COMMAND_HISTORY];
-	int			nextHistoryLine;	// the last line in the history buffer, not masked
-	int			historyLine;		// the line being displayed from history buffer
+	history_t	history;
 } WinConData;
 
 static WinConData s_wcd;
 
 void Con_StoreCommand( const char* inputBuffer ) {
-	field_t& field = s_wcd.historyEditLines[ s_wcd.nextHistoryLine % COMMAND_HISTORY ];
+	field_t field;
 	Q_strncpyz( field.buffer, inputBuffer, sizeof(field.buffer) );
 	field.cursor = strlen( inputBuffer );
 	field.scroll = 0;
 	field.widthInChars = field.cursor;
-	
-	// avoid having the same command twice in a row
-	if ( s_wcd.nextHistoryLine > 0 ) {
-		const int prevLine = (s_wcd.nextHistoryLine - 1) % COMMAND_HISTORY;
-		if ( !memcmp(&field, &s_wcd.historyEditLines[prevLine], sizeof(field)) ) {
-			s_wcd.historyLine = s_wcd.nextHistoryLine;
-			return;
-		}
-	}
-	
-	s_wcd.nextHistoryLine++;
-	s_wcd.historyLine = s_wcd.nextHistoryLine;
+	History_SaveCommand( &s_wcd.history, &field );
 }
 
 static LONG WINAPI ConWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -298,27 +285,28 @@ LONG WINAPI InputLineWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 		break;
 
 	case WM_KEYDOWN:
-		if ( wParam == VK_UP ) {
-			if ( s_wcd.nextHistoryLine - s_wcd.historyLine < COMMAND_HISTORY && s_wcd.historyLine > 0 )
-				s_wcd.historyLine--;
-			const field_t& field = s_wcd.historyEditLines[ s_wcd.historyLine % COMMAND_HISTORY ];
+		if ( wParam == VK_UP )
+		{
+			field_t field;
+			History_GetPreviousCommand( &field, &s_wcd.history );
 			SetWindowText( hWnd, field.buffer );
 			SendMessage( hWnd, EM_SETSEL, (WPARAM)field.cursor, (LPARAM)field.cursor );
 			return 0;
 		}
 
-		if ( wParam == VK_DOWN ) {
-			s_wcd.historyLine++;
-
-			if ( s_wcd.historyLine >= s_wcd.nextHistoryLine ) {
-				s_wcd.historyLine = s_wcd.nextHistoryLine;
-				SetWindowText( s_wcd.hwndInputLine, "" );
-				return 0;
+		if ( wParam == VK_DOWN )
+		{
+			field_t field;
+			History_GetNextCommand( &field, &s_wcd.history, 0 );
+			if ( field.buffer[0] != '\0' )
+			{
+				SetWindowText( hWnd, field.buffer );
+				SendMessage( hWnd, EM_SETSEL, (WPARAM)field.cursor, (LPARAM)field.cursor );
 			}
-
-			const field_t& field = s_wcd.historyEditLines[ s_wcd.historyLine % COMMAND_HISTORY ];
-			SetWindowText( hWnd, field.buffer );
-			SendMessage( hWnd, EM_SETSEL, (WPARAM)field.cursor, (LPARAM)field.cursor );
+			else
+			{
+				SetWindowText( s_wcd.hwndInputLine, "" );
+			}
 			return 0;
 		}
 
@@ -499,10 +487,7 @@ void Sys_CreateConsole( void )
 	SetForegroundWindow( s_wcd.hWnd );
 	SetFocus( s_wcd.hwndInputLine );
 
-	for ( int i = 0; i < COMMAND_HISTORY; ++i )
-		Field_Clear( &s_wcd.historyEditLines[i] );
-	s_wcd.historyLine = 0;
-	s_wcd.nextHistoryLine = 0;
+	History_Clear( &s_wcd.history, 0 );
 
 	s_wcd.visLevel = 1;
 }

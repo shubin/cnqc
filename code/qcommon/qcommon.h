@@ -666,6 +666,19 @@ void Field_AutoCompleteDemoNameRead( int startArg, int compArg );
 void Field_AutoCompleteDemoNameWrite( int startArg, int compArg );
 void Field_AutoCompleteKeyName( int startArg, int compArg );
 
+#define COMMAND_HISTORY		32
+typedef struct {
+	field_t	commands[COMMAND_HISTORY];
+	int		next;		// the last line in the history buffer, not masked
+	int		display;	// the line being displayed from history buffer
+						// will be <= nextHistoryLine
+} history_t;
+
+void History_Clear( history_t* history, int width );
+void History_SaveCommand( history_t* history, const field_t* edit );
+void History_GetPreviousCommand( field_t* edit, history_t* history );
+void History_GetNextCommand( field_t* edit, history_t* history, int width );
+
 /*
 ==============================================================
 
