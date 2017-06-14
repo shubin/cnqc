@@ -454,17 +454,16 @@ static qbool GLW_CreateWindow( int width, int height, int colorbits )
 		r.bottom = height;
 
 		int style = WS_VISIBLE | WS_CLIPCHILDREN;
-		int exstyle;
+		int exstyle = 0;
 
 		if ( glInfo.isFullscreen )
 		{
 			style |= WS_POPUP;
-			exstyle = WS_EX_TOPMOST;
+			exstyle |= WS_EX_TOPMOST;
 		}
 		else
 		{
-			style |= WS_OVERLAPPED | WS_BORDER | WS_CAPTION | WS_SYSMENU;
-			exstyle = 0;
+			style |= WS_OVERLAPPED | WS_BORDER | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
 			AdjustWindowRect( &r, style, FALSE );
 		}
 
