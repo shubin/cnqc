@@ -212,6 +212,9 @@ void trap_BotFreeClient( int clientNum ) {
 
 void trap_GetUsercmd( int clientNum, usercmd_t *cmd ) {
 	syscall( G_GET_USERCMD, clientNum, cmd );
+	cmd->forwardmove	= max( cmd->forwardmove,	-127 );
+	cmd->rightmove		= max( cmd->rightmove,		-127 );
+	cmd->upmove			= max( cmd->upmove,			-127 );
 }
 
 qboolean trap_GetEntityToken( char *buffer, int bufferSize ) {
