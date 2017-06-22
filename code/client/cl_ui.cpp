@@ -26,6 +26,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 vm_t *uivm;
 
+static const byte*	interopBufferIn;
+static int			interopBufferInSize;
+static byte*		interopBufferOut;
+static int			interopBufferOutSize;
+
+
 /*
 ====================
 GetClientState
@@ -745,6 +751,22 @@ static int GetConfigString(int index, char *buf, int size)
 }
 
 
+static qbool CL_UI_GetValue( char* value, int valueSize, const char* key )
+{
+	if( Q_stricmp(key, "trap_LocateInteropData") == 0 ) {
+		Com_sprintf( value, valueSize, "%d", UI_EXT_LOCATEINTEROPDATA );
+		return qtrue;
+	}
+
+	if( Q_stricmp(key, "trap_R_AddRefEntityToScene2") == 0 ) {
+		Com_sprintf( value, valueSize, "%d", UI_EXT_R_ADDREFENTITYTOSCENE2 );
+		return qtrue;
+	}
+
+	return qfalse;
+}
+
+
 ///////////////////////////////////////////////////////////////
 
 
@@ -845,7 +867,7 @@ static intptr_t CL_UISystemCalls( intptr_t* args )
 		return 0;
 
 	case UI_R_ADDREFENTITYTOSCENE:
-		re.AddRefEntityToScene( VMA(1) );
+		re.AddRefEntityToScene( VMA(1), qfalse );
 		return 0;
 
 	case UI_R_ADDPOLYTOSCENE:
@@ -1077,6 +1099,21 @@ static intptr_t CL_UISystemCalls( intptr_t* args )
 	case UI_VERIFY_CDKEY:
 		return CL_CDKeyValidate(VMA(1), VMA(2));
 
+	// extensions
+
+	case UI_EXT_GETVALUE:
+		return CL_UI_GetValue( VMA(1), args[2], VMA(3) );
+
+	case UI_EXT_LOCATEINTEROPDATA:
+		interopBufferIn = VMA(1);
+		interopBufferInSize = args[2];
+		interopBufferOut = VMA(3);
+		interopBufferOutSize = args[4];
+		return 0;
+
+	case UI_EXT_R_ADDREFENTITYTOSCENE2:
+		re.AddRefEntityToScene( VMA(1), qtrue );
+		return 0;
 
 	default:
 		Com_Error( ERR_DROP, "Bad UI system trap: %i", args[0] );

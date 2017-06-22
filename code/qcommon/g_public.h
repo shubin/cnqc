@@ -384,8 +384,12 @@ typedef enum {
 	BOTLIB_PC_LOAD_SOURCE,
 	BOTLIB_PC_FREE_SOURCE,
 	BOTLIB_PC_READ_TOKEN,
-	BOTLIB_PC_SOURCE_FILE_AND_LINE
+	BOTLIB_PC_SOURCE_FILE_AND_LINE,
 
+	// engine extensions
+	// the mod should _never_ use these symbols
+	G_EXT_GETVALUE = 700,
+	G_EXT_LOCATEINTEROPDATA
 } gameImport_t;
 
 

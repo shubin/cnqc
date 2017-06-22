@@ -137,7 +137,13 @@ typedef enum {
 	UI_ATAN2,
 	UI_SQRT,
 	UI_FLOOR,
-	UI_CEIL
+	UI_CEIL,
+
+	// engine extensions
+	// the mod should _never_ use these symbols
+	UI_EXT_GETVALUE = 700,
+	UI_EXT_LOCATEINTEROPDATA,
+	UI_EXT_R_ADDREFENTITYTOSCENE2
 } uiImport_t;
 
 

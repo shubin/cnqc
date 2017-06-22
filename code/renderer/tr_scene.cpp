@@ -163,7 +163,7 @@ void RE_AddPolyToScene( qhandle_t hShader, int numVerts, const polyVert_t* verts
 ///////////////////////////////////////////////////////////////
 
 
-void RE_AddRefEntityToScene( const refEntity_t* ent )
+void RE_AddRefEntityToScene( const refEntity_t* ent, qbool intShaderTime )
 {
 	if ( !tr.registered ) {
 		return;
@@ -177,8 +177,10 @@ void RE_AddRefEntityToScene( const refEntity_t* ent )
 		ri.Error( ERR_DROP, "RE_AddRefEntityToScene: bad reType %i", ent->reType );
 	}
 
-	backEndData[tr.smpFrame]->entities[r_numentities].e = *ent;
-	backEndData[tr.smpFrame]->entities[r_numentities].lightingCalculated = qfalse;
+	trRefEntity_t* const trEnt = &backEndData[tr.smpFrame]->entities[r_numentities];
+	trEnt->e = *ent;
+	trEnt->lightingCalculated = qfalse;
+	trEnt->intShaderTime = intShaderTime;
 	r_numentities++;
 }
 

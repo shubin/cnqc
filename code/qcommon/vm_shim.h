@@ -15,6 +15,8 @@ struct VM_Arg {
 	VMA_CONVOP( const char );
 	VMA_CONVOP( char );
 	VMA_CONVOP( void );
+	VMA_CONVOP( byte );
+	VMA_CONVOP( const byte );
 
 	VMA_CONVOP( vmCvar_t );
 

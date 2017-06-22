@@ -73,6 +73,8 @@ struct trRefEntity_t {
 	vec3_t	ambientLight;		// color normalized to 0-255
 	int		ambientLightInt;	// 32 bit rgba packed
 	vec3_t	directedLight;
+
+	qbool	intShaderTime;		// is the shaderTime member an integer?
 };
 
 
@@ -823,7 +825,6 @@ typedef struct {
 	int* pc; // current stats set, depending on projection2D
 	int pc2D[RB_STATS_MAX];
 	int pc3D[RB_STATS_MAX];
-	qbool isShaderTimeInSec;  // use int instead float
 } backEndState_t;
 
 
@@ -927,8 +928,6 @@ extern backEndState_t	backEnd;
 extern trGlobals_t	tr;
 extern glstate_t	glState;		// outside of TR since it shouldn't be cleared during ref re-init
 
-// 1.32e
-extern cvar_t   *r_floatfix;
 
 //
 // cvars
@@ -1322,7 +1321,7 @@ SCENE GENERATION
 void R_ToggleSmpFrame();
 
 void RE_ClearScene();
-void RE_AddRefEntityToScene( const refEntity_t *ent );
+void RE_AddRefEntityToScene( const refEntity_t *ent, qbool intShaderTime );
 void RE_AddPolyToScene( qhandle_t hShader , int numVerts, const polyVert_t *verts, int num );
 void RE_AddLightToScene( const vec3_t org, float radius, float r, float g, float b );
 void RE_RenderScene( const refdef_t *fd );

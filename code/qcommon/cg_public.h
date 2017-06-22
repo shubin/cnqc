@@ -175,7 +175,14 @@ typedef enum {
 	CG_CEIL,
 	DO_NOT_WANT_CG_TESTPRINTINT,
 	DO_NOT_WANT_CG_TESTPRINTFLOAT,
-	CG_ACOS
+	CG_ACOS,
+
+	// engine extensions
+	// the mod should _never_ use these symbols
+	CG_EXT_GETVALUE = 700,
+	CG_EXT_LOCATEINTEROPDATA,
+	CG_EXT_R_ADDREFENTITYTOSCENE2,
+	CG_EXT_R_FORCEFIXEDDLIGHTS
 } cgameImport_t;
 
 

@@ -686,6 +686,9 @@ void Cvar_Update( vmCvar_t *vmCvar )
 
 void Cvar_Init()
 {
+	// this cvar is the single entry point of the entire extension system
+	Cvar_Get( "//trap_GetValue", "700", CVAR_INIT | CVAR_ROM );
+
 	cvar_cheats = Cvar_Get( "sv_cheats", "1", CVAR_ROM | CVAR_SYSTEMINFO );
 	Cvar_Get( "git_branch", GIT_BRANCH, CVAR_ROM );
 	Cvar_Get( "git_headHash", GIT_COMMIT, CVAR_ROM );

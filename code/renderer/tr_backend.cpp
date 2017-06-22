@@ -482,7 +482,7 @@ static void RB_RenderDrawSurfList( const drawSurf_t* drawSurfs, int numDrawSurfs
 
 			if ( entityNum != ENTITYNUM_WORLD ) {
 				backEnd.currentEntity = &backEnd.refdef.entities[entityNum];
-				if (backEnd.isShaderTimeInSec)
+				if (backEnd.currentEntity->intShaderTime)
 				    backEnd.refdef.floatTime = originalTime - (double)(backEnd.currentEntity->e.shaderTime.iShaderTime) / 1000.0;
 				else
 				    backEnd.refdef.floatTime = originalTime - backEnd.currentEntity->e.shaderTime.fShaderTime;
@@ -596,7 +596,7 @@ static void RB_RenderLitSurfList( dlight_t* dl )
 
 			if ( entityNum != ENTITYNUM_WORLD ) {
 				backEnd.currentEntity = &backEnd.refdef.entities[entityNum];
-				if (backEnd.isShaderTimeInSec)
+				if (backEnd.currentEntity->intShaderTime)
 				    backEnd.refdef.floatTime = originalTime - (double)backEnd.currentEntity->e.shaderTime.iShaderTime;
 				else
                     backEnd.refdef.floatTime = originalTime - backEnd.currentEntity->e.shaderTime.fShaderTime;
@@ -1068,9 +1068,6 @@ void RB_ExecuteRenderCommands( const void *data )
 #else
     backEnd.smpFrame = 0;
 #endif
-
-	cvar_t* r_floatfix = ri.Cvar_Get( "r_floatfix", "1", CVAR_NORESTART );
-    backEnd.isShaderTimeInSec = r_floatfix->integer ? qtrue : qfalse;
     
 	while ( 1 ) {
 		data = PADP(data, sizeof(void *));

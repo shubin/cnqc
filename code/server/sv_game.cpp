@@ -30,6 +30,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 botlib_export_t	*botlib_export;
 
+static const byte*	interopBufferIn;
+static int			interopBufferInSize;
+static byte*		interopBufferOut;
+static int			interopBufferOutSize;
+
 
 // these functions must be used instead of pointer arithmetic, because
 // the game allocates gentities with private information after the server shared part
@@ -226,6 +231,17 @@ static void SV_GetUsercmd( int clientNum, usercmd_t* cmd )
 		Com_Error( ERR_DROP, "SV_GetUsercmd: bad clientNum:%i", clientNum );
 
 	*cmd = svs.clients[clientNum].lastUsercmd;
+}
+
+
+static qbool SV_G_GetValue( char* value, int valueSize, const char* key )
+{
+	if( Q_stricmp(key, "trap_LocateInteropData") == 0 ) {
+		Com_sprintf( value, valueSize, "%d", G_EXT_LOCATEINTEROPDATA );
+		return qtrue;
+	}
+
+	return qfalse;
 }
 
 
@@ -774,6 +790,18 @@ static intptr_t SV_GameSystemCalls( intptr_t* args )
 
 	case TRAP_CEIL:
 		return PASSFLOAT( ceil( VMF(1) ) );
+
+	// extensions
+
+	case G_EXT_GETVALUE:
+		return SV_G_GetValue( VMA(1), args[2], VMA(3) );
+
+	case G_EXT_LOCATEINTEROPDATA:
+		interopBufferIn = VMA(1);
+		interopBufferInSize = args[2];
+		interopBufferOut = VMA(3);
+		interopBufferOutSize = args[4];
+		return 0;
 
 	default:
 		Com_Error( ERR_DROP, "Bad game system trap: %i", args[0] );

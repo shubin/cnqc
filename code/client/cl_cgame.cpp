@@ -26,6 +26,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../qcommon/vm_shim.h"
 
 
+static const byte*	interopBufferIn;
+static int			interopBufferInSize;
+static byte*		interopBufferOut;
+static int			interopBufferOutSize;
+
+
 static void CL_GetGameState( gameState_t* gs )
 {
 	*gs = cl.gameState;
@@ -292,6 +298,27 @@ void CL_ShutdownCGame()
 }
 
 
+static qbool CL_CG_GetValue( char* value, int valueSize, const char* key )
+{
+	if( Q_stricmp(key, "trap_LocateInteropData") == 0 ) {
+		Com_sprintf( value, valueSize, "%d", CG_EXT_LOCATEINTEROPDATA );
+		return qtrue;
+	}
+
+	if( Q_stricmp(key, "trap_R_AddRefEntityToScene2") == 0 ) {
+		Com_sprintf( value, valueSize, "%d", CG_EXT_R_ADDREFENTITYTOSCENE2 );
+		return qtrue;
+	}
+
+	if( Q_stricmp(key, "trap_R_ForceFixedDLights") == 0 ) {
+		Com_sprintf( value, valueSize, "%d", CG_EXT_R_FORCEFIXEDDLIGHTS );
+		return qtrue;
+	}
+
+	return qfalse;
+}
+
+
 ///////////////////////////////////////////////////////////////
 
 
@@ -432,7 +459,7 @@ static intptr_t CL_CgameSystemCalls( intptr_t *args )
 		re.ClearScene();
 		return 0;
 	case CG_R_ADDREFENTITYTOSCENE:
-		re.AddRefEntityToScene( VMA(1) );
+		re.AddRefEntityToScene( VMA(1), qfalse );
 		return 0;
 	case CG_R_ADDPOLYTOSCENE:
 		re.AddPolyToScene( args[1], args[2], VMA(3), 1 );
@@ -541,6 +568,25 @@ static intptr_t CL_CgameSystemCalls( intptr_t *args )
 
 	case CG_R_INPVS:
 		return re.inPVS( VMA(1), VMA(2) );
+
+	// engine extensions
+
+	case CG_EXT_GETVALUE:
+		return CL_CG_GetValue( VMA(1), args[2], VMA(3) );
+
+	case CG_EXT_LOCATEINTEROPDATA:
+		interopBufferIn = VMA(1);
+		interopBufferInSize = args[2];
+		interopBufferOut = VMA(3);
+		interopBufferOutSize = args[4];
+		return 0;
+
+	case CG_EXT_R_ADDREFENTITYTOSCENE2:
+		re.AddRefEntityToScene( VMA(1), qtrue );
+		return 0;
+
+	case CG_EXT_R_FORCEFIXEDDLIGHTS:
+		return 0; // already the case for CNQ3
 
 	default:
 		Com_Error( ERR_DROP, "Bad cgame system trap: %i", args[0] );

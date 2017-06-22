@@ -32,13 +32,14 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "cg_public.h"
 
 
-static intptr_t (QDECL *syscall)( intptr_t arg, ... ) = (intptr_t (QDECL *)( intptr_t, ...))-1;
+dllSyscall_t syscall = (dllSyscall_t)-1;
+extern int cg_addRefEntSyscallId;
 
 
 #if defined(_MSC_VER)
 __declspec(dllexport)
 #endif
-void dllEntry( intptr_t (QDECL *syscallptr)( intptr_t arg,... ) ) {
+void dllEntry( dllSyscall_t syscallptr ) {
 	syscall = syscallptr;
 }
 
@@ -245,7 +246,7 @@ void	trap_R_ClearScene( void ) {
 }
 
 void	trap_R_AddRefEntityToScene( const refEntity_t *re ) {
-	syscall( CG_R_ADDREFENTITYTOSCENE, re );
+	syscall( cg_addRefEntSyscallId, re );
 }
 
 void	trap_R_AddPolyToScene( qhandle_t hShader , int numVerts, const polyVert_t *verts ) {
