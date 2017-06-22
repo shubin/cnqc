@@ -37,7 +37,6 @@ typedef struct
 	HDC			hDC;
 	HGLRC		hGLRC;
 	HINSTANCE	hinstOpenGL;
-	int			desktopBPP;
 	qbool		cdsDevModeValid;
 	DEVMODE		cdsDevMode;			// Custom device mode for full-screen with r_mode 1.
 	qbool		pixelFormatSet;

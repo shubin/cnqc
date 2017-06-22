@@ -934,15 +934,6 @@ extern glstate_t	glState;		// outside of TR since it shouldn't be cleared during
 //
 extern cvar_t	*r_verbose;				// used for verbose debug spew
 
-extern cvar_t	*r_stencilbits;			// number of desired stencil bits
-extern cvar_t	*r_depthbits;			// number of desired depth bits
-extern cvar_t	*r_colorbits;			// number of desired color bits, only relevant for fullscreen
-extern cvar_t	*r_texturebits;			// number of desired texture bits
-										// 0 = use framebuffer depth
-										// 16 = use 16-bit textures
-										// 32 = use 32-bit textures
-										// all else = error
-
 extern cvar_t	*r_measureOverdraw;		// enables stencil buffer overdraw measurement
 
 extern cvar_t	*r_lodbias;				// push/pull LOD transitions
@@ -969,7 +960,6 @@ extern cvar_t	*r_displayRefresh;		// optional display refresh option
 extern cvar_t	*r_intensity;
 extern cvar_t	*r_gamma;
 
-extern cvar_t	*r_ext_compressed_textures;
 extern cvar_t	*r_ext_max_anisotropy;
 extern cvar_t	*r_msaa;
 

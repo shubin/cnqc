@@ -347,31 +347,11 @@ static void Upload32( image_t* image, unsigned int* data )
 	// validate and/or override the internal format
 	switch (image->format) {
 	case GL_RGB:
-		/* if ( flags & IMG_NOIMANIP ) {
-			;
-		} else */
-		if ( r_ext_compressed_textures->integer ) {
-			image->format = GL_COMPRESSED_RGB_ARB;
-		}
-		else if ( r_texturebits->integer == 16 ) {
-			image->format = GL_RGB5;
-		}
-		else if ( r_texturebits->integer == 32 ) {
-			image->format = GL_RGB8;
-		}
+		image->format = GL_RGB8;
 		break;
 
 	case GL_RGBA:
-		/* compressed RGBA *still* somehow manages to suck ass, even with DXT5
-		if ( r_ext_compressed_textures->integer ) {
-			format = GL_COMPRESSED_RGBA_ARB;
-		} else */
-		if ( r_texturebits->integer == 16 ) {
-			image->format = GL_RGBA4;
-		}
-		else if ( r_texturebits->integer == 32 ) {
-			image->format = GL_RGBA8;
-		}
+		image->format = GL_RGBA8;
 		break;
 
 	case GL_LUMINANCE_ALPHA:

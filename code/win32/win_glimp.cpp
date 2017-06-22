@@ -209,35 +209,16 @@ static int GLW_ChoosePFD( HDC hDC, PIXELFORMATDESCRIPTOR *pPFD )
 **
 ** Helper function zeros out then fills in a PFD
 */
-static void GLW_CreatePFD( PIXELFORMATDESCRIPTOR *pPFD, int colorbits, int depthbits, int stencilbits )
+static void GLW_CreatePFD( PIXELFORMATDESCRIPTOR *pPFD )
 {
-	PIXELFORMATDESCRIPTOR src = 
-	{
-		sizeof(PIXELFORMATDESCRIPTOR),	// size of this pfd
-		1,								// version number
-		PFD_DRAW_TO_WINDOW |			// support window
-		PFD_SUPPORT_OPENGL |			// support OpenGL
-		PFD_DOUBLEBUFFER,				// double buffered
-		PFD_TYPE_RGBA,					// RGBA type
-		24,								// 24-bit color depth
-		0, 0, 0, 0, 0, 0,				// color bits ignored
-		0,								// no alpha buffer
-		0,								// shift bit ignored
-		0,								// no accumulation buffer
-		0, 0, 0, 0, 					// accum bits ignored
-		24,								// 24-bit z-buffer
-		8,								// 8-bit stencil buffer
-		0,								// no auxiliary buffer
-		PFD_MAIN_PLANE,					// main layer
-		0,								// reserved
-		0, 0, 0							// layer masks ignored
-	};
-
-	src.cColorBits = (BYTE)colorbits;
-	src.cDepthBits = (BYTE)depthbits;
-	src.cStencilBits = (BYTE)stencilbits;
-
-	*pPFD = src;
+	ZeroMemory( pPFD, sizeof( *pPFD ) );
+	pPFD->nSize = sizeof( *pPFD );
+	pPFD->dwFlags		= PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+	pPFD->iPixelType	= PFD_TYPE_RGBA;
+	pPFD->iLayerType	= PFD_MAIN_PLANE;
+	pPFD->cColorBits	= 32;
+	pPFD->cDepthBits	= 24;
+	pPFD->cStencilBits	= 8;
 }
 
 static int GLW_MakeContext( PIXELFORMATDESCRIPTOR *pPFD )
@@ -306,10 +287,9 @@ static int GLW_MakeContext( PIXELFORMATDESCRIPTOR *pPFD )
 ** - get a DC if one doesn't exist
 ** - create an HGLRC if one doesn't exist
 */
-static qbool GLW_InitDriver( int colorbits )
+static qbool GLW_InitDriver()
 {
 	int		tpfd;
-	int		depthbits, stencilbits;
 	static PIXELFORMATDESCRIPTOR pfd;		// save between frames since 'tr' gets cleared
 
 	ri.Printf( PRINT_DEVELOPER, "Initializing OpenGL driver\n" );
@@ -327,43 +307,12 @@ static qbool GLW_InitDriver( int colorbits )
 		ri.Printf( PRINT_DEVELOPER, "...Get DC succeeded\n" );
 	}
 
-	if ( colorbits == 0 )
-	{
-		colorbits = glw_state.desktopBPP;
-	}
-
 	//
-	// implicitly assume Z-buffer depth == desktop color depth
-	//
-	if ( r_depthbits->integer == 0 ) {
-		if ( colorbits > 16 ) {
-			depthbits = 24;
-		} else {
-			depthbits = 16;
-		}
-	} else {
-		depthbits = r_depthbits->integer;
-	}
-
-	//
-	// do not allow stencil if Z-buffer depth likely won't contain it
-	//
-	stencilbits = r_stencilbits->integer;
-	if ( depthbits < 24 )
-	{
-		stencilbits = 0;
-	}
-
-	//
-	// make two attempts to set the PIXELFORMAT
-	//
-
-	//
-	// first attempt: r_colorbits, depthbits, and r_stencilbits
+	// attempt to set the PIXELFORMAT
 	//
 	if ( !glw_state.pixelFormatSet )
 	{
-		GLW_CreatePFD( &pfd, colorbits, depthbits, stencilbits );
+		GLW_CreatePFD( &pfd );
 		if ( ( tpfd = GLW_MakeContext( &pfd ) ) != TRY_PFD_SUCCESS )
 		{
 			if ( tpfd == TRY_PFD_FAIL_HARD )
@@ -372,34 +321,10 @@ static qbool GLW_InitDriver( int colorbits )
 				return qfalse;
 			}
 
-			//
-			// punt if we've already tried the desktop bit depth and no stencil bits
-			//
-			if ( ( r_colorbits->integer == glw_state.desktopBPP ) && !stencilbits )
-			{
-				ReleaseDC( g_wv.hWnd, glw_state.hDC );
-				glw_state.hDC = NULL;
-				ri.Printf( PRINT_ALL, "...failed to find an appropriate PIXELFORMAT\n" );
-				return qfalse;
-			}
-
-			//
-			// second attempt: desktop's color bits and no stencil
-			//
-			if ( colorbits > glw_state.desktopBPP )
-				colorbits = glw_state.desktopBPP;
-
-			GLW_CreatePFD( &pfd, colorbits, depthbits, 0 );
-			if ( GLW_MakeContext( &pfd ) != TRY_PFD_SUCCESS )
-			{
-				if ( glw_state.hDC )
-				{
-					ReleaseDC( g_wv.hWnd, glw_state.hDC );
-					glw_state.hDC = NULL;
-				}
-				ri.Printf( PRINT_ALL, "...failed to find an appropriate PIXELFORMAT\n" );
-				return qfalse;
-			}
+			ReleaseDC( g_wv.hWnd, glw_state.hDC );
+			glw_state.hDC = NULL;
+			ri.Printf( PRINT_ALL, "...failed to find an appropriate PIXELFORMAT\n" );
+			return qfalse;
 		}
 	}
 
@@ -415,7 +340,7 @@ static qbool GLW_InitDriver( int colorbits )
 
 // responsible for creating the Win32 window and initializing the OpenGL driver.
 
-static qbool GLW_CreateWindow( int width, int height, int colorbits )
+static qbool GLW_CreateWindow( int width, int height )
 {
 	static qbool s_classRegistered = qfalse;
 
@@ -501,7 +426,7 @@ static qbool GLW_CreateWindow( int width, int height, int colorbits )
 		ri.Printf( PRINT_DEVELOPER, "...window already present, CreateWindowEx skipped\n" );
 	}
 
-	if ( !GLW_InitDriver( colorbits ) )
+	if ( !GLW_InitDriver() )
 	{
 		ShowWindow( g_wv.hWnd, SW_HIDE );
 		DestroyWindow( g_wv.hWnd );
@@ -623,10 +548,6 @@ void WIN_SetDesktopDisplaySettings()
 
 static qbool GLW_SetMode( qbool cdsFullscreen )
 {
-	HDC hDC = GetDC( GetDesktopWindow() );
-	glw_state.desktopBPP = GetDeviceCaps( hDC, BITSPIXEL );
-	ReleaseDC( GetDesktopWindow(), hDC );
-
 	glInfo.isFullscreen = cdsFullscreen;
 	WIN_UpdateMonitorIndexFromCvar();
 	if ( !R_GetModeInfo( &glConfig.vidWidth, &glConfig.vidHeight, &glConfig.windowAspect ) ) {
@@ -653,10 +574,8 @@ static qbool GLW_SetMode( qbool cdsFullscreen )
 				dm.dmFields |= DM_DISPLAYFREQUENCY;
 			}
 
-			if ( r_colorbits->integer ) {
-				dm.dmBitsPerPel = r_colorbits->integer;
-				dm.dmFields |= DM_BITSPERPEL;
-			}
+			dm.dmBitsPerPel = 32;
+			dm.dmFields |= DM_BITSPERPEL;
 
 			const RECT& monRect = g_wv.monitorRects[g_wv.monitor];
 			dm.dmPosition.x = monRect.left;
@@ -671,7 +590,7 @@ static qbool GLW_SetMode( qbool cdsFullscreen )
 		}
 	}
 
-	if (!GLW_CreateWindow( glConfig.vidWidth, glConfig.vidHeight, glConfig.colorBits ))
+	if (!GLW_CreateWindow( glConfig.vidWidth, glConfig.vidHeight ))
 		return qfalse;
 
 	if (EnumDisplaySettingsA( GLW_GetCurrentDisplayDeviceName(), ENUM_CURRENT_SETTINGS, &dm ))

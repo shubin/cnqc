@@ -69,11 +69,6 @@ cvar_t	*r_msaa;
 
 cvar_t	*r_ignoreGLErrors;
 
-cvar_t	*r_stencilbits;
-cvar_t	*r_depthbits;
-cvar_t	*r_colorbits;
-cvar_t	*r_texturebits;
-
 cvar_t	*r_lightmap;
 cvar_t	*r_vertexLight;
 cvar_t	*r_uiFullScreen;
@@ -444,7 +439,6 @@ void GfxInfo_f( void )
 
 	ri.Printf( PRINT_DEVELOPER, "texturemode: %s\n", r_textureMode->string );
 	ri.Printf( PRINT_DEVELOPER, "picmip: %d\n", r_picmip->integer );
-	ri.Printf( PRINT_DEVELOPER, "texture bits: %d\n", r_texturebits->integer );
 	ri.Printf( PRINT_DEVELOPER, "compressed textures: %s\n", enablestrings[r_ext_compressed_textures->integer] );
 	ri.Printf( PRINT_DEVELOPER, "ambient pass: %s\n", r_vertexLight->integer ? "vertex" : "lightmap" );
 	if ( r_finish->integer ) {
@@ -501,10 +495,6 @@ static void R_Register()
 	r_roundImagesDown = ri.Cvar_Get ("r_roundImagesDown", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_colorMipLevels = ri.Cvar_Get ("r_colorMipLevels", "0", CVAR_LATCH );
 	r_detailTextures = ri.Cvar_Get( "r_detailtextures", "1", CVAR_ARCHIVE | CVAR_LATCH );
-	r_texturebits = ri.Cvar_Get( "r_texturebits", "0", CVAR_ARCHIVE | CVAR_LATCH );
-	r_colorbits = ri.Cvar_Get( "r_colorbits", "0", CVAR_ARCHIVE | CVAR_LATCH );
-	r_stencilbits = ri.Cvar_Get( "r_stencilbits", "0", CVAR_ARCHIVE | CVAR_LATCH );
-	r_depthbits = ri.Cvar_Get( "r_depthbits", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_overBrightBits = ri.Cvar_Get( "r_overBrightBits", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_mode = ri.Cvar_Get( "r_mode", "0", CVAR_ARCHIVE | CVAR_LATCH );
 #if USE_SDL_VIDEO

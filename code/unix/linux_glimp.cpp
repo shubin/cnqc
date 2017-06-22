@@ -828,27 +828,20 @@ void GLimp_Shutdown( void )
 static rserr_t GLW_SetMode( qboolean fullscreen )
 {
   int attrib[] = {
-    GLX_RGBA,         // 0
-    GLX_RED_SIZE, 4,      // 1, 2
-    GLX_GREEN_SIZE, 4,      // 3, 4
-    GLX_BLUE_SIZE, 4,     // 5, 6
-    GLX_DOUBLEBUFFER,     // 7
-    GLX_DEPTH_SIZE, 1,      // 8, 9
-    GLX_STENCIL_SIZE, 1,    // 10, 11
+    GLX_RGBA,
+    GLX_RED_SIZE, 8,
+    GLX_GREEN_SIZE, 8,
+    GLX_BLUE_SIZE, 8,
+    GLX_DOUBLEBUFFER,
+    GLX_DEPTH_SIZE, 24,
+    GLX_STENCIL_SIZE, 8,
     None
   };
-  // these match in the array
-#define ATTR_RED_IDX 2
-#define ATTR_GREEN_IDX 4
-#define ATTR_BLUE_IDX 6
-#define ATTR_DEPTH_IDX 9
-#define ATTR_STENCIL_IDX 11
+
   XVisualInfo *visinfo;
   XSetWindowAttributes attr;
   XSizeHints sizehints;
   unsigned long mask;
-  int colorbits, depthbits, stencilbits;
-  int tcolorbits, tdepthbits, tstencilbits;
   int actualWidth, actualHeight;
   int i;
 
@@ -871,115 +864,19 @@ static rserr_t GLW_SetMode( qboolean fullscreen )
 	}
 	ri.Printf( PRINT_DEVELOPER, "...setting mode %dx%d %s\n", glConfig.vidWidth, glConfig.vidHeight, fullscreen ? "FS" : "W" );
 
-
-
   actualWidth = glConfig.vidWidth;
   actualHeight = glConfig.vidHeight;
-
-  if (!r_colorbits->value)
-    colorbits = 24;
-  else
-    colorbits = r_colorbits->value;
-
-  if (!r_depthbits->value)
-    depthbits = 24;
-  else
-    depthbits = r_depthbits->value;
-  stencilbits = r_stencilbits->value;
-
-  for (i = 0; i < 16; i++)
-  {
-    // 0 - default
-    // 1 - minus colorbits
-    // 2 - minus depthbits
-    // 3 - minus stencil
-    if ((i % 4) == 0 && i)
-    {
-      // one pass, reduce
-      switch (i / 4)
-      {
-      case 2 :
-        if (colorbits == 24)
-          colorbits = 16;
-        break;
-      case 1 :
-        if (depthbits == 24)
-          depthbits = 16;
-        else if (depthbits == 16)
-          depthbits = 8;
-      case 3 :
-        if (stencilbits == 24)
-          stencilbits = 16;
-        else if (stencilbits == 16)
-          stencilbits = 8;
-      }
-    }
-
-    tcolorbits = colorbits;
-    tdepthbits = depthbits;
-    tstencilbits = stencilbits;
-
-    if ((i % 4) == 3)
-    { // reduce colorbits
-      if (tcolorbits == 24)
-        tcolorbits = 16;
-    }
-
-    if ((i % 4) == 2)
-    { // reduce depthbits
-      if (tdepthbits == 24)
-        tdepthbits = 16;
-      else if (tdepthbits == 16)
-        tdepthbits = 8;
-    }
-
-    if ((i % 4) == 1)
-    { // reduce stencilbits
-      if (tstencilbits == 24)
-        tstencilbits = 16;
-      else if (tstencilbits == 16)
-        tstencilbits = 8;
-      else
-        tstencilbits = 0;
-    }
-
-    if (tcolorbits == 24)
-    {
-      attrib[ATTR_RED_IDX] = 8;
-      attrib[ATTR_GREEN_IDX] = 8;
-      attrib[ATTR_BLUE_IDX] = 8;
-    } else
-    {
-      // must be 16 bit
-      attrib[ATTR_RED_IDX] = 4;
-      attrib[ATTR_GREEN_IDX] = 4;
-      attrib[ATTR_BLUE_IDX] = 4;
-    }
-
-    attrib[ATTR_DEPTH_IDX] = tdepthbits; // default to 24 depth
-    attrib[ATTR_STENCIL_IDX] = tstencilbits;
-
-    visinfo = qglXChooseVisual(dpy, scrnum, attrib);
-    if (!visinfo)
-    {
-      continue;
-    }
-
-    ri.Printf( PRINT_ALL, "Using %d/%d/%d Color bits, %d depth, %d stencil display.\n",
-               attrib[ATTR_RED_IDX], attrib[ATTR_GREEN_IDX], attrib[ATTR_BLUE_IDX],
-               attrib[ATTR_DEPTH_IDX], attrib[ATTR_STENCIL_IDX]);
-
-    glConfig.colorBits = tcolorbits;
-    glConfig.depthBits = tdepthbits;
-    glConfig.stencilBits = tstencilbits;
-    break;
-  }
-
+  
+  visinfo = qglXChooseVisual(dpy, scrnum, attrib);
   if (!visinfo)
   {
     ri.Printf( PRINT_ALL, "Couldn't get a visual\n" );
     return RSERR_INVALID_MODE;
   }
+  
+  glConfig.colorBits = 32;
+  glConfig.depthBits = 24;
+  glConfig.stencilBits = 8;
 
   /* window attributes */
   attr.background_pixel = BlackPixel(dpy, scrnum);
