@@ -322,13 +322,34 @@ breaks every single mod except CPMA otherwise, but it IS wrong, and critically s
 	var->resetString = CopyString( var_value );
 
 	// link the variable in
-	var->next = cvar_vars;
-	cvar_vars = var;
+	if ( cvar_vars == NULL || Q_stricmp(cvar_vars->name, var_name) > 0 ) {
+		// insert as the first cvar
+		cvar_t* const next = cvar_vars;
+		cvar_vars = var;
+		var->next = next;
+	} else {
+		// insert after some other cvar
+		cvar_t* curr = cvar_vars;
+		cvar_t* prev = cvar_vars;
+		for (;;) {
+			if ( Q_stricmp(curr->name, var_name) > 0 )
+				break;
+
+			prev = curr;
+			if ( curr->next == NULL )
+				break;
+
+			curr = curr->next;
+		}
+		cvar_t* const next = prev->next;
+		prev->next = var;
+		var->next = next;
+	}
 
 	var->flags = flags;
 	cvar_modifiedFlags |= flags; // needed so USERINFO cvars created by cgame actually get sent
 
-	long hash = Cvar_Hash(var_name);
+	const long hash = Cvar_Hash( var_name );
 	var->hashNext = hashTable[hash];
 	hashTable[hash] = var;
 

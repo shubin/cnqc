@@ -479,8 +479,31 @@ void Cmd_AddCommandEx( const char* cmd_name, xcommand_t function, qbool cgame )
 	cmd->function = function;
 	cmd->completion = NULL;
 	cmd->cgame = cgame;
-	cmd->next = cmd_functions;
-	cmd_functions = cmd;
+
+	// add the command
+	if ( cmd_functions == NULL || Q_stricmp(cmd_functions->name, cmd_name) > 0 ) {
+		// insert as the first command
+		cmd_function_t* const next = cmd_functions;
+		cmd_functions = cmd;
+		cmd->next = next;
+	} else {
+		// insert after some other command
+		cmd_function_t* curr = cmd_functions;
+		cmd_function_t* prev = cmd_functions;
+		for (;;) {
+			if ( Q_stricmp(curr->name, cmd_name) > 0 )
+				break;
+
+			prev = curr;
+			if ( curr->next == NULL )
+				break;
+
+			curr = curr->next;
+		}
+		cmd_function_t* const next = prev->next;
+		prev->next = cmd;
+		cmd->next = next;
+	}
 }
 
 
@@ -577,12 +600,6 @@ void Cmd_ExecuteString( const char* text )
 	for ( prev = &cmd_functions ; *prev ; prev = &cmd->next ) {
 		cmd = *prev;
 		if ( !Q_stricmp( cmd_argv[0],cmd->name ) ) {
-			// rearrange the links so that the command will be
-			// near the head of the list next time it is used
-			*prev = cmd->next;
-			cmd->next = cmd_functions;
-			cmd_functions = cmd;
-
 			// perform the action
 			if ( !cmd->function ) {
 				// let the cgame or game handle it
