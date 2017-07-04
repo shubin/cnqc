@@ -351,8 +351,10 @@ void Cmd_Init();
 // if function is NULL, the command will be forwarded to the server
 // as a clc_clientCommand instead of executed locally
 void Cmd_AddCommand( const char* cmd_name, xcommand_t function );
+void Cmd_AddCommandEx( const char* cmd_name, xcommand_t function, qbool cgame );
 
 void Cmd_RemoveCommand( const char* cmd_name );
+void Cmd_RemoveCGameCommands();
 
 // auto-completion of command arguments
 void Cmd_SetAutoCompletion( const char* cmd_name, xcommandCompletion_t complete );

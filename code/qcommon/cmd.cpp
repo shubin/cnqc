@@ -230,6 +230,7 @@ typedef struct cmd_function_s
 	char					*name;
 	xcommand_t				function;
 	xcommandCompletion_t	completion;
+	qbool					cgame; // registered by cgame?
 } cmd_function_t;
 
 
@@ -438,10 +439,12 @@ static void Cmd_TokenizeString2( const char* text, qbool ignoreQuotes )
 	}
 }
 
+
 void Cmd_TokenizeString( const char* text )
 {
 	Cmd_TokenizeString2( text, qfalse );
 }
+
 
 void Cmd_TokenizeStringIgnoreQuotes( const char* text )
 {
@@ -450,6 +453,12 @@ void Cmd_TokenizeStringIgnoreQuotes( const char* text )
 
 
 void Cmd_AddCommand( const char* cmd_name, xcommand_t function )
+{
+	Cmd_AddCommandEx( cmd_name, function, qfalse );
+}
+
+
+void Cmd_AddCommandEx( const char* cmd_name, xcommand_t function, qbool cgame )
 {
 	cmd_function_t* cmd;
 
@@ -469,6 +478,7 @@ void Cmd_AddCommand( const char* cmd_name, xcommand_t function )
 	cmd->name = CopyString( cmd_name );
 	cmd->function = function;
 	cmd->completion = NULL;
+	cmd->cgame = cgame;
 	cmd->next = cmd_functions;
 	cmd_functions = cmd;
 }
@@ -478,7 +488,7 @@ void Cmd_RemoveCommand( const char* cmd_name )
 {
 	cmd_function_t** back = &cmd_functions;
 
-	while( 1 ) {
+	for(;;) {
 		cmd_function_t* cmd = *back;
 		if ( !cmd ) {
 			// command wasn't active
@@ -493,6 +503,28 @@ void Cmd_RemoveCommand( const char* cmd_name )
 			return;
 		}
 		back = &cmd->next;
+	}
+}
+
+
+void Cmd_RemoveCGameCommands()
+{
+	cmd_function_t** back = &cmd_functions;
+
+	for(;;) {
+		cmd_function_t* const cmd = *back;
+		if ( !cmd )
+			break;
+
+		if ( !cmd->cgame ) {
+			back = &cmd->next;
+			continue;
+		}
+
+		*back = cmd->next;
+		if ( cmd->name )
+			Z_Free( cmd->name );
+		Z_Free( cmd );
 	}
 }
 

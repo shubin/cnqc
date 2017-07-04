@@ -1,6 +1,8 @@
 
 DD Mmm 17 - 1.49
 
+fix: commands registered by cgame no longer auto-complete after the cgame qvm has shut down
+
 chg: removed r_stencilbits, r_depthbits, r_colorbits, r_texturebits and r_ext_compressed_textures
 
 chg: using stb_image to load png and tga images

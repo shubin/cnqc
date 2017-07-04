@@ -135,7 +135,7 @@ static void CL_SetUserCmdValue( int userCmdValue, float sensitivityScale )
 
 static void CL_AddCgameCommand( const char* cmd )
 {
-	Cmd_AddCommand( cmd, NULL );
+	Cmd_AddCommandEx( cmd, NULL, qtrue );
 }
 
 
@@ -295,6 +295,7 @@ void CL_ShutdownCGame()
 	VM_Call( cgvm, CG_SHUTDOWN );
 	VM_Free( cgvm );
 	cgvm = NULL;
+	Cmd_RemoveCGameCommands();
 }
 
 
