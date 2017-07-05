@@ -201,7 +201,7 @@ static void SV_DevMap_f( )
 static void SV_CompleteMap_f( int startArg, int compArg )
 {
 	if ( startArg + 1 == compArg )
-		Field_AutoCompleteMapName( startArg, compArg );
+		Field_AutoCompleteCustom( startArg, compArg, &Field_AutoCompleteMapName );
 }
 
 

@@ -262,7 +262,7 @@ static void CL_Record_f()
 static void CL_CompleteDemoRecord_f( int startArg, int compArg )
 {
 	if ( startArg + 1 == compArg )
-		Field_AutoCompleteDemoNameWrite( startArg, compArg );
+		Field_AutoCompleteCustom( startArg, compArg, &Field_AutoCompleteDemoNameWrite );
 }
 
 
@@ -431,7 +431,7 @@ void CL_PlayDemo_f()
 static void CL_CompleteDemoPlay_f( int startArg, int compArg )
 {
 	if ( startArg + 1 == compArg )
-		Field_AutoCompleteDemoNameRead( startArg, compArg );
+		Field_AutoCompleteCustom( startArg, compArg, &Field_AutoCompleteDemoNameRead );
 }
 
 
@@ -1899,7 +1899,7 @@ static void CL_CallVote_f()
 static void CL_CompleteCallVote_f( int startArg, int compArg )
 {
 	if ( compArg == startArg + 2 && !Q_stricmp( Cmd_Argv( startArg + 1 ), "map" ) )
-		Field_AutoCompleteMapName( startArg, compArg );
+		Field_AutoCompleteCustom( startArg, compArg, &Field_AutoCompleteMapName );
 }
 
 

@@ -435,6 +435,10 @@ CONSOLE LINE EDITING
 
 static void Console_Key( int key )
 {
+	// clear auto-completion buffer when not pressing tab
+	if ( key != K_TAB )
+		g_consoleField.acOffset = 0;
+
 	// ctrl-L clears screen
 	if ( key == 'l' && keys[K_CTRL].down ) {
 		Cbuf_AddText( "clear\n" );
@@ -443,6 +447,8 @@ static void Console_Key( int key )
 
 	// enter finishes the line
 	if ( key == K_ENTER || key == K_KP_ENTER ) {
+		g_consoleField.acOffset = 0;
+
 		// if not in the game explicitly prepend a slash if needed
 		if ( (cls.state != CA_ACTIVE) && g_consoleField.buffer[0]
 				&& (g_consoleField.buffer[0] != '\\') && (g_consoleField.buffer[0] != '/') ) {
@@ -492,12 +498,14 @@ static void Console_Key( int key )
 
 	if ( ( key == K_UPARROW ) ||
 			( ( tolower(key) == 'p' ) && keys[K_CTRL].down ) ) {
+		g_consoleField.acOffset = 0;
 		History_GetPreviousCommand( &g_consoleField, &g_history );
 		return;
 	}
 
 	if ( ( key == K_DOWNARROW ) ||
 			( ( tolower(key) == 'n' ) && keys[K_CTRL].down ) ) {
+		g_consoleField.acOffset = 0;
 		History_GetNextCommand( &g_consoleField, &g_history, g_console_field_width );
 		return;
 	}
@@ -829,7 +837,7 @@ static void Key_Bind_f()
 static void Key_CompleteBind_f( int startArg, int compArg )
 {
 	if ( compArg == startArg + 1 )
-		Field_AutoCompleteKeyName( startArg, compArg );
+		Field_AutoCompleteCustom( startArg, compArg, &Field_AutoCompleteKeyName );
 	else if ( compArg >= startArg + 2 )
 		Field_AutoCompleteFrom( compArg, compArg, qtrue, qtrue );
 }
@@ -838,7 +846,7 @@ static void Key_CompleteBind_f( int startArg, int compArg )
 static void Key_CompleteUnbind_f( int startArg, int compArg )
 {
 	if ( compArg == startArg + 1 )
-		Field_AutoCompleteKeyName( startArg, compArg );
+		Field_AutoCompleteCustom( startArg, compArg, &Field_AutoCompleteKeyName );
 }
 
 

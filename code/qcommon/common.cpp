@@ -84,6 +84,8 @@ cvar_t	*sv_packetdelay = 0;
 cvar_t	*com_noErrorInterrupt;
 #endif
 
+static cvar_t	*com_completionStyle;	// 0 = legacy, 1 = ET-style
+
 // com_speeds times
 int		time_game;
 int		time_frontend;		// renderer frontend time
@@ -2217,6 +2219,8 @@ void Com_Init( char *commandLine )
 	com_noErrorInterrupt = Cvar_Get( "com_noErrorInterrupt", "0", 0 );
 #endif
 
+	com_completionStyle = Cvar_Get( "com_completionStyle", "0", CVAR_ARCHIVE );
+
 	if ( com_dedicated->integer ) {
 		if ( !com_viewlog->integer ) {
 			Cvar_Set( "viewlog", "1" );
@@ -2331,7 +2335,7 @@ static void Com_WriteConfig_f()
 static void Com_CompleteWriteConfig_f( int startArg, int compArg )
 {
 	if ( startArg + 1 == compArg )
-		Field_AutoCompleteConfigName( startArg, compArg );
+		Field_AutoCompleteCustom( startArg, compArg, &Field_AutoCompleteConfigName );
 }
 
 
@@ -2625,11 +2629,14 @@ void Field_Clear( field_t* edit )
 	edit->scroll = 0;
 }
 
-static const char* completionString;
-static char shortestMatch[MAX_TOKEN_CHARS];
-static int	matchCount;
-// field we are working on, passed to Field_AutoComplete(&g_consoleCommand for instance)
-static field_t* completionField;
+static const char*	completionString;
+static char			shortestMatch[MAX_TOKEN_CHARS];
+static char			fullMatch[MAX_TOKEN_CHARS];
+static int			matchCount;
+static int			matchIndex;
+static qbool		findIndexOnly;		// for ET-style completion of command arguments
+static field_t*		completionField;	// field we are working on, passed to Field_AutoComplete
+
 
 static void FindMatches( const char *s )
 {
@@ -2655,6 +2662,21 @@ static void FindMatches( const char *s )
 			shortestMatch[i] = 0;
 		}
 	}
+}
+
+
+static int findMatchIndex;
+static void FindIndexMatch( const char *s )
+{
+	if ( Q_stricmpn( s, completionString, strlen( completionString ) ) ) {
+		return;
+	}
+
+	if ( findMatchIndex == matchIndex ) {
+		Q_strncpyz( fullMatch, s, sizeof( fullMatch ) );
+	}
+
+	findMatchIndex++;
 }
 
 
@@ -2761,6 +2783,42 @@ static void Field_AutoCompleteCmdOrVarName( int startArg, int compArg, qbool sea
 	if ( !searchCmds && !searchVars )
 		return;
 
+	field_t* const field = completionField;
+
+	if ( field->acOffset > 0 ) {
+		if ( matchCount > 1 ) {
+			// find the next match
+			completionString = shortestMatch;
+			findMatchIndex = 0;
+			if ( searchCmds )
+				Cmd_CommandCompletion( FindIndexMatch );
+			if ( searchVars )
+				Cvar_CommandCompletion( FindIndexMatch );
+			matchIndex = ( matchIndex + 1 ) % matchCount;
+
+			// insert it in the edit field
+			if ( compArg == 0 ) {
+				Q_strncpyz( field->buffer, fullMatch, sizeof(field->buffer) );
+				field->cursor = strlen( field->buffer );
+				Field_AppendLastArgs( field, 1 );
+			} else {
+				field->buffer[0] = '\0';
+				Field_AppendFirstArgs( field, compArg );
+				Q_strcat( field->buffer, sizeof(field->buffer), " " );
+				Q_strcat( field->buffer, sizeof(field->buffer), fullMatch );
+				field->cursor = strlen( field->buffer );
+				Field_AppendLastArgs( field, compArg + 1 );
+			}
+			const int delta = String_HasLeadingSlash( field->buffer ) ? 0 : 1;
+			field->acLength = field->cursor + delta - field->acOffset;
+		}
+		return;
+	}
+
+	*shortestMatch = '\0';
+	matchCount = 0;
+	matchIndex = 0;
+
 	if ( searchCmds )
 		Cmd_CommandCompletion( FindMatches );
 	if ( searchVars )
@@ -2768,6 +2826,15 @@ static void Field_AutoCompleteCmdOrVarName( int startArg, int compArg, qbool sea
 
 	if ( !Field_CompleteShortestMatch( startArg, compArg ) )
 		return;
+
+	// we found 2+ matches
+	if ( com_completionStyle->integer ) {
+		const int delta = String_HasLeadingSlash( field->buffer ) ? 0 : 1;
+		field->acStartArg = startArg;
+		field->acCompArg = compArg;
+		field->acOffset = field->cursor + delta;
+		field->acLength = 0;
+	}
 
 	if ( searchCmds )
 		Cmd_CommandCompletion( PrintMatches );
@@ -2778,29 +2845,65 @@ static void Field_AutoCompleteCmdOrVarName( int startArg, int compArg, qbool sea
 
 static void Field_AutoCompleteCommandArgument( int startArg, int compArg )
 {
+	field_t* const field = completionField;
+	if ( field->acOffset == 0 ) {
+		*shortestMatch = '\0';
+		matchCount = 0;
+		matchIndex = 0;
+	}
+
 	const char* cmdName = Cmd_Argv( startArg );
 	if ( String_HasLeadingSlash( cmdName ) )
 		cmdName++;
 	if ( *cmdName == '\0' )
 		return;
 
+	if ( field->acStartArg == startArg && field->acOffset > 0 ) {
+		if ( matchCount > 1 ) {
+			// find the next match
+			completionString = shortestMatch;
+			findMatchIndex = 0;
+			findIndexOnly = qtrue;
+			Cmd_AutoCompleteArgument( cmdName, startArg, compArg );
+			findIndexOnly = qfalse;
+			matchIndex = ( matchIndex + 1 ) % matchCount;
+
+			// insert it in the edit field
+			field->buffer[0] = '\0';
+			Field_AppendFirstArgs( field, compArg );
+			Q_strcat( field->buffer, sizeof(field->buffer), " " );
+			Q_strcat( field->buffer, sizeof(field->buffer), fullMatch );
+			field->cursor = strlen( field->buffer );
+			Field_AppendLastArgs( field, compArg + 1 );
+			const int delta = String_HasLeadingSlash( field->buffer ) ? 0 : 1;
+			field->acLength = field->cursor + delta - field->acOffset;
+		}
+		return;
+	}
+	
 	Cmd_AutoCompleteArgument( cmdName, startArg, compArg );
+
+	// we found 2+ matches
+	if ( field->acOffset == 0 && matchCount >= 2 && com_completionStyle->integer ) {
+		const int delta = String_HasLeadingSlash( field->buffer ) ? 0 : 1;
+		field->acStartArg = startArg;
+		field->acCompArg = compArg;
+		field->acOffset = field->cursor + delta;
+		field->acLength = 0;
+	}
 }
 
 
 void Field_AutoCompleteFrom( int startArg, int compArg, qbool searchCmds, qbool searchVars )
 {
-	// clear results
-	matchCount = 0;
-	*shortestMatch = '\0';
-
 	// For the first argument, we always check both variables and commands.
 	// For other arguments, we run a custom auto-completion handler
 	// registered by the command if one was provided.
-	if ( compArg == startArg )
+	if ( compArg == startArg ) {
 		Field_AutoCompleteCmdOrVarName( startArg, compArg, searchCmds, searchVars );
-	else
+	} else {
 		Field_AutoCompleteCommandArgument( startArg, compArg );
+	}
 }
 
 
@@ -2874,57 +2977,50 @@ void Field_AutoComplete( field_t *field, qbool insertBackslash )
 }
 
 
-void Field_AutoCompleteMapName( int startArg, int compArg )
+void Field_AutoCompleteCustom( int startArg, int compArg, fieldCompletionHandler_t callback )
 {
-	FS_FilenameCompletion( "maps", "bsp", qtrue, FindMatches, 0 );
-	if ( Field_CompleteShortestMatch( startArg, compArg ) )
-		FS_FilenameCompletion( "maps", "bsp", qtrue, PrintMatches, 0 );
-}
-
-
-void Field_AutoCompleteConfigName( int startArg, int compArg )
-{
-	FS_FilenameCompletion( "", "cfg", qtrue, FindMatches, FS_FILTER_INPAK );
-	if ( Field_CompleteShortestMatch( startArg, compArg ) )
-		FS_FilenameCompletion( "", "cfg", qtrue, PrintMatches, FS_FILTER_INPAK );
-}
-
-
-#define DEMO_EXT "dm_"STRINGIZE(PROTOCOL_VERSION)
-
-
-void Field_AutoCompleteDemoNameRead( int startArg, int compArg )
-{
-	FS_FilenameCompletion( "demos", "dm_66", qtrue, FindMatches, 0 );
-	FS_FilenameCompletion( "demos", "dm_67", qtrue, FindMatches, 0 );
-	FS_FilenameCompletion( "demos", DEMO_EXT, qtrue, FindMatches, 0 );
-	if ( Field_CompleteShortestMatch( startArg, compArg ) )
-	{
-		FS_FilenameCompletion( "demos", "dm_66", qtrue, PrintMatches, 0 );
-		FS_FilenameCompletion( "demos", "dm_67", qtrue, PrintMatches, 0 );
-		FS_FilenameCompletion( "demos", DEMO_EXT, qtrue, PrintMatches, 0 );
+	if ( findIndexOnly ) {
+		( *callback )( FindIndexMatch );
+		return;
 	}
-}
 
-
-void Field_AutoCompleteDemoNameWrite( int startArg, int compArg )
-{
-	FS_FilenameCompletion( "demos", DEMO_EXT, qtrue, FindMatches, FS_FILTER_INPAK );
+	( *callback )( FindMatches );
 	if ( Field_CompleteShortestMatch( startArg, compArg ) )
-		FS_FilenameCompletion( "demos", DEMO_EXT, qtrue, PrintMatches, FS_FILTER_INPAK );
+		( *callback )( PrintMatches );
 }
 
 
-#undef DEMO_EXT
+void Field_AutoCompleteMapName( fieldCallback_t callback )
+{
+	FS_FilenameCompletion( "maps", "bsp", qtrue, callback, 0 );
+}
+
+
+void Field_AutoCompleteConfigName( fieldCallback_t callback )
+{
+	FS_FilenameCompletion( "", "cfg", qtrue, callback, FS_FILTER_INPAK );
+}
+
+
+void Field_AutoCompleteDemoNameRead( fieldCallback_t callback )
+{
+	FS_FilenameCompletion( "demos", "dm_66", qtrue, callback, 0 );
+	FS_FilenameCompletion( "demos", "dm_67", qtrue, callback, 0 );
+	FS_FilenameCompletion( "demos", "dm_68", qtrue, callback, 0 );
+}
+
+
+void Field_AutoCompleteDemoNameWrite( fieldCallback_t callback )
+{
+	FS_FilenameCompletion( "demos", "dm_68", qtrue, callback, FS_FILTER_INPAK );
+}
 
 
 #ifndef DEDICATED
 
-void Field_AutoCompleteKeyName( int startArg, int compArg )
+void Field_AutoCompleteKeyName( fieldCallback_t callback )
 {
-	Key_KeyNameCompletion( FindMatches );
-	if ( Field_CompleteShortestMatch( startArg, compArg ) )
-		Key_KeyNameCompletion( PrintMatches );
+	Key_KeyNameCompletion( callback );
 }
 
 #endif

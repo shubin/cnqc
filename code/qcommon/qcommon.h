@@ -651,22 +651,34 @@ Edit fields and command line history/completion
 
 #define	MAX_EDIT_LINE	256
 typedef struct {
+	char	buffer[MAX_EDIT_LINE];
 	int		cursor;
 	int		scroll;
 	int		widthInChars;
-	char	buffer[MAX_EDIT_LINE];
+	int		acOffset;		// auto-completion letter index with the leading slash present
+	int		acLength;		// auto-completion letter count
+	int		acStartArg;		// auto-completion command token index
+	int		acCompArg;		// auto-completion argument token index
 } field_t;
 
 void Field_Clear( field_t *edit );
 void Field_AutoComplete( field_t *edit, qbool insertBackslash ); // should only be called by Console_Key
 
-// these are the functions you can use from your own command argument auto-completion callbacks
+typedef void (*fieldCallback_t)( const char* );
+typedef void (*fieldCompletionHandler_t)( fieldCallback_t );
+
+// these are the only Field_ functions you can call from a Cmd_SetAutoCompletion callback
 void Field_AutoCompleteFrom( int startArg, int compArg, qbool searchCmds, qbool searchVars );
-void Field_AutoCompleteMapName( int startArg, int compArg );
-void Field_AutoCompleteConfigName( int startArg, int compArg );
-void Field_AutoCompleteDemoNameRead( int startArg, int compArg );
-void Field_AutoCompleteDemoNameWrite( int startArg, int compArg );
-void Field_AutoCompleteKeyName( int startArg, int compArg );
+void Field_AutoCompleteCustom( int startArg, int compArg, fieldCompletionHandler_t callback );
+
+// these should only be passed as an argument to Field_AutoCompleteCustom
+void Field_AutoCompleteMapName( fieldCallback_t callback );
+void Field_AutoCompleteConfigName( fieldCallback_t callback );
+void Field_AutoCompleteDemoNameRead( fieldCallback_t callback );
+void Field_AutoCompleteDemoNameWrite( fieldCallback_t callback );
+#ifndef DEDICATED
+void Field_AutoCompleteKeyName( fieldCallback_t callback );
+#endif
 
 #define COMMAND_HISTORY		32
 typedef struct {

@@ -240,6 +240,10 @@ const char* Sys_ConsoleInput()
     if (avail != -1)
     {
       // we have something
+      
+      if (key != '\t')
+		tty_con.acOffset = 0;
+      
       if (key == tty_erase || key == 127 || key == 8) // backspace
       {
 		const int length = strlen(tty_con.buffer);

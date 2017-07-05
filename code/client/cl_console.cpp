@@ -69,8 +69,10 @@ static console_t con;
 int g_console_field_width = CONSOLE_WIDTH;
 
 
-void Con_ToggleConsole_f( void )
+void Con_ToggleConsole_f()
 {
+	g_consoleField.acOffset = 0;
+
 	// closing a full screen console restarts the demo loop
 	if ( cls.state == CA_DISCONNECTED && cls.keyCatchers == KEYCATCH_CONSOLE ) {
 		CL_StartDemoLoop();
@@ -404,7 +406,18 @@ static void Con_DrawInput()
 		return;
 	}
 
-	float y = con.y - (con.ch * 1.5);
+	float y = con.y - (con.ch * 1.5f);
+
+	// highlight the currently auto-completed part of the edit line
+	if ( g_consoleField.acOffset > 0 ) {
+		const int length = g_consoleField.acLength;
+		if ( length > 0 ) {
+			const vec4_t highlightColor = { 0.5f, 0.5f, 0.2f, 0.45f };
+			const int offset = g_consoleField.acOffset;
+			re.SetColor( highlightColor );
+			re.DrawStretchPic( con.xadjust + con.cw + offset * con.cw, y, length * con.cw, con.ch, 0, 0, 0, 0, cls.whiteShader );
+		}
+	}
 
 	re.SetColor( colorBlack );
 	SCR_DrawChar( con.xadjust + 1, y + 1, con.cw, con.ch, ']' );

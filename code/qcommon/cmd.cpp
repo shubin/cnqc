@@ -187,7 +187,7 @@ static void Cmd_Exec_f()
 static void Cmd_CompleteExec_f( int startArg, int compArg )
 {
 	if ( startArg + 1 == compArg )
-		Field_AutoCompleteConfigName( startArg, compArg );
+		Field_AutoCompleteCustom( startArg, compArg, &Field_AutoCompleteConfigName );
 }
 
 

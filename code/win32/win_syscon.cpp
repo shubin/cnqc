@@ -285,6 +285,9 @@ LONG WINAPI InputLineWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 		break;
 
 	case WM_KEYDOWN:
+		if ( wParam != VK_TAB )
+			s_wcd.inputField.acOffset = 0;
+
 		if ( wParam == VK_UP )
 		{
 			field_t field;
@@ -313,6 +316,9 @@ LONG WINAPI InputLineWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 		break;
 
 	case WM_CHAR:
+		if ( wParam != VK_TAB )
+			s_wcd.inputField.acOffset = 0;
+
 		if ( wParam == VK_RETURN )
 		{
 			GetWindowText( s_wcd.hwndInputLine, inputBuffer, sizeof( inputBuffer ) );
