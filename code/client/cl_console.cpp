@@ -33,7 +33,7 @@ static const cvar_t* con_speed;
 
 #define CON_NOTIFYLINES	4
 
-#define CON_TEXTSIZE	32768
+#define CON_TEXTSIZE	(256*1024)
 
 struct console_t {
 	qbool	initialized;
