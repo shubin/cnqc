@@ -719,6 +719,9 @@ qbool SV_CheckPaused( void ) {
 
 static void SV_IntegerOverflowShutDown( const char* msg )
 {
+	if ( Sys_HardReboot() )
+		Com_Quit( 1 );
+
 	// save the map name in case it gets cleared during the shut down
 	char mapName[MAX_QPATH];
 	Q_strncpyz( mapName, Cvar_VariableString("mapname"), sizeof(mapName) );

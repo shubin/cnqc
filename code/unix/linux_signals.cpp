@@ -76,9 +76,25 @@ static const char* Sig_GetName(int sig)
 }
 
 
+static const char* Sig_CreateFileName(const char* extension)
+{
+	const time_t epochTime = time(NULL);
+	struct tm* const utcTime = gmtime(&epochTime);
+	const int y = 1900 + utcTime->tm_year;
+	const int m = utcTime->tm_mon + 1;
+	const int d = utcTime->tm_mday;
+	const int h = utcTime->tm_hour;
+	const int mi = utcTime->tm_min;
+	const int s = utcTime->tm_sec;
+
+	return va("%s-crash-%d.%02d.%02d-%02d.%02d.%02d%s",
+				q_argv[0], y, m, d, h, mi, s, extension);
+}
+
+
 static void Sig_WriteJSON(int sig)
 {
-	FILE* const file = fopen(va("%s-crash.json", q_argv[0]), "w");
+	FILE* const file = fopen(Sig_CreateFileName(".json"), "w");
 	if (file == NULL)
 		return;
 
@@ -95,7 +111,7 @@ static void Sig_WriteJSON(int sig)
 // only uses functions safe to call in a signal handler
 static void Sig_WriteBacktraceSafe()
 {
-	FILE* const file = fopen(va("%s-crash.bt", q_argv[0]), "w");
+	FILE* const file = fopen(Sig_CreateFileName(".bt"), "w");
 	if (file == NULL)
 		return;
 
@@ -125,7 +141,7 @@ static void libbt_ErrorCallback(void* data, const char* msg, int errnum)
 // might not be safe in a signal handler
 static void Sig_WriteBacktraceUnsafe()
 {
-	FILE* const file = fopen(va("%s-crash.bt", q_argv[0]), "a");
+	FILE* const file = fopen(Sig_CreateFileName(".bt"), "a");
 	if (file == NULL)
 		return;
 

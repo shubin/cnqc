@@ -40,5 +40,5 @@ void QGL_Shutdown( void );
 // signals.c
 void SIG_Init(void);
 
-extern int          q_argc;
-extern const char** q_argv;
+extern int    q_argc;
+extern char** q_argv;

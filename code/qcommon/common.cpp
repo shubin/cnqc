@@ -314,7 +314,7 @@ void QDECL Com_Error( int code, const char *fmt, ... )
 }
 
 
-void Com_Quit_f( void )
+void Com_Quit( int status )
 {
 	// don't try to shutdown if we are in a recursive error
 	if ( !com_errorEntered ) {
@@ -326,7 +326,13 @@ void Com_Quit_f( void )
 		FS_Shutdown( qtrue );
 	}
 
-	Sys_Quit();
+	Sys_Quit( status );
+}
+
+
+static void Com_Quit_f( void )
+{
+	Com_Quit( 0 );
 }
 
 

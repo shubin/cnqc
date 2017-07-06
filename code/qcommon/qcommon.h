@@ -725,7 +725,7 @@ void		Info_Print( const char *s );
 void		Com_BeginRedirect (char *buffer, int buffersize, void (*flush)(char *));
 void		Com_EndRedirect( void );
 void		QDECL Com_DPrintf( const char *fmt, ... );
-void		Com_Quit_f( void );
+void		Com_Quit( int status );
 int			Com_EventLoop();
 int			Com_Milliseconds();	// will be journaled properly
 unsigned	Com_BlockChecksum( const void *buffer, int length );
@@ -962,7 +962,7 @@ typedef struct {
 sysEvent_t Sys_GetEvent();
 
 void Sys_Init();
-void Sys_Quit();
+void Sys_Quit( int status ); // status is the engine's exit code
 
 // general development dll loading for virtual machine testing
 void* QDECL Sys_LoadDll( const char* name, dllSyscall_t *entryPoint, dllSyscall_t systemcalls );
@@ -1000,6 +1000,8 @@ char** Sys_ListFiles( const char *directory, const char *extension, const char *
 void	Sys_FreeFileList( char **list );
 
 qbool Sys_LowPhysicalMemory( void );
+
+qbool Sys_HardReboot(); // qtrue when the server can restart itself
 
 // huffman.cpp - id's original code
 // used for out-of-band (OOB) datagrams with dynamically created trees

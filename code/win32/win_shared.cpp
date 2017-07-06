@@ -41,3 +41,9 @@ const char* Sys_DefaultHomePath()
 	return NULL;
 }
 
+
+qbool Sys_HardReboot()
+{
+	return qfalse;
+}
+

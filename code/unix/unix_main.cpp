@@ -53,8 +53,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ///////////////////////////////////////////////////////////////
 
 
-int          q_argc = 0;
-const char** q_argv = NULL;
+int    q_argc = 0;
+char** q_argv = NULL;
 
 static qboolean stdin_active = qtrue;
 
@@ -521,10 +521,10 @@ void Sys_Error( const char *error, ... )
 }
 
 
-void Sys_Quit()
+void Sys_Quit( int status )
 {
 	Sys_ConsoleInputShutdown();
-	exit(0);
+	exit( status );
 }
 
 
@@ -837,10 +837,76 @@ void Sys_Init()
 }
 
 
-int main( int argc, const char** argv )
+qbool Sys_HardReboot()
+{
+#ifdef DEDICATED
+	return qtrue;
+#else
+	return qfalse;
+#endif
+}
+
+
+#ifdef DEDICATED
+
+
+static int Lin_RunProcess( char** argv )
+{
+	const pid_t pid = fork();
+	if (pid == 0) {
+		if (execve(argv[0], argv , NULL) == -1) {
+			fprintf(stderr, "failed to launch child process: %s\n", strerror(errno));
+			_exit(1); // quit without calling atexit handlers
+			return 0;
+		}
+	}
+
+	int status;
+	while (waitpid(pid, &status, WNOHANG) == 0)
+		sleep(1); // in seconds
+
+    return WEXITSTATUS(status);
+}
+
+
+static void Lin_HardRebootHandler( int argc, char** argv )
+{
+	for (int i = 0; i < argc; ++i) {
+		if (!Q_stricmp(argv[i], "nohardreboot")) {
+			return;
+		}
+	}
+	
+	static char* args[256];
+	if (argc + 2 >= sizeof(args) / sizeof(args[0])) {
+		fprintf(stderr, "too many arguments: %d\n", argc);
+		_exit(1); // quit without calling atexit handlers
+		return;
+	}
+
+	for (int i = 0; i < argc; ++i)
+		args[i] = argv[i];
+	args[argc + 0] = (char*)"nohardreboot";
+	args[argc + 1] = NULL;
+
+	for (;;) {
+		if (Lin_RunProcess(args) == 0)
+			_exit(0); // quit without calling atexit handlers
+	}
+}
+
+
+#endif
+
+
+int main( int argc, char** argv )
 {
 	q_argc = argc;
 	q_argv = argv;
+
+#ifdef DEDICATED
+	Lin_HardRebootHandler(argc, argv);
+#endif
 
 	SIG_Init();
 	
@@ -863,7 +929,7 @@ int main( int argc, const char** argv )
 
 	Sys_ConsoleInputInit();
 
-	while (qtrue) {
+	for (;;) {
 		Com_Frame();
 	}
 
