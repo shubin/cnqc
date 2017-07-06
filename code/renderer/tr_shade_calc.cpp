@@ -1044,7 +1044,11 @@ void RB_CalcDiffuseColor( unsigned char *colors )
 	vec3_t			lightDir;
 	vec3_t			directedLight;
 	int				numVertexes;
+
 	ent = backEnd.currentEntity;
+	if (!ent || !tess.numVertexes)
+		return;
+
 	ambientLightInt = ent->ambientLightInt;
 	VectorCopy( ent->ambientLight, ambientLight );
 	VectorCopy( ent->directedLight, directedLight );
