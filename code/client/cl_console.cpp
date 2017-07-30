@@ -412,10 +412,11 @@ static void Con_DrawInput()
 	if ( g_consoleField.acOffset > 0 ) {
 		const int length = g_consoleField.acLength;
 		if ( length > 0 ) {
+			// note that Field_Draw takes integers as arguments so we need to truncate our coordinates and font sizes to match
 			const vec4_t highlightColor = { 0.5f, 0.5f, 0.2f, 0.45f };
 			const int offset = g_consoleField.acOffset;
 			re.SetColor( highlightColor );
-			re.DrawStretchPic( con.xadjust + con.cw + offset * con.cw, y, length * con.cw, con.ch, 0, 0, 0, 0, cls.whiteShader );
+			re.DrawStretchPic( con.xadjust + (offset + 1) * (int)con.cw, y, length * (int)con.cw, (int)con.ch, 0, 0, 0, 0, cls.whiteShader );
 		}
 	}
 
