@@ -1287,6 +1287,8 @@ static void IN_StartupHotKey( qbool fullStartUp )
 
 static void IN_ShutDownHotKey()
 {
+	Cmd_RemoveCommand( "minimizekeynames" );
+
 	WIN_UnregisterHotKey();
 }
 
