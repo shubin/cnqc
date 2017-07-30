@@ -3046,7 +3046,7 @@ static int LengthWithoutTrailingWhitespace( const char* s )
 	int i = (int)strlen(s);
 	while ( i-- ) {
 		if ( s[i] != ' ' && s[i] != '\t' )
-			return i;
+			return i + 1;
 	}
 
 	return 0;
@@ -3062,11 +3062,15 @@ void History_SaveCommand( history_t* history, const field_t* edit )
 		// argument count and then each argument with a case sensitive comparison,
 		// but there's only one tokenizer data instance...
 		// Instead, we only ignore the trailing whitespace.
+		const int lengthCur = LengthWithoutTrailingWhitespace( edit->buffer );
+		if ( lengthCur == 0 ) {
+			history->display = history->next;
+			return;
+		}
+
 		const int prevLine = (history->next - 1) % COMMAND_HISTORY;
-		const int length1 = LengthWithoutTrailingWhitespace( edit->buffer );
-		const int length2 = LengthWithoutTrailingWhitespace( history->commands[prevLine].buffer );
-		const int maxLength = min( length1, length2 );
-		if ( maxLength <= 0 || strncmp(edit->buffer, history->commands[prevLine].buffer, maxLength) == 0 ) {
+		const int lengthPrev = LengthWithoutTrailingWhitespace( history->commands[prevLine].buffer );
+		if ( lengthCur == lengthPrev && strncmp(edit->buffer, history->commands[prevLine].buffer, lengthCur) == 0 ) {
 			history->display = history->next;
 			return;
 		}
