@@ -8,5 +8,8 @@
 *.idb
 code/qcommon/git.h
 code/win32/winquake.res
-build/vs*/*sdf
-build/*/obj
+makefiles/vs*/*sdf
+makefiles/*/obj
+.build
+.bin
+/.project

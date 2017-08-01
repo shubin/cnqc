@@ -1,5 +1,8 @@
 --[[
 
+Currently used build:
+premake 5.0.0-alpha10
+
 There are only 2 build toolchains supported:
 - Visual C++ on Windows
 - GCC on Linux
@@ -9,29 +12,24 @@ There are only 2 build toolchains supported:
 
 --]]
 
-newoption
-{
-   trigger     = "quake3dir",
-   description = "Quake 3 directory path, used for copying the binaries and running the debugger"
-}
-
-if not _OPTIONS["quake3dir"] then
-	error "quake3dir must be specified on the command-line"
-end
-
 -- relative to the LUA script
-path_root = "../.."
-path_src = path_root.."/cnq3/code"
-path_build = path_root.."/cnq3/build"
+path_root = ".."
+path_src = path_root.."/code"
+path_make = path_root.."/makefiles"
+path_build = path_root.."/.build"
 path_bin = path_root.."/.bin"
 
 -- relative to the makefile
+make_path_src = "../../code"
 make_path_git_scripts = ".."
 make_path_git_header = "../../code/qcommon/git.h"
-make_path_bin = "../../../.bin"
+make_path_build = "../../.build"
+make_path_bin = "../../.bin"
 
--- the only absolute path we allow
-abs_path_q3 = path.getabsolute(_OPTIONS["quake3dir"]) -- os.realpath won't work if we pass in an env. var. here
+-- environment variables
+envvar_q3dir  = "QUAKE3DIR" -- Windows: required - Linux: optional
+envvar_moddir = "CPMADIR"   -- Windows: required - Linux: unused
+abs_path_q3 = string.format("$(%s)", envvar_q3dir)
 
 extra_warnings = 1
 
@@ -62,13 +60,6 @@ local function WIN_CreatePdbCopyPostBuildCommand(exeName)
 	local make_path_pdb = string.format("%s/%s/%s.pdb", make_path_bin, GetBinDirName(), exeName)
 
 	return string.format("copy \"%s\" \"%s\"", make_path_pdb, abs_path_q3)
-
-end
-
-local function SetTargetAndLink(dirPath)
-
-	targetdir(dirPath)
-	libdirs(dirPath)
 
 end
 
@@ -163,7 +154,7 @@ local function GetExeNameSuffix()
 
 end
 
-local function ApplyProjectSettings()
+local function ApplyProjectSettings(outputExe)
 
 	--
 	-- General
@@ -171,7 +162,7 @@ local function ApplyProjectSettings()
 
 	filter { }
 
-	location ( path_build.."/".._ACTION )
+	location ( path_make.."/".._ACTION )
 
 	rtti "Off"
 	exceptionhandling "Off"
@@ -196,7 +187,18 @@ local function ApplyProjectSettings()
 
 	-- Build directories
 	filter {  }
-	SetTargetAndLink ( string.format("%s/%s", path_bin, GetBinDirName()) )
+	local objDir = string.format("%s/%s/%s", path_build, GetBinDirName(), "%{prj.name}")
+	local libDir = string.format("%s/%s",    path_build, GetBinDirName())
+	if outputExe == true then
+		local exeDir = string.format("%s/%s", path_bin, GetBinDirName())
+		objdir(objDir)
+		targetdir(exeDir)
+		libdirs(libDir)
+	else
+		objdir(objDir)
+		targetdir(libDir)
+		libdirs(libDir)
+	end
 
 	--
 	-- Visual C++
@@ -259,13 +261,13 @@ end
 
 local function ApplyLibProjectSettings()
 
-	ApplyProjectSettings()
+	ApplyProjectSettings(false)
 
 end
 
 local function ApplyExeProjectSettings(exeName, server)
 
-	ApplyProjectSettings()
+	ApplyProjectSettings(true)
 
 	filter { }
 
@@ -447,7 +449,8 @@ local function ApplyExeProjectSettings(exeName, server)
 		postbuildcommands { path.translate(WIN_CreatePdbCopyPostBuildCommand(exeName), "\\") }
 	else
 		prebuildcommands { CreateGitPreBuildCommand(".sh") }
-		postbuildcommands { CreateExeCopyPostBuildCommand("cp -u", exeName, "") }
+		postbuildcommands { string.format("if [ -n \"$$%s\" ]; then %s; fi",
+			envvar_q3dir, CreateExeCopyPostBuildCommand("cp -u", exeName, "")) }
 	end
 
 	-- create VC++ debug settings
@@ -455,9 +458,9 @@ local function ApplyExeProjectSettings(exeName, server)
 		local abs_path_exe = string.format("%s\\%s.exe", abs_path_q3, exeName)
 		debugcommand(abs_path_exe)
 		if (server == 1) then
-			debugargs { "+set fs_game $(CPMADIR) +set sv_pure 0" }
+			debugargs { string.format("+set fs_game $(%s) +set sv_pure 0", envvar_moddir) }
 		else
-			debugargs { "+set fs_game $(CPMADIR) +set sv_pure 0 +set r_fullscreen 0" }
+			debugargs { string.format("+set fs_game $(%s) +set sv_pure 0 +set r_fullscreen 0", envvar_moddir) }
 		end
 		debugdir(abs_path_q3)
 
@@ -477,7 +480,7 @@ local function ApplyExeProjectSettings(exeName, server)
 	-- RC will compile the .rc into a .res
 	-- LINK accepts .res files directly
 	filter "action:vs*"
-		linkoptions { path.translate(path_src.."/win32/winquake.res", "\\"), "/STACK:8388608" }
+		linkoptions { path.translate(make_path_src.."/win32/winquake.res", "\\"), "/STACK:8388608" }
 
 	filter { "action:vs*", "configurations:release" }
 		linkoptions { "/OPT:REF", "/OPT:ICF" }
@@ -622,7 +625,7 @@ local function ApplyLibJpegTurboProjectSettings()
 		nasm_includes = string.format("-I%s/ -I%s/win/ -I%s/simd/", asm_inc_path, asm_inc_path, asm_inc_path)
 	end
 
-	local obj_file_path = string.format("%s%s", "%{cfg.targetdir}/%{file.basename}", GetCompilerObjectExtension())
+	local obj_file_path = string.format("%s%s", "%{cfg.objdir}/%{file.basename}", GetCompilerObjectExtension())
 	local command = string.format("nasm -o%s %s %s %s", obj_file_path, nasm_flags, nasm_includes, "%{file.relpath}")
 	if os.is("windows") then
 		command = path.translate(command, "\\")
@@ -642,7 +645,7 @@ end
 
 solution "cnq3"
 
-	location ( path_build.."/".._ACTION )
+	location ( path_make.."/".._ACTION )
 	platforms { "x32", "x64" }
 	configurations { "debug", "release" }
 
@@ -651,6 +654,7 @@ solution "cnq3"
 		kind "WindowedApp"
 		language "C++"
 		ApplyExeProjectSettings("cnq3", 0)
+		buildoptions { "-std=c++98" }
 
 	project "cnq3-server"
 
@@ -658,6 +662,7 @@ solution "cnq3"
 		language "C++"
 		defines { "DEDICATED" }
 		ApplyExeProjectSettings("cnq3-server", 1)
+		buildoptions { "-std=c++98" }
 
 	project "botlib"
 
@@ -666,6 +671,7 @@ solution "cnq3"
 		defines { "BOTLIB" }
 		AddSourcesAndHeaders("botlib")
 		ApplyLibProjectSettings()
+		buildoptions { "-std=c++98" }
 
 	project "renderer"
 
@@ -674,6 +680,7 @@ solution "cnq3"
 		AddSourcesAndHeaders("renderer")
 		includedirs { path_src.."/freetype/include" }
 		ApplyLibProjectSettings()
+		buildoptions { "-std=c++98" }
 
 	project "libjpeg-turbo"
 

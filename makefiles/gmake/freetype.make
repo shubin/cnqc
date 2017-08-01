@@ -12,9 +12,9 @@ endif
 
 ifeq ($(config),debug_x32)
   RESCOMP = windres
-  TARGETDIR = ../../../.bin/debug_x32
+  TARGETDIR = ../../.build/debug_x32
   TARGET = $(TARGETDIR)/libfreetype.a
-  OBJDIR = obj/x32/debug/freetype
+  OBJDIR = ../../.build/debug_x32/freetype
   DEFINES += -D_LIB -DFT2_BUILD_LIBRARY -D_BIND_TO_CURRENT_VCLIBS_VERSION=1 -DDEBUG -D_DEBUG
   INCLUDES += -I../../code/freetype/include
   FORCE_INCLUDE +=
@@ -24,7 +24,7 @@ ifeq ($(config),debug_x32)
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
   LIBS +=
   LDDEPS +=
-  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -L../../../.bin/debug_x32 -m32 
+  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -L../../.build/debug_x32 -m32 
   LINKCMD = $(AR) -rcs "$@" $(OBJECTS)
   define PREBUILDCMDS
   endef
@@ -39,9 +39,9 @@ endif
 
 ifeq ($(config),debug_x64)
   RESCOMP = windres
-  TARGETDIR = ../../../.bin/debug_x64
+  TARGETDIR = ../../.build/debug_x64
   TARGET = $(TARGETDIR)/libfreetype.a
-  OBJDIR = obj/x64/debug/freetype
+  OBJDIR = ../../.build/debug_x64/freetype
   DEFINES += -D_LIB -DFT2_BUILD_LIBRARY -D_BIND_TO_CURRENT_VCLIBS_VERSION=1 -DDEBUG -D_DEBUG
   INCLUDES += -I../../code/freetype/include
   FORCE_INCLUDE +=
@@ -51,7 +51,7 @@ ifeq ($(config),debug_x64)
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
   LIBS +=
   LDDEPS +=
-  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib64 -L../../../.bin/debug_x64 -m64 
+  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib64 -L../../.build/debug_x64 -m64 
   LINKCMD = $(AR) -rcs "$@" $(OBJECTS)
   define PREBUILDCMDS
   endef
@@ -66,9 +66,9 @@ endif
 
 ifeq ($(config),release_x32)
   RESCOMP = windres
-  TARGETDIR = ../../../.bin/release_x32
+  TARGETDIR = ../../.build/release_x32
   TARGET = $(TARGETDIR)/libfreetype.a
-  OBJDIR = obj/x32/release/freetype
+  OBJDIR = ../../.build/release_x32/freetype
   DEFINES += -D_LIB -DFT2_BUILD_LIBRARY -D_BIND_TO_CURRENT_VCLIBS_VERSION=1 -DNDEBUG
   INCLUDES += -I../../code/freetype/include
   FORCE_INCLUDE +=
@@ -78,7 +78,7 @@ ifeq ($(config),release_x32)
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
   LIBS +=
   LDDEPS +=
-  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -L../../../.bin/release_x32 -m32 
+  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -L../../.build/release_x32 -m32 
   LINKCMD = $(AR) -rcs "$@" $(OBJECTS)
   define PREBUILDCMDS
   endef
@@ -93,9 +93,9 @@ endif
 
 ifeq ($(config),release_x64)
   RESCOMP = windres
-  TARGETDIR = ../../../.bin/release_x64
+  TARGETDIR = ../../.build/release_x64
   TARGET = $(TARGETDIR)/libfreetype.a
-  OBJDIR = obj/x64/release/freetype
+  OBJDIR = ../../.build/release_x64/freetype
   DEFINES += -D_LIB -DFT2_BUILD_LIBRARY -D_BIND_TO_CURRENT_VCLIBS_VERSION=1 -DNDEBUG
   INCLUDES += -I../../code/freetype/include
   FORCE_INCLUDE +=
@@ -105,7 +105,7 @@ ifeq ($(config),release_x64)
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
   LIBS +=
   LDDEPS +=
-  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib64 -L../../../.bin/release_x64 -m64 
+  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib64 -L../../.build/release_x64 -m64 
   LINKCMD = $(AR) -rcs "$@" $(OBJECTS)
   define PREBUILDCMDS
   endef

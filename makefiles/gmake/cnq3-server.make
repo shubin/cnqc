@@ -12,19 +12,19 @@ endif
 
 ifeq ($(config),debug_x32)
   RESCOMP = windres
-  TARGETDIR = ../../../.bin/debug_x32
+  TARGETDIR = ../../.bin/debug_x32
   TARGET = $(TARGETDIR)/cnq3-server-x86
-  OBJDIR = obj/x32/debug/cnq3-server
+  OBJDIR = ../../.build/debug_x32/cnq3-server
   DEFINES += -DDEDICATED -DDEBUG -D_DEBUG
   INCLUDES +=
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
-  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -g -Wno-unused-parameter -Wno-write-strings -x c++
+  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -g -Wno-unused-parameter -Wno-write-strings -x c++ -std=c++98
   ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CFLAGS) -fno-exceptions -fno-rtti
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-  LIBS += ../../../.bin/debug_x32/libbotlib.a -ldl -lm -lbacktrace
-  LDDEPS += ../../../.bin/debug_x32/libbotlib.a
-  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -L../../../.bin/debug_x32 -m32 
+  LIBS += ../../.build/debug_x32/libbotlib.a -ldl -lm -lbacktrace
+  LDDEPS += ../../.build/debug_x32/libbotlib.a
+  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -L../../.build/debug_x32 -m32 
   LINKCMD = $(CXX) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
   define PREBUILDCMDS
 	@echo Running prebuild commands
@@ -34,7 +34,7 @@ ifeq ($(config),debug_x32)
   endef
   define POSTBUILDCMDS
 	@echo Running postbuild commands
-	cp -u "../../../.bin/debug_x32/cnq3-server-x86" "$(QUAKE3DIR)"
+	if [ -n "$$QUAKE3DIR" ]; then cp -u "../../.bin/debug_x32/cnq3-server-x86" "$(QUAKE3DIR)"; fi
   endef
 all: $(TARGETDIR) $(OBJDIR) prebuild prelink $(TARGET)
 	@:
@@ -43,19 +43,19 @@ endif
 
 ifeq ($(config),debug_x64)
   RESCOMP = windres
-  TARGETDIR = ../../../.bin/debug_x64
+  TARGETDIR = ../../.bin/debug_x64
   TARGET = $(TARGETDIR)/cnq3-server-x64
-  OBJDIR = obj/x64/debug/cnq3-server
+  OBJDIR = ../../.build/debug_x64/cnq3-server
   DEFINES += -DDEDICATED -DDEBUG -D_DEBUG
   INCLUDES +=
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
-  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g -Wno-unused-parameter -Wno-write-strings -x c++
+  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g -Wno-unused-parameter -Wno-write-strings -x c++ -std=c++98
   ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CFLAGS) -fno-exceptions -fno-rtti
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-  LIBS += ../../../.bin/debug_x64/libbotlib.a -ldl -lm -lbacktrace
-  LDDEPS += ../../../.bin/debug_x64/libbotlib.a
-  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib64 -L../../../.bin/debug_x64 -m64 
+  LIBS += ../../.build/debug_x64/libbotlib.a -ldl -lm -lbacktrace
+  LDDEPS += ../../.build/debug_x64/libbotlib.a
+  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib64 -L../../.build/debug_x64 -m64 
   LINKCMD = $(CXX) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
   define PREBUILDCMDS
 	@echo Running prebuild commands
@@ -65,7 +65,7 @@ ifeq ($(config),debug_x64)
   endef
   define POSTBUILDCMDS
 	@echo Running postbuild commands
-	cp -u "../../../.bin/debug_x64/cnq3-server-x64" "$(QUAKE3DIR)"
+	if [ -n "$$QUAKE3DIR" ]; then cp -u "../../.bin/debug_x64/cnq3-server-x64" "$(QUAKE3DIR)"; fi
   endef
 all: $(TARGETDIR) $(OBJDIR) prebuild prelink $(TARGET)
 	@:
@@ -74,19 +74,19 @@ endif
 
 ifeq ($(config),release_x32)
   RESCOMP = windres
-  TARGETDIR = ../../../.bin/release_x32
+  TARGETDIR = ../../.bin/release_x32
   TARGET = $(TARGETDIR)/cnq3-server-x86
-  OBJDIR = obj/x32/release/cnq3-server
+  OBJDIR = ../../.build/release_x32/cnq3-server
   DEFINES += -DDEDICATED -DNDEBUG
   INCLUDES +=
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
-  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -fomit-frame-pointer -ffast-math -Os -g -msse2 -Wno-unused-parameter -Wno-write-strings -g1 -x c++
+  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -fomit-frame-pointer -ffast-math -Os -g -msse2 -Wno-unused-parameter -Wno-write-strings -g1 -x c++ -std=c++98
   ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CFLAGS) -fno-exceptions -fno-rtti
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-  LIBS += ../../../.bin/release_x32/libbotlib.a -ldl -lm -lbacktrace
-  LDDEPS += ../../../.bin/release_x32/libbotlib.a
-  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -L../../../.bin/release_x32 -m32 
+  LIBS += ../../.build/release_x32/libbotlib.a -ldl -lm -lbacktrace
+  LDDEPS += ../../.build/release_x32/libbotlib.a
+  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -L../../.build/release_x32 -m32 
   LINKCMD = $(CXX) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
   define PREBUILDCMDS
 	@echo Running prebuild commands
@@ -96,7 +96,7 @@ ifeq ($(config),release_x32)
   endef
   define POSTBUILDCMDS
 	@echo Running postbuild commands
-	cp -u "../../../.bin/release_x32/cnq3-server-x86" "$(QUAKE3DIR)"
+	if [ -n "$$QUAKE3DIR" ]; then cp -u "../../.bin/release_x32/cnq3-server-x86" "$(QUAKE3DIR)"; fi
   endef
 all: $(TARGETDIR) $(OBJDIR) prebuild prelink $(TARGET)
 	@:
@@ -105,19 +105,19 @@ endif
 
 ifeq ($(config),release_x64)
   RESCOMP = windres
-  TARGETDIR = ../../../.bin/release_x64
+  TARGETDIR = ../../.bin/release_x64
   TARGET = $(TARGETDIR)/cnq3-server-x64
-  OBJDIR = obj/x64/release/cnq3-server
+  OBJDIR = ../../.build/release_x64/cnq3-server
   DEFINES += -DDEDICATED -DNDEBUG
   INCLUDES +=
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
-  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -fomit-frame-pointer -ffast-math -Os -g -msse2 -Wno-unused-parameter -Wno-write-strings -g1 -x c++
+  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -fomit-frame-pointer -ffast-math -Os -g -msse2 -Wno-unused-parameter -Wno-write-strings -g1 -x c++ -std=c++98
   ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CFLAGS) -fno-exceptions -fno-rtti
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-  LIBS += ../../../.bin/release_x64/libbotlib.a -ldl -lm -lbacktrace
-  LDDEPS += ../../../.bin/release_x64/libbotlib.a
-  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib64 -L../../../.bin/release_x64 -m64 
+  LIBS += ../../.build/release_x64/libbotlib.a -ldl -lm -lbacktrace
+  LDDEPS += ../../.build/release_x64/libbotlib.a
+  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib64 -L../../.build/release_x64 -m64 
   LINKCMD = $(CXX) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
   define PREBUILDCMDS
 	@echo Running prebuild commands
@@ -127,7 +127,7 @@ ifeq ($(config),release_x64)
   endef
   define POSTBUILDCMDS
 	@echo Running postbuild commands
-	cp -u "../../../.bin/release_x64/cnq3-server-x64" "$(QUAKE3DIR)"
+	if [ -n "$$QUAKE3DIR" ]; then cp -u "../../.bin/release_x64/cnq3-server-x64" "$(QUAKE3DIR)"; fi
   endef
 all: $(TARGETDIR) $(OBJDIR) prebuild prelink $(TARGET)
 	@:
