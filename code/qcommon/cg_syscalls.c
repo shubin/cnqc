@@ -33,7 +33,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 
 dllSyscall_t syscall = (dllSyscall_t)-1;
-extern int cg_addRefEntSyscallId;
 
 
 #if defined(_MSC_VER)
@@ -246,7 +245,7 @@ void	trap_R_ClearScene( void ) {
 }
 
 void	trap_R_AddRefEntityToScene( const refEntity_t *re ) {
-	syscall( cg_addRefEntSyscallId, re );
+	syscall( CG_R_ADDREFENTITYTOSCENE, re );
 }
 
 void	trap_R_AddPolyToScene( qhandle_t hShader , int numVerts, const polyVert_t *verts ) {
