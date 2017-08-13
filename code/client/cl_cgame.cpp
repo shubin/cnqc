@@ -289,6 +289,7 @@ void CL_ShutdownCGame()
 {
 	cls.keyCatchers &= ~KEYCATCH_CGAME;
 	cls.cgameStarted = qfalse;
+	cls.cgameForwardInput = 0;
 	if ( !cgvm ) {
 		return;
 	}
@@ -301,19 +302,19 @@ void CL_ShutdownCGame()
 
 static qbool CL_CG_GetValue( char* value, int valueSize, const char* key )
 {
-	if( Q_stricmp(key, "trap_LocateInteropData") == 0 ) {
-		Com_sprintf( value, valueSize, "%d", CG_EXT_LOCATEINTEROPDATA );
-		return qtrue;
-	}
+	struct syscall_t { const char* name; int number; };
+	static const syscall_t syscalls[] = {
+		{ "trap_LocateInteropData", CG_EXT_LOCATEINTEROPDATA },
+		{ "trap_R_AddRefEntityToScene2", CG_EXT_R_ADDREFENTITYTOSCENE2 },
+		{ "trap_R_ForceFixedDLights", CG_EXT_R_FORCEFIXEDDLIGHTS },
+		{ "trap_SetInputForwarding", CG_EXT_SETINPUTFORWARDING }
+	};
 
-	if( Q_stricmp(key, "trap_R_AddRefEntityToScene2") == 0 ) {
-		Com_sprintf( value, valueSize, "%d", CG_EXT_R_ADDREFENTITYTOSCENE2 );
-		return qtrue;
-	}
-
-	if( Q_stricmp(key, "trap_R_ForceFixedDLights") == 0 ) {
-		Com_sprintf( value, valueSize, "%d", CG_EXT_R_FORCEFIXEDDLIGHTS );
-		return qtrue;
+	for ( int i = 0; i < ARRAY_LEN( syscalls ); ++i ) {
+		if( Q_stricmp(key, syscalls[i].name) == 0 ) {
+			Com_sprintf( value, valueSize, "%d", syscalls[i].number );
+			return qtrue;
+		}
 	}
 
 	return qfalse;
@@ -589,6 +590,10 @@ static intptr_t CL_CgameSystemCalls( intptr_t *args )
 	case CG_EXT_R_FORCEFIXEDDLIGHTS:
 		return 0; // already the case for CNQ3
 
+	case CG_EXT_SETINPUTFORWARDING:
+		cls.cgameForwardInput = (int)args[1];
+		return 0;
+
 	default:
 		Com_Error( ERR_DROP, "Bad cgame system trap: %i", args[0] );
 	}
@@ -599,6 +604,8 @@ static intptr_t CL_CgameSystemCalls( intptr_t *args )
 void CL_InitCGame()
 {
 	int t = Sys_Milliseconds();
+
+	cls.cgameForwardInput = 0;
 
 	// put away the console
 	Con_Close();

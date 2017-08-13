@@ -259,6 +259,9 @@ typedef struct {
 	qbool	uiStarted;
 	qbool	cgameStarted;
 
+	// forward input to cgame regardless of keycatcher state?
+	int			cgameForwardInput;	// 1=mouse, 2=keys (note: we don't forward the escape key)
+
 	int			framecount;
 	int			frametime;			// msec since last frame
 

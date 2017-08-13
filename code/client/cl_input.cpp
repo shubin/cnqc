@@ -293,7 +293,7 @@ void CL_MouseEvent( int dx, int dy, int time )
 	} else if (cls.keyCatchers & KEYCATCH_CGAME) {
 		VM_Call( cgvm, CG_MOUSE_EVENT, dx, dy );
 	} else {
-		if ( cgvm )
+		if ( cgvm && (cls.cgameForwardInput & 1) )
 			VM_Call( cgvm, CG_MOUSE_EVENT, dx, dy );
 		cl.mouseDx[cl.mouseIndex] += dx;
 		cl.mouseDy[cl.mouseIndex] += dy;

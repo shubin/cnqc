@@ -1009,9 +1009,11 @@ void CL_KeyEvent( int key, qbool down, unsigned time )
 
 		CL_AddKeyUpCommands( key, kb );
 
-		if ( cls.keyCatchers & KEYCATCH_UI && uivm ) {
+		if ( (cls.keyCatchers & KEYCATCH_UI) && uivm ) {
 			VM_Call( uivm, UI_KEY_EVENT, key, down );
-		} else if ( cls.keyCatchers & KEYCATCH_CGAME && cgvm ) {
+		} else if ( (cls.keyCatchers & KEYCATCH_CGAME) && cgvm ) {
+			VM_Call( cgvm, CG_KEY_EVENT, key, down );
+		} else if ( (cls.cgameForwardInput & 2) && cgvm ) {
 			VM_Call( cgvm, CG_KEY_EVENT, key, down );
 		}
 
@@ -1032,6 +1034,8 @@ void CL_KeyEvent( int key, qbool down, unsigned time )
 		}
 	} else if ( cls.keyCatchers & KEYCATCH_MESSAGE ) {
 		Message_Key( key );
+	} else if ( (cls.cgameForwardInput & 2) && cgvm ) {
+		VM_Call( cgvm, CG_KEY_EVENT, key, down );
 	} else if ( cls.state == CA_DISCONNECTED ) {
 		Console_Key( key );
 	} else {
