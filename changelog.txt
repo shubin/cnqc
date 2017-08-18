@@ -1,6 +1,8 @@
 
 DD Mmm 17 - 1.49
 
+fix: r_lightmap is now archived and actually does its job
+
 add: r_greyscale to control how monochromatic the final image looks
   r_greyscale 0 (default) = full color (nothing done)
   r_greyscale 1 = monochrome

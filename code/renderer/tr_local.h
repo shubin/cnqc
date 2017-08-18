@@ -1011,14 +1011,6 @@ extern cvar_t	*r_flareSize;
 extern cvar_t	*r_flareFade;
 extern cvar_t	*r_flareCoeff;
 
-///////////////////////////////////////////////////////////////
-extern cvar_t	*r_maplightBrightness;
-extern cvar_t	*r_maplightSaturation;
-extern cvar_t	*r_maplightColor;
-extern cvar_t	*r_maplightColorMode;
-extern vec3_t	vMaplightColorFilter;
-///////////////////////////////////////////////////////////////
-
 
 void  R_NoiseInit();
 double R_NoiseGet4f( double x, double y, double z, double t );
@@ -1214,7 +1206,6 @@ void R_ComputeTexCoords( const shaderStage_t* pStage, stageVars_t& svars );
 void R_BindAnimatedImage( const textureBundle_t* bundle );
 
 void RB_FogPass();
-void RB_StageIteratorGeneric();
 void RB_StageIteratorSky();
 
 void RB_AddQuadStamp( vec3_t origin, vec3_t left, vec3_t up, byte *color );

@@ -60,6 +60,7 @@ cvar_t	*r_drawentities;
 cvar_t	*r_drawworld;
 cvar_t	*r_speeds;
 cvar_t	*r_fullbright;
+cvar_t	*r_lightmap;
 cvar_t	*r_novis;
 cvar_t	*r_nocull;
 cvar_t	*r_nocurves;
@@ -70,7 +71,6 @@ cvar_t	*r_msaa;
 
 cvar_t	*r_ignoreGLErrors;
 
-cvar_t	*r_lightmap;
 cvar_t	*r_vertexLight;
 cvar_t	*r_uiFullScreen;
 cvar_t	*r_mode;
@@ -481,15 +481,6 @@ static void R_Register()
 	r_ext_compressed_textures = ri.Cvar_Get( "r_ext_compressed_textures", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_ext_max_anisotropy = ri.Cvar_Get( "r_ext_max_anisotropy", "16", CVAR_ARCHIVE | CVAR_LATCH );
 	r_msaa = ri.Cvar_Get( "r_msaa", "0", CVAR_ARCHIVE | CVAR_LATCH );
-	
-	///////////////////////////////////////////////////////////////
-	r_maplightBrightness = ri.Cvar_Get("r_maplightBrightness", "1", CVAR_ARCHIVE | CVAR_LATCH);
-	AssertCvarRange(r_maplightBrightness, 0.0f, 8.0f, qfalse);
-	r_maplightSaturation = ri.Cvar_Get("r_maplightSaturation", "1", CVAR_ARCHIVE | CVAR_LATCH);
-	AssertCvarRange(r_maplightSaturation, 0.0f, 4.0f, qfalse);
-	r_maplightColorMode = ri.Cvar_Get("r_maplightColorMode", "1", CVAR_ARCHIVE | CVAR_LATCH);
-	AssertCvarRange(r_maplightColorMode, 0, 1, qtrue);
-	r_maplightColor = ri.Cvar_Get("r_maplightColor", "ffffff", CVAR_ARCHIVE | CVAR_LATCH);
 
 	r_picmip = ri.Cvar_Get ("r_picmip", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	AssertCvarRange( r_picmip, 0, 16, qtrue );
@@ -508,6 +499,7 @@ static void R_Register()
 	r_customaspect = ri.Cvar_Get( "r_customaspect", "1.333", CVAR_ARCHIVE | CVAR_LATCH );
 	r_vertexLight = ri.Cvar_Get( "r_vertexLight", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_fullbright = ri.Cvar_Get( "r_fullbright", "0", CVAR_ARCHIVE | CVAR_LATCH );
+	r_lightmap = ri.Cvar_Get( "r_lightmap", "0", CVAR_ARCHIVE );
 	r_subdivisions = ri.Cvar_Get( "r_subdivisions", "4", CVAR_ARCHIVE | CVAR_LATCH );
 #ifdef USE_R_SMP
 	r_smp = ri.Cvar_Get( "r_smp", "0", CVAR_ARCHIVE | CVAR_LATCH );
@@ -560,7 +552,6 @@ static void R_Register()
 
 	r_nocurves = ri.Cvar_Get ("r_nocurves", "0", CVAR_CHEAT );
 	r_drawworld = ri.Cvar_Get ("r_drawworld", "1", CVAR_CHEAT );
-	r_lightmap = ri.Cvar_Get ("r_lightmap", "0", 0 );
 	r_portalOnly = ri.Cvar_Get ("r_portalOnly", "0", CVAR_CHEAT );
 
 	r_flareSize = ri.Cvar_Get ("r_flareSize", "40", CVAR_CHEAT);

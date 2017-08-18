@@ -65,30 +65,6 @@ static void R_LoadLightmaps( const lump_t* l )
 	int i, j, k;
 	byte image[LIGHTMAP_SIZE * LIGHTMAP_SIZE * 4];
 
-	for(k = 0; k < 3; k++) {
-		if(strlen(r_maplightColor->string) == 3) {
-			int hexNum = r_maplightColor->string[k] - 48 < 0 ? 0 : r_maplightColor->string[k] - 48;
-			hexNum = hexNum > 15 ? hexNum - 65 + 48 + 10: hexNum;
-			hexNum = hexNum > 15 ? hexNum - 97 + 65: hexNum;
-
-			vMaplightColorFilter[k] = ((float)hexNum * 16.0f) / 255.0f;
-		}
-		else if(strlen(r_maplightColor->string) == 6) {
-			int hexHigh = r_maplightColor->string[k * 2] - 48 < 0 ? 0 : r_maplightColor->string[k * 2] - 48;
-			hexHigh = hexHigh > 15 ? hexHigh - 65 + 48 + 10: hexHigh;
-			hexHigh = hexHigh > 15 ? hexHigh - 97 + 65: hexHigh;
-
-			int hexLow = r_maplightColor->string[k * 2 + 1] - 48 < 0 ? 0 : r_maplightColor->string[k * 2 + 1] - 48;
-			hexLow = hexLow > 15 ? hexLow - 65 + 48 + 10: hexLow;
-			hexLow = hexLow > 15 ? hexLow - 97 + 65: hexLow;
-
-			vMaplightColorFilter[k] = (((float)hexHigh * 16.0f) + (float)hexLow) / 255.0f;
-		}
-		else {
-			vMaplightColorFilter[k] = 1.0f;
-		}
-	}
-
 	// if we are in r_vertexLight mode, we don't need the lightmaps at all
 	if (r_vertexLight->integer)
 		return;
@@ -112,25 +88,14 @@ static void R_LoadLightmaps( const lump_t* l )
 	for ( i = 0; i < tr.numLightmaps; ++i ) {
 		// expand the 24 bit on-disk to 32 bit
 		for ( j = 0; j < LIGHTMAP_SIZE * LIGHTMAP_SIZE; ++j ) {
-			R_ColorShiftLightingBytes( &p[j*3], &image[j*4] );
-			image[j*4+3] = 255;
-			
-			vec3_t vColor = {(float)image[j * 4 + 0] / 255.0f, (float)image[j * 4 + 1] / 255.0f, (float)image[j * 4 + 2] / 255.0f};
-			float greyColor = (vColor[0] + vColor[1] + vColor[2]) / 3.0f;
+			R_ColorShiftLightingBytes( &p[j * 3], &image[j * 4] );
 
-			for(k = 0; k < 3; k++) {
-				if(r_maplightColorMode->integer > 0) {
-					vColor[k] = vColor[k] * r_maplightSaturation->value + greyColor * (1.0f - r_maplightSaturation->value);
-				}
-				else {
-					vColor[k] = greyColor;
-				}
-				vColor[k] *= r_maplightBrightness->value;
-				vColor[k] *= vMaplightColorFilter[k];
-				vColor[k] = vColor[k] < 0.0f ? 0.0f : vColor[k];
-				vColor[k] = vColor[k] > 1.0f ? 1.0f : vColor[k];
-				image[j * 4 + k] = (byte)(vColor[k] * 255.0f);
+			for ( k = 0; k < 3; ++k ) {
+				const float c1 = (float)image[j * 4 + k] / 255.0f;
+				const float c2 = Com_Clamp( 0.0f, 1.0f, c1 );
+				image[j * 4 + k] = (byte)(c2 * 255.0f);
 			}
+			image[j * 4 + 3] = 255;
 		}
 		tr.lightmaps[i] = R_CreateImage( va("*lightmap%d",i), image,
 				LIGHTMAP_SIZE, LIGHTMAP_SIZE, GL_RGB, IMG_NOMIPMAP | IMG_NOPICMIP, GL_CLAMP );

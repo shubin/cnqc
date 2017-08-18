@@ -175,17 +175,33 @@ static void GL2_DynLights_LightingPass()
 ///////////////////////////////////////////////////////////////
 
 
-static void GL2_DynLights_MultitextureStage( int stage )
+// returns qtrue if needs to break early
+static qbool GL2_DynLights_MultitextureStage( int stage )
 {
-	// everything we care about from the first stage is already done
-	const shaderStage_t* pStage = tess.xstages[++stage];
+	static stageVars_t svarsMT; // this is a huge struct
+
+	const shaderStage_t* pPrevStage = tess.xstages[stage++];
+	const shaderStage_t* pStage = tess.xstages[stage];
+	const qbool lightmapOnly = r_lightmap->integer && (pStage->type == ST_LIGHTMAP || pPrevStage->type == ST_LIGHTMAP);
+
+	if ( lightmapOnly ) {
+		const int prevEnv = glState.texEnv[glState.currenttmu];
+		GL_TexEnv( GL_REPLACE );
+		if ( pStage->type == ST_LIGHTMAP ) {
+			R_BindAnimatedImage( &pStage->bundle );
+			R_ComputeTexCoords( pStage, svarsMT );
+			qglTexCoordPointer( 2, GL_FLOAT, 0, svarsMT.texcoords );
+		}
+		qglDrawElements( GL_TRIANGLES, tess.numIndexes, GL_INDEX_TYPE, tess.indexes );
+		GL_TexEnv( prevEnv );
+		return qtrue;
+	}
 
 	GL_SelectTexture( 1 );
 	qglEnable( GL_TEXTURE_2D );
 	GL_TexEnv( pStage->mtEnv );
 	R_BindAnimatedImage( &pStage->bundle );
-
-	static stageVars_t svarsMT; // this is a huge struct
+	
 	R_ComputeTexCoords( pStage, svarsMT );
 	qglEnableClientState( GL_TEXTURE_COORD_ARRAY );
 	qglTexCoordPointer( 2, GL_FLOAT, 0, svarsMT.texcoords );
@@ -194,6 +210,8 @@ static void GL2_DynLights_MultitextureStage( int stage )
 
 	qglDisable( GL_TEXTURE_2D );
 	GL_SelectTexture( 0 );
+
+	return qfalse;
 }
 
 
@@ -231,6 +249,7 @@ void GL2_DynLights_StageIterator()
 		const shaderStage_t* pStage = tess.xstages[stage];
 		R_ComputeColors( pStage, tess.svars );
 		R_ComputeTexCoords( pStage, tess.svars );
+
 		R_BindAnimatedImage( &pStage->bundle );
 		GL_State( pStage->stateBits );
 
@@ -239,11 +258,12 @@ void GL2_DynLights_StageIterator()
 		// so color changes are ignored unless we "update" the color pointer again
 		qglColorPointer( 4, GL_UNSIGNED_BYTE, 0, tess.svars.colors );
 		qglTexCoordPointer( 2, GL_FLOAT, 0, tess.svars.texcoords );
-
-		if (pStage->mtStages) {
+		
+		if ( pStage->mtStages ) {
 			// we can't really cope with massive collapses, so
 			assert( pStage->mtStages == 1 );
-			GL2_DynLights_MultitextureStage( stage );
+			if ( GL2_DynLights_MultitextureStage( stage ) )
+				break;
 			stage += pStage->mtStages;
 			continue;
 		}

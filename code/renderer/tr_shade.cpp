@@ -262,33 +262,7 @@ void R_ComputeColors( const shaderStage_t* pStage, stageVars_t& svars )
 		}
 		break;
 	case CGEN_EXACT_VERTEX:
-		if(r_fullbright->integer < 0) {
-			for (i = 0; i < tess.numVertexes; i++) {
-				int k;
-				
-				vec3_t vColor = {(float)tess.vertexColors[i][0] * tr.identityLight / 255.0f, (float)tess.vertexColors[i][1] * tr.identityLight / 255.0f, (float)tess.vertexColors[i][2] * tr.identityLight / 255.0f};
-				float greyColor = (vColor[0] + vColor[1] + vColor[2]) / 3.0f;
-
-				for(k = 0; k < 3; k++) {
-					if(r_maplightColorMode->integer > 0) {
-						vColor[k] = vColor[k] * r_maplightSaturation->value + greyColor * (1.0f - r_maplightSaturation->value);
-					}
-					else {
-						vColor[k] = greyColor;
-					}
-					vColor[k] *= r_maplightBrightness->value;
-					vColor[k] *= vMaplightColorFilter[k];
-					vColor[k] = vColor[k] < 0.0f ? 0.0f : vColor[k];
-					vColor[k] = vColor[k] > 1.0f ? 1.0f : vColor[k];
-					svars.colors[i][k] = (byte)(vColor[k] * 255.0f);
-				}
-
-				svars.colors[i][3] = tess.vertexColors[i][3];
-			}
-		}
-		else {
-			Com_Memcpy( svars.colors, tess.vertexColors, tess.numVertexes * sizeof( tess.vertexColors[0] ) );
-		}
+		Com_Memcpy( svars.colors, tess.vertexColors, tess.numVertexes * sizeof( tess.vertexColors[0] ) );
 		break;
 	case CGEN_ONE_MINUS_VERTEX:
 		if ( tr.identityLight == 1 )
@@ -500,85 +474,6 @@ void R_ComputeTexCoords( const shaderStage_t* pStage, stageVars_t& svars )
 			ri.Error( ERR_DROP, "ERROR: unknown texmod '%d' in shader '%s'\n", pStage->texMods[i].type, tess.shader->name );
 			break;
 		}
-	}
-}
-
-
-///////////////////////////////////////////////////////////////
-
-
-static void RB_IterateStagesGeneric( const shaderCommands_t* input )
-{
-	for (int stage = 0; stage < MAX_SHADER_STAGES; ++stage)
-	{
-		const shaderStage_t* pStage = tess.xstages[stage];
-		if ( !pStage )
-			break;
-
-		R_ComputeColors( pStage, tess.svars );
-		R_ComputeTexCoords( pStage, tess.svars );
-
-		if ( r_lightmap->integer && (pStage->type == ST_LIGHTMAP) )
-			GL_TexEnv( GL_REPLACE );
-
-		R_BindAnimatedImage( &pStage->bundle );
-		GL_State( pStage->stateBits );
-		R_DrawElements( input->numIndexes, input->indexes );
-
-		// allow skipping out to show just lightmaps during development
-		if ( r_lightmap->integer && (pStage->type == ST_LIGHTMAP) ) {
-			GL_TexEnv( GL_MODULATE );
-			break;
-		}
-	}
-}
-
-
-void RB_StageIteratorGeneric()
-{
-	shaderCommands_t* input = &tess;
-
-	if (tess.pass == shaderCommands_t::TP_LIGHT)
-		return;
-
-	GL_Program();
-
-	RB_DeformTessGeometry();
-
-	GL_Cull( input->shader->cullType );
-
-	if ( input->shader->polygonOffset )
-	{
-		qglEnable( GL_POLYGON_OFFSET_FILL );
-		//qglPolygonOffset( r_offsetFactor->value, r_offsetUnits->value );
-	}
-
-	// geometry is per-shader and can be compiled
-	// color and tc are per-stage, and can't
-
-	qglDisableClientState( GL_COLOR_ARRAY );
-	qglDisableClientState( GL_TEXTURE_COORD_ARRAY );
-
-	qglVertexPointer( 3, GL_FLOAT, 16, input->xyz );	// padded for SIMD
-	qglLockArraysEXT( 0, input->numVertexes );
-
-	qglEnableClientState( GL_COLOR_ARRAY );
-	qglColorPointer( 4, GL_UNSIGNED_BYTE, 0, input->svars.colors );
-	qglEnableClientState( GL_TEXTURE_COORD_ARRAY );
-	qglTexCoordPointer( 2, GL_FLOAT, 0, input->svars.texcoords[0] );
-
-	// call shader function
-	RB_IterateStagesGeneric( input );
-
-	if ( tess.fogNum && tess.shader->fogPass ) {
-		RB_FogPass();
-	}
-
-	qglUnlockArraysEXT();
-
-	if ( input->shader->polygonOffset )
-	{
-		qglDisable( GL_POLYGON_OFFSET_FILL );
 	}
 }
 

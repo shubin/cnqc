@@ -1541,8 +1541,6 @@ static void ComputeStageIteratorFunc()
 	}
 
 	shader.siFunc = GL2_DynLights_StageIterator;
-
-	//shader.siFunc = RB_StageIteratorGeneric;
 }
 
 
@@ -2398,8 +2396,6 @@ void R_ShaderList_f( void )
 			ri.Printf( PRINT_ALL, "    " );
 		} else if ( shader->siFunc == RB_StageIteratorSky ) {
 			ri.Printf( PRINT_ALL, "sky " );
-		} else if ( shader->siFunc == RB_StageIteratorGeneric ) {
-			ri.Printf( PRINT_ALL, "lgc " );
 		} else {
 			ri.Printf( PRINT_ALL, "??? " );
 		}
