@@ -2009,15 +2009,6 @@ static shader_t* FinishShader()
 
 	shader.numStages = stage;
 
-	// fix up any stages that we want fullbright
-	if ( r_fullbright->integer && (shader.lightmapIndex == LIGHTMAP_BY_VERTEX) ) {
-		for ( int i = 0; i < shader.numStages; ++i ) {
-			if (stages[i].rgbGen == CGEN_EXACT_VERTEX) {
-				stages[i].rgbGen = CGEN_IDENTITY;
-			}
-		}
-	}
-
 	FindLightingStages();
 
 	CollapseStages();

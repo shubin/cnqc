@@ -185,23 +185,35 @@ static qbool GL2_DynLights_MultitextureStage( int stage )
 	const qbool lightmapOnly = r_lightmap->integer && (pStage->type == ST_LIGHTMAP || pPrevStage->type == ST_LIGHTMAP);
 
 	if ( lightmapOnly ) {
-		const int prevEnv = glState.texEnv[glState.currenttmu];
-		GL_TexEnv( GL_REPLACE );
 		if ( pStage->type == ST_LIGHTMAP ) {
 			R_BindAnimatedImage( &pStage->bundle );
 			R_ComputeTexCoords( pStage, svarsMT );
 			qglTexCoordPointer( 2, GL_FLOAT, 0, svarsMT.texcoords );
 		}
 		qglDrawElements( GL_TRIANGLES, tess.numIndexes, GL_INDEX_TYPE, tess.indexes );
-		GL_TexEnv( prevEnv );
 		return qtrue;
+	}
+	
+	if ( r_fullbright->integer ) {
+		if ( pStage->type == ST_LIGHTMAP ) {
+			Com_Memset( tess.svars.colors, tr.identityLightByte, tess.numVertexes * 4 );
+			qglDrawElements( GL_TRIANGLES, tess.numIndexes, GL_INDEX_TYPE, tess.indexes );
+			return qfalse;
+		} else if ( pPrevStage->type == ST_LIGHTMAP ) {
+			Com_Memset( tess.svars.colors, tr.identityLightByte, tess.numVertexes * 4 );
+			R_BindAnimatedImage( &pStage->bundle );
+			R_ComputeTexCoords( pStage, svarsMT );
+			qglTexCoordPointer( 2, GL_FLOAT, 0, svarsMT.texcoords );
+			qglDrawElements( GL_TRIANGLES, tess.numIndexes, GL_INDEX_TYPE, tess.indexes );
+			return qfalse;
+		}
 	}
 
 	GL_SelectTexture( 1 );
 	qglEnable( GL_TEXTURE_2D );
 	GL_TexEnv( pStage->mtEnv );
 	R_BindAnimatedImage( &pStage->bundle );
-	
+
 	R_ComputeTexCoords( pStage, svarsMT );
 	qglEnableClientState( GL_TEXTURE_COORD_ARRAY );
 	qglTexCoordPointer( 2, GL_FLOAT, 0, svarsMT.texcoords );

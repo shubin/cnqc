@@ -960,6 +960,8 @@ extern cvar_t	*r_displayRefresh;		// optional display refresh option
 extern cvar_t	*r_intensity;
 extern cvar_t	*r_gamma;
 extern cvar_t	*r_greyscale;
+extern cvar_t	*r_lightmap;			// render lightmaps only
+extern cvar_t	*r_fullbright;			// avoid lightmap pass
 
 extern cvar_t	*r_ext_max_anisotropy;
 extern cvar_t	*r_msaa;
@@ -974,8 +976,6 @@ extern	cvar_t	*r_finish;
 extern	cvar_t	*r_swapInterval;
 extern	cvar_t	*r_textureMode;
 
-extern	cvar_t	*r_fullbright;			// avoid lightmap pass
-extern	cvar_t	*r_lightmap;			// render lightmaps only
 extern	cvar_t	*r_vertexLight;			// vertex lighting mode for better performance
 extern	cvar_t	*r_uiFullScreen;		// ui is running fullscreen
 
