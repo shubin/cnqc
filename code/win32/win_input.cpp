@@ -25,31 +25,24 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 
 struct Mouse {
-	virtual qbool Init() { return qtrue; }
-	virtual qbool Activate( qbool active );
-	virtual void Shutdown() {}
-	virtual qbool ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam ) { return qfalse; } // returns true if the event was handled
-
 	Mouse() : active(qfalse), wheel(0) {}
-	void UpdateWheel( int delta );
-private:
+
+	qbool IsActive() const { return active; }
+
+	virtual qbool Init() { return qfalse; }														// qtrue if successful
+	virtual qbool Activate( qbool active ) { return qfalse; }									// qtrue if successful
+	virtual void Shutdown() {}
+	virtual qbool ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam ) { return qfalse; }	// qtrue if the event was handled
+
+protected:
+	void UpdateWheel( int delta );	// queues mouse wheel events if needed
+
 	qbool active;
 	int wheel;
 };
 
 static Mouse* mouse;
-
-
-qbool Mouse::Activate( qbool _active )
-{
-	if (active == _active)
-		return qfalse;
-
-	active = _active;
-	wheel = 0;
-
-	return qtrue;
-}
+static qbool mouseSettingsSet = qfalse;
 
 
 void Mouse::UpdateWheel( int delta )
@@ -88,16 +81,30 @@ qbool rawmouse_t::Init()
 }
 
 
-qbool rawmouse_t::Activate( qbool active )
+qbool rawmouse_t::Activate( qbool _active )
 {
+	// if raw input isn't initialized with the RIDEV_INPUTSINK flag,
+	// pressing *any* mouse button while bringing the window back
+	// into focus will keep the cursor visible indefinitely...
+	// this was tested to be true on Windows 7 and 8.1
+
+	wheel = 0;
+
 	// RIDEV_NOLEGACY means we only get WM_INPUT and not WM_LBUTTONDOWN etc
+	// RIDEV_INPUTSINK means we get input even when not in the foreground
 	RAWINPUTDEVICE rid;
 	rid.usUsagePage = 1;
 	rid.usUsage = 2;
-	rid.dwFlags = active ? RIDEV_NOLEGACY : RIDEV_REMOVE;
+	rid.dwFlags = _active ? (RIDEV_NOLEGACY | RIDEV_INPUTSINK) : RIDEV_REMOVE;
 	rid.hwndTarget = NULL;
 
-	return !!RegisterRawInputDevices( &rid, 1, sizeof(rid) );
+	if (!RegisterRawInputDevices( &rid, 1, sizeof(rid) )) {
+		active = !_active;
+		return qfalse;
+	}
+
+	active = _active;
+	return qtrue;
 }
 
 
@@ -110,7 +117,6 @@ qbool rawmouse_t::ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam )
 		return qfalse;
 
 	HRAWINPUT h = (HRAWINPUT)lParam;
-
 	UINT size;
 	if (GetRawInputData( h, RID_INPUT, NULL, &size, sizeof(RAWINPUTHEADER) ) == -1)
 		return qfalse;
@@ -160,10 +166,10 @@ struct winmouse_t : public Mouse {
 	virtual qbool Activate( qbool active );
 	virtual qbool ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam );
 
+private:
 	void UpdateWindowCenter();
 
 	int window_center_x, window_center_y;
-	qbool active;
 };
 
 static winmouse_t winmouse;
@@ -179,6 +185,7 @@ void winmouse_t::UpdateWindowCenter()
 
 qbool winmouse_t::Activate( qbool _active )
 {
+	wheel = 0;
 	active = _active;
 
 	if (!_active)
@@ -251,6 +258,7 @@ static void IN_StartupMouse()
 {
 	assert( !mouse );
 	mouse = 0;
+	mouseSettingsSet = qfalse;
 
 	cvar_t* in_mouse = Cvar_Get( "in_mouse", "1", CVAR_ARCHIVE|CVAR_LATCH );
 	in_mouse->modified = qfalse;
@@ -338,14 +346,14 @@ void IN_Shutdown()
 }
 
 
-void IN_SetCursorSettings( qbool active )
+static void IN_SetCursorSettings( qbool active )
 {
 	if (active) {
 		while (ShowCursor(FALSE) >= 0)
 			;
 		RECT rc;
-		GetWindowRect( g_wv.hWnd, &rc );
 		SetCapture( g_wv.hWnd );
+		GetWindowRect( g_wv.hWnd, &rc );
 		ClipCursor( &rc );
 	} else {
 		while (ShowCursor(TRUE) < 0)
@@ -361,16 +369,17 @@ void IN_SetCursorSettings( qbool active )
 
 void IN_Activate( qbool active )
 {
-	if ( !mouse || !mouse->Mouse::Activate( active ) )
+	if ( !mouse || (mouseSettingsSet && mouse->IsActive() == active) )
 		return;
 
-	IN_SetCursorSettings( active );
+	if ( mouse->Activate( active ) )
+		IN_SetCursorSettings( active );
 
-	mouse->Activate( active );
+	mouseSettingsSet = qtrue;
 }
 
 
-qbool IN_ShouldBeActive()
+static qbool IN_ShouldBeActive()
 {
 	return g_wv.activeApp && (!(cls.keyCatchers & KEYCATCH_CONSOLE) || Cvar_VariableIntegerValue("r_fullscreen"));
 }

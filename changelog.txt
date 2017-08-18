@@ -103,6 +103,9 @@ chg: updated mouse input for better grab (de-)activation and fixed window draggi
 
 chg: reduced raw mouse input latency and added cl_drawMouseLag
 
+fix: in raw mouse input mode, keeping any button pressed while focusing the window would keep
+  the cursor visible even after releasing all buttons
+
 
 Linux:
 

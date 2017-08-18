@@ -86,8 +86,6 @@ static void WIN_AppActivate( BOOL fActive, BOOL fMinimized )
 
 	// we don't want to act like we're active if we're minimized
 	g_wv.activeApp = active;
-
-	IN_Activate( IN_ShouldBeActive() );
 }
 
 
@@ -362,13 +360,10 @@ LRESULT CALLBACK MainWndProc (
 			}
 		}
 		g_wv.activeApp = (qbool)!IsIconic( hWnd );
-		IN_SetCursorSettings( IN_ShouldBeActive() );
-			
 		break;
 
 	case WM_KILLFOCUS:
 		g_wv.activeApp = qfalse;
-		IN_SetCursorSettings( qfalse );
 		if ( glw_state.cdsDevModeValid )
 			WIN_SetDesktopDisplaySettings();
 		break;
