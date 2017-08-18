@@ -44,6 +44,7 @@ cvar_t	*r_skipBackEnd;
 
 cvar_t	*r_intensity;
 cvar_t	*r_gamma;
+cvar_t	*r_greyscale;
 
 cvar_t	*r_measureOverdraw;
 
@@ -542,6 +543,7 @@ static void R_Register()
     r_swapInterval = ri.Cvar_Get( "r_swapInterval", "0", CVAR_ARCHIVE );
 #endif	
 	r_gamma = ri.Cvar_Get( "r_gamma", "1", CVAR_ARCHIVE );
+	r_greyscale = ri.Cvar_Get( "r_greyscale", "0", CVAR_ARCHIVE );
 
 	r_ambientScale = ri.Cvar_Get( "r_ambientScale", "0.6", CVAR_CHEAT );
 	r_directedScale = ri.Cvar_Get( "r_directedScale", "1", CVAR_CHEAT );

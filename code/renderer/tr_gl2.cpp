@@ -570,32 +570,8 @@ static void GL2_FBO_BlitMSToSS()
 }
 
 
-static GLSL_Program gammaProg;
-
-struct GLSL_GammaProgramAttribs
+static void GL2_FullScreenQuad()
 {
-	int texture;
-	int gammaOverbright;
-};
-
-static GLSL_GammaProgramAttribs gammaProgAttribs;
-
-
-void GL2_PostProcessGamma()
-{
-	const int obBits = Com_ClampInt( 0, (glConfig.colorBits > 16) ? 2 : 1, r_overBrightBits->integer );
-	const float obScale = 1 << obBits;
-	const float gamma = 1.0f / Com_Clamp( 0.5f, 3.0f, r_gamma->value );
-
-	GL2_FBO_Swap();
-	GL2_FBO_Bind();
-	
-	GL_Program( gammaProg );
-	qglUniform1i( gammaProgAttribs.texture, 0 ); // we use texture unit 0
-	qglUniform4f( gammaProgAttribs.gammaOverbright, gamma, gamma, gamma, obScale );
-	GL_SelectTexture( 0 );
-	qglBindTexture( GL_TEXTURE_2D, frameBuffersPostProcess[frameBufferReadIndex ^ 1].color );
-
 	const float w = glConfig.vidWidth;
 	const float h = glConfig.vidHeight;
 	qglBegin( GL_QUADS );
@@ -608,7 +584,38 @@ void GL2_PostProcessGamma()
 		qglTexCoord2f( 1.0f, 0.0f );
 		qglVertex2f( w, h );
 	qglEnd();
+}
 
+
+static GLSL_Program gammaProg;
+
+struct GLSL_GammaProgramAttribs
+{
+	int texture;
+	int gammaOverbright;
+};
+
+static GLSL_GammaProgramAttribs gammaProgAttribs;
+
+
+static void GL2_PostProcessGamma()
+{
+	const int obBits = Com_ClampInt( 0, 2, r_overBrightBits->integer );
+	const float obScale = (float)( 1 << obBits );
+	const float gamma = 1.0f / Com_Clamp( 0.5f, 3.0f, r_gamma->value );
+
+	if ( gamma == 1.0f && obBits == 0 )
+		return;
+
+	GL2_FBO_Swap();
+	GL2_FBO_Bind();
+	
+	GL_Program( gammaProg );
+	qglUniform1i( gammaProgAttribs.texture, 0 ); // we use texture unit 0
+	qglUniform4f( gammaProgAttribs.gammaOverbright, gamma, gamma, gamma, obScale );
+	GL_SelectTexture( 0 );
+	qglBindTexture( GL_TEXTURE_2D, frameBuffersPostProcess[frameBufferReadIndex ^ 1].color );
+	GL2_FullScreenQuad();
 	qglBindTexture( GL_TEXTURE_2D, 0 );
 	GL_Program();
 }
@@ -630,6 +637,62 @@ static const char* gammaFS =
 "{\n"
 "	vec3 base = texture2D(texture, gl_TexCoord[0].xy).rgb;\n"
 "	gl_FragColor = vec4(pow(base, gammaOverbright.xyz) * gammaOverbright.w, 1.0);\n"
+"}\n"
+"";
+
+
+static GLSL_Program greyscaleProg;
+
+struct GLSL_GreyscaleProgramAttribs
+{
+	int texture;
+	int greyscale;
+};
+
+static GLSL_GreyscaleProgramAttribs greyscaleProgAttribs;
+static qbool greyscaleProgramValid = qfalse;
+
+
+static void GL2_PostProcessGreyscale()
+{
+	if ( !greyscaleProgramValid )
+		return;
+
+	const float greyscale = Com_Clamp( 0.0f, 1.0f, r_greyscale->value );
+	if ( greyscale == 0.0f )
+		return;
+
+	GL2_FBO_Swap();
+	GL2_FBO_Bind();
+	
+	GL_Program( greyscaleProg );
+	qglUniform1i( greyscaleProgAttribs.texture, 0 ); // we use texture unit 0
+	qglUniform1f( greyscaleProgAttribs.greyscale, greyscale );
+	GL_SelectTexture( 0 );
+	qglBindTexture( GL_TEXTURE_2D, frameBuffersPostProcess[frameBufferReadIndex ^ 1].color );
+	GL2_FullScreenQuad();
+	qglBindTexture( GL_TEXTURE_2D, 0 );
+	GL_Program();
+}
+
+
+static const char* greyscaleVS =
+"void main()\n"
+"{\n"
+"	gl_Position = ftransform();\n"
+"	gl_TexCoord[0] = gl_MultiTexCoord0;\n"
+"}\n"
+"";
+
+static const char* greyscaleFS =
+"uniform sampler2D texture;\n"
+"uniform float greyscale;\n"
+"\n"
+"void main()\n"
+"{\n"
+"	vec3 base = texture2D(texture, gl_TexCoord[0].xy).rgb;\n"
+"	vec3 grey = vec3(0.299 * base.r + 0.587 * base.g + 0.114 * base.b);\n"
+"	gl_FragColor = vec4(lerp(base, grey, greyscale), 1.0);\n"
 "}\n"
 "";
 
@@ -657,6 +720,14 @@ qbool QGL_InitGL2()
 	gammaProgAttribs.texture = qglGetUniformLocation( gammaProg.p, "texture" );
 	gammaProgAttribs.gammaOverbright = qglGetUniformLocation( gammaProg.p, "gammaOverbright" );
 
+	greyscaleProgramValid = GL2_CreateProgram( greyscaleProg, greyscaleVS, greyscaleFS );
+	if ( greyscaleProgramValid ) {
+		greyscaleProgAttribs.texture = qglGetUniformLocation( greyscaleProg.p, "texture" );
+		greyscaleProgAttribs.greyscale = qglGetUniformLocation( greyscaleProg.p, "greyscale" );	
+	} else {
+		Com_Printf( "ERROR: failed to compile greyscale shaders\n" );
+	}
+
 	return qtrue;
 }
 
@@ -676,6 +747,7 @@ void GL2_EndFrame()
 		GL2_FBO_BlitMSToSS();
 
 	GL2_PostProcessGamma();
+	GL2_PostProcessGreyscale();
 	GL2_FBO_BlitSSToBackBuffer();
 }
 

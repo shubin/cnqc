@@ -1,6 +1,11 @@
 
 DD Mmm 17 - 1.49
 
+add: r_greyscale to control how monochromatic the final image looks
+  r_greyscale 0 (default) = full color (nothing done)
+  r_greyscale 1 = monochrome
+  r_greyscale ]0 1[ for linear interpolations between the 2 extremes
+
 add: com_completionStyle to select the auto-completion style
   com_completionStyle 0 (default) = always print all results
   com_completionStyle 1 = cycle results like Enemy Territory's console

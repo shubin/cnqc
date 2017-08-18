@@ -862,11 +862,9 @@ static void R_CreateBuiltinImages()
 
 void R_SetColorMappings()
 {
-	// allow 2 overbright bits in 24 bit, but only 1 in 16 bit
-	tr.overbrightBits = Com_Clamp( 0, (glConfig.colorBits > 16) ? 2 : 1, r_overBrightBits->integer );
-
-	tr.identityLight = 1.0f / (1 << tr.overbrightBits);
-	tr.identityLightByte = 255 * tr.identityLight;
+	tr.overbrightBits = Com_Clamp( 0, 2, r_overBrightBits->integer );
+	tr.identityLight = 1.0f / (float)( 1 << tr.overbrightBits );
+	tr.identityLightByte = (int)( 255.0f * tr.identityLight );
 
 	if ( r_intensity->value < 1 )
 		ri.Cvar_Set( "r_intensity", "1" );

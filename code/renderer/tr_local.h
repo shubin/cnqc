@@ -959,6 +959,7 @@ extern cvar_t	*r_displayRefresh;		// optional display refresh option
 
 extern cvar_t	*r_intensity;
 extern cvar_t	*r_gamma;
+extern cvar_t	*r_greyscale;
 
 extern cvar_t	*r_ext_max_anisotropy;
 extern cvar_t	*r_msaa;
