@@ -344,6 +344,8 @@ static qbool GLW_CreateWindow( int width, int height )
 {
 	static qbool s_classRegistered = qfalse;
 
+	g_wv.inputInitialized = qfalse;
+
 	if ( !s_classRegistered )
 	{
 		WNDCLASS wc;
@@ -735,6 +737,12 @@ void GLimp_Shutdown()
 {
 	const char* success[] = { "failed", "success" };
 	int retVal;
+
+	if ( g_wv.inputInitialized )
+	{
+		IN_Shutdown();
+		g_wv.inputInitialized = qfalse;
+	}
 
 	// FIXME: Brian, we need better fallbacks from partially initialized failures
 	if ( !qwglMakeCurrent ) {

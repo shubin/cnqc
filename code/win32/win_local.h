@@ -77,6 +77,8 @@ typedef struct
 	qbool		minimizeHotKeyValid;
 	UINT		minimizeHotKeyKey;
 	UINT		minimizeHotKeyMods;
+
+	qbool		inputInitialized;
 } WinVars_t;
 
 extern WinVars_t g_wv;

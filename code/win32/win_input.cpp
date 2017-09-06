@@ -69,6 +69,7 @@ void Mouse::UpdateWheel( int delta )
 struct rawmouse_t : public Mouse {
 	virtual qbool Init();
 	virtual qbool Activate( qbool active );
+	virtual void Shutdown();
 	virtual qbool ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam );
 };
 
@@ -77,34 +78,50 @@ static rawmouse_t rawmouse;
 
 qbool rawmouse_t::Init()
 {
-	return Activate( qtrue );
+	wheel = 0;
+
+	// Problems with the RIDEV_NOLEGACY flag:
+	// - When focusing the app while pressing a mouse button, the cursor becomes visible and stays so indefinitely
+	//   despite properly having done the repeated calls to ShowCursor(FALSE) until the counter is negative.
+	//   You have to wait for the mouse button to be released to call ReleaseCapture() and SetCapture(hWnd) again in order to
+	//   actually hide the cursor again.
+	// - Unlike what the MSDN docs might let you think, some *really* important messages get dropped, not just mouse input ones.
+	//   The application won't get the focus back when being clicked!
+	// It's a buggy mess, so don't use it.
+
+	RAWINPUTDEVICE rid;
+	rid.usUsagePage = 1;
+	rid.usUsage = 2;
+	rid.dwFlags = 0;
+	rid.hwndTarget = NULL;
+
+	if (!RegisterRawInputDevices( &rid, 1, sizeof(rid)) ) {
+		active = qfalse;
+		return qfalse;
+	}
+
+	active = qtrue;
+	return qtrue;
 }
 
 
 qbool rawmouse_t::Activate( qbool _active )
 {
-	// if raw input isn't initialized with the RIDEV_INPUTSINK flag,
-	// pressing *any* mouse button while bringing the window back
-	// into focus will keep the cursor visible indefinitely...
-	// this was tested to be true on Windows 7 and 8.1
-
 	wheel = 0;
+	active = _active;
 
-	// RIDEV_NOLEGACY means we only get WM_INPUT and not WM_LBUTTONDOWN etc
-	// RIDEV_INPUTSINK means we get input even when not in the foreground
+	return qtrue;
+}
+
+
+void rawmouse_t::Shutdown()
+{
 	RAWINPUTDEVICE rid;
 	rid.usUsagePage = 1;
 	rid.usUsage = 2;
-	rid.dwFlags = _active ? (RIDEV_NOLEGACY | RIDEV_INPUTSINK) : RIDEV_REMOVE;
+	rid.dwFlags = RIDEV_REMOVE;
 	rid.hwndTarget = NULL;
-
-	if (!RegisterRawInputDevices( &rid, 1, sizeof(rid) )) {
-		active = !_active;
-		return qfalse;
-	}
-
-	active = _active;
-	return qtrue;
+	RegisterRawInputDevices( &rid, 1, sizeof(rid) );
 }
 
 
@@ -113,7 +130,10 @@ qbool rawmouse_t::Activate( qbool _active )
 
 qbool rawmouse_t::ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam )
 {
-	if (msg != WM_INPUT)
+	static const int riBtnDnFlags[5] = { RI_MOUSE_BUTTON_1_DOWN, RI_MOUSE_BUTTON_2_DOWN, RI_MOUSE_BUTTON_3_DOWN, RI_MOUSE_BUTTON_4_DOWN, RI_MOUSE_BUTTON_5_DOWN };
+	static const int riBtnUpFlags[5] = { RI_MOUSE_BUTTON_1_UP, RI_MOUSE_BUTTON_2_UP, RI_MOUSE_BUTTON_3_UP, RI_MOUSE_BUTTON_4_UP, RI_MOUSE_BUTTON_5_UP };
+
+	if (!active || msg != WM_INPUT)
 		return qfalse;
 
 	HRAWINPUT h = (HRAWINPUT)lParam;
@@ -139,21 +159,13 @@ qbool rawmouse_t::ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam )
 	if (ri.data.mouse.usButtonFlags & RI_MOUSE_WHEEL)
 		UpdateWheel( (SHORT)ri.data.mouse.usButtonData );
 
-	// typical MS clusterfuck for button handling, sigh... and better yet,
-	// ulRawButtons isn't actually populated at all with the ms mouse drivers
-#define QUEUE_RI_BUTTON( button ) \
-	if (ri.data.mouse.usButtonFlags & (RI_MOUSE_BUTTON_##button##_DOWN)) \
-		Sys_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MOUSE##button##, qtrue, 0, NULL ); \
-	if (ri.data.mouse.usButtonFlags & (RI_MOUSE_BUTTON_##button##_UP)) \
-		Sys_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MOUSE##button##, qfalse, 0, NULL );
+	for (int i = 0; i < 5; ++i) {
+		if (ri.data.mouse.usButtonFlags & riBtnDnFlags[i])
+			Sys_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MOUSE1 + i, qtrue, 0, NULL );
 
-	QUEUE_RI_BUTTON( 1 );
-	QUEUE_RI_BUTTON( 2 );
-	QUEUE_RI_BUTTON( 3 );
-	QUEUE_RI_BUTTON( 4 );
-	QUEUE_RI_BUTTON( 5 );
-
-#undef QUEUE_RI_BUTTON
+		if (ri.data.mouse.usButtonFlags & riBtnUpFlags[i])
+			Sys_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MOUSE1 + i, qfalse, 0, NULL );
+	}
 
 	return qfalse;
 }
@@ -329,11 +341,15 @@ void IN_Init()
 	in_joystick->modified = qfalse;
 
 	IN_Startup();
+
+	g_wv.inputInitialized = qtrue;
 }
 
 
 void IN_Shutdown()
 {
+	g_wv.inputInitialized = qfalse;
+
 	IN_Activate( qfalse );
 
 	if (mouse) {
@@ -389,6 +405,10 @@ static qbool IN_ShouldBeActive()
 
 void IN_Frame()
 {
+	// lazily initialize if needed
+	if ( !com_dedicated->integer && !g_wv.inputInitialized )
+		IN_Init();
+
 	IN_JoyMove();
 	IN_UpdateHotKey();
 
