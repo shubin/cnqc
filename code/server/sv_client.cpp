@@ -1030,11 +1030,11 @@ static void SV_VerifyPaks_f( client_t* cl )
 	// namely the ui and cgame that we think they should have
 
 	pArg = Cmd_Argv(nCurArg++);
-	if ( !FS_FileIsInPAK("vm/cgame.qvm", &checksum) || !pArg || *pArg == '@' || atoi(pArg) != checksum )
+	if ( !FS_FileIsInPAK("vm/cgame.qvm", &checksum, NULL) || !pArg || *pArg == '@' || atoi(pArg) != checksum )
 		goto impure;
 
 	pArg = Cmd_Argv(nCurArg++);
-	if ( !FS_FileIsInPAK("vm/ui.qvm", &checksum) || !pArg || *pArg == '@' || atoi(pArg) != checksum )
+	if ( !FS_FileIsInPAK("vm/ui.qvm", &checksum, NULL) || !pArg || *pArg == '@' || atoi(pArg) != checksum )
 		goto impure;
 
 	// should be sitting at the delimiter now

@@ -324,11 +324,6 @@ static void SV_TouchCGame()
 
 void SV_SpawnServer( const char* mapname )
 {
-	int			i;
-	int			checksum;
-	char		systemInfo[16384];
-	const char	*p;
-
 	// shut down the existing game if it is running
 	SV_ShutdownGameProgs();
 
@@ -376,7 +371,7 @@ void SV_SpawnServer( const char* mapname )
 	//Cvar_Set( "nextmap", "map_restart 0");
 	Cvar_Set( "nextmap", va("map %s", mapname) );
 
-	for (i=0 ; i<sv_maxclients->integer ; i++) {
+	for (int i=0 ; i<sv_maxclients->integer ; i++) {
 		// save when the server started for each client already connected
         if (svs.clients[i].state >= CS_CONNECTED) {
             svs.clients[i].oldServerTime = svs.time;
@@ -385,7 +380,7 @@ void SV_SpawnServer( const char* mapname )
 
 	// wipe the entire per-level structure
 	SV_ClearServer();
-	for ( i = 0 ; i < MAX_CONFIGSTRINGS ; i++ ) {
+	for ( int i = 0 ; i < MAX_CONFIGSTRINGS ; i++ ) {
 		sv.configstrings[i] = CopyString("");
 	}
 
@@ -397,12 +392,17 @@ void SV_SpawnServer( const char* mapname )
 	sv.checksumFeed = ( ((int) rand() << 16) ^ rand() ) ^ Com_Milliseconds();
 	FS_Restart( sv.checksumFeed );
 
+	unsigned checksum;
 	CM_LoadMap( va("maps/%s.bsp", mapname), qfalse, &checksum );
 
 	// set serverinfo visible name
 	Cvar_Set( "mapname", mapname );
 
-	Cvar_Set( "sv_mapChecksum", va("%i",checksum) );
+	Cvar_Set( "sv_mapChecksum", va("%d", (int)checksum) );
+
+	int pakChecksum = 0;
+	FS_FileIsInPAK( va("maps/%s.bsp", mapname), NULL, &pakChecksum );
+	Cvar_Set( "sv_currentPak", va("%d", (int)pakChecksum) );
 
 	// serverid should be different each time
 	sv.serverId = com_frameTime;
@@ -425,7 +425,7 @@ void SV_SpawnServer( const char* mapname )
 	sv_gametype->modified = qfalse;
 
 	// run a few frames to allow everything to settle
-	for (i = 0;i < 3; i++)
+	for (int i = 0;i < 3; i++)
 	{
 		VM_Call (gvm, GAME_RUN_FRAME, svs.time);
 		SV_BotFrame (svs.time);
@@ -435,7 +435,7 @@ void SV_SpawnServer( const char* mapname )
 	// create a baseline for more efficient communications
 	SV_CreateBaseline ();
 
-	for (i=0 ; i<sv_maxclients->integer ; i++) {
+	for (int i=0 ; i<sv_maxclients->integer ; i++) {
 		// send the new gamestate to all connected clients
 		if (svs.clients[i].state >= CS_CONNECTED) {
 			qbool isBot = ( svs.clients[i].netchan.remoteAddress.type == NA_BOT );
@@ -472,6 +472,7 @@ void SV_SpawnServer( const char* mapname )
 	SV_BotFrame (svs.time);
 	svs.time += 100;
 
+	const char *p;
 	if ( sv_pure->integer ) {
 		// the server sends these to the clients so they will only
 		// load pk3s also loaded at the server
@@ -503,6 +504,7 @@ void SV_SpawnServer( const char* mapname )
 	Cvar_Set( "sv_referencedPakNames", p );
 
 	// save systeminfo and serverinfo strings
+	char systemInfo[16384];
 	Q_strncpyz( systemInfo, Cvar_InfoString_Big( CVAR_SYSTEMINFO ), sizeof( systemInfo ) );
 	cvar_modifiedFlags &= ~CVAR_SYSTEMINFO;
 	SV_SetConfigstring( CS_SYSTEMINFO, systemInfo );
@@ -540,6 +542,7 @@ void SV_Init()
 	sv_gametype = Cvar_Get ("g_gametype", "0", CVAR_SERVERINFO | CVAR_LATCH );
 	Cvar_Get ("protocol", va("%i", PROTOCOL_VERSION), CVAR_SERVERINFO | CVAR_ROM);
 	sv_mapname = Cvar_Get ("mapname", "nomap", CVAR_SERVERINFO | CVAR_ROM);
+	Cvar_Get ("sv_currentPak", "", CVAR_SERVERINFO | CVAR_ROM);
 	sv_privateClients = Cvar_Get ("sv_privateClients", "0", CVAR_SERVERINFO);
 	sv_hostname = Cvar_Get ("sv_hostname", "noname", CVAR_SERVERINFO | CVAR_ARCHIVE );
 	sv_maxclients = Cvar_Get ("sv_maxclients", "8", CVAR_SERVERINFO | CVAR_LATCH);

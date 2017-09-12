@@ -275,7 +275,7 @@ CLIENT SIDE DEMO PLAYBACK
 */
 
 
-static void CL_DemoCompleted()
+void CL_DemoCompleted()
 {
 	if (cl_timedemo && cl_timedemo->integer) {
 		int time = Sys_Milliseconds() - clc.timeDemoStart;
@@ -419,7 +419,7 @@ void CL_PlayDemo_f()
 	Q_strncpyz( cls.servername, Cmd_Argv(1), sizeof( cls.servername ) );
 
 	// read demo messages until connected
-	while ( cls.state >= CA_CONNECTED && cls.state < CA_PRIMED ) {
+	while (cls.state >= CA_CONNECTED && cls.state < CA_PRIMED && !CL_MapDownload_Active()) {
 		CL_ReadDemoMessage();
 	}
 	// don't get the first snapshot this frame, to prevent the long
@@ -1067,7 +1067,7 @@ static void CL_Clientinfo_f( void )
 ///////////////////////////////////////////////////////////////
 
 
-static void CL_DownloadsComplete()
+void CL_DownloadsComplete()
 {
 	// if we downloaded files we need to restart the file system
 	if (clc.downloadRestart) {
@@ -1177,14 +1177,10 @@ void CL_NextDownload(void) {
 		else
 			s = localName + strlen(localName); // point at the nul byte
 
-		if( !cl_allowDownload->integer ) {
-			Com_Error(ERR_DROP, "UDP Downloads are "
-				"disabled on your client. "
-				"(cl_allowDownload is %d)",
-				cl_allowDownload->integer);
-		return;
-		}
-		else {
+		if( cl_allowDownload->integer != -1 ) {
+			Com_Error(ERR_DROP, "The id download system is disabled (cl_allowDownload must be -1)");
+			return;
+		} else {
 			CL_BeginDownload( localName, remoteName );
 		}
 
@@ -1200,6 +1196,91 @@ void CL_NextDownload(void) {
 }
 
 
+// returns qtrue if a download started
+static qbool CL_StartDownloads()
+{
+	int mode = cl_allowDownload->integer;
+	if (mode < -1 || mode > 1) {
+		mode = 1;
+	}
+
+	// downloads disabled
+	if (mode == 0) {
+		// autodownload is disabled on the client
+		// but it's possible that some referenced files on the server are missing
+		char missingfiles[1024];
+		if (FS_ComparePaks(missingfiles, sizeof(missingfiles), qfalse)) {
+			// NOTE TTimo I would rather have that printed as a modal message box
+			// but at this point while joining the game we don't know whether we will successfully join or not
+			Com_Printf("\nWARNING: You are missing some files referenced by the server:\n%s"
+					   "To enable downloads, set cl_allowDownload to 1 (new) or -1 (old)\n\n", missingfiles);
+		}
+		return qfalse;
+	}
+
+	// legacy id downloads
+	if (mode == -1) {
+		if (FS_ComparePaks(clc.downloadList, sizeof(clc.downloadList), qtrue)) {
+			Com_Printf("Need paks: %s\n", clc.downloadList);
+			if (*clc.downloadList) {
+				// if autodownloading is not enabled on the server
+				cls.state = CA_CONNECTED;
+				CL_NextDownload();
+				return qtrue;
+			}
+		}
+		return qfalse;
+	}
+
+	//
+	// CNQ3 downloads
+	//
+
+	// note: the use of FS_FileIsInPAK works here because it rejects paks that aren't in the pure list
+	const qbool pureServer = Cvar_VariableIntegerValue("sv_pure"); // the cvar is in CS_SYSTEMINFO
+	const qbool exactMatch = !clc.demoplaying && pureServer;
+	const char* const serverInfo = cl.gameState.stringData + cl.gameState.stringOffsets[CS_SERVERINFO];
+	const char* const mapName = Info_ValueForKey(serverInfo, "mapname");
+	const char* const mapPath = va("maps/%s.bsp", mapName);
+	if ((!exactMatch && FS_FileExists(mapPath)) || FS_FileIsInPAK(mapPath, NULL, NULL))
+		return qfalse;
+
+	// generate a checksum list of all the pure paks we're missing
+	unsigned int pakChecksums[256];
+	int pakCount;
+	const char* const pakChecksumString = Info_ValueForKey(serverInfo, "sv_currentPak");
+	unsigned int pakChecksum;
+	if (sscanf(pakChecksumString, "%d", &pakChecksum) == 1 && pakChecksum != 0) {
+		pakChecksums[0] = pakChecksum;
+		pakCount = 1;
+	} else {
+		FS_MissingPaks(pakChecksums, &pakCount, ARRAY_LEN(pakChecksums));
+	}
+	
+	if (pakCount > 0) {
+		const qbool dlStarted = pakCount == 1 ?
+			// we know exactly which pk3 we need, so no need to send a map name
+			CL_PakDownload_Start(pakChecksums[0], qfalse) :
+			// we send the map's name and a list of pk3 checksums (qmd4)
+			CL_MapDownload_Start_PakChecksums(mapName, pakChecksums, pakCount, exactMatch);
+
+		if (dlStarted) {
+			cls.state = CA_CONNECTED;
+			return qtrue;
+		}
+		return qfalse;
+	}
+
+	// we send the map's name only because we have no additional data and
+	// an exact match isn't needed
+	if (!exactMatch && CL_MapDownload_Start(mapName, qfalse)) {
+		cls.state = CA_CONNECTED;
+		return qtrue;
+	}
+	return qfalse;
+}
+
+
 /*
 =================
 CL_InitDownloads
@@ -1209,35 +1290,11 @@ and determine if we need to download them
 =================
 */
 void CL_InitDownloads(void) {
-  char missingfiles[1024];
-
-  if ( !cl_allowDownload->integer )
-  {
-    // autodownload is disabled on the client
-    // but it's possible that some referenced files on the server are missing
-    if (FS_ComparePaks( missingfiles, sizeof( missingfiles ), qfalse ) )
-    {      
-      // NOTE TTimo I would rather have that printed as a modal message box
-      //   but at this point while joining the game we don't know wether we will successfully join or not
-      Com_Printf( "\nWARNING: You are missing some files referenced by the server:\n%s"
-                  "You might not be able to join the game\n"
-                  "Go to the setting menu to turn on autodownload, or get the file elsewhere\n\n", missingfiles );
-    }
-  }
-  else if ( FS_ComparePaks( clc.downloadList, sizeof( clc.downloadList ) , qtrue ) ) {
-
-    Com_Printf("Need paks: %s\n", clc.downloadList );
-
-		if ( *clc.downloadList ) {
-			// if autodownloading is not enabled on the server
-			cls.state = CA_CONNECTED;
-			CL_NextDownload();
-			return;
-		}
-
+	
+	if(!CL_StartDownloads())
+	{
+		CL_DownloadsComplete();
 	}
-
-	CL_DownloadsComplete();
 }
 
 
@@ -1535,6 +1592,9 @@ void CL_Frame( int msec )
 	if ( cl_timegraph->integer ) {
 		SCR_DebugGraph ( cls.realFrametime * 0.25, 0 );
 	}
+
+	// advance the current map download, if any
+	CL_MapDownload_Continue();
 
 	// see if we need to update any userinfo
 	CL_CheckUserinfo();
@@ -1903,6 +1963,88 @@ static void CL_CompleteCallVote_f( int startArg, int compArg )
 }
 
 
+static void CL_PrintDownloadPakUsage()
+{
+	Com_Printf( "Usage: %s checksum (signed decimal, '0x' or '0X' prefix for hex)\n", Cmd_Argv(0) );
+}
+
+
+static void CL_DownloadPak_f()
+{
+	unsigned int checksum;
+	if ( Cmd_Argc() != 2 ) {
+		CL_PrintDownloadPakUsage();
+		return;
+	}
+
+	const char* const arg1 = Cmd_Argv(1);
+	const int length = strlen( arg1 );
+	if ( length > 2 && arg1[0] == '0' && (arg1[1] == 'x' || arg1[1] == 'X') ) {
+		if ( sscanf(arg1 + 2, "%x", &checksum) != 1 ) {
+			CL_PrintDownloadPakUsage();
+			return;
+		}
+	} else {
+		int crc32;
+		if ( sscanf(arg1, "%d", &crc32) != 1 ) {
+			CL_PrintDownloadPakUsage();
+			return;
+		}
+		checksum = (unsigned int)crc32;
+	}
+
+	if ( checksum == 0 ) {
+		Com_Printf( "%s: invalid checksum 0\n", Cmd_Argv(0) );
+		return;
+	}
+
+	if ( FS_PakExists(checksum) ) {
+		Com_Printf( "%s: pk3 with checksum 0x%08x (%d) already present\n", Cmd_Argv(0), checksum, (int)checksum );
+		return;
+	}
+
+	CL_PakDownload_Start( checksum, qtrue );
+}
+
+
+static void CL_DownloadMap( qbool forceDL )
+{
+	if ( Cmd_Argc() != 2 ) {
+		Com_Printf( "Usage: %s mapname\n", Cmd_Argv(0) );
+		return;
+	}
+
+	const char* const mapName = Cmd_Argv(1);
+	if ( !forceDL ) {
+		const char* const mapPath = va( "maps/%s.bsp", mapName );
+		if ( FS_FileExists(mapPath) || FS_FileIsInPAK(mapPath, NULL, NULL) ) {
+			Com_Printf( "Map already exists! To force the download, use /%sf\n", Cmd_Argv(0) );
+			return;
+		}
+	}
+
+	CL_MapDownload_Start(mapName, qtrue);
+}
+
+
+static void CL_DownloadMap_f()
+{
+	CL_DownloadMap( qfalse );
+}
+
+
+static void CL_ForceDownloadMap_f()
+{
+	CL_DownloadMap( qtrue );
+}
+
+
+static void CL_CancelDownload_f()
+{
+	CL_MapDownload_Cancel();
+}
+
+
 void CL_Init()
 {
 	//QSUBSYSTEM_INIT_START( "Client" );
@@ -1936,7 +2078,7 @@ void CL_Init()
 	cl_maxpackets = Cvar_Get ("cl_maxpackets", "30", CVAR_ARCHIVE );
 	cl_packetdup = Cvar_Get ("cl_packetdup", "1", CVAR_ARCHIVE );
 
-	cl_allowDownload = Cvar_Get ("cl_allowDownload", "0", CVAR_ARCHIVE);
+	cl_allowDownload = Cvar_Get ("cl_allowDownload", "1", CVAR_ARCHIVE);
 
 #ifdef MACOS_X
 	// In game video is REALLY slow in Mac OS X right now due to driver slowness
@@ -1987,6 +2129,10 @@ void CL_Init()
 	Cmd_AddCommand ("model", CL_SetModel_f );
 	Cmd_AddCommand ("video", CL_Video_f );
 	Cmd_AddCommand ("stopvideo", CL_StopVideo_f );
+	Cmd_AddCommand ("dlpak", CL_DownloadPak_f );
+	Cmd_AddCommand ("dlmap", CL_DownloadMap_f );
+	Cmd_AddCommand ("dlmapf", CL_ForceDownloadMap_f );
+	Cmd_AddCommand ("dlstop", CL_CancelDownload_f );
 
 	// we use these until we get proper handling on the mod side
 	Cmd_AddCommand ("cv", CL_CallVote_f );
@@ -2001,6 +2147,8 @@ void CL_Init()
 	Cbuf_Execute();
 
 	Cvar_Set( "cl_running", "1" );
+
+	CL_MapDownload_Init();
 
 	//QSUBSYSTEM_INIT_DONE( "Client" );
 }
@@ -2030,6 +2178,7 @@ void CL_Shutdown()
 	CL_ShutdownUI();
 
 	CL_SaveCommandHistory();
+	CL_MapDownload_Cancel();
 
 	Cmd_RemoveCommand ("cmd");
 	Cmd_RemoveCommand ("configstrings");
@@ -2052,6 +2201,10 @@ void CL_Shutdown()
 	Cmd_RemoveCommand ("model");
 	Cmd_RemoveCommand ("video");
 	Cmd_RemoveCommand ("stopvideo");
+	Cmd_RemoveCommand ("dlpak");
+	Cmd_RemoveCommand ("dlmap");
+	Cmd_RemoveCommand ("dlmapf");
+	Cmd_RemoveCommand ("dlstop");
 
 	// we use these until we get proper handling on the mod side
 	Cmd_RemoveCommand ("cv");

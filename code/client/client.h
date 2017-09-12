@@ -326,7 +326,7 @@ extern	cvar_t	*cl_timedemo;
 extern	cvar_t	*cl_aviFrameRate;
 extern	cvar_t	*cl_aviMotionJpeg;
 
-extern	cvar_t	*cl_allowDownload;
+extern	cvar_t	*cl_allowDownload;	// 0=off, 1=CNQ3, -1=id
 extern	cvar_t	*cl_inGameVideo;
 
 //=================================================
@@ -351,6 +351,9 @@ void CL_NextDownload(void);
 
 qbool CL_CDKeyValidate( const char *key, const char *checksum );
 int CL_ServerStatus( char *serverAddress, char *serverStatusString, int maxLen );
+
+void CL_DownloadsComplete();
+void CL_DemoCompleted();
 
 
 // cl_browser
@@ -475,3 +478,17 @@ void CL_WriteAVIVideoFrame( const byte *imageBuffer, int size );
 void CL_WriteAVIAudioFrame( const byte *pcmBuffer, int size );
 qbool CL_CloseAVI( void );
 qbool CL_VideoRecording( void );
+
+//
+// cl_download.cpp
+//
+qbool CL_MapDownload_Start( const char* mapName, qbool fromCommand );
+qbool CL_MapDownload_Start_MapChecksum( const char* mapName, unsigned int mapCrc32, qbool exactMatch );
+qbool CL_MapDownload_Start_PakChecksums( const char* mapName, unsigned int* pakChecksums, int pakCount, qbool exactMatch );
+qbool CL_PakDownload_Start( unsigned int pakChecksum, qbool fromCommand );
+void CL_MapDownload_Continue();
+void CL_MapDownload_Init();
+qbool CL_MapDownload_Active();
+void CL_MapDownload_Cancel();
+void CL_MapDownload_DrawConsole( float cw, float ch );
+void CL_MapDownload_CrashCleanUp();

@@ -280,7 +280,7 @@ rescan:
 
 static void CL_CM_LoadMap( const char* mapname )
 {
-	int checksum;
+	unsigned checksum;
 	CM_LoadMap( mapname, qtrue, &checksum );
 }
 
@@ -290,6 +290,7 @@ void CL_ShutdownCGame()
 	cls.keyCatchers &= ~KEYCATCH_CGAME;
 	cls.cgameStarted = qfalse;
 	cls.cgameForwardInput = 0;
+	CL_MapDownload_Cancel();
 	if ( !cgvm ) {
 		return;
 	}

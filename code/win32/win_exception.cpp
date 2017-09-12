@@ -1,6 +1,9 @@
 #include "../qcommon/q_shared.h"
 #include "../qcommon/qcommon.h"
 #include "../qcommon/crash.h"
+#ifndef DEDICATED
+#include "../client/client.h"
+#endif
 #include "win_local.h"
 #include "glw_win.h"
 #include <DbgHelp.h>
@@ -491,6 +494,12 @@ LONG CALLBACK WIN_HandleException( EXCEPTION_POINTERS* ep )
 			ShowWindow(g_wv.hWnd, SW_MINIMIZE);
 		} __except(EXCEPTION_EXECUTE_HANDLER) {}
 	}
+#endif
+
+#ifndef DEDICATED
+	__try {
+		CL_MapDownload_CrashCleanUp();
+	} __except(EXCEPTION_EXECUTE_HANDLER) {}
 #endif
 
 	if (exc_exitCalled || IsDebuggerPresent())

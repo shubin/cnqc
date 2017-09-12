@@ -2423,6 +2423,13 @@ void Com_Frame()
 	if ( !com_dedicated->integer && com_maxfps->integer > 0 && !com_timedemo->integer )
 		minMsec = 1000 / com_maxfps->integer;
 
+#ifndef DEDICATED
+	// let's not limit the download speed by sleeping too much
+	qbool CL_MapDownload_Active(); // in client.h
+	if ( CL_MapDownload_Active() )
+		minMsec = 1;
+#endif
+
 	static int lastTime = 0;
 	int msec;
 	do {
@@ -2576,48 +2583,43 @@ float Q_acos(float c)
 }
 
 
-/*
-==================
-crc32 routines
-==================
-*/
+static unsigned int CRC32_table[256];
+static qbool CRC32_tableCreated = qfalse;
 
-static unsigned int crc32_table[256];
-static qboolean crc32_inited = qfalse;
 
-void crc32_init( unsigned int *crc )
+void CRC32_Begin( unsigned int* crc )
 {
-	unsigned int c;
-	int i, j;
-
-	if ( !crc32_inited )
+	if ( !CRC32_tableCreated )
 	{
-		for (i = 0; i < 256; i++)
+		for ( int i = 0; i < 256; i++ )
 		{
-			c = i;
-			for ( j = 0; j < 8; j++ )
+			unsigned int c = i;
+			for ( int j = 0; j < 8; j++ )
 				c = c & 1 ? (c >> 1) ^ 0xEDB88320UL : c >> 1;
-			crc32_table[i] = c;
+			CRC32_table[i] = c;
 		}
-		crc32_inited = qtrue;
+		CRC32_tableCreated = qtrue;
 	}
 
 	*crc = 0xFFFFFFFFUL;
 }
 
 
-void crc32_update( unsigned int *crc, unsigned char *buf, unsigned int len )
+void CRC32_ProcessBlock( unsigned int* crc, const void* buffer, unsigned int length )
 {
-	while ( len-- )
+	unsigned int hash = *crc;
+	const unsigned char* buf = (const unsigned char*)buffer;
+	while ( length-- )
 	{
-		*crc = crc32_table[(*crc ^ *buf++) & 0xFF] ^ (*crc >> 8);
+		hash = CRC32_table[(hash ^ *buf++) & 0xFF] ^ (hash >> 8);
 	}
+	*crc = hash;
 }
 
 
-void crc32_final( unsigned int *crc )
+void CRC32_End( unsigned int* crc )
 {
-	*crc = *crc ^ 0xFFFFFFFFUL;
+	*crc ^= 0xFFFFFFFFUL;
 }
 
 

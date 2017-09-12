@@ -1,6 +1,26 @@
 
 DD Mmm 17 - 1.49
 
+add: new CNQ3 download system that uses checksums to get the right pak files
+  the CNQ3 download system will use the WorldSpawn map server for inexact queries
+  (when loading demos or using /dlmap) when the CNQ3 map server doesn't have the file
+
+  system | speed | cases               | source(s)     | file availability | server requirements
+  -------|-------|---------------------|---------------|-------------------|--------------------
+  CNQ3   | fast  | pure servers, demos | map server(s) | not guaranteed    | none
+  id     | slow  | pure servers only   | the Q3 server | guaranteed        | sv_allowDownload 1
+
+chg: cl_allowDownload can be used to select the download system
+  cl_allowDownload  0 = downloads disabled
+  cl_allowDownload  1 (default) = CNQ3 download system
+  cl_allowDownload -1 = id's original download system
+
+add: new commands for manually initiating and canceling fast downloads:
+  dlpak  <checksum> to download a pak by its checksum if the pak doesn't exist locally
+  dlmap  <map_name> to download a map by name if no map with such a name exists locally
+  dlmapf <map_name> to force download a map by name
+  dlstop            to cancel the download in progress, if any
+
 fix: r_fullbright is no longer latched and actually does its job
 
 fix: r_lightmap is now archived and actually does its job

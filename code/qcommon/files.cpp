@@ -1266,7 +1266,7 @@ CONVENIENCE FUNCTIONS FOR ENTIRE FILES
 */
 
 
-qbool FS_FileIsInPAK( const char* filename, int* pChecksum )
+qbool FS_FileIsInPAK( const char* filename, int* pureChecksum, int* checksum )
 {
 	if ( !fs_searchpaths ) {
 		Com_Error( ERR_FATAL, "Filesystem call made without initialization\n" );
@@ -1307,8 +1307,11 @@ qbool FS_FileIsInPAK( const char* filename, int* pChecksum )
 			do {
 				// case and separator insensitive comparisons
 				if ( !FS_FilenameCompare( pakFile->name, filename ) ) {
-					if (pChecksum) {
-						*pChecksum = search->pack->pure_checksum;
+					if (pureChecksum) {
+						*pureChecksum = search->pack->pure_checksum;
+					}
+					if (checksum) {
+						*checksum = search->pack->checksum;
 					}
 					return qtrue;
 				}
@@ -2412,6 +2415,49 @@ qbool FS_ComparePaks( char *neededpaks, int len, qbool dlstring ) {
 	return qfalse; // We have them all
 }
 
+
+void FS_MissingPaks( unsigned int* checksums, int* checksumCount, int maxChecksums )
+{
+	int count = 0;
+	for (int i = 0; i < fs_numServerReferencedPaks; i++) {
+		// ignore official paks
+		if (FS_idPak(fs_serverReferencedPakNames[i], BASEGAME))
+			continue;
+
+		qbool gotIt = qfalse;
+		for (searchpath_t* sp = fs_searchpaths; sp; sp = sp->next) {
+			if (sp->pack && sp->pack->checksum == fs_serverReferencedPaks[i]) {
+				gotIt = qtrue;
+				break;
+			}
+		}
+
+		if (gotIt)
+			continue;
+
+		checksums[count++] = fs_serverReferencedPaks[i];
+
+		if (count == maxChecksums) {
+			Com_Printf("^3WARNING: FS_MissingPaks has too many checksums for the array given (over %d)\n", maxChecksums);
+			break;
+		}
+	}
+
+	*checksumCount = count;
+}
+
+
+qbool FS_PakExists( unsigned int checksum )
+{
+	for (searchpath_t* sp = fs_searchpaths; sp; sp = sp->next) {
+		if (sp->pack && sp->pack->checksum == checksum)
+			return qtrue;
+	}
+
+	return qfalse;
+}
+
+
 /*
 ================
 FS_Shutdown
@@ -2563,9 +2609,6 @@ static void FS_Startup( const char *gameName )
 	// https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=506
 	// reorder the pure pk3 files according to server order
 	FS_ReorderPurePaks();
-
-	// print the current search paths
-	FS_Path_f();
 
 	fs_gamedirvar->modified = qfalse; // We just loaded, it's not modified
 
@@ -3006,6 +3049,7 @@ void FS_Restart( int checksumFeed ) {
 	Q_strncpyz(lastValidGame, fs_gamedirvar->string, sizeof(lastValidGame));
 
 }
+
 
 /*
 =================

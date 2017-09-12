@@ -254,6 +254,9 @@
     <ClCompile Include="..\..\code\client\cl_console.cpp">
       <Filter>client</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\code\client\cl_download.cpp">
+      <Filter>client</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\code\client\cl_input.cpp">
       <Filter>client</Filter>
     </ClCompile>

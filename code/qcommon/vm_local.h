@@ -202,7 +202,6 @@ struct vm_s {
 	byte		*jumpTableTargets;
 	int			numJumpTableTargets;
 
-	uint32_t	crc32sum;
 	vmIndex_t	index;
 
 	int			callStackDepth;

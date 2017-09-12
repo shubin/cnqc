@@ -487,9 +487,9 @@ extern	int			cvar_modifiedFlags;
 // etc, variables have been modified since the last check.  The bit
 // can then be cleared to allow another change detection.
 
-void crc32_init( unsigned int *crc );
-void crc32_update( unsigned int *crc, unsigned char *buf, unsigned int len );
-void crc32_final( unsigned int *crc );
+void CRC32_Begin( unsigned int* crc );
+void CRC32_ProcessBlock( unsigned int* crc, const void* buffer, unsigned int length );
+void CRC32_End( unsigned int* crc );
 
 /*
 ==============================================================
@@ -556,7 +556,7 @@ int		FS_FOpenFileRead( const char *qpath, fileHandle_t *file, qbool uniqueFILE )
 // It is generally safe to always set uniqueFILE to qtrue, because the majority of
 // file IO goes through FS_ReadFile, which Does The Right Thing already.
 
-qbool	FS_FileIsInPAK( const char* filename, int* pChecksum );
+qbool	FS_FileIsInPAK( const char* filename, int* pureChecksum, int* checksum );
 
 int		FS_Write( const void *buffer, int len, fileHandle_t f );
 
@@ -628,6 +628,8 @@ void FS_PureServerSetLoadedPaks( const char *pakSums );
 qbool FS_CheckDirTraversal(const char *checkdir);
 qbool FS_idPak( const char* pak, const char* base );
 qbool FS_ComparePaks( char *neededpaks, int len, qbool dlstring );
+void FS_MissingPaks( unsigned int* checksums, int* checksumCount, int maxChecksums );
+qbool FS_PakExists( unsigned int checksum );
 
 void FS_Rename( const char *from, const char *to );
 

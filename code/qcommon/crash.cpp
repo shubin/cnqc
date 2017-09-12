@@ -156,14 +156,14 @@ static unsigned int CRC32_HashFile(const char* filePath)
 	const unsigned int lastBlockSize = fileSize - fullBlocks * (unsigned int)BUFFER_SIZE;
 
 	unsigned int crc32 = 0;
-	crc32_init(&crc32);
+	CRC32_Begin(&crc32);
 
 	for(unsigned int i = 0; i < fullBlocks; ++i) {
 		if (fread(buffer, BUFFER_SIZE, 1, file) != 1) {
 			fclose(file);
 			return 0;
 		}
-		crc32_update(&crc32, buffer, BUFFER_SIZE);
+		CRC32_ProcessBlock(&crc32, buffer, BUFFER_SIZE);
 	}
 
 	if(lastBlockSize > 0) {
@@ -171,10 +171,10 @@ static unsigned int CRC32_HashFile(const char* filePath)
 			fclose(file);
 			return 0;
 		}
-		crc32_update(&crc32, buffer, lastBlockSize);
+		CRC32_ProcessBlock(&crc32, buffer, lastBlockSize);
 	}
 
-	crc32_final(&crc32);
+	CRC32_End(&crc32);
 
 	fclose(file);
 

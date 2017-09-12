@@ -439,7 +439,7 @@ void CM_ClearMap()
 
 // loads in the map and all submodels
 
-void CM_LoadMap( const char* name, qbool clientload, int* checksum )
+void CM_LoadMap( const char* name, qbool clientload, unsigned* checksum )
 {
 	if ( !name || !name[0] )
 		Com_Error( ERR_DROP, "CM_LoadMap: NULL name" );

@@ -591,6 +591,7 @@ static void Con_DrawSolidConsole( float frac )
 	}
 
 	Con_DrawInput();
+	CL_MapDownload_DrawConsole( con.cw, con.ch );
 
 	re.SetColor( NULL );
 }

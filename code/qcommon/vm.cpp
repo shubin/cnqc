@@ -409,7 +409,6 @@ vmHeader_t *VM_LoadQVM( vm_t *vm, qboolean alloc ) {
 	int					dataLength;
 	int					i;
 	char				filename[MAX_QPATH], *errorMsg;
-	unsigned int		crc32sum;
 	vmHeader_t			*header;
 
 	// load the image
@@ -422,10 +421,6 @@ vmHeader_t *VM_LoadQVM( vm_t *vm, qboolean alloc ) {
 		return NULL;
 	}
 
-	crc32_init( &crc32sum );
-	crc32_update( &crc32sum, (unsigned char*)header, length );
-	crc32_final( &crc32sum );
-
 	// will also swap header
 	errorMsg = VM_ValidateHeader( header, length );
 	if ( errorMsg ) {
@@ -434,9 +429,6 @@ vmHeader_t *VM_LoadQVM( vm_t *vm, qboolean alloc ) {
 		Com_Error( ERR_FATAL, "%s", errorMsg );
 		return NULL;
 	}
-
-	vm->crc32sum = crc32sum;
-	Crash_SaveQVMChecksum( vm->index, crc32sum );
 
 	dataLength = header->dataLength + header->litLength + header->bssLength;
 	vm->dataLength = dataLength;
@@ -470,6 +462,12 @@ vmHeader_t *VM_LoadQVM( vm_t *vm, qboolean alloc ) {
 	for ( i = 0 ; i < header->dataLength ; i += 4 ) {
 		*(int *)(vm->dataBase + i) = LittleLong( *(int *)(vm->dataBase + i ) );
 	}
+
+	unsigned int crc32;
+	CRC32_Begin( &crc32 );
+	CRC32_ProcessBlock( &crc32, header, length );
+	CRC32_End( &crc32 );
+	Crash_SaveQVMChecksum( vm->index, crc32 );
 
 	return header;
 }
