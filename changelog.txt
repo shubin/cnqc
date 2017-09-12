@@ -1,6 +1,8 @@
 
 DD Mmm 17 - 1.49
 
+fix: /bind was treating single-character key names in a case sensitive manner
+
 add: new CNQ3 download system that uses checksums to get the right pak files
   the CNQ3 download system will use the WorldSpawn map server for inexact queries
   (when loading demos or using /dlmap) when the CNQ3 map server doesn't have the file
