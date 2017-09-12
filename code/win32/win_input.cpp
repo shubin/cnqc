@@ -175,6 +175,7 @@ qbool rawmouse_t::ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam )
 
 
 struct winmouse_t : public Mouse {
+	virtual qbool Init() { return qtrue; }
 	virtual qbool Activate( qbool active );
 	virtual qbool ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam );
 
@@ -268,8 +269,8 @@ qbool winmouse_t::ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam )
 
 static void IN_StartupMouse()
 {
-	assert( !mouse );
-	mouse = 0;
+	assert( mouse == NULL );
+	mouse = NULL;
 	mouseSettingsSet = qfalse;
 
 	cvar_t* in_mouse = Cvar_Get( "in_mouse", "1", CVAR_ARCHIVE|CVAR_LATCH );
@@ -289,9 +290,12 @@ static void IN_StartupMouse()
 		Com_Printf( "Raw mouse initialization failed\n" );
 	}
 
-	mouse = &winmouse;
-	mouse->Init();
-	Com_Printf( "Using Win32 mouse input\n" );
+	if (winmouse.Init()) {
+		mouse = &winmouse;
+		Com_Printf( "Using Win32 mouse input\n" );
+	} else {
+		Com_Printf( "Win32 mouse initialization failed\n" );
+	}
 }
 
 
@@ -336,6 +340,9 @@ static void IN_Startup()
 
 void IN_Init()
 {
+	if (g_wv.inputInitialized)
+		return;
+
 	in_midi		= Cvar_Get( "in_midi",		"0", CVAR_ARCHIVE );
 	in_joystick	= Cvar_Get( "in_joystick",	"0", CVAR_ARCHIVE|CVAR_LATCH );
 	in_joystick->modified = qfalse;
@@ -348,6 +355,9 @@ void IN_Init()
 
 void IN_Shutdown()
 {
+	if (!g_wv.inputInitialized)
+		return;
+
 	g_wv.inputInitialized = qfalse;
 
 	IN_Activate( qfalse );

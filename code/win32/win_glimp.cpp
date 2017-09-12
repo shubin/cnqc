@@ -344,8 +344,6 @@ static qbool GLW_CreateWindow( int width, int height )
 {
 	static qbool s_classRegistered = qfalse;
 
-	g_wv.inputInitialized = qfalse;
-
 	if ( !s_classRegistered )
 	{
 		WNDCLASS wc;
@@ -374,6 +372,8 @@ static qbool GLW_CreateWindow( int width, int height )
 	//
 	if ( !g_wv.hWnd )
 	{
+		g_wv.inputInitialized = qfalse;
+
 		RECT r;
 		r.left = 0;
 		r.top = 0;
