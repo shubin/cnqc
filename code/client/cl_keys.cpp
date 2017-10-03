@@ -87,6 +87,18 @@ static const keyname_t keynames[] =
 	{"F10", K_F10},
 	{"F11", K_F11},
 	{"F12", K_F12},
+	{"F13", K_F13},
+	{"F14", K_F14},
+	{"F15", K_F15},
+	{"F16", K_F16},
+	{"F17", K_F17},
+	{"F18", K_F18},
+	{"F19", K_F19},
+	{"F20", K_F20},
+	{"F21", K_F21},
+	{"F22", K_F22},
+	{"F23", K_F23},
+	{"F24", K_F24},
 
 	{"INS", K_INS},
 	{"DEL", K_DEL},
@@ -1042,9 +1054,7 @@ void CL_KeyEvent( int key, qbool down, unsigned time )
 		// send the bound action
 		kb = keys[key].binding;
 		if ( !kb ) {
-			if (key >= 200) {
-				Com_Printf( "%s is unbound, use controls menu to set.\n", Key_KeynumToString( key ) );
-			}
+			// unbound
 		} else if (kb[0] == '+') {
 			int i;
 			char button[1024], *buttonPtr;

@@ -1,6 +1,8 @@
 
 DD Mmm 17 - 1.49
 
+add: keys F13 to F24 are now bindable
+
 add: new cvar type and range extension for compatible mods like CPMA 1.50
 
 add: new help commands for commands and cvars of the engine and compatible mods like CPMA 1.50

@@ -121,33 +121,35 @@ MapKey
 Map from windows to quake keynums
 =======
 */
-static int MapKey (int key)
+static int MapKey( int wParam, int lParam )
 {
-	int result;
-	int modified;
-	qbool is_extended;
-
-	//Com_Printf( "0x%X\n", key );
-
-	modified = ( key >> 16 ) & 255;
-
-	if ( modified > 127 )
-		return 0;
-
-	if ( key & ( 1 << 24 ) )
+	// the K_F13 to K_F24 values are *not* contiguous for mod compatibility reasons
+	switch ( wParam )
 	{
-		is_extended = qtrue;
-	}
-	else
-	{
-		is_extended = qfalse;
+		case VK_F13: return K_F13;
+		case VK_F14: return K_F14;
+		case VK_F15: return K_F15;
+		case VK_F16: return K_F16;
+		case VK_F17: return K_F17;
+		case VK_F18: return K_F18;
+		case VK_F19: return K_F19;
+		case VK_F20: return K_F20;
+		case VK_F21: return K_F21;
+		case VK_F22: return K_F22;
+		case VK_F23: return K_F23;
+		case VK_F24: return K_F24;
+		default: break;
 	}
 
-	result = s_scantokey[modified];
+	const int scanCode = ( lParam >> 16 ) & 255;
+	if ( scanCode > 127 )
+		return 0; // why?
 
-	if ( !is_extended )
+	const qbool isExtended = (lParam & ( 1 << 24 )) != 0;
+	const int result = s_scantokey[scanCode];
+
+	if ( !isExtended )
 	{
-		//Com_Printf( "!extended 0x%X\n", result );
 		switch ( result )
 		{
 		case K_HOME:
@@ -180,7 +182,6 @@ static int MapKey (int key)
 	}
 	else
 	{
-		//Com_Printf( "extended 0x%X\n", result );
 		switch ( result )
 		{
 		case K_PAUSE:
@@ -316,12 +317,12 @@ LRESULT CALLBACK MainWndProc (
 		}
 		// fall through
 	case WM_KEYDOWN:
-		Sys_QueEvent( g_wv.sysMsgTime, SE_KEY, MapKey( lParam ), qtrue, 0, NULL );
+		Sys_QueEvent( g_wv.sysMsgTime, SE_KEY, MapKey( wParam, lParam ), qtrue, 0, NULL );
 		break;
 
 	case WM_SYSKEYUP:
 	case WM_KEYUP:
-		Sys_QueEvent( g_wv.sysMsgTime, SE_KEY, MapKey( lParam ), qfalse, 0, NULL );
+		Sys_QueEvent( g_wv.sysMsgTime, SE_KEY, MapKey( wParam, lParam ), qfalse, 0, NULL );
 		break;
 
 	case WM_CHAR:

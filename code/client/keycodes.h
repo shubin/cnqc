@@ -151,6 +151,9 @@ typedef enum {
 	K_AUX15,
 	K_AUX16,
 
+	// never change anything above as it will mess up mod code
+	// what follows is new in CNQ3
+
 	K_MOUSE6,
 	K_MOUSE7,
 	K_MOUSE8,
@@ -160,6 +163,16 @@ typedef enum {
 	K_MENU,
 
 	K_BACKSLASH,
+
+	K_F16,
+	K_F17,
+	K_F18,
+	K_F19,
+	K_F20,
+	K_F21,
+	K_F22,
+	K_F23,
+	K_F24,
 
 	K_LAST_KEY		// this had better be <256!
 } keyNum_t;

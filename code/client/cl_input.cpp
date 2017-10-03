@@ -25,6 +25,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "client_help.h"
 
 
+static char LastKeyTooHigh[K_LAST_KEY < 256 ? 1 : -1];
+
+
 static cvar_t* m_speed;
 static cvar_t* m_accel;
 static cvar_t* m_accelStyle;	// 0=original, 1=new
