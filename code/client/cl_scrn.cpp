@@ -244,7 +244,7 @@ static void SCR_DrawMouseInputLatencies()
 	y += 30;
 	SCR_DrawInputStats( cl.userCmdTime - cl.mouseTime, x, y, w, h, "netw" );
 	y += 30;
-	SCR_DrawInputStats( re_cameraMatrixTime - cl.mouseTime, x, y, w, h, "draw" );
+	SCR_DrawInputStats( re.GetCameraMatrixTime() - cl.mouseTime, x, y, w, h, "draw" );
 }
 
 

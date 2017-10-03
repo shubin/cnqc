@@ -663,6 +663,12 @@ static void RE_EndRegistration()
 }
 
 
+static int RE_GetCameraMatrixTime()
+{
+	return re_cameraMatrixTime;
+}
+
+
 const refexport_t* GetRefAPI( const refimport_t* rimp )
 {
 	static refexport_t re;
@@ -708,6 +714,8 @@ const refexport_t* GetRefAPI( const refimport_t* rimp )
 	re.inPVS = R_inPVS;
 
 	re.TakeVideoFrame = RE_TakeVideoFrame;
+
+	re.GetCameraMatrixTime = RE_GetCameraMatrixTime;
 
 	return &re;
 }

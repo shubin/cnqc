@@ -1535,4 +1535,7 @@ extern void GL2_BeginFrame();
 extern void GL2_EndFrame();
 
 
+extern int re_cameraMatrixTime;
+
+
 #endif //TR_LOCAL_H
