@@ -198,6 +198,7 @@ typedef struct {
 	void	(*Cvar_RegisterTable)( const cvarTableItem_t* cvars, int count );
 
 	void	(*Cmd_RegisterTable)( const cmdTableItem_t* cmds, int count );
+	void	(*Cmd_UnregisterModule)();
 
 	int		(*Cmd_Argc)();
 	const char* (*Cmd_Argv)(int i);

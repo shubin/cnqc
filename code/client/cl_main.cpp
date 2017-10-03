@@ -1650,7 +1650,6 @@ static void CL_ShutdownRef()
 	if ( !re.Shutdown ) {
 		return;
 	}
-	Cmd_UnregisterModule( MODULE_RENDERER );
 	re.Shutdown( qtrue );
 	Com_Memset( &re, 0, sizeof( re ) );
 }
@@ -1668,11 +1667,18 @@ static void RI_Cvar_RegisterTable( const cvarTableItem_t* cvars, int count )
 }
 
 
+static void RI_Cmd_UnregisterModule()
+{
+	Cmd_UnregisterModule( MODULE_RENDERER );
+}
+
+
 static void CL_InitRef()
 {
 	refimport_t ri;
 
 	ri.Cmd_RegisterTable = RI_Cmd_RegisterTable;
+	ri.Cmd_UnregisterModule = RI_Cmd_UnregisterModule;
 	ri.Cmd_Argc = Cmd_Argc;
 	ri.Cmd_Argv = Cmd_Argv;
 	ri.Printf = CL_RefPrintf;

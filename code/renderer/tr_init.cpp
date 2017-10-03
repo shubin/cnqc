@@ -620,6 +620,7 @@ static void RE_Shutdown( qbool destroyWindow )
 	ri.Printf( PRINT_DEVELOPER, "RE_Shutdown( %i )\n", destroyWindow );
 
 	if ( tr.registered ) {
+		ri.Cmd_UnregisterModule();
 		R_SyncRenderThread();
 		R_ShutdownCommandBuffers();
 		R_DeleteTextures();
