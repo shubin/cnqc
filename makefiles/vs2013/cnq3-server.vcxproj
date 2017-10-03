@@ -267,6 +267,7 @@ copy "..\..\.bin\release_x64\cnq3-server-x64.pdb" "$(QUAKE3DIR)"</Command>
     <ClInclude Include="..\..\code\botlib\l_script.h" />
     <ClInclude Include="..\..\code\botlib\l_struct.h" />
     <ClInclude Include="..\..\code\client\client.h" />
+    <ClInclude Include="..\..\code\client\client_help.h" />
     <ClInclude Include="..\..\code\client\keycodes.h" />
     <ClInclude Include="..\..\code\client\keys.h" />
     <ClInclude Include="..\..\code\client\snd_codec.h" />
@@ -278,6 +279,7 @@ copy "..\..\.bin\release_x64\cnq3-server-x64.pdb" "$(QUAKE3DIR)"</Command>
     <ClInclude Include="..\..\code\qcommon\cm_patch.h" />
     <ClInclude Include="..\..\code\qcommon\cm_polylib.h" />
     <ClInclude Include="..\..\code\qcommon\cm_public.h" />
+    <ClInclude Include="..\..\code\qcommon\common_help.h" />
     <ClInclude Include="..\..\code\qcommon\crash.h" />
     <ClInclude Include="..\..\code\qcommon\g_public.h" />
     <ClInclude Include="..\..\code\qcommon\git.h" />
@@ -297,6 +299,7 @@ copy "..\..\.bin\release_x64\cnq3-server-x64.pdb" "$(QUAKE3DIR)"</Command>
     <ClInclude Include="..\..\code\win32\glw_win.h" />
     <ClInclude Include="..\..\code\win32\resource.h" />
     <ClInclude Include="..\..\code\win32\wglext.h" />
+    <ClInclude Include="..\..\code\win32\win_help.h" />
     <ClInclude Include="..\..\code\win32\win_local.h" />
     <ClInclude Include="..\..\code\win32\windows.h" />
   </ItemGroup>

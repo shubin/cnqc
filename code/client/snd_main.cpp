@@ -28,6 +28,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 cvar_t *s_volume;
 cvar_t *s_musicVolume;
+cvar_t *s_initsound;
 
 static soundInterface_t si;
 
@@ -230,16 +231,31 @@ static void S_Music_f( void )
 ///////////////////////////////////////////////////////////////
 
 
+static const cvarTableItem_t cl_cvars[] =
+{
+	{ &s_volume, "s_volume", "0.8", CVAR_ARCHIVE, CVART_FLOAT, "0", "1", "global sound volume" },
+	{ &s_musicVolume, "s_musicvolume", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", "16", "music volume" },
+	{ &s_initsound, "s_initsound", "1", 0, CVART_BOOL, NULL, NULL, "enables the audio system" }
+};
+
+
+static const cmdTableItem_t cl_cmds[] =
+{
+	{ "play", S_Play_f, NULL, "starts local sound playback" },
+	{ "music", S_Music_f, NULL, "starts music playback" },
+	{ "s_list", S_SoundList, NULL, "lists loaded sounds" },
+	{ "s_stop", S_StopAllSounds, NULL, "stops all sound playbacks" },
+	{ "s_info", S_SoundInfo, NULL, "prints sound system info" }
+};
+
+
 void S_Init()
 {
 	QSUBSYSTEM_INIT_START( "Sound" );
 
-	s_volume = Cvar_Get( "s_volume", "0.8", CVAR_ARCHIVE );
-	s_musicVolume = Cvar_Get( "s_musicvolume", "0.25", CVAR_ARCHIVE );
-	Cmd_AddCommand( "s_info", S_SoundInfo );
+	Cvar_RegisterArray( cl_cvars, MODULE_SOUND );
 
-	const cvar_t* cv = Cvar_Get( "s_initsound", "1", 0 );
-	if ( !cv->integer ) {
+	if ( !s_initsound->integer ) {
 		Com_Memset( &si, 0, sizeof(si) );
 		Com_Printf( "Sound disabled.\n" );
 		return;
@@ -247,10 +263,7 @@ void S_Init()
 
 	S_CodecInit();
 
-	Cmd_AddCommand( "play", S_Play_f );
-	Cmd_AddCommand( "music", S_Music_f );
-	Cmd_AddCommand( "s_list", S_SoundList );
-	Cmd_AddCommand( "s_stop", S_StopAllSounds );
+	Cmd_RegisterArray( cl_cmds, MODULE_SOUND );
 
 	if (!S_Base_Init( &si )) {
 		Com_Printf( "Sound initialization failed.\n" );
@@ -273,11 +286,7 @@ void S_Shutdown()
 
 	Com_Memset( &si, 0, sizeof(si) );
 
-	Cmd_RemoveCommand( "play" );
-	Cmd_RemoveCommand( "music" );
-	Cmd_RemoveCommand( "s_list" );
-	Cmd_RemoveCommand( "s_stop" );
-	Cmd_RemoveCommand( "s_info" );
+	Cmd_UnregisterModule( MODULE_SOUND );
 
 	S_CodecShutdown();
 }

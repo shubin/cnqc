@@ -22,6 +22,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "../client/client.h"
 #include "win_local.h"
+#include "win_help.h"
 
 
 struct Mouse {
@@ -274,6 +275,8 @@ static void IN_StartupMouse()
 	mouseSettingsSet = qfalse;
 
 	cvar_t* in_mouse = Cvar_Get( "in_mouse", "1", CVAR_ARCHIVE|CVAR_LATCH );
+	Cvar_SetRange( "in_mouse", CVART_INTEGER, "0", "2" );
+	Cvar_SetHelp( "in_mouse", help_in_mouse );
 	in_mouse->modified = qfalse;
 
 	if (!in_mouse->integer) {
@@ -343,8 +346,11 @@ void IN_Init()
 	if (g_wv.inputInitialized)
 		return;
 
-	in_midi		= Cvar_Get( "in_midi",		"0", CVAR_ARCHIVE );
-	in_joystick	= Cvar_Get( "in_joystick",	"0", CVAR_ARCHIVE|CVAR_LATCH );
+	in_midi = Cvar_Get( "in_midi", "0", CVAR_ARCHIVE );
+	Cvar_SetModule( "in_midi", MODULE_INPUT );
+
+	in_joystick = Cvar_Get( "in_joystick", "0", CVAR_ARCHIVE|CVAR_LATCH );
+	Cvar_SetModule( "in_joystick", MODULE_INPUT );
 	in_joystick->modified = qfalse;
 
 	IN_Startup();
@@ -795,6 +801,7 @@ static void IN_StartupMIDI()
 	in_mididevice	= Cvar_Get ("in_mididevice",			"0",		CVAR_ARCHIVE);
 
 	Cmd_AddCommand( "midiinfo", MidiInfo_f );
+	Cmd_SetHelp( "midiinfo", "prints MIDI devices info" );
 
 	//
 	// open the MIDI IN port
@@ -1306,10 +1313,16 @@ static void WIN_PrintMinimizeKeyNames()
 static void IN_StartupHotKey( qbool fullStartUp )
 {
 	in_minimize = Cvar_Get( "in_minimize", "", CVAR_ARCHIVE );
+	Cvar_SetHelp( "in_minimize", help_in_minimize );
+	Cvar_SetModule( "in_minimize", MODULE_INPUT );
 	in_minimize->modified = qfalse;
 
 	if ( fullStartUp )
+	{
 		Cmd_AddCommand( "minimizekeynames", &WIN_PrintMinimizeKeyNames );
+		Cmd_SetHelp( "minimizekeynames", "prints all key names usable with in_minimize" );
+		Cmd_SetModule( "minimizekeynames", MODULE_INPUT );
+	}
 
 	WIN_UnregisterHotKey();
 
@@ -1326,6 +1339,7 @@ static void IN_StartupHotKey( qbool fullStartUp )
 
 static void IN_ShutDownHotKey()
 {
+	// @TODO: remove this once Sys_InitInput and Sys_ShutdownInput are done
 	Cmd_RemoveCommand( "minimizekeynames" );
 
 	WIN_UnregisterHotKey();
@@ -1337,6 +1351,5 @@ static void IN_UpdateHotKey()
 	if ( !in_minimize->modified )
 		return;
 
-	in_minimize->modified = qtrue;
 	IN_StartupHotKey( qfalse );
 }

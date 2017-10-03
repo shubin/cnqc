@@ -542,8 +542,10 @@ void Sys_Init()
 
 #ifndef DEDICATED
 	Cmd_AddCommand( "in_restart", Sys_In_Restart_f );
+	Cmd_SetHelp( "in_restart", "restarts the input system" );
 #endif
 	Cmd_AddCommand( "net_restart", Sys_Net_Restart_f );
+	Cmd_SetHelp( "net_restart", "restarts the network system" );
 
 	if ( !IsWindowsVistaOrGreater() )
 		Sys_Error( "%s requires Windows Vista or later", Q3_VERSION );
@@ -599,6 +601,8 @@ void WIN_UpdateMonitorIndexFromCvar()
 	// r_monitor is the 1-based monitor index, 0 means primary monitor
 	// use Cvar_Get to enforce the latched change, if any
 	const int monitor = Cvar_Get( "r_monitor", "0", CVAR_ARCHIVE | CVAR_LATCH )->integer;
+	Cvar_SetRange( "r_monitor", CVART_INTEGER, "0", va("%d", g_wv.monitorCount) );
+	Cvar_SetHelp( "r_monitor", "1-based monitor index, 0=primary" );
 	if ( monitor <= 0 || monitor > g_wv.monitorCount )
 	{
 		g_wv.monitor = g_wv.primaryMonitor;

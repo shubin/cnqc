@@ -318,7 +318,6 @@ extern	cvar_t	*cl_maxpackets;
 extern	cvar_t	*cl_packetdup;
 extern	cvar_t	*cl_shownet;
 extern	cvar_t	*cl_showSend;
-extern	cvar_t	*cl_timeNudge;
 extern	cvar_t	*cl_showTimeDelta;
 extern	cvar_t	*cl_serverStatusResendTime;
 
@@ -372,6 +371,7 @@ void CL_ServerStatusResponse( const netadr_t& from, msg_t *msg );
 // cl_input
 //
 void CL_InitInput();
+void CL_ShutdownInput();
 void CL_SendCmd();
 void CL_ClearState();
 
@@ -400,6 +400,7 @@ qbool	CL_UpdateVisiblePings_f( int source );
 // console
 //
 void CL_ConInit();
+void CL_ConShutdown();
 void Con_ToggleConsole_f();
 void Con_ClearNotify();
 void Con_RunConsole();

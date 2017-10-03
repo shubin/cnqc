@@ -61,6 +61,8 @@ void SND_setup()
 
 	// a sndBuffer is actually 2K+, so this isn't even REMOTELY close to actual megs
 	const cvar_t* cv = Cvar_Get( "com_soundMegs", DEF_COMSOUNDMEGS, CVAR_LATCH | CVAR_ARCHIVE );
+	Cvar_SetRange( "com_soundMegs", CVART_INTEGER, "1", "64" );
+	Cvar_SetHelp( "com_soundMegs", "sound system buffer size [MB]" );
 	int scs = cv->integer * 1024;
 
 	sndbuffers = (sndBuffer*)Hunk_Alloc( scs * sizeof(sndBuffer), h_high );

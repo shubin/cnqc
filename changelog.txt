@@ -1,6 +1,12 @@
 
 DD Mmm 17 - 1.49
 
+add: new cvar type and range extension for compatible mods like CPMA 1.50
+
+add: new help commands for commands and cvars of the engine and compatible mods like CPMA 1.50
+  help|man   <cvar|cmd> to display the help of a cvar or command
+  searchhelp <pattern>  to list all cvars and commands whose help or name matches the pattern
+
 fix: /bind was treating single-character key names in a case sensitive manner
 
 add: new CNQ3 download system that uses checksums to get the right pak files

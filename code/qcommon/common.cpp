@@ -23,6 +23,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "q_shared.h"
 #include "qcommon.h"
+#include "common_help.h"
 #include <setjmp.h>
 
 #if (_MSC_VER >= 1400) // Visual C++ 2005 or later
@@ -47,8 +48,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define MIN_COMHUNKMEGS		56
 #define DEF_COMHUNKMEGS		64
 #define DEF_COMZONEMEGS		24
-#define XSTRING(x)			STRING(x)
-#define STRING(x)			#x
 #define DEF_COMHUNKMEGS_S	XSTRING(DEF_COMHUNKMEGS)
 #define DEF_COMZONEMEGS_S	XSTRING(DEF_COMZONEMEGS)
 
@@ -56,9 +55,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 static jmp_buf abortframe;		// an ERR_DROP occured, exit the entire frame
 
 
-static fileHandle_t logfile = 0;
-static fileHandle_t com_journalFile = 0;		// events are written here
-fileHandle_t	com_journalDataFile = 0;		// config files are written here
+static fileHandle_t	logfile = 0;
+static fileHandle_t	com_journalFile = 0;		// events are written here
+fileHandle_t		com_journalDataFile = 0;		// config files are written here
 
 cvar_t	*com_viewlog = 0;
 cvar_t	*com_speeds = 0;
@@ -74,8 +73,6 @@ cvar_t	*com_cl_running = 0;
 cvar_t	*com_logfile = 0;		// 1 = buffer log, 2 = flush after each print
 cvar_t	*com_showtrace = 0;
 cvar_t	*com_version = 0;
-cvar_t	*com_buildScript = 0;	// for automated data building scripts
-cvar_t	*com_introPlayed = 0;
 cvar_t	*cl_paused = 0;
 cvar_t	*sv_paused = 0;
 cvar_t	*cl_packetdelay = 0;
@@ -229,12 +226,6 @@ void QDECL Com_Error( int code, const char *fmt, ... )
 {
 	static int	lastErrorTime;
 	static int	errorCount;
-
-	// when we are running automated scripts, make sure we
-	// know if anything failed
-	if ( com_buildScript && com_buildScript->integer ) {
-		code = ERR_FATAL;
-	}
 
 	// make sure we can get at our local stuff
 	FS_PureServerSetLoadedPaks( "" );
@@ -1253,10 +1244,10 @@ static void Com_InitZoneMemory()
 	//FIXME: 05/01/06 com_zoneMegs is useless right now as neither q3config.cfg nor
 	// Com_StartupVariable have been executed by this point. The net result is that
 	// s_zoneTotal will always be set to the default value.
+	// myT: removed com_zoneMegs for now
 
 	// allocate the random block zone
-	const cvar_t* cv = Cvar_Get( "com_zoneMegs", DEF_COMZONEMEGS_S, CVAR_LATCH | CVAR_ARCHIVE );
-	s_zoneTotal = 1024 * 1024 * max( DEF_COMZONEMEGS, cv->integer );
+	s_zoneTotal = 1024 * 1024 * DEF_COMZONEMEGS;
 
 	mainzone = (memzone_t*)calloc( s_zoneTotal, 1 );
 	if ( !mainzone )
@@ -1341,6 +1332,19 @@ void Hunk_SmallLog( void )
 #endif
 
 
+static const cmdTableItem_t hunk_cmds[] =
+{
+	{ "meminfo", Com_Meminfo_f, NULL, "prints memory allocation info" },
+#ifdef ZONE_DEBUG
+	{ "zonelog", Z_LogHeap },
+#endif
+#ifdef HUNK_DEBUG
+	{ "hunklog", Hunk_Log },
+	{ "hunksmalllog", Hunk_SmallLog }
+#endif
+};
+
+
 static void Com_InitHunkMemory()
 {
 	// make sure the file system has allocated and "not" freed any temp blocks
@@ -1352,8 +1356,11 @@ static void Com_InitHunkMemory()
 
 	// allocate the stack based hunk allocator
 	const cvar_t* cv = Cvar_Get( "com_hunkMegs", DEF_COMHUNKMEGS_S, CVAR_LATCH | CVAR_ARCHIVE );
+	if (com_dedicated && com_dedicated->integer)
+		Cvar_SetRange( "com_hunkMegs", CVART_INTEGER, XSTRING(MIN_DEDICATED_COMHUNKMEGS), "256" );
+	else
+		Cvar_SetRange( "com_hunkMegs", CVART_INTEGER, XSTRING(MIN_COMHUNKMEGS), "256" );
 
-	// if we are not dedicated min allocation is 56, otherwise min is 1
 	int nMinAlloc;
 	const char* s;
 	if (com_dedicated && com_dedicated->integer) {
@@ -1374,7 +1381,7 @@ static void Com_InitHunkMemory()
 #if defined( _MSC_VER ) && defined( _DEBUG ) && defined( idx64 )
 	// try to allocate at the highest possible address range to help detect errors during development
 	s_hunkData = (byte*)VirtualAlloc( NULL, ( s_hunkTotal + 4095 ) & ( ~4095 ), MEM_COMMIT | MEM_TOP_DOWN, PAGE_READWRITE );
-	Cvar_Get( "sys_hunkBaseAddress", va( "%p", s_hunkData ), 0 );
+	Cvar_Get( "sys_hunkBaseAddress", va( "%p", s_hunkData ), CVAR_ROM );
 #else
 	s_hunkData = (byte*)calloc( s_hunkTotal + 63, 1 );
 #endif
@@ -1385,14 +1392,7 @@ static void Com_InitHunkMemory()
 	s_hunkData = (byte *) ( ( (intptr_t)s_hunkData + 63 ) & ( ~63 ) );
 	Hunk_Clear();
 
-	Cmd_AddCommand( "meminfo", Com_Meminfo_f );
-#ifdef ZONE_DEBUG
-	Cmd_AddCommand( "zonelog", Z_LogHeap );
-#endif
-#ifdef HUNK_DEBUG
-	Cmd_AddCommand( "hunklog", Hunk_Log );
-	Cmd_AddCommand( "hunksmalllog", Hunk_SmallLog );
-#endif
+	Cmd_RegisterArray( hunk_cmds, MODULE_COMMON );
 }
 
 
@@ -2127,6 +2127,43 @@ static qbool Com_GetProcessorInfo()
 #undef IS_X64
 
 
+static const cmdTableItem_t com_cmds[] =
+{
+#if defined(DEBUG) || defined(CNQ3_DEV)
+	{ "error", Com_Error_f },
+	{ "crash", Com_Crash_f },
+	{ "freeze", Com_Freeze_f },
+	{ "exit", Com_Exit_f },
+#endif
+	{ "quit", Com_Quit_f, NULL, "closes the application" },
+	{ "writeconfig", Com_WriteConfig_f, Com_CompleteWriteConfig_f, "write the cvars and key binds to a file" }
+};
+
+
+static const cvarTableItem_t com_cvars[] =
+{
+	{ &com_maxfps, "com_maxfps", "125", CVAR_ARCHIVE, CVART_INTEGER, "60", "250", help_com_maxfps },
+	{ &com_developer, "developer", "0", CVAR_TEMP, CVART_BOOL, NULL, NULL, "enables detailed logging" },
+	{ &com_logfile, "logfile", "0", CVAR_TEMP, CVART_INTEGER, "0", "2", help_com_logfile },
+	{ &com_timescale, "timescale", "1", CVAR_CHEAT | CVAR_SYSTEMINFO, CVART_FLOAT, "0.1", "100", "game time to real time ratio" },
+	{ &com_fixedtime, "fixedtime", "0", CVAR_CHEAT, CVART_INTEGER, "1", "64", "fixed number of ms per simulation tick" },
+	{ &com_showtrace, "com_showtrace", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "prints trace optimization info" },
+	{ &com_viewlog, "viewlog", "0", CVAR_CHEAT, CVART_INTEGER, "0", "2", help_com_viewlog },
+	{ &com_speeds, "com_speeds", "0", 0, CVART_BOOL, NULL, NULL, "prints timing info" },
+	{ &com_timedemo, "timedemo", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "benchmarking mode for demo playback" },
+	{ &cl_paused, "cl_paused", "0", CVAR_ROM, CVART_BOOL },
+	{ &sv_paused, "sv_paused", "0", CVAR_ROM, CVART_BOOL },
+	{ &cl_packetdelay, "cl_packetdelay", "0", CVAR_CHEAT, CVART_INTEGER, "0", NULL },
+	{ &sv_packetdelay, "sv_packetdelay", "0", CVAR_CHEAT, CVART_INTEGER, "0", NULL },
+	{ &com_sv_running, "sv_running", "0", CVAR_ROM, CVART_BOOL },
+	{ &com_cl_running, "cl_running", "0", CVAR_ROM, CVART_BOOL },
+#if defined(_WIN32) && defined(_DEBUG)
+	{ &com_noErrorInterrupt, "com_noErrorInterrupt", "0", 0, CVART_BOOL },
+#endif
+	{ &com_completionStyle, "com_completionStyle", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_com_completionStyle }
+};
+
+
 #if defined(_MSC_VER)
 #pragma warning (disable: 4611) // setjmp + destructors = bad. which it is, but...
 #endif
@@ -2189,6 +2226,7 @@ void Com_Init( char *commandLine )
 #else
 	com_dedicated = Cvar_Get("dedicated", "0", CVAR_LATCH);
 #endif
+
 	// allocate the stack based hunk allocator
 	Com_InitHunkMemory();
 
@@ -2199,33 +2237,7 @@ void Com_Init( char *commandLine )
 	//
 	// init commands and vars
 	//
-	com_maxfps = Cvar_Get ("com_maxfps", "85", CVAR_ARCHIVE);
-
-	com_developer = Cvar_Get ("developer", "0", CVAR_TEMP );
-	com_logfile = Cvar_Get ("logfile", "0", CVAR_TEMP );
-
-	com_timescale = Cvar_Get ("timescale", "1", CVAR_CHEAT | CVAR_SYSTEMINFO );
-	com_fixedtime = Cvar_Get ("fixedtime", "0", CVAR_CHEAT);
-	com_showtrace = Cvar_Get ("com_showtrace", "0", CVAR_CHEAT);
-	com_viewlog = Cvar_Get( "viewlog", "0", CVAR_CHEAT );
-	com_speeds = Cvar_Get ("com_speeds", "0", 0);
-	com_timedemo = Cvar_Get ("timedemo", "0", CVAR_CHEAT);
-
-	cl_paused = Cvar_Get ("cl_paused", "0", CVAR_ROM);
-	sv_paused = Cvar_Get ("sv_paused", "0", CVAR_ROM);
-	cl_packetdelay = Cvar_Get ("cl_packetdelay", "0", CVAR_CHEAT);
-	sv_packetdelay = Cvar_Get ("sv_packetdelay", "0", CVAR_CHEAT);
-	com_sv_running = Cvar_Get ("sv_running", "0", CVAR_ROM);
-	com_cl_running = Cvar_Get ("cl_running", "0", CVAR_ROM);
-	com_buildScript = Cvar_Get( "com_buildScript", "0", 0 );
-
-	com_introPlayed = Cvar_Get( "com_introplayed", "0", CVAR_ARCHIVE );
-
-#if defined(_WIN32) && defined(_DEBUG)
-	com_noErrorInterrupt = Cvar_Get( "com_noErrorInterrupt", "0", 0 );
-#endif
-
-	com_completionStyle = Cvar_Get( "com_completionStyle", "0", CVAR_ARCHIVE );
+	Cvar_RegisterArray( com_cvars, MODULE_COMMON );
 
 	if ( com_dedicated->integer ) {
 		if ( !com_viewlog->integer ) {
@@ -2233,16 +2245,7 @@ void Com_Init( char *commandLine )
 		}
 	}
 
-#if defined(DEBUG) || defined(CNQ3_DEV)
-	Cmd_AddCommand( "error", Com_Error_f );
-	Cmd_AddCommand( "crash", Com_Crash_f );
-	Cmd_AddCommand( "freeze", Com_Freeze_f );
-	Cmd_AddCommand( "exit", Com_Exit_f );
-#endif
-
-	Cmd_AddCommand( "quit", Com_Quit_f );
-	Cmd_AddCommand( "writeconfig", Com_WriteConfig_f );
-	Cmd_SetAutoCompletion( "writeconfig", Com_CompleteWriteConfig_f );
+	Cmd_RegisterArray( com_cmds, MODULE_COMMON );
 
 	const char* s = Q3_VERSION" "PLATFORM_STRING" "__DATE__;
 	com_version = Cvar_Get( "version", s, CVAR_ROM | CVAR_SERVERINFO );
@@ -2270,16 +2273,7 @@ void Com_Init( char *commandLine )
 	com_frameTime = Com_Milliseconds();
 
 	// add + commands from command line
-	if ( !Com_AddStartupCommands() ) {
-		// if the user didn't give any commands, run default action
-		if ( !com_dedicated->integer ) {
-			if ( !com_introPlayed->integer ) {
-				Cvar_Set( com_introPlayed->name, "1" );
-				Cbuf_AddText( "cinematic idlogo.RoQ\n" );
-				Cvar_Set( "nextmap", "cinematic intro.RoQ" );
-			}
-		}
-	}
+	Com_AddStartupCommands();
 
 	// start in full screen ui mode
 	Cvar_Set( "r_uiFullScreen", "1" );
@@ -2696,11 +2690,42 @@ static void PrintMatches( const char *s )
 }
 
 
+static void PrintCmdMatches( const char *s )
+{
+	if ( Q_stricmpn( s, shortestMatch, strlen( shortestMatch ) ) )
+		return;
+
+	char msg[CONSOLE_WIDTH * 2]; // account for lots of color codes
+	const char* desc;
+	const char* help;
+	Cmd_GetHelp( &desc, &help, s );
+	
+	if ( desc )
+		Com_sprintf( msg, sizeof(msg), "    "COLOR_CMD"%s - "COLOR_HELP"%s\n", s, desc );
+	else
+		Com_sprintf( msg, sizeof(msg), "    "COLOR_CMD"%s\n", s );
+
+	Com_TruncatePrintString( msg, sizeof(msg), CONSOLE_WIDTH );
+	Com_Printf( msg );
+}
+
+
 static void PrintCvarMatches( const char *s )
 {
-	if ( !Q_stricmpn( s, shortestMatch, strlen( shortestMatch ) ) ) {
-		Com_Printf( "    %s = \"%s\"\n", s, Cvar_VariableString( s ) );
-	}
+	if ( Q_stricmpn( s, shortestMatch, strlen( shortestMatch ) ) )
+		return;
+
+	char msg[CONSOLE_WIDTH * 2]; // account for lots of color codes
+	const char* desc;
+	const char* help;
+	Cvar_GetHelp( &desc, &help, s );
+	if ( desc )
+		Com_sprintf( msg, sizeof(msg), "    "COLOR_CVAR"%s^7 = \""COLOR_VAL"%s^7\" - "COLOR_HELP"%s\n", s, Cvar_VariableString( s ), desc );
+	else
+		Com_sprintf( msg, sizeof(msg), "    "COLOR_CVAR"%s^7 = \""COLOR_VAL"%s^7\"\n", s, Cvar_VariableString( s ) );
+
+	Com_TruncatePrintString( msg, sizeof(msg), CONSOLE_WIDTH );
+	Com_Printf( msg );
 }
 
 
@@ -2845,7 +2870,7 @@ static void Field_AutoCompleteCmdOrVarName( int startArg, int compArg, qbool sea
 	}
 
 	if ( searchCmds )
-		Cmd_CommandCompletion( PrintMatches );
+		Cmd_CommandCompletion( PrintCmdMatches );
 	if ( searchVars )
 		Cvar_CommandCompletion( PrintCvarMatches );
 }
@@ -3135,4 +3160,76 @@ const char* Q_itohex( uint64_t number, qbool uppercase, qbool prefix )
 	}
 
 	return buffer + startOffset;
+}
+
+
+void Help_AllocSplitText( char** desc, char** help, const char* combined )
+{
+	if ( *desc != NULL || *help != NULL ) {
+		// break here for some debugging fun
+		return;
+	}
+
+	const char* const newLine = strchr( combined, '\n' );
+	if ( !newLine ) {
+		*desc = CopyString( combined );
+		return;
+	}
+
+	const int srcLen = strlen( combined );
+	const int descLen = newLine - combined;
+	const int helpLen = srcLen - descLen - 1;
+	*desc = (char*)S_Malloc( descLen + 1 );
+	*help = (char*)S_Malloc( helpLen + 1 );
+	memcpy( *desc, combined, descLen );
+	memcpy( *help, combined + descLen + 1, helpLen );
+	(*desc)[descLen] = '\0';
+	(*help)[helpLen] = '\0';
+}
+
+
+void Com_TruncatePrintString( char* buffer, int size, int maxLength )
+{
+	if ( Q_PrintStrlen( buffer ) <= maxLength )
+		return;
+
+	int byteIndex = Q_PrintStroff( buffer, maxLength );
+	if ( byteIndex < 0 || byteIndex >= size )
+		byteIndex = size - 1;
+
+	buffer[byteIndex - 4] = '.';
+	buffer[byteIndex - 3] = '.';
+	buffer[byteIndex - 2] = '.';
+	buffer[byteIndex - 1] = '\n';
+	buffer[byteIndex - 0] = '\0';
+}
+
+
+void Com_PrintModules( module_t firstModule, int moduleMask )
+{
+#define MODULE_ITEM(Enum, Desc) Desc, 
+	static const char* ModuleNames[MODULE_COUNT + 1] =
+	{
+		MODULE_LIST(MODULE_ITEM)
+		""
+	};
+#undef MODULE_ITEM
+
+	if ( firstModule == MODULE_NONE || moduleMask == 0 )
+		return;
+
+	const int otherModules = moduleMask & (~(1 << firstModule));
+
+	if ( otherModules )
+		Com_Printf( "Modules: " );
+	else
+		Com_Printf( "Module: " );
+	Com_Printf( "%s", ModuleNames[firstModule] );
+	
+	for ( int i = 0; i < 32; ++i ) {
+		if ( (otherModules >> i) & 1 )
+			Com_Printf( ", %s", ModuleNames[i] );
+	}
+
+	Com_Printf("\n");
 }

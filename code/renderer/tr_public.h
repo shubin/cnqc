@@ -189,10 +189,12 @@ typedef struct {
 	void	(*Free)( void *buf );
 
 	cvar_t	*(*Cvar_Get)( const char *name, const char *value, int flags );
+	void	(*Cvar_SetHelp)( const char *name, const char *help );
 	void	(*Cvar_Set)( const char *name, const char *value );
 
-	void	(*Cmd_AddCommand)( const char *name, void(*cmd)(void) );
-	void	(*Cmd_RemoveCommand)( const char *name );
+	void	(*Cvar_RegisterTable)( const cvarTableItem_t* cvars, int count );
+
+	void	(*Cmd_RegisterTable)( const cmdTableItem_t* cmds, int count );
 
 	int		(*Cmd_Argc)();
 	const char* (*Cmd_Argv)(int i);

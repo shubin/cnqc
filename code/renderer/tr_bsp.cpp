@@ -34,7 +34,7 @@ static byte* fileBase;
 static void R_ColorShiftLightingBytes( const byte in[4], byte out[4] )
 {
 	// shift the color data based on overbright range
-	int shift = r_mapOverBrightBits->integer - tr.overbrightBits;
+	const int shift = Com_ClampInt( 0, 2, r_mapOverBrightBits->integer - tr.overbrightBits );
 
 	// shift the data based on overbright range
 	int r = in[0] << shift;

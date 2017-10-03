@@ -753,14 +753,20 @@ static int GetConfigString(int index, char *buf, int size)
 
 static qbool CL_UI_GetValue( char* value, int valueSize, const char* key )
 {
-	if( Q_stricmp(key, "trap_LocateInteropData") == 0 ) {
-		Com_sprintf( value, valueSize, "%d", UI_EXT_LOCATEINTEROPDATA );
-		return qtrue;
-	}
+	struct syscall_t { const char* name; int number; };
+	static const syscall_t syscalls[] = {
+		{ "trap_LocateInteropData", UI_EXT_LOCATEINTEROPDATA },
+		{ "trap_R_AddRefEntityToScene2", UI_EXT_R_ADDREFENTITYTOSCENE2 },
+		{ "trap_Cvar_SetRange", UI_EXT_CVAR_SETRANGE },
+		{ "trap_Cvar_SetHelp", UI_EXT_CVAR_SETHELP },
+		{ "trap_Cmd_SetHelp", UI_EXT_CMD_SETHELP }
+	};
 
-	if( Q_stricmp(key, "trap_R_AddRefEntityToScene2") == 0 ) {
-		Com_sprintf( value, valueSize, "%d", UI_EXT_R_ADDREFENTITYTOSCENE2 );
-		return qtrue;
+	for ( int i = 0; i < ARRAY_LEN( syscalls ); ++i ) {
+		if( Q_stricmp(key, syscalls[i].name) == 0 ) {
+			Com_sprintf( value, valueSize, "%d", syscalls[i].number );
+			return qtrue;
+		}
 	}
 
 	return qfalse;
@@ -788,6 +794,7 @@ static intptr_t CL_UISystemCalls( intptr_t* args )
 
 	case UI_CVAR_REGISTER:
 		Cvar_Register( VMA(1), VMA(2), VMA(3), args[4] );
+		Cvar_SetModule( VMA(2), MODULE_UI );
 		return 0;
 
 	case UI_CVAR_UPDATE:
@@ -1113,6 +1120,18 @@ static intptr_t CL_UISystemCalls( intptr_t* args )
 
 	case UI_EXT_R_ADDREFENTITYTOSCENE2:
 		re.AddRefEntityToScene( VMA(1), qtrue );
+		return 0;
+
+	case UI_EXT_CVAR_SETRANGE:
+		Cvar_SetRange( VMA(1), (cvarType_t)args[2], VMA(3), VMA(4) );
+		return 0;
+
+	case UI_EXT_CVAR_SETHELP:
+		Cvar_SetHelp( VMA(1), VMA(2) );
+		return 0;
+
+	case UI_EXT_CMD_SETHELP:
+		Cmd_SetHelp( VMA(1), VMA(2) );
 		return 0;
 
 	default:

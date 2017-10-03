@@ -446,6 +446,30 @@ char* Q_strrchr( const char* string, int c )
 }
 
 
+const char *Q_stristr( const char *s, const char *find )
+{
+	char c;
+	if ((c = *find++) != 0) {
+		if (c >= 'a' && c <= 'z')
+			c -= ('a' - 'A');
+
+		const size_t len = strlen(find);
+		do {
+			char sc;
+			do {
+				if ((sc = *s++) == 0)
+					return NULL;
+				if (sc >= 'a' && sc <= 'z')
+					sc -= ('a' - 'A');
+			} while (sc != c);
+		} while (Q_stricmpn(s, find, len) != 0);
+		s--;
+	}
+
+	return s;
+}
+
+
 // safe strncpy that ensures a trailing zero
 
 void Q_strncpyz( char *dest, const char *src, int destsize )
@@ -570,6 +594,27 @@ int Q_PrintStrlen( const char *string )
 	}
 
 	return len;
+}
+
+
+int Q_PrintStroff( const char *string, int charOffset )
+{
+	int len = 0;
+	const char* p = string;
+
+	if (!p)
+		return 0;
+
+	while ( *p && len < charOffset ) {
+		if( Q_IsColorString( p ) ) {
+			p += 2;
+			continue;
+		}
+		p++;
+		len++;
+	}
+
+	return p - string;
 }
 
 

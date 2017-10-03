@@ -38,14 +38,14 @@ static void SV_UserinfoChanged( client_t *cl )
 
 	val = Info_ValueForKey( cl->userinfo, "rate" );
 	if (val[0]) {
-		cl->rate = Com_Clamp( 4000, 99999, atoi(val) );
+		cl->rate = Com_ClampInt( 4000, 99999, atoi(val) );
 	} else {
 		cl->rate = 25000;
 	}
 
 	val = Info_ValueForKey( cl->userinfo, "snaps" );
 	if (val[0]) {
-		i = Com_Clamp( 10, sv_fps->integer, atoi(val) );
+		i = Com_ClampInt( 10, sv_fps->integer, atoi(val) );
 	} else {
 		i = sv_fps->integer;
 	}

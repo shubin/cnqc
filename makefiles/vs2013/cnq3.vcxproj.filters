@@ -126,6 +126,9 @@
     <ClInclude Include="..\..\code\client\client.h">
       <Filter>client</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\code\client\client_help.h">
+      <Filter>client</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\code\client\keycodes.h">
       <Filter>client</Filter>
     </ClInclude>
@@ -157,6 +160,9 @@
       <Filter>qcommon</Filter>
     </ClInclude>
     <ClInclude Include="..\..\code\qcommon\cm_public.h">
+      <Filter>qcommon</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\qcommon\common_help.h">
       <Filter>qcommon</Filter>
     </ClInclude>
     <ClInclude Include="..\..\code\qcommon\crash.h">
@@ -210,6 +216,9 @@
     <ClInclude Include="..\..\code\renderer\stb_image.h">
       <Filter>renderer</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\code\renderer\tr_help.h">
+      <Filter>renderer</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\code\renderer\tr_local.h">
       <Filter>renderer</Filter>
     </ClInclude>
@@ -229,6 +238,9 @@
       <Filter>win32</Filter>
     </ClInclude>
     <ClInclude Include="..\..\code\win32\wglext.h">
+      <Filter>win32</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\win32\win_help.h">
       <Filter>win32</Filter>
     </ClInclude>
     <ClInclude Include="..\..\code\win32\win_local.h">

@@ -575,6 +575,7 @@ int		Q_stricmpn( const char *s1, const char *s2, int n );
 char	*Q_strlwr( char *s1 );
 char	*Q_strupr( char *s1 );
 char	*Q_strrchr( const char* string, int c );
+const char	*Q_stristr( const char *s, const char *find );
 
 // buffer size safe library replacements
 void	Q_strncpyz( char *dest, const char *src, int destsize );
@@ -582,6 +583,8 @@ void	Q_strcat( char *dest, int size, const char *src );
 
 // strlen that discounts Quake color sequences
 int Q_PrintStrlen( const char *string );
+// gets the byte offset of the Nth printable character
+int Q_PrintStroff( const char *string, int charOffset );
 // removes color sequences from string
 char *Q_CleanStr( char *string );
 
@@ -636,6 +639,15 @@ default values.
 #define CVAR_NONEXISTENT	0xFFFFFFFF	// Cvar doesn't exist.
 
 #define	MAX_CVAR_VALUE_STRING	256
+
+typedef enum {
+	CVART_STRING,	// no validation
+	CVART_FLOAT,	// uses floating-point min/max bounds
+	CVART_INTEGER,	// uses integer min/max bounds
+	CVART_BITMASK,	// uses integer min/max bounds
+	CVART_BOOL,		// uses integer min/max bounds, min=0 and max=1
+	CVART_COUNT		// always last in the enum
+} cvarType_t;
 
 typedef int	cvarHandle_t;
 
@@ -1059,6 +1071,13 @@ typedef enum {
 
 #define CDKEY_LEN 16
 #define CDCHKSUM_LEN 2
+
+
+// #define ANSWER 42
+// STRING(ANSWER)  -> "ANSWER"
+// XSTRING(ANSWER) -> "42"
+#define STRING(x)	#x			// stringifies x
+#define XSTRING(x)	STRING(x)	// expands x and then stringifies the result
 
 
 #if defined(__cplusplus)

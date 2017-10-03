@@ -25,6 +25,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "qcommon.h"
 #include "crash.h"
 #include "git.h"
+#include "common_help.h"
+#include <float.h>
 
 static cvar_t* cvar_vars;
 static cvar_t* cvar_cheats;
@@ -141,6 +143,74 @@ void Cvar_CommandCompletion( void(*callback)(const char *s) )
 }
 
 
+void Cvar_EnumHelp( search_callback_t callback, const char* pattern )
+{
+	if( pattern == NULL || *pattern == '\0' )
+		return;
+
+	cvar_t* cvar;
+	for ( cvar = cvar_vars; cvar; cvar = cvar->next ) {
+		if( cvar->name && !(cvar->flags & CVAR_USER_CREATED) )
+			callback( cvar->name, cvar->desc, cvar->help, pattern );
+	}
+}
+
+
+static qbool Cvar_IsValidGet( cvar_t *var, const char *value )
+{
+	if ( var->type == CVART_STRING )
+		return qtrue;
+
+	if ( var->type == CVART_FLOAT ) {
+		float f;
+		if ( sscanf(value, "%f", &f) != 1 ||
+			!isfinite(f) ||
+			f < var->validator.f.min ||
+			f > var->validator.f.max)
+			return qfalse;
+	} else {
+		int i;
+		if ( sscanf(value, "%d", &i) != 1 ||
+			i < var->validator.i.min ||
+			i > var->validator.i.max)
+			return qfalse;
+	}
+
+	return qtrue;
+}
+
+
+static qbool Cvar_IsValidSet( cvar_t *var, const char *value )
+{
+#define WARNING( Message )	{ Com_Printf( "WARNING %s: " Message "\n", var->name ); return qfalse; }
+
+	if ( var->type == CVART_STRING )
+		return qtrue;
+
+	if ( var->type == CVART_FLOAT ) {
+		float f;
+		if ( sscanf(value, "%f", &f) != 1 || !isfinite(f) )
+			WARNING( "not a finite floating-point value" )
+		if( f < var->validator.f.min )
+			WARNING( "float value too low" )
+		if( f > var->validator.f.max )
+			WARNING( "float value too high" )
+	} else {
+		int i;
+		if ( sscanf(value, "%d", &i) != 1 )
+			WARNING("not a whole number (integer)")
+		if( i < var->validator.i.min )
+			WARNING( "integer value too low" )
+		if( i > var->validator.i.max )
+			WARNING( "integer value too high" )
+	}
+
+	return qtrue;
+
+#undef WARNING
+}
+
+
 static cvar_t* Cvar_Set2( const char *var_name, const char *value, qbool force )
 {
 //	Com_DPrintf( "Cvar_Set2: %s %s\n", var_name, value );
@@ -162,9 +232,11 @@ static cvar_t* Cvar_Set2( const char *var_name, const char *value, qbool force )
 		value = var->resetString;
 	}
 
-	if (!strcmp(value,var->string)) {
+	if (!strcmp(value, var->string) ||
+		!Cvar_IsValidSet(var, value)) {
 		return var;
 	}
+
 	// note what types of cvars have been modified (userinfo, archive, serverinfo, systeminfo)
 	cvar_modifiedFlags |= var->flags;
 
@@ -256,6 +328,8 @@ cvar_t* Cvar_Get( const char *var_name, const char *var_value, int flags )
 
 	cvar_t* var = Cvar_FindVar( var_name );
 	if ( var ) {
+		var_value = Cvar_IsValidGet( var, var_value ) ? var_value : var->resetString;
+
 		// if the C code is now specifying a variable that the user already
 		// set a value for, take the new value as the reset value
 		if ( ( var->flags & CVAR_USER_CREATED ) && !( flags & CVAR_USER_CREATED )
@@ -320,6 +394,11 @@ breaks every single mod except CPMA otherwise, but it IS wrong, and critically s
 	var->value = atof(var->string);
 	var->integer = atoi(var->string);
 	var->resetString = CopyString( var_value );
+	var->desc = NULL;
+	var->help = NULL;
+	var->type = CVART_STRING;
+	var->firstModule = MODULE_NONE;
+	var->moduleMask = 0;
 
 	// link the variable in
 	if ( cvar_vars == NULL || Q_stricmp(cvar_vars->name, var_name) > 0 ) {
@@ -354,6 +433,177 @@ breaks every single mod except CPMA otherwise, but it IS wrong, and critically s
 	hashTable[hash] = var;
 
 	return var;
+}
+
+
+void Cvar_SetHelp( const char *var_name, const char *help )
+{
+	cvar_t* var = Cvar_FindVar( var_name );
+	if ( !var )
+		return;
+
+	Help_AllocSplitText( &var->desc, &var->help, help );
+}
+
+
+qbool Cvar_GetHelp( const char **desc, const char **help, const char* var_name )
+{
+	cvar_t* var = Cvar_FindVar( var_name );
+	if ( !var )
+		return qfalse;
+
+	*desc = var->desc;
+	*help = var->help;
+
+	return qtrue;
+}
+
+
+void Cvar_SetRange( const char *var_name, cvarType_t type, const char *minStr, const char *maxStr )
+{
+#define WARNING( Message ) { assert(0); Com_Printf( "Cvar_SetRange on %s: " Message "\n", var_name ); return; }
+
+	cvar_t* var = Cvar_FindVar( var_name );
+	if( !var )
+		WARNING( "cvar not found" );
+
+	if( (unsigned int)type >= CVART_COUNT )
+		WARNING( "invalid cvar type" );
+
+	if ( type == CVART_BOOL ) {
+		var->validator.i.min = 0;
+		var->validator.i.max = 1;
+	} else if ( type == CVART_INTEGER || type == CVART_BITMASK ) {
+		int min = INT_MIN;
+		int max = INT_MAX;
+		if ( minStr && sscanf(minStr, "%d", &min) != 1 )
+			WARNING( "invalid min value" )
+		if ( maxStr && sscanf(maxStr, "%d", &max) != 1 )
+			WARNING( "invalid max value" )
+		if ( min > max )
+			WARNING( "min greater than max" )
+		var->validator.i.min = min;
+		var->validator.i.max = max;
+	} else if ( type == CVART_FLOAT ) {
+		// yes, sscanf *does* recognize special strings for inf and NaN
+		float min = -FLT_MAX;
+		float max =  FLT_MAX;
+		if ( minStr && sscanf(minStr, "%f", &min) != 1 && !isfinite(min) )
+			WARNING( "invalid min value" )
+		if ( maxStr && sscanf(maxStr, "%f", &max) != 1 && !isfinite(max) )
+			WARNING( "invalid max value" )
+		if ( min > max )
+			WARNING( "min greater than max" )
+		var->validator.f.min = min;
+		var->validator.f.max = max;
+	}
+	var->type = type;
+
+	// run a validation pass right away
+	Cvar_Set( var_name, var->string );
+
+#undef ERROR
+}
+
+
+void Cvar_RegisterTable( const cvarTableItem_t* cvars, int count, module_t module )
+{
+	for ( int i = 0; i < count; ++i ) {
+		const cvarTableItem_t* item = &cvars[i];
+
+		if ( item->cvar )
+			*item->cvar = Cvar_Get( item->name, item->reset, item->flags );
+		else
+			Cvar_Get( item->name, item->reset, item->flags );
+
+		if ( item->help )
+			Cvar_SetHelp( item->name, item->help );
+
+		if ( item->min ||
+			item->max ||
+			item->type == CVART_BITMASK ||
+			item->type == CVART_BOOL )
+			Cvar_SetRange( item->name, item->type, item->min, item->max );
+
+		Cvar_SetModule( item->name, module );
+	}
+}
+
+
+void Cvar_SetModule( const char *var_name, module_t module )
+{
+	cvar_t* var = Cvar_FindVar( var_name );
+	if ( !var )
+		return;
+
+	var->moduleMask |= 1 << (int)module;
+	if ( var->firstModule == MODULE_NONE )
+		var->firstModule = module;
+}
+
+
+void Cvar_GetModuleInfo( module_t *firstModule, int *moduleMask, const char *var_name )
+{
+	cvar_t* var = Cvar_FindVar( var_name );
+	if ( !var )
+		return;
+
+	*firstModule = var->firstModule;
+	*moduleMask = var->moduleMask;
+}
+
+
+static const char* Cvar_FormatRangeFloat( float vf )
+{
+	const int vi = (int)vf;
+	const qbool round = vf == (float)vi;
+
+	return round ? va( "%d.0", vi ) : va( "%.3g", vf );
+}
+
+
+void Cvar_PrintTypeAndRange( const char *var_name )
+{
+	cvar_t* var = Cvar_FindVar( var_name );
+	if ( !var )
+		return;
+
+	if ( var->type == CVART_BOOL ) {
+		Com_Printf( "%s <0|1> (default: %s)\n", var_name, var->resetString );
+	} else if ( var->type == CVART_BITMASK ) {
+		Com_Printf( "%s <bitmask> (default: %s)\n", var_name, var->resetString );
+	} else if ( var->type == CVART_FLOAT ) {
+		const float minV = var->validator.f.min;
+		const float maxV = var->validator.f.max;
+		if ( minV == -FLT_MAX && maxV == FLT_MAX ) {
+			Com_Printf( "%s <float_value> (default: %s)\n", var_name, var->resetString);
+		} else {
+			const char* min = minV == -FLT_MAX ? "-inf" : Cvar_FormatRangeFloat( minV );
+			const char* max = maxV == +FLT_MAX ? "+inf" : Cvar_FormatRangeFloat( maxV );
+			Com_Printf( "%s <%s..%s> (default: %s)\n", var_name, min, max, var->resetString );
+		}
+	} else if ( var->type == CVART_INTEGER ) {
+		const int minV = var->validator.i.min;
+		const int maxV = var->validator.i.max;
+		const int diff = maxV - minV;
+		if( minV == INT_MIN && maxV == INT_MAX ) {
+			Com_Printf( "%s <integer_value> (default: %s)\n", var_name, var->resetString );
+		} else if ( diff == 0 ) {
+			Com_Printf( "%s <%d> (default: %s)\n", var_name, minV, var->resetString );
+		} else if ( diff == 1 ) {
+			Com_Printf( "%s <%d|%d> (default: %s)\n", var_name, minV, minV + 1, var->resetString );
+		} else if ( diff == 2 ) {
+			Com_Printf( "%s <%d|%d|%d> (default: %s)\n", var_name, minV, minV + 1, minV + 2, var->resetString );
+		} else if ( diff == 3 ) {
+			Com_Printf( "%s <%d|%d|%d|%d> (default: %s)\n", var_name, minV, minV + 1, minV + 2, minV + 3, var->resetString );
+		} else {
+			const char* min = minV == INT_MIN ? "-inf" : va( "%d", minV );
+			const char* max = maxV == INT_MAX ? "+inf" : va( "%d", maxV );
+			Com_Printf( "%s <%s..%s> (default: %s)\n", var_name, min, max, var->resetString );
+		}
+	} else {
+		Com_Printf( "%s <string> (default: %s)\n", var_name, var->resetString );
+	}
 }
 
 
@@ -596,6 +846,12 @@ static void Cvar_Restart_f( void )
 			if ( var->resetString ) {
 				Z_Free( var->resetString );
 			}
+			if ( var->desc ) {
+				Z_Free( var->desc );
+			}
+			if ( var->help ) {
+				Z_Free( var->help );
+			}
 			// clear the var completely, since we
 			// can't remove the index from the list
 			Com_Memset( var, 0, sizeof( var ) );
@@ -705,6 +961,19 @@ void Cvar_Update( vmCvar_t *vmCvar )
 }
 
 
+static const cmdTableItem_t cl_cmds[] =
+{
+	{ "toggle", Cvar_Toggle_f, Cvar_CompleteName, help_toggle },
+	{ "set", Cvar_Set_f, Cvar_CompleteName, "creates or changes a cvar's value" },
+	{ "sets", Cvar_SetS_f, Cvar_CompleteName, "like /set with the server info flag" },
+	{ "setu", Cvar_SetU_f, Cvar_CompleteName, "like /set with the user info flag" },
+	{ "seta", Cvar_SetA_f, Cvar_CompleteName, "like /set with the archive flag" },
+	{ "reset", Cvar_Reset_f, Cvar_CompleteName, "sets a cvar back to its default value" },
+	{ "cvarlist", Cvar_List_f, NULL, help_cvarlist },
+	{ "cvar_restart", Cvar_Restart_f, NULL, "restarts the cvar system" }
+};
+
+
 void Cvar_Init()
 {
 	// this cvar is the single entry point of the entire extension system
@@ -714,18 +983,5 @@ void Cvar_Init()
 	Cvar_Get( "git_branch", GIT_BRANCH, CVAR_ROM );
 	Cvar_Get( "git_headHash", GIT_COMMIT, CVAR_ROM );
 
-	Cmd_AddCommand( "toggle", Cvar_Toggle_f );
-	Cmd_AddCommand( "set", Cvar_Set_f );
-	Cmd_AddCommand( "sets", Cvar_SetS_f );
-	Cmd_AddCommand( "setu", Cvar_SetU_f );
-	Cmd_AddCommand( "seta", Cvar_SetA_f );
-	Cmd_AddCommand( "reset", Cvar_Reset_f );
-	Cmd_AddCommand( "cvarlist", Cvar_List_f );
-	Cmd_AddCommand( "cvar_restart", Cvar_Restart_f );
-	Cmd_SetAutoCompletion( "toggle", Cvar_CompleteName );
-	Cmd_SetAutoCompletion( "set", Cvar_CompleteName );
-	Cmd_SetAutoCompletion( "sets", Cvar_CompleteName );
-	Cmd_SetAutoCompletion( "setu", Cvar_CompleteName );
-	Cmd_SetAutoCompletion( "seta", Cvar_CompleteName );
-	Cmd_SetAutoCompletion( "reset", Cvar_CompleteName );
+	Cmd_RegisterArray( cl_cmds, MODULE_COMMON );
 }

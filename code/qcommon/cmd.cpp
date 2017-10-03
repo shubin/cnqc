@@ -23,6 +23,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "q_shared.h"
 #include "qcommon.h"
+#include "common_help.h"
 
 #define MAX_CMD_BUFFER	32768
 #define MAX_CMD_LINE	1024
@@ -48,6 +49,83 @@ static void Cmd_Wait_f( void )
 	} else {
 		cmd_wait = 1;
 	}
+}
+
+
+static void Cmd_Help_f()
+{
+	const char* const arg0 = Cmd_Argv( 0 );
+	if ( Cmd_Argc() != 2 ) {
+		Com_Printf( "usage: %s cvarname|cmdname\n", arg0 );
+		return;
+	}
+	
+	const char* const arg1 = Cmd_Argv(1);
+	if ( !Q_stricmp( arg0, "man" ) && !Q_stricmp( arg1, "woman" ) ) {
+		Com_Printf( "yeah... no\n" );
+		return;
+	}
+
+	qbool isCvar = qfalse;
+	const char *desc;
+	const char *help;
+	module_t firstModule;
+	int moduleMask;
+	if ( Cvar_GetHelp( &desc, &help, arg1 ) ) {
+		isCvar = qtrue;
+		Cvar_GetModuleInfo( &firstModule, &moduleMask, arg1 );
+	} else if ( Cmd_GetHelp( &desc, &help, arg1 ) ) {
+		Cmd_GetModuleInfo( &firstModule, &moduleMask, arg1 );
+	} else {
+		Com_Printf( "found no cvar/command with the name '%s'\n", arg1 );
+		return;
+	}
+
+	if ( isCvar ) {
+		Cvar_PrintTypeAndRange( arg1 );
+	}
+
+	Com_PrintModules( firstModule, moduleMask );
+
+	if ( !desc ) {
+		Com_Printf( "no help text found for %s '%s'\n", isCvar ? "cvar" : "command", arg1 );
+		return;
+	}
+
+	const char firstLetter = toupper( *desc );
+	Com_Printf( COLOR_HELP"%c%s.\n", firstLetter, desc + 1 );
+	if ( help )
+		Com_Printf( COLOR_HELP"%s\n", help );
+}
+
+
+static void Cmd_PrintSearchResult( const char *name, const char *desc, const char *help, const char *pattern )
+{
+	if ( Q_stristr(name, pattern) || (desc && Q_stristr(desc, pattern)) || (help && Q_stristr(help, pattern)) ) {
+		if ( desc )
+			Com_Printf( "    %s - %s\n", name, desc );
+		else
+			Com_Printf( "    %s\n", name );
+	}
+}
+
+
+static void Cmd_SearchHelp_f()
+{
+	if ( Cmd_Argc() != 2 ) {
+		Com_Printf( "usage: %s string_pattern\n", Cmd_Argv( 0 ) );
+		return;
+	}
+
+	Cmd_EnumHelp( Cmd_PrintSearchResult, Cmd_Argv( 1 ) );
+	Cvar_EnumHelp( Cmd_PrintSearchResult, Cmd_Argv( 1 ) );
+}
+
+
+static void Cmd_CompleteHelp_f( int startArg, int compArg )
+{
+	if ( compArg == startArg + 1 )
+		Field_AutoCompleteFrom( compArg, compArg, qtrue, qtrue );
 }
 
 
@@ -228,9 +306,12 @@ typedef struct cmd_function_s
 {
 	struct cmd_function_s	*next;
 	char					*name;
+	char					*desc;
+	char					*help;
 	xcommand_t				function;
 	xcommandCompletion_t	completion;
-	qbool					cgame; // registered by cgame?
+	module_t				firstModule;
+	int						moduleMask;
 } cmd_function_t;
 
 
@@ -454,12 +535,6 @@ void Cmd_TokenizeStringIgnoreQuotes( const char* text )
 
 void Cmd_AddCommand( const char* cmd_name, xcommand_t function )
 {
-	Cmd_AddCommandEx( cmd_name, function, qfalse );
-}
-
-
-void Cmd_AddCommandEx( const char* cmd_name, xcommand_t function, qbool cgame )
-{
 	cmd_function_t* cmd;
 
 	// fail if the command already exists
@@ -478,7 +553,10 @@ void Cmd_AddCommandEx( const char* cmd_name, xcommand_t function, qbool cgame )
 	cmd->name = CopyString( cmd_name );
 	cmd->function = function;
 	cmd->completion = NULL;
-	cmd->cgame = cgame;
+	cmd->firstModule = MODULE_NONE;
+	cmd->moduleMask = 0;
+	cmd->desc = NULL;
+	cmd->help = NULL;
 
 	// add the command
 	if ( cmd_functions == NULL || Q_stricmp(cmd_functions->name, cmd_name) > 0 ) {
@@ -507,6 +585,18 @@ void Cmd_AddCommandEx( const char* cmd_name, xcommand_t function, qbool cgame )
 }
 
 
+static void Cmd_Free( cmd_function_t* cmd )
+{
+	if ( cmd->name )
+		Z_Free( cmd->name );
+	if ( cmd->desc )
+		Z_Free( cmd->desc );
+	if ( cmd->help )
+		Z_Free( cmd->help );
+	Z_Free( cmd );
+}
+
+
 void Cmd_RemoveCommand( const char* cmd_name )
 {
 	cmd_function_t** back = &cmd_functions;
@@ -519,10 +609,7 @@ void Cmd_RemoveCommand( const char* cmd_name )
 		}
 		if ( !strcmp( cmd_name, cmd->name ) ) {
 			*back = cmd->next;
-			if ( cmd->name ) {
-				Z_Free( cmd->name );
-			}
-			Z_Free( cmd );
+			Cmd_Free( cmd );
 			return;
 		}
 		back = &cmd->next;
@@ -530,25 +617,30 @@ void Cmd_RemoveCommand( const char* cmd_name )
 }
 
 
-void Cmd_RemoveCGameCommands()
+void Cmd_SetHelp( const char* cmd_name, const char* cmd_help )
 {
-	cmd_function_t** back = &cmd_functions;
-
-	for(;;) {
-		cmd_function_t* const cmd = *back;
-		if ( !cmd )
-			break;
-
-		if ( !cmd->cgame ) {
-			back = &cmd->next;
-			continue;
+	cmd_function_t* cmd;
+	for ( cmd = cmd_functions; cmd; cmd = cmd->next ) {
+		if ( !strcmp( cmd_name, cmd->name ) ) {
+			Help_AllocSplitText( &cmd->desc, &cmd->help, cmd_help );
+			return;
 		}
-
-		*back = cmd->next;
-		if ( cmd->name )
-			Z_Free( cmd->name );
-		Z_Free( cmd );
 	}
+}
+
+
+qbool Cmd_GetHelp( const char** desc, const char** help, const char* cmd_name )
+{
+	cmd_function_t* cmd;
+	for ( cmd = cmd_functions; cmd; cmd = cmd->next ) {
+		if ( !strcmp( cmd_name, cmd->name ) ) {
+			*desc = cmd->desc;
+			*help = cmd->help;
+			return qtrue;
+		}
+	}
+
+	return qfalse;
 }
 
 
@@ -582,6 +674,18 @@ void Cmd_CommandCompletion( void(*callback)(const char* s) )
 	const cmd_function_t* cmd;
 	for ( cmd = cmd_functions; cmd; cmd = cmd->next ) {
 		callback( cmd->name );
+	}
+}
+
+
+void Cmd_EnumHelp( search_callback_t callback, const char* pattern )
+{
+	if ( pattern == NULL || *pattern == '\0' )
+		return;
+
+	cmd_function_t* cmd;
+	for ( cmd = cmd_functions; cmd; cmd = cmd->next) {
+		callback( cmd->name, cmd->desc, cmd->help, pattern );
 	}
 }
 
@@ -657,14 +761,85 @@ static void Cmd_List_f()
 }
 
 
+static const cmdTableItem_t cl_cmds[] =
+{
+	{ "cmdlist", Cmd_List_f, NULL, help_cmdlist },
+	{ "exec", Cmd_Exec_f, Cmd_CompleteExec_f, "executes all commands in a text file" },
+	{ "vstr", Cmd_Vstr_f, Cmd_CompleteVstr_f, "executes the string value of a cvar" },
+	{ "echo", Cmd_Echo_f, NULL, "prints the arguments to the console" },
+	{ "wait", Cmd_Wait_f, NULL, "delays command execution by N frames" },
+	{ "help", Cmd_Help_f, Cmd_CompleteHelp_f, "displays the help of a cvar or command" },
+	{ "man", Cmd_Help_f, Cmd_CompleteHelp_f, "displays the help of a cvar or command" },
+	{ "searchhelp", Cmd_SearchHelp_f, NULL, "lists all cvars+cmds whose help matches" }
+};
+
+
 void Cmd_Init()
 {
-	Cmd_AddCommand( "cmdlist", Cmd_List_f );
-	Cmd_AddCommand( "exec", Cmd_Exec_f );
-	Cmd_SetAutoCompletion( "exec", Cmd_CompleteExec_f );
-	Cmd_AddCommand( "vstr", Cmd_Vstr_f );
-	Cmd_SetAutoCompletion( "vstr", Cmd_CompleteVstr_f );
-	Cmd_AddCommand( "echo", Cmd_Echo_f );
-	Cmd_AddCommand( "wait", Cmd_Wait_f );
+	Cmd_RegisterArray( cl_cmds, MODULE_COMMON );
+}
+
+
+void Cmd_RegisterTable( const cmdTableItem_t* cmds, int count, module_t module )
+{
+	for ( int i = 0; i < count; ++i ) {
+		const cmdTableItem_t* item = &cmds[i];
+
+		Cmd_AddCommand( item->name, item->function );
+
+		if ( item->completion )
+			Cmd_SetAutoCompletion( item->name, item->completion );
+
+		if ( item->help )
+			Cmd_SetHelp( item->name, item->help );
+
+		Cmd_SetModule( item->name, module );
+	}
+}
+
+
+void Cmd_SetModule( const char* cmd_name, module_t module )
+{
+	cmd_function_t* cmd;
+	for ( cmd = cmd_functions; cmd; cmd = cmd->next ) {
+		if ( !strcmp( cmd_name, cmd->name ) ) {
+			cmd->moduleMask |= 1 << (int)module;
+			if ( cmd->firstModule == MODULE_NONE )
+				cmd->firstModule = module;
+			return;
+		}
+	}
+}
+
+
+void Cmd_UnregisterModule( module_t module )
+{
+	if ( module <= MODULE_NONE || module >= MODULE_COUNT )
+		return;
+
+	cmd_function_t* cmd = cmd_functions;
+	while( cmd ) {
+		if ( cmd->firstModule == module && cmd->moduleMask == 1 << (int)module ) {
+			cmd_function_t* next;
+			next = cmd->next;
+			Cmd_RemoveCommand( cmd->name );
+			cmd = next;
+		} else {
+			cmd = cmd->next;
+		}
+	}
+}
+
+
+void Cmd_GetModuleInfo( module_t* firstModule, int* moduleMask, const char* cmd_name )
+{
+	cmd_function_t* cmd;
+	for ( cmd = cmd_functions; cmd; cmd = cmd->next ) {
+		if ( !strcmp( cmd_name, cmd->name ) ) {
+			*firstModule = cmd->firstModule;
+			*moduleMask = cmd->moduleMask;
+			return;
+		}
+	}
 }
 

@@ -683,6 +683,7 @@ static void SV_KillServer_f() {
 	SV_Shutdown( "killserver" );
 }
 
+
 static void SV_ServerRestart_f() 
 {
     char mapname[MAX_QPATH];
@@ -694,6 +695,25 @@ static void SV_ServerRestart_f()
 }
 
 
+static const cmdTableItem_t sv_cmds[] =
+{
+	{ "heartbeat", SV_Heartbeat_f, NULL, "sends a heartbeat to master servers" },
+	{ "kick", SV_Kick_f, NULL, "kicks a player by name" },
+	{ "banUser", SV_Ban_f, NULL, "bans a player by name" },
+	{ "banClient", SV_BanNum_f, NULL, "bans a player by client number" },
+	{ "clientkick", SV_KickNum_f, NULL, "kicks a player by client number" },
+	{ "status", SV_Status_f, NULL, "prints the current player list" },
+	{ "serverinfo", SV_Serverinfo_f, NULL, "prints all server info cvars" },
+	{ "systeminfo", SV_Systeminfo_f, NULL, "prints all system info cvars" },
+	{ "dumpuser", SV_DumpUser_f, NULL, "prints a user's info cvars" },
+	{ "map_restart", SV_MapRestart_f, NULL, "resets the game without reloading the map" },
+	{ "sectorlist", SV_SectorList_f, NULL, "prints entity count for all sectors" },
+	{ "map", SV_Map_f, SV_CompleteMap_f, "loads a map" },
+	{ "devmap", SV_DevMap_f, SV_CompleteMap_f, "loads a map with cheats enabled" },
+	{ "killserver", SV_KillServer_f, NULL, "shuts the server down" },
+	{ "sv_restart", SV_ServerRestart_f, NULL, "restarts the server" }
+};
+
 
 void SV_AddOperatorCommands()
 {
@@ -704,44 +724,18 @@ void SV_AddOperatorCommands()
 
 	initialized = qtrue;
 
-	Cmd_AddCommand ("heartbeat", SV_Heartbeat_f);
-	Cmd_AddCommand ("kick", SV_Kick_f);
-	Cmd_AddCommand ("banUser", SV_Ban_f);
-	Cmd_AddCommand ("banClient", SV_BanNum_f);
-	Cmd_AddCommand ("clientkick", SV_KickNum_f);
-	Cmd_AddCommand ("status", SV_Status_f);
-	Cmd_AddCommand ("serverinfo", SV_Serverinfo_f);
-	Cmd_AddCommand ("systeminfo", SV_Systeminfo_f);
-	Cmd_AddCommand ("dumpuser", SV_DumpUser_f);
-	Cmd_AddCommand ("map_restart", SV_MapRestart_f);
-	Cmd_AddCommand ("sectorlist", SV_SectorList_f);
-	Cmd_AddCommand ("map", SV_Map_f);
-	Cmd_AddCommand ("devmap", SV_DevMap_f);
-	Cmd_SetAutoCompletion ("map", SV_CompleteMap_f);
-	Cmd_SetAutoCompletion ("devmap", SV_CompleteMap_f);
-	Cmd_AddCommand ("killserver", SV_KillServer_f);
-	Cmd_AddCommand ("sv_restart", SV_ServerRestart_f );
+	Cmd_RegisterArray( sv_cmds, MODULE_SERVER );
+
 	if( com_dedicated->integer ) {
-		Cmd_AddCommand ("say", SV_ConSay_f);
+		Cmd_AddCommand( "say", SV_ConSay_f );
+		Cmd_SetModule( "say", MODULE_SERVER );
 	}
 }
 
 
 void SV_RemoveOperatorCommands()
 {
-#if 0
 	// removing these won't let the server start again
-	Cmd_RemoveCommand ("heartbeat");
-	Cmd_RemoveCommand ("kick");
-	Cmd_RemoveCommand ("banUser");
-	Cmd_RemoveCommand ("banClient");
-	Cmd_RemoveCommand ("status");
-	Cmd_RemoveCommand ("serverinfo");
-	Cmd_RemoveCommand ("systeminfo");
-	Cmd_RemoveCommand ("dumpuser");
-	Cmd_RemoveCommand ("map_restart");
-	Cmd_RemoveCommand ("sectorlist");
-	Cmd_RemoveCommand ("say");
-#endif
+	//Cmd_UnregisterModule( MODULE_SERVER );
 }
 

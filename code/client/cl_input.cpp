@@ -22,27 +22,28 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // cl.input.c  -- builds an intended movement command to send to the server
 
 #include "client.h"
+#include "client_help.h"
 
 
-static const cvar_t* m_speed;
-static const cvar_t* m_accel;
-static const cvar_t* m_accelStyle;	// 0=original, 1=new
-static const cvar_t* m_accelOffset;	// for style 1 only
-static const cvar_t* m_limit;		// for style 0 only
-static const cvar_t* m_pitch;
-static const cvar_t* m_yaw;
-static const cvar_t* m_forward;
-static const cvar_t* m_side;
-static const cvar_t* m_filter;
+static cvar_t* m_speed;
+static cvar_t* m_accel;
+static cvar_t* m_accelStyle;	// 0=original, 1=new
+static cvar_t* m_accelOffset;	// for style 1 only
+static cvar_t* m_limit;			// for style 0 only
+static cvar_t* m_pitch;
+static cvar_t* m_yaw;
+static cvar_t* m_forward;
+static cvar_t* m_side;
+static cvar_t* m_filter;
 
-static const cvar_t* cl_pitchspeed;
-static const cvar_t* cl_yawspeed;
-static const cvar_t* cl_run;
-static const cvar_t* cl_anglespeedkey;
-static const cvar_t* cl_freelook;
+static cvar_t* cl_pitchspeed;
+static cvar_t* cl_yawspeed;
+static cvar_t* cl_run;
+static cvar_t* cl_anglespeedkey;
+static cvar_t* cl_freelook;
 
-static const cvar_t* cl_nodelta;
-static const cvar_t* cl_showMouseRate;
+static cvar_t* cl_nodelta;
+static cvar_t* cl_showMouseRate;
 
 static unsigned frame_msec;
 static int old_com_frameTime;
@@ -382,7 +383,7 @@ static void CL_MouseMove( usercmd_t* cmd )
 			my *= speed;
 		// new style, similar to quake3e's cl_mouseAccelStyle 1
 		} else {
-			const float offset = Com_Clamp( 0.001f, 5000.0f, m_accelOffset->value );
+			const float offset = m_accelOffset->value;
 			const float rateXa = fabsf( mx ) / (float)frame_msec;
 			const float rateYa = fabsf( my ) / (float)frame_msec;
 			const float powerXa = powf( rateXa / offset, m_accel->value );
@@ -591,12 +592,6 @@ static qbool CL_ReadyToSendPacket()
 		return qtrue;
 	}
 
-	// check for exceeding cl_maxpackets
-	if ( cl_maxpackets->integer < 15 ) {
-		Cvar_Set( "cl_maxpackets", "15" );
-	} else if ( cl_maxpackets->integer > 125 ) {
-		Cvar_Set( "cl_maxpackets", "125" );
-	}
 	oldPacketNum = (clc.netchan.outgoingSequence - 1) & PACKET_MASK;
 	delta = cls.realtime -  cl.outPackets[ oldPacketNum ].p_realtime;
 	if ( delta < 1000 / cl_maxpackets->integer ) {
@@ -673,11 +668,6 @@ void CL_WritePacket( void )
 	// we want to send all the usercmds that were generated in the last
 	// few packet, so even if a couple packets are dropped in a row,
 	// all the cmds will make it to the server
-	if ( cl_packetdup->integer < 0 ) {
-		Cvar_Set( "cl_packetdup", "0" );
-	} else if ( cl_packetdup->integer > 5 ) {
-		Cvar_Set( "cl_packetdup", "5" );
-	}
 	oldPacketNum = (clc.netchan.outgoingSequence - 1 - cl_packetdup->integer) & PACKET_MASK;
 	count = cl.cmdNumber - cl.outPackets[ oldPacketNum ].p_cmdNumber;
 	if ( count > MAX_PACKET_USERCMDS ) {
@@ -835,96 +825,109 @@ static void IN_Button15Down(void) {IN_KeyDown(&in_buttons[15]);}
 static void IN_Button15Up(void) {IN_KeyUp(&in_buttons[15]);}
 
 
+static const cvarTableItem_t cl_cvars[] =
+{
+	{ NULL, "cl_drawMouseLag", "0", 0, CVART_BOOL, NULL, NULL, "draws sampling to display/upload delays" },
+	{ &m_speed, "m_speed", "2", CVAR_ARCHIVE, CVART_FLOAT, "0", "100", "mouse sensitivity" },
+	{ &m_accel, "m_accel", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", NULL, "mouse acceleration" },
+	{ &m_accelStyle, "m_accelStyle", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "1", "0=original, 1=new" },
+	{ &m_accelOffset, "m_accelOffset", "0", CVAR_ARCHIVE, CVART_FLOAT, "0.001", "5000", "offset for the power function\nfor m_accelStyle 1 only" },
+	{ &m_limit, "m_limit", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", NULL, "mouse speed cap (0=disabled)\nfor m_accelStyle 0 only" },
+	{ &m_pitch, "m_pitch", "0.022", CVAR_ARCHIVE, CVART_FLOAT, "-100", "100", "post-accel vertical mouse sens." },
+	{ &m_yaw, "m_yaw", "0.022", CVAR_ARCHIVE, CVART_FLOAT, "-100", "100", "post-accel horizontal mouse sens." },
+	{ &m_forward, "m_forward", "0.25", CVAR_ARCHIVE, CVART_FLOAT, "-32767", "32767", "forward/backwards mouse sensitivity (+strafe)" },
+	{ &m_side, "m_side", "0.25", CVAR_ARCHIVE, CVART_FLOAT, "-32767", "32767", "left/right mouse sensitivity (+strafe)" },
+	{ &m_filter, "m_filter", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "mouse smoothing" },
+	{ &cl_pitchspeed, "cl_pitchspeed", "140", CVAR_ARCHIVE, CVART_FLOAT, "0", NULL, "+lookup +lookdown speed" },
+	{ &cl_yawspeed, "cl_yawspeed", "140", CVAR_ARCHIVE, CVART_FLOAT, "0", NULL, "+right +left speed" },
+	{ &cl_anglespeedkey, "cl_anglespeedkey", "1.5", 0, CVART_FLOAT },
+	{ &cl_run, "cl_run", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "running enabled (0=walk)" },
+	{ &cl_freelook, "cl_freelook", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "0 means you can't look up/down" },
+	{ &cl_showMouseRate, "cl_showmouserate", "0", 0, CVART_BOOL, NULL, NULL, "prints info when m_accel != 0" },
+	{ &cl_nodelta, "cl_nodelta", "0", 0, CVART_BOOL, NULL, NULL, "disables delta-compression on uploaded user commands" },
+	{ &cl_debugMove, "cl_debugMove", "0", 0, CVART_INTEGER, "0", "2", help_cl_debugMove }
+};
+
+
+static const cmdTableItem_t cl_cmds[] =
+{
+#define help_button1 "\nYou can't move and there's a chat bubble over your head."
+	{ "+moveup", IN_UpDown, NULL, "starts jumping/moving up" help_plus_minus },
+	{ "-moveup", IN_UpUp, NULL, "stops jumping/moving up" help_plus_minus },
+	{ "+movedown", IN_DownDown, NULL, "starts crouching/moving down" help_plus_minus },
+	{ "-movedown", IN_DownUp, NULL, "stops crouching/moving down" help_plus_minus },
+	{ "+left", IN_LeftDown, NULL, "starts rotating left" help_plus_minus },
+	{ "-left", IN_LeftUp, NULL, "stops rotating left" help_plus_minus },
+	{ "+right", IN_RightDown, NULL, "starts rotating right" help_plus_minus },
+	{ "-right", IN_RightUp, NULL, "stops rotating right" help_plus_minus },
+	{ "+forward", IN_ForwardDown, NULL, "starts moving forward" help_plus_minus },
+	{ "-forward", IN_ForwardUp, NULL, "stops moving forward" help_plus_minus },
+	{ "+back", IN_BackDown, NULL, "starts moving backwards" help_plus_minus },
+	{ "-back", IN_BackUp, NULL, "stops moving backwards" help_plus_minus },
+	{ "+lookup", IN_LookupDown, NULL, "starts looking up" help_plus_minus },
+	{ "-lookup", IN_LookupUp, NULL, "stops looking up" help_plus_minus },
+	{ "+lookdown", IN_LookdownDown, NULL, "starts looking down" help_plus_minus },
+	{ "-lookdown", IN_LookdownUp, NULL, "stops looking down" help_plus_minus },
+	{ "+strafe", IN_StrafeDown, NULL, "starts mouse strafing mode" help_plus_minus },
+	{ "-strafe", IN_StrafeUp, NULL, "stops mouse strafing mode" help_plus_minus },
+	{ "+moveleft", IN_MoveleftDown, NULL, "starts strafing left" help_plus_minus },
+	{ "-moveleft", IN_MoveleftUp, NULL, "stops strafing left" help_plus_minus },
+	{ "+moveright", IN_MoverightDown, NULL, "starts strafing right" help_plus_minus },
+	{ "-moveright", IN_MoverightUp, NULL, "stops strafing right" help_plus_minus },
+	{ "+speed", IN_SpeedDown, NULL, "start walk/run toggle" },
+	{ "-speed", IN_SpeedUp, NULL, "stops walk/run toggle" },
+	{ "+attack", IN_Button0Down, NULL, "starts firing the gun" help_plus_minus },
+	{ "-attack", IN_Button0Up, NULL, "stops firing the gun" help_plus_minus },
+	{ "+button0", IN_Button0Down, NULL, "starts firing the gun" help_plus_minus },
+	{ "-button0", IN_Button0Up, NULL, "stops firing the gun" help_plus_minus },
+	{ "+button1", IN_Button1Down, NULL, "starts chat stance" help_button1 help_plus_minus },
+	{ "-button1", IN_Button1Up, NULL, "stops chat stance" help_button1 help_plus_minus },
+	{ "+button2", IN_Button2Down, NULL, "starts using item" help_plus_minus },
+	{ "-button2", IN_Button2Up, NULL, "stops using item" help_plus_minus },
+	{ "+button3", IN_Button3Down, NULL, "starts taunt" help_plus_minus },
+	{ "-button3", IN_Button3Up, NULL, "stops taunt" help_plus_minus },
+	{ "+button4", IN_Button4Down },
+	{ "-button4", IN_Button4Up },
+	{ "+button5", IN_Button5Down },
+	{ "-button5", IN_Button5Up },
+	{ "+button6", IN_Button6Down },
+	{ "-button6", IN_Button6Up },
+	{ "+button7", IN_Button7Down },
+	{ "-button7", IN_Button7Up },
+	{ "+button8", IN_Button8Down },
+	{ "-button8", IN_Button8Up },
+	{ "+button9", IN_Button9Down },
+	{ "-button9", IN_Button9Up },
+	{ "+button10", IN_Button10Down },
+	{ "-button10", IN_Button10Up },
+	{ "+button11", IN_Button11Down },
+	{ "-button11", IN_Button11Up },
+	{ "+button12", IN_Button12Down },
+	{ "-button12", IN_Button12Up },
+	{ "+button13", IN_Button13Down },
+	{ "-button13", IN_Button13Up },
+	{ "+button14", IN_Button14Down },
+	{ "-button14", IN_Button14Up },
+	{ "+button15", IN_Button15Down },
+	{ "-button15", IN_Button15Up },
+	{ "+mlook", IN_MLookDown, NULL, "enables free look when cl_freelook is 0" help_plus_minus },
+	{ "-mlook", IN_MLookUp, NULL, "disables free look when cl_freelook is 0" help_plus_minus }
+#undef help_button1
+};
+
+
+// @TODO: move "in_restart" here and let the platform layer
+// implement Sys_InitInput and Sys_ShutdownInput
+
+
 void CL_InitInput()
 {
-	Cmd_AddCommand ("+moveup",IN_UpDown);
-	Cmd_AddCommand ("-moveup",IN_UpUp);
-	Cmd_AddCommand ("+movedown",IN_DownDown);
-	Cmd_AddCommand ("-movedown",IN_DownUp);
-	Cmd_AddCommand ("+left",IN_LeftDown);
-	Cmd_AddCommand ("-left",IN_LeftUp);
-	Cmd_AddCommand ("+right",IN_RightDown);
-	Cmd_AddCommand ("-right",IN_RightUp);
-	Cmd_AddCommand ("+forward",IN_ForwardDown);
-	Cmd_AddCommand ("-forward",IN_ForwardUp);
-	Cmd_AddCommand ("+back",IN_BackDown);
-	Cmd_AddCommand ("-back",IN_BackUp);
-	Cmd_AddCommand ("+lookup", IN_LookupDown);
-	Cmd_AddCommand ("-lookup", IN_LookupUp);
-	Cmd_AddCommand ("+lookdown", IN_LookdownDown);
-	Cmd_AddCommand ("-lookdown", IN_LookdownUp);
-	Cmd_AddCommand ("+strafe", IN_StrafeDown);
-	Cmd_AddCommand ("-strafe", IN_StrafeUp);
-	Cmd_AddCommand ("+moveleft", IN_MoveleftDown);
-	Cmd_AddCommand ("-moveleft", IN_MoveleftUp);
-	Cmd_AddCommand ("+moveright", IN_MoverightDown);
-	Cmd_AddCommand ("-moveright", IN_MoverightUp);
-	Cmd_AddCommand ("+speed", IN_SpeedDown);
-	Cmd_AddCommand ("-speed", IN_SpeedUp);
-	Cmd_AddCommand ("+attack", IN_Button0Down);
-	Cmd_AddCommand ("-attack", IN_Button0Up);
-	Cmd_AddCommand ("+button0", IN_Button0Down);
-	Cmd_AddCommand ("-button0", IN_Button0Up);
-	Cmd_AddCommand ("+button1", IN_Button1Down);
-	Cmd_AddCommand ("-button1", IN_Button1Up);
-	Cmd_AddCommand ("+button2", IN_Button2Down);
-	Cmd_AddCommand ("-button2", IN_Button2Up);
-	Cmd_AddCommand ("+button3", IN_Button3Down);
-	Cmd_AddCommand ("-button3", IN_Button3Up);
-	Cmd_AddCommand ("+button4", IN_Button4Down);
-	Cmd_AddCommand ("-button4", IN_Button4Up);
-	Cmd_AddCommand ("+button5", IN_Button5Down);
-	Cmd_AddCommand ("-button5", IN_Button5Up);
-	Cmd_AddCommand ("+button6", IN_Button6Down);
-	Cmd_AddCommand ("-button6", IN_Button6Up);
-	Cmd_AddCommand ("+button7", IN_Button7Down);
-	Cmd_AddCommand ("-button7", IN_Button7Up);
-	Cmd_AddCommand ("+button8", IN_Button8Down);
-	Cmd_AddCommand ("-button8", IN_Button8Up);
-	Cmd_AddCommand ("+button9", IN_Button9Down);
-	Cmd_AddCommand ("-button9", IN_Button9Up);
-	Cmd_AddCommand ("+button10", IN_Button10Down);
-	Cmd_AddCommand ("-button10", IN_Button10Up);
-	Cmd_AddCommand ("+button11", IN_Button11Down);
-	Cmd_AddCommand ("-button11", IN_Button11Up);
-	Cmd_AddCommand ("+button12", IN_Button12Down);
-	Cmd_AddCommand ("-button12", IN_Button12Up);
-	Cmd_AddCommand ("+button13", IN_Button13Down);
-	Cmd_AddCommand ("-button13", IN_Button13Up);
-	Cmd_AddCommand ("+button14", IN_Button14Down);
-	Cmd_AddCommand ("-button14", IN_Button14Up);
-	Cmd_AddCommand ("+button15", IN_Button15Down);
-	Cmd_AddCommand ("-button15", IN_Button15Up);
-	Cmd_AddCommand ("+mlook", IN_MLookDown);
-	Cmd_AddCommand ("-mlook", IN_MLookUp);
+	Cmd_RegisterArray( cl_cmds, MODULE_INPUT );
+	Cvar_RegisterArray( cl_cvars, MODULE_INPUT );
+}
 
-	Cvar_Get( "cl_drawMouseLag", "0", 0 );
 
-	m_speed = Cvar_Get( "m_speed", "8", CVAR_ARCHIVE );
-	m_accel = Cvar_Get( "m_accel", "0", CVAR_ARCHIVE );
-	m_accelStyle = Cvar_Get( "m_accelStyle", "0", CVAR_ARCHIVE );
-	m_accelOffset = Cvar_Get( "m_accelOffset", "5", CVAR_ARCHIVE );
-	m_limit = Cvar_Get( "m_limit", "0", CVAR_ARCHIVE );
-	m_pitch = Cvar_Get( "m_pitch", "0.022", CVAR_ARCHIVE );
-	m_yaw = Cvar_Get( "m_yaw", "0.022", CVAR_ARCHIVE );
-	m_forward = Cvar_Get( "m_forward", "0.25", CVAR_ARCHIVE );
-	m_side = Cvar_Get( "m_side", "0.25", CVAR_ARCHIVE );
-
-#ifdef MACOS_X
-	// input is jittery on OS X w/o this
-	m_filter = Cvar_Get( "m_filter", "1", CVAR_ARCHIVE );
-#else
-	m_filter = Cvar_Get( "m_filter", "0", CVAR_ARCHIVE );
-#endif
-
-	cl_pitchspeed = Cvar_Get( "cl_pitchspeed", "140", CVAR_ARCHIVE );
-	cl_yawspeed = Cvar_Get( "cl_yawspeed", "140", CVAR_ARCHIVE );
-	cl_anglespeedkey = Cvar_Get( "cl_anglespeedkey", "1.5", 0 );
-	cl_run = Cvar_Get( "cl_run", "1", CVAR_ARCHIVE );
-	cl_freelook = Cvar_Get( "cl_freelook", "1", CVAR_ARCHIVE );
-
-	cl_showMouseRate = Cvar_Get( "cl_showmouserate", "0", 0 );
-	cl_nodelta = Cvar_Get( "cl_nodelta", "0", 0 );
-
-	cl_debugMove = Cvar_Get( "cl_debugMove", "0", 0 );
+void CL_ShutdownInput()
+{
+	Cmd_UnregisterModule( MODULE_INPUT );
 }

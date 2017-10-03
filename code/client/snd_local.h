@@ -140,7 +140,7 @@ extern	portable_samplepair_t	s_rawsamples[MAX_RAW_SAMPLES];
 
 extern cvar_t *s_volume;
 extern cvar_t *s_musicVolume;
-extern const cvar_t* s_testsound;
+extern cvar_t *s_testsound;
 
 qbool S_LoadSound( sfx_t* sfx );
 

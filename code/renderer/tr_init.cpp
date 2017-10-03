@@ -22,6 +22,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // tr_init.c -- functions that are not called every frame
 
 #include "tr_local.h"
+#include "tr_help.h"
 
 glconfig_t	glConfig;
 glinfo_t	glInfo;
@@ -48,7 +49,6 @@ cvar_t	*r_greyscale;
 
 cvar_t	*r_measureOverdraw;
 
-cvar_t	*r_inGameVideo;
 cvar_t	*r_fastsky;
 cvar_t	*r_dynamiclight;
 
@@ -65,7 +65,6 @@ cvar_t	*r_novis;
 cvar_t	*r_nocull;
 cvar_t	*r_nocurves;
 
-cvar_t	*r_ext_compressed_textures;
 cvar_t	*r_ext_max_anisotropy;
 cvar_t	*r_msaa;
 
@@ -129,30 +128,6 @@ static cvar_t* r_maxpolys;
 static cvar_t* r_maxpolyverts;
 int max_polys;
 int max_polyverts;
-
-
-static void AssertCvarRange( cvar_t *cv, float minVal, float maxVal, qbool shouldBeIntegral )
-{
-	if ( shouldBeIntegral )
-	{
-		if ( ( int ) cv->value != cv->integer )
-		{
-			ri.Printf( PRINT_WARNING, "WARNING: cvar '%s' must be integral (%f)\n", cv->name, cv->value );
-			ri.Cvar_Set( cv->name, va( "%d", cv->integer ) );
-		}
-	}
-
-	if ( cv->value < minVal )
-	{
-		ri.Printf( PRINT_WARNING, "WARNING: cvar '%s' out of range (%f < %f)\n", cv->name, cv->value, minVal );
-		ri.Cvar_Set( cv->name, va( "%f", minVal ) );
-	}
-	else if ( cv->value > maxVal )
-	{
-		ri.Printf( PRINT_WARNING, "WARNING: cvar '%s' out of range (%f > %f)\n", cv->name, cv->value, maxVal );
-		ri.Cvar_Set( cv->name, va( "%f", maxVal ) );
-	}
-}
 
 
 static void GL_SetDefaultState()
@@ -423,7 +398,6 @@ const void *RB_TakeVideoFrameCmd( const void *data )
 void GfxInfo_f( void )
 {
 	cvar_t* sys_cpustring = ri.Cvar_Get( "sys_cpustring", "", 0 );
-	const char* enablestrings[] = { "disabled", "enabled" };
 
 	ri.Printf( PRINT_DEVELOPER, "\nGL_VENDOR: %s\n", glConfig.vendor_string );
 	ri.Printf( PRINT_DEVELOPER, "GL_RENDERER: %s\n", glConfig.renderer_string );
@@ -440,7 +414,6 @@ void GfxInfo_f( void )
 
 	ri.Printf( PRINT_DEVELOPER, "texturemode: %s\n", r_textureMode->string );
 	ri.Printf( PRINT_DEVELOPER, "picmip: %d\n", r_picmip->integer );
-	ri.Printf( PRINT_DEVELOPER, "compressed textures: %s\n", enablestrings[r_ext_compressed_textures->integer] );
 	ri.Printf( PRINT_DEVELOPER, "ambient pass: %s\n", r_vertexLight->integer ? "vertex" : "lightmap" );
 	if ( r_finish->integer ) {
 		ri.Printf( PRINT_DEVELOPER, "Forcing glFinish\n" );
@@ -458,129 +431,108 @@ void GfxInfo_f( void )
 ///////////////////////////////////////////////////////////////
 
 
-static struct r_ConsoleCmd {
-	const char* cmd;
-	xcommand_t fn;
-} const r_ConsoleCmds[] = {
-	{ "gfxinfo", GfxInfo_f },
-	{ "imagelist", R_ImageList_f },
-	{ "shaderlist", R_ShaderList_f },
-	{ "skinlist", R_SkinList_f },
-	{ "modellist", R_Modellist_f },
-	{ "screenshot", R_ScreenShotTGA_f },
-	{ "screenshotJPEG", R_ScreenShotJPG_f },
-	{ }
+static const cmdTableItem_t r_cmds[] =
+{
+	{ "gfxinfo", GfxInfo_f, NULL, "prints display mode info" },
+	{ "imagelist", R_ImageList_f, NULL, "prints loaded images" },
+	{ "shaderlist", R_ShaderList_f, NULL, "prints loaded shaders" },
+	{ "skinlist", R_SkinList_f, NULL, "prints loaded skins" },
+	{ "modellist", R_Modellist_f, NULL, "prints loaded models" },
+	{ "screenshot", R_ScreenShotTGA_f, NULL, "takes a TARGA (.tga) screenshot" },
+	{ "screenshotJPEG", R_ScreenShotJPG_f, NULL, "takes a JPEG (.jpg) screenshot" }
+};
+
+
+static const cvarTableItem_t r_cvars[] =
+{
+	//
+	// latched and archived variables
+	//
+	{ &r_ext_max_anisotropy, "r_ext_max_anisotropy", "4", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "4", help_r_ext_max_anisotropy },
+	{ &r_msaa, "r_msaa", "4", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "16", "anti-aliasing sample count, 0=off" },
+	{ &r_picmip, "r_picmip", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "16", help_r_picmip },
+	{ &r_roundImagesDown, "r_roundImagesDown", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_roundImagesDown },
+	{ &r_colorMipLevels, "r_colorMipLevels", "0", CVAR_LATCH, CVART_BOOL, NULL, NULL, "colorizes textures based on their mip level" },
+	{ &r_detailTextures, "r_detailtextures", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, "enables detail textures shader stages" },
+	{ &r_overBrightBits, "r_overBrightBits", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "2", help_r_overBrightBits },
+	{ &r_mode, "r_mode", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_mode },
+	{ &r_fullscreen, "r_fullscreen", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, "full-screen mode" },
+	{ &r_width, "r_width", "1280", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "320", "65535", "custom window width" help_r_mode0 },
+	{ &r_height, "r_height", "720", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "240", "65535", "custom window height" help_r_mode0 },
+	{ &r_customaspect, "r_customaspect", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0.1", "10", "custom pixel aspect ratio" help_r_mode0 },
+	{ &r_vertexLight, "r_vertexLight", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, "disables lightmap texture blending" },
+	{ &r_subdivisions, "r_subdivisions", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "1", "64", help_r_subdivisions },
+#ifdef USE_R_SMP
+	{ &r_smp, "r_smp", "0", CVAR_ARCHIVE | CVAR_LATCH },
+	{ &r_showSmp, "r_showSmp", "0", CVAR_CHEAT },
+	{ &r_skipBackEnd, "r_skipBackEnd", "0", CVAR_CHEAT },
+#endif
+
+	//
+	// latched variables that can only change over a restart
+	//
+	{ &r_displayRefresh, "r_displayRefresh", "0", CVAR_LATCH, CVART_INTEGER, "0", "480", "0 lets the driver decide" },
+	{ &r_mapOverBrightBits, "r_mapOverBrightBits", "2", CVAR_LATCH, CVART_INTEGER, "0", "2", help_r_mapOverBrightBits },
+	{ &r_intensity, "r_intensity", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "1", NULL, "linear brightness scale for textures and dynamic lights" },
+	{ &r_singleShader, "r_singleShader", "0", CVAR_CHEAT | CVAR_LATCH },
+
+	//
+	// archived variables that can change at any time
+	//
+	{ &r_lodbias, "r_lodbias", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "16", help_r_lodbias },
+	{ &r_flares, "r_flares", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "enables light flares" },
+	{ &r_ignoreGLErrors, "r_ignoreGLErrors", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "if 0, OpenGL errors are fatal" },
+	{ &r_fastsky, "r_fastsky", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_fastsky },
+	{ &r_noportals, "r_noportals", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_noportals },
+	{ &r_dynamiclight, "r_dynamiclight", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "enables dynamic lights" },
+	{ &r_finish, "r_finish", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "enables glFinish calls" },
+	{ &r_textureMode, "r_textureMode", "GL_LINEAR_MIPMAP_LINEAR", CVAR_ARCHIVE, CVART_STRING, NULL, NULL, help_r_textureMode },
+	{ &r_swapInterval, "r_swapInterval", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "8", help_r_swapInterval },
+	{ &r_gamma, "r_gamma", "1", CVAR_ARCHIVE, CVART_FLOAT, "0.5", "3", help_r_gamma },
+	{ &r_greyscale, "r_greyscale", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", "1", "controls how monochrome the final image looks" },
+	{ &r_lightmap, "r_lightmap", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_lightmap },
+	{ &r_fullbright, "r_fullbright", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_fullbright },
+
+	//
+	// temporary variables that can change at any time
+	//
+	{ &r_lodCurveError, "r_lodCurveError", "250", CVAR_CHEAT },
+	{ &r_ambientScale, "r_ambientScale", "0.6", CVAR_CHEAT },
+	{ &r_directedScale, "r_directedScale", "1", CVAR_CHEAT },
+	{ &r_uiFullScreen, "r_uifullscreen", "0", CVAR_TEMP },
+	{ &r_showImages, "r_showImages", "0", CVAR_TEMP },
+	{ &r_debugLight, "r_debuglight", "0", CVAR_TEMP },
+	{ &r_debugSort, "r_debugSort", "0", CVAR_CHEAT },
+	{ &r_nocurves, "r_nocurves", "0", CVAR_CHEAT },
+	{ &r_drawworld, "r_drawworld", "1", CVAR_CHEAT },
+	{ &r_portalOnly, "r_portalOnly", "0", CVAR_CHEAT },
+	{ &r_flareSize, "r_flareSize", "40", CVAR_CHEAT },
+	{ &r_flareFade, "r_flareFade", "7", CVAR_CHEAT },
+	{ &r_flareCoeff, "r_flareCoeff", "150", CVAR_CHEAT },
+	{ &r_measureOverdraw, "r_measureOverdraw", "0", CVAR_CHEAT },
+	{ &r_lodscale, "r_lodscale", "5", CVAR_CHEAT },
+	{ &r_norefresh, "r_norefresh", "0", CVAR_CHEAT },
+	{ &r_drawentities, "r_drawentities", "1", CVAR_CHEAT },
+	{ &r_nocull, "r_nocull", "0", CVAR_CHEAT },
+	{ &r_novis, "r_novis", "0", CVAR_CHEAT },
+	{ &r_speeds, "r_speeds", "0", CVAR_CHEAT },
+	{ &r_verbose, "r_verbose", "0", CVAR_CHEAT },
+	{ &r_debugSurface, "r_debugSurface", "0", CVAR_CHEAT },
+	{ &r_nobind, "r_nobind", "0", CVAR_CHEAT },
+	{ &r_showtris, "r_showtris", "0", CVAR_CHEAT },
+	{ &r_showsky, "r_showsky", "0", CVAR_CHEAT },
+	{ &r_shownormals, "r_shownormals", "0", CVAR_CHEAT },
+	{ &r_clear, "r_clear", "0", CVAR_CHEAT },
+	{ &r_lockpvs, "r_lockpvs", "0", CVAR_CHEAT },
+	{ &r_maxpolys, "r_maxpolys", XSTRING(DEFAULT_MAX_POLYS), 0 },
+	{ &r_maxpolyverts, "r_maxpolyverts", XSTRING(DEFAULT_MAX_POLYVERTS), 0 }
 };
 
 
 static void R_Register()
 {
-	//
-	// latched and archived variables
-	//
-	r_ext_compressed_textures = ri.Cvar_Get( "r_ext_compressed_textures", "0", CVAR_ARCHIVE | CVAR_LATCH );
-	r_ext_max_anisotropy = ri.Cvar_Get( "r_ext_max_anisotropy", "16", CVAR_ARCHIVE | CVAR_LATCH );
-	r_msaa = ri.Cvar_Get( "r_msaa", "0", CVAR_ARCHIVE | CVAR_LATCH );
-
-	r_picmip = ri.Cvar_Get ("r_picmip", "0", CVAR_ARCHIVE | CVAR_LATCH );
-	AssertCvarRange( r_picmip, 0, 16, qtrue );
-	r_roundImagesDown = ri.Cvar_Get ("r_roundImagesDown", "0", CVAR_ARCHIVE | CVAR_LATCH );
-	r_colorMipLevels = ri.Cvar_Get ("r_colorMipLevels", "0", CVAR_LATCH );
-	r_detailTextures = ri.Cvar_Get( "r_detailtextures", "1", CVAR_ARCHIVE | CVAR_LATCH );
-	r_overBrightBits = ri.Cvar_Get( "r_overBrightBits", "1", CVAR_ARCHIVE | CVAR_LATCH );
-	r_mode = ri.Cvar_Get( "r_mode", "0", CVAR_ARCHIVE | CVAR_LATCH );
-#if USE_SDL_VIDEO
-	r_fullscreen = ri.Cvar_Get( "r_fullscreen", "1", CVAR_ARCHIVE );
-#else
-    r_fullscreen = ri.Cvar_Get( "r_fullscreen", "1", CVAR_ARCHIVE | CVAR_LATCH );
-#endif	
-	r_width = ri.Cvar_Get( "r_width", "800", CVAR_ARCHIVE | CVAR_LATCH );
-	r_height = ri.Cvar_Get( "r_height", "600", CVAR_ARCHIVE | CVAR_LATCH );
-	r_customaspect = ri.Cvar_Get( "r_customaspect", "1.333", CVAR_ARCHIVE | CVAR_LATCH );
-	r_vertexLight = ri.Cvar_Get( "r_vertexLight", "0", CVAR_ARCHIVE | CVAR_LATCH );
-	r_subdivisions = ri.Cvar_Get( "r_subdivisions", "4", CVAR_ARCHIVE | CVAR_LATCH );
-#ifdef USE_R_SMP
-	r_smp = ri.Cvar_Get( "r_smp", "0", CVAR_ARCHIVE | CVAR_LATCH );
-    r_showSmp = ri.Cvar_Get ("r_showSmp", "0", CVAR_CHEAT);
-    r_skipBackEnd = ri.Cvar_Get ("r_skipBackEnd", "0", CVAR_CHEAT);
-#endif	
-
-	//
-	// temporary latched variables that can only change over a restart
-	//
-	r_displayRefresh = ri.Cvar_Get( "r_displayRefresh", "0", CVAR_LATCH );
-	AssertCvarRange( r_displayRefresh, 0, 200, qtrue );
-	r_mapOverBrightBits = ri.Cvar_Get ("r_mapOverBrightBits", "2", CVAR_LATCH );
-	r_intensity = ri.Cvar_Get ("r_intensity", "1", CVAR_ARCHIVE | CVAR_LATCH );
-	r_singleShader = ri.Cvar_Get ("r_singleShader", "0", CVAR_CHEAT | CVAR_LATCH );
-
-	//
-	// archived variables that can change at any time
-	//
-	r_lodCurveError = ri.Cvar_Get( "r_lodCurveError", "250", CVAR_CHEAT );
-	r_lodbias = ri.Cvar_Get( "r_lodbias", "0", CVAR_ARCHIVE );
-	r_flares = ri.Cvar_Get ("r_flares", "0", CVAR_ARCHIVE );
-	r_ignoreGLErrors = ri.Cvar_Get( "r_ignoreGLErrors", "1", CVAR_ARCHIVE );
-	r_fastsky = ri.Cvar_Get( "r_fastsky", "0", CVAR_ARCHIVE );
-	r_noportals = ri.Cvar_Get( "r_noportals", "0", CVAR_ARCHIVE );
-	r_inGameVideo = ri.Cvar_Get( "r_inGameVideo", "1", CVAR_ARCHIVE );
-	r_dynamiclight = ri.Cvar_Get( "r_dynamiclight", "1", CVAR_ARCHIVE );
-	r_finish = ri.Cvar_Get( "r_finish", "0", CVAR_ARCHIVE );
-	r_textureMode = ri.Cvar_Get( "r_textureMode", "GL_LINEAR_MIPMAP_NEAREST", CVAR_ARCHIVE );
-#if USE_SDL_VIDEO	
-	r_swapInterval = ri.Cvar_Get( "r_swapInterval", "0", CVAR_ARCHIVE | CVAR_LATCH );
-#else
-    r_swapInterval = ri.Cvar_Get( "r_swapInterval", "0", CVAR_ARCHIVE );
-#endif	
-	r_gamma = ri.Cvar_Get( "r_gamma", "1", CVAR_ARCHIVE );
-	r_greyscale = ri.Cvar_Get( "r_greyscale", "0", CVAR_ARCHIVE );
-	r_lightmap = ri.Cvar_Get( "r_lightmap", "0", CVAR_ARCHIVE );
-	r_fullbright = ri.Cvar_Get( "r_fullbright", "0", CVAR_ARCHIVE );
-
-	r_ambientScale = ri.Cvar_Get( "r_ambientScale", "0.6", CVAR_CHEAT );
-	r_directedScale = ri.Cvar_Get( "r_directedScale", "1", CVAR_CHEAT );
-
-	//
-	// temporary variables that can change at any time
-	//
-	r_uiFullScreen = ri.Cvar_Get( "r_uifullscreen", "0", CVAR_TEMP );
-
-	r_showImages = ri.Cvar_Get( "r_showImages", "0", CVAR_TEMP );
-
-	r_debugLight = ri.Cvar_Get( "r_debuglight", "0", CVAR_TEMP );
-	r_debugSort = ri.Cvar_Get( "r_debugSort", "0", CVAR_CHEAT );
-
-	r_nocurves = ri.Cvar_Get ("r_nocurves", "0", CVAR_CHEAT );
-	r_drawworld = ri.Cvar_Get ("r_drawworld", "1", CVAR_CHEAT );
-	r_portalOnly = ri.Cvar_Get ("r_portalOnly", "0", CVAR_CHEAT );
-
-	r_flareSize = ri.Cvar_Get ("r_flareSize", "40", CVAR_CHEAT);
-	r_flareFade = ri.Cvar_Get ("r_flareFade", "7", CVAR_CHEAT);
-	r_flareCoeff = ri.Cvar_Get ("r_flareCoeff", "150", CVAR_CHEAT);
-
-
-	r_measureOverdraw = ri.Cvar_Get( "r_measureOverdraw", "0", CVAR_CHEAT );
-	r_lodscale = ri.Cvar_Get( "r_lodscale", "5", CVAR_CHEAT );
-	r_norefresh = ri.Cvar_Get ("r_norefresh", "0", CVAR_CHEAT);
-	r_drawentities = ri.Cvar_Get ("r_drawentities", "1", CVAR_CHEAT );
-	r_nocull = ri.Cvar_Get ("r_nocull", "0", CVAR_CHEAT);
-	r_novis = ri.Cvar_Get ("r_novis", "0", CVAR_CHEAT);
-	r_speeds = ri.Cvar_Get ("r_speeds", "0", CVAR_CHEAT);
-	r_verbose = ri.Cvar_Get( "r_verbose", "0", CVAR_CHEAT );
-	r_debugSurface = ri.Cvar_Get ("r_debugSurface", "0", CVAR_CHEAT);
-	r_nobind = ri.Cvar_Get ("r_nobind", "0", CVAR_CHEAT);
-	r_showtris = ri.Cvar_Get ("r_showtris", "0", CVAR_CHEAT);
-	r_showsky = ri.Cvar_Get ("r_showsky", "0", CVAR_CHEAT);
-	r_shownormals = ri.Cvar_Get ("r_shownormals", "0", CVAR_CHEAT);
-	r_clear = ri.Cvar_Get ("r_clear", "0", CVAR_CHEAT);
-	r_lockpvs = ri.Cvar_Get ("r_lockpvs", "0", CVAR_CHEAT);
-
-	r_maxpolys = ri.Cvar_Get( "r_maxpolys", va("%d", DEFAULT_MAX_POLYS), 0 );
-	r_maxpolyverts = ri.Cvar_Get( "r_maxpolyverts", va("%d", DEFAULT_MAX_POLYVERTS), 0 );
-
-	for (int i = 0; r_ConsoleCmds[i].cmd; ++i) {
-		ri.Cmd_AddCommand( r_ConsoleCmds[i].cmd, r_ConsoleCmds[i].fn );
-	}
+	ri.Cvar_RegisterTable( r_cvars, ARRAY_LEN(r_cvars) );
+	ri.Cmd_RegisterTable( r_cmds, ARRAY_LEN(r_cmds) );
 }
 
 
@@ -666,10 +618,6 @@ void R_Init()
 static void RE_Shutdown( qbool destroyWindow )
 {
 	ri.Printf( PRINT_DEVELOPER, "RE_Shutdown( %i )\n", destroyWindow );
-
-	for (int i = 0; r_ConsoleCmds[i].cmd; ++i) {
-		ri.Cmd_RemoveCommand( r_ConsoleCmds[i].cmd );
-	}
 
 	if ( tr.registered ) {
 		R_SyncRenderThread();

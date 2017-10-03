@@ -389,7 +389,10 @@ typedef enum {
 	// engine extensions
 	// the mod should _never_ use these symbols
 	G_EXT_GETVALUE = 700,
-	G_EXT_LOCATEINTEROPDATA
+	G_EXT_LOCATEINTEROPDATA,
+	G_EXT_CVAR_SETRANGE,
+	G_EXT_CVAR_SETHELP,
+	G_EXT_CMD_SETHELP
 } gameImport_t;
 
 

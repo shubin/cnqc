@@ -61,10 +61,10 @@ static int s_numSfx;
 #define SFX_HASH_SIZE 128
 static sfx_t* sfxHash[SFX_HASH_SIZE];
 
-static const cvar_t* s_show;
-static const cvar_t* s_mixahead;
-static const cvar_t* s_mixPreStep;
-const cvar_t* s_testsound;
+static cvar_t* s_show;
+static cvar_t* s_mixahead;
+static cvar_t* s_mixPreStep;
+cvar_t* s_testsound;
 
 static loopSound_t		loopSounds[MAX_GENTITIES];
 static channel_t		*freelist = NULL;
@@ -1098,14 +1098,20 @@ static void S_Base_Shutdown()
 }
 
 
+static const cvarTableItem_t cl_cvars[] =
+{
+	{ &s_mixahead, "s_mixahead", "0.2", CVAR_ARCHIVE, CVART_FLOAT },
+	{ &s_mixPreStep, "s_mixPreStep", "0.05", CVAR_ARCHIVE, CVART_FLOAT },
+	{ &s_show, "s_show", "0", CVAR_CHEAT, CVART_INTEGER, "0", "2" },
+	{ &s_testsound, "s_testsound", "0", CVAR_CHEAT, CVART_BOOL }
+};
+
+
 qbool S_Base_Init( soundInterface_t *si )
 {
 	Com_Memset( si, 0, sizeof(*si) );
 
-	s_mixahead = Cvar_Get( "s_mixahead", "0.2", CVAR_ARCHIVE );
-	s_mixPreStep = Cvar_Get( "s_mixPreStep", "0.05", CVAR_ARCHIVE );
-	s_show = Cvar_Get( "s_show", "0", CVAR_CHEAT );
-	s_testsound = Cvar_Get( "s_testsound", "0", CVAR_CHEAT );
+	Cvar_RegisterArray( cl_cvars, MODULE_SOUND );
 
 	if (!SNDDMA_Init())
 		return qfalse;

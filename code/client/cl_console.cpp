@@ -22,13 +22,14 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // console.c
 
 #include "client.h"
+#include "client_help.h"
 
 
-static const cvar_t* con_noprint;
-static const cvar_t* con_notifytime;
-static const cvar_t* con_scale;
-static const cvar_t* con_scaleMode; // 0 = without res, 1 = with res, 2 = 8x12
-static const cvar_t* con_speed;
+static cvar_t* con_noprint;
+static cvar_t* con_notifytime;
+static cvar_t* con_scale;
+static cvar_t* con_scaleMode; // 0 = without res, 1 = with res, 2 = 8x12
+static cvar_t* con_speed;
 
 
 #define CON_NOTIFYLINES	4
@@ -65,7 +66,6 @@ static console_t con;
 #define CONCHAR_WIDTH	8
 #define CONCHAR_HEIGHT	12
 
-#define CONSOLE_WIDTH	78
 int g_console_field_width = CONSOLE_WIDTH;
 
 
@@ -264,12 +264,8 @@ static void Con_ResizeFont()
 	if (con_scaleMode->integer == 1)
 		SCR_AdjustFrom640( &con.cw, &con.ch, NULL, NULL );
 
-	// bugs in the renderer's overflow handling will cause crashes
-	// if the console has too many polys/verts because of too small a font
-	// this is a fairly arbitrary lower bound, but better than nothing
-	const float scale = max( 0.25f, fabsf( con_scale->value ) );
-	con.cw *= scale;
-	con.ch *= scale;
+	con.cw *= con_scale->value;
+	con.ch *= con_scale->value;
 
 	if ( cls.glconfig.vidWidth * SCREEN_HEIGHT > cls.glconfig.vidHeight * SCREEN_WIDTH ) {
 		// the console distorts horribly on widescreens
@@ -280,13 +276,34 @@ static void Con_ResizeFont()
 }
 
 
+static const cvarTableItem_t con_cvars[] =
+{
+	// con_scale:
+	// bugs in the renderer's overflow handling will cause crashes
+	// if the console has too many polys/verts because of too small a font
+	{ &con_noprint, "con_noprint", "0", 0, CVART_BOOL, NULL, NULL, "disables console printing and history writing" },
+	{ &con_notifytime, "con_notifytime", "3", CVAR_ARCHIVE, CVART_FLOAT, "0", "30", "number of seconds a notify line stays visible" },
+	{ &con_scale, "con_scale", "1.2", CVAR_ARCHIVE, CVART_FLOAT, "0.25", "10", "console text scaling factor" },
+	{ &con_scaleMode, "con_scaleMode", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "2", help_con_scaleMode },
+	{ &con_speed, "con_speed", "1000", CVAR_ARCHIVE, CVART_FLOAT, "0.1", "1000", "console opening/closing speed" }
+};
+
+
+static const cmdTableItem_t con_cmds[] =
+{
+	{ "toggleconsole", Con_ToggleConsole_f, NULL, "toggles console display" },
+	{ "messagemode", Con_MessageMode_f, NULL, "chat with everyone" },
+	{ "messagemode2", Con_MessageMode2_f, NULL, "chat with teammates" },
+	{ "messagemode3", Con_MessageMode3_f, NULL, "chat with the player being aimed at" },
+	{ "messagemode4", Con_MessageMode4_f, NULL, "chat with the last attacker" },
+	{ "clear", Con_Clear_f, NULL, "clears the console" },
+	{ "condump", Con_Dump_f, NULL, "dumps console history to a text file" }
+};
+
+
 void CL_ConInit()
 {
-	con_noprint = Cvar_Get( "con_noprint", "0", 0 );
-	con_notifytime = Cvar_Get( "con_notifytime", "3", CVAR_ARCHIVE );
-	con_scale = Cvar_Get( "con_scale", "1", CVAR_ARCHIVE );
-	con_scaleMode = Cvar_Get( "con_scaleMode", "0", CVAR_ARCHIVE );
-	con_speed = Cvar_Get( "con_speed", "3", CVAR_ARCHIVE );
+	Cvar_RegisterArray( con_cvars, MODULE_CONSOLE );
 
 	Field_Clear( &g_consoleField );
 	g_consoleField.widthInChars = g_console_field_width;
@@ -295,13 +312,13 @@ void CL_ConInit()
 
 	CL_LoadCommandHistory();
 
-	Cmd_AddCommand( "toggleconsole", Con_ToggleConsole_f );
-	Cmd_AddCommand( "messagemode", Con_MessageMode_f );
-	Cmd_AddCommand( "messagemode2", Con_MessageMode2_f );
-	Cmd_AddCommand( "messagemode3", Con_MessageMode3_f );
-	Cmd_AddCommand( "messagemode4", Con_MessageMode4_f );
-	Cmd_AddCommand( "clear", Con_Clear_f );
-	Cmd_AddCommand( "condump", Con_Dump_f );
+	Cmd_RegisterArray( con_cmds, MODULE_CONSOLE );
+}
+
+
+void CL_ConShutdown()
+{
+	Cmd_UnregisterModule( MODULE_CONSOLE );
 }
 
 

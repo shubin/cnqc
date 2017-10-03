@@ -632,9 +632,9 @@ static GLSL_GammaProgramAttribs gammaProgAttribs;
 
 static void GL2_PostProcessGamma()
 {
-	const int obBits = Com_ClampInt( 0, 2, r_overBrightBits->integer );
+	const int obBits = r_overBrightBits->integer;
 	const float obScale = (float)( 1 << obBits );
-	const float gamma = 1.0f / Com_Clamp( 0.5f, 3.0f, r_gamma->value );
+	const float gamma = 1.0f / r_gamma->value;
 
 	if ( gamma == 1.0f && obBits == 0 )
 		return;

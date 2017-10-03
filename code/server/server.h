@@ -233,11 +233,9 @@ extern	cvar_t	*sv_privateClients;
 extern	cvar_t	*sv_hostname;
 extern	cvar_t	*sv_master[MAX_MASTER_SERVERS];
 extern	cvar_t	*sv_reconnectlimit;
-extern	cvar_t	*sv_showloss;
 extern	cvar_t	*sv_padPackets;
 extern	cvar_t	*sv_killserver;
 extern	cvar_t	*sv_mapname;
-extern	cvar_t	*sv_mapChecksum;
 extern	cvar_t	*sv_serverid;
 extern	cvar_t	*sv_minRate;
 extern	cvar_t	*sv_maxRate;
@@ -248,6 +246,7 @@ extern	cvar_t	*sv_pure;
 extern	cvar_t	*sv_floodProtect;
 extern	cvar_t	*sv_lanForceRate;
 extern	cvar_t	*sv_strictAuth;
+extern	cvar_t	*sv_minRebootDelayMins;
 
 //===========================================================
 

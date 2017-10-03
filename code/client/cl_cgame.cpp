@@ -133,12 +133,6 @@ static void CL_SetUserCmdValue( int userCmdValue, float sensitivityScale )
 }
 
 
-static void CL_AddCgameCommand( const char* cmd )
-{
-	Cmd_AddCommandEx( cmd, NULL, qtrue );
-}
-
-
 static void CL_ConfigstringModified()
 {
 	int index = atoi( Cmd_Argv(1) );
@@ -297,7 +291,7 @@ void CL_ShutdownCGame()
 	VM_Call( cgvm, CG_SHUTDOWN );
 	VM_Free( cgvm );
 	cgvm = NULL;
-	Cmd_RemoveCGameCommands();
+	Cmd_UnregisterModule( MODULE_CGAME );
 }
 
 
@@ -308,7 +302,10 @@ static qbool CL_CG_GetValue( char* value, int valueSize, const char* key )
 		{ "trap_LocateInteropData", CG_EXT_LOCATEINTEROPDATA },
 		{ "trap_R_AddRefEntityToScene2", CG_EXT_R_ADDREFENTITYTOSCENE2 },
 		{ "trap_R_ForceFixedDLights", CG_EXT_R_FORCEFIXEDDLIGHTS },
-		{ "trap_SetInputForwarding", CG_EXT_SETINPUTFORWARDING }
+		{ "trap_SetInputForwarding", CG_EXT_SETINPUTFORWARDING },
+		{ "trap_Cvar_SetRange", CG_EXT_CVAR_SETRANGE },
+		{ "trap_Cvar_SetHelp", CG_EXT_CVAR_SETHELP },
+		{ "trap_Cmd_SetHelp", CG_EXT_CMD_SETHELP }
 	};
 
 	for ( int i = 0; i < ARRAY_LEN( syscalls ); ++i ) {
@@ -339,7 +336,8 @@ static intptr_t CL_CgameSystemCalls( intptr_t *args )
 	case CG_MILLISECONDS:
 		return Sys_Milliseconds();
 	case CG_CVAR_REGISTER:
-		Cvar_Register( VMA(1), VMA(2), VMA(3), args[4] ); 
+		Cvar_Register( VMA(1), VMA(2), VMA(3), args[4] );
+		Cvar_SetModule( VMA(2), MODULE_CGAME );
 		return 0;
 	case CG_CVAR_UPDATE:
 		Cvar_Update( VMA(1) );
@@ -375,7 +373,8 @@ static intptr_t CL_CgameSystemCalls( intptr_t *args )
 		Cbuf_AddText( VMA(1) );
 		return 0;
 	case CG_ADDCOMMAND:
-		CL_AddCgameCommand( VMA(1) );
+		Cmd_AddCommand( VMA(1), NULL );
+		Cmd_SetModule( VMA(1), MODULE_CGAME );
 		return 0;
 	case CG_REMOVECOMMAND:
 		Cmd_RemoveCommand( VMA(1) );
@@ -593,6 +592,18 @@ static intptr_t CL_CgameSystemCalls( intptr_t *args )
 
 	case CG_EXT_SETINPUTFORWARDING:
 		cls.cgameForwardInput = (int)args[1];
+		return 0;
+
+	case CG_EXT_CVAR_SETRANGE:
+		Cvar_SetRange( VMA(1), (cvarType_t)args[2], VMA(3), VMA(4) );
+		return 0;
+
+	case CG_EXT_CVAR_SETHELP:
+		Cvar_SetHelp( VMA(1), VMA(2) );
+		return 0;
+
+	case CG_EXT_CMD_SETHELP:
+		Cmd_SetHelp( VMA(1), VMA(2) );
 		return 0;
 
 	default:

@@ -22,17 +22,17 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // cl_main.c  -- client main loop
 
 #include "client.h"
+#include "client_help.h"
 
 
 cvar_t	*cl_debugMove;
 
-cvar_t	*rcon_client_password;
+cvar_t	*rconPassword;
 cvar_t	*rconAddress;
 
 cvar_t* cl_timeout;
 cvar_t* cl_maxpackets;
 cvar_t* cl_packetdup;
-cvar_t* cl_timeNudge;
 cvar_t* cl_showTimeDelta;
 cvar_t* cl_serverStatusResendTime;
 cvar_t* cl_shownet;
@@ -41,9 +41,6 @@ cvar_t* cl_showSend;
 cvar_t	*cl_timedemo;
 cvar_t	*cl_aviFrameRate;
 cvar_t	*cl_aviMotionJpeg;
-
-static cvar_t* cl_motd;
-static cvar_t* cl_motdString;
 
 cvar_t	*cl_allowDownload;
 cvar_t	*cl_inGameVideo;
@@ -571,8 +568,8 @@ static void CL_RequestAuthorization()
 	}
 	key[i] = 0;
 
-	const cvar_t* anon = Cvar_Get( "cl_anonymous", "0", CVAR_INIT|CVAR_SYSTEMINFO );
-	NET_OutOfBandPrint( NS_CLIENT, cls.authorizeServer, va("getKeyAuthorize %i %s", anon->integer, key) );
+	int anonymous = 0; // previously set by cl_anonymous
+	NET_OutOfBandPrint( NS_CLIENT, cls.authorizeServer, va("getKeyAuthorize %i %s", anonymous, key) );
 }
 
 
@@ -818,42 +815,6 @@ void CL_ForwardCommandToServer( const char *string )
 }
 
 
-static void CL_RequestMotd()
-{
-	char info[MAX_INFO_STRING];
-
-	if ( !cl_motd->integer ) {
-		return;
-	}
-
-	Com_Printf( "Resolving %s\n", UPDATE_SERVER_NAME );
-	if ( !NET_StringToAdr( UPDATE_SERVER_NAME, &cls.updateServer  ) ) {
-		Com_Printf( "Couldn't resolve address\n" );
-		return;
-	}
-
-	cls.updateServer.port = BigShort( PORT_UPDATE );
-	Com_Printf( "%s resolved to %i.%i.%i.%i:%i\n", UPDATE_SERVER_NAME,
-		cls.updateServer.ip[0], cls.updateServer.ip[1],
-		cls.updateServer.ip[2], cls.updateServer.ip[3],
-		BigShort( cls.updateServer.port ) );
-
-	info[0] = 0;
-	// NOTE TTimo xoring against Com_Milliseconds, otherwise we may not have a qtrue randomization
-	// only srand I could catch before here is tr_noise.c l:26 srand(1001)
-	// https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=382
-	// NOTE: the Com_Milliseconds xoring only affects the lower 16-bit word,
-	//   but I decided it was enough randomization
-	Com_sprintf( cls.updateChallenge, sizeof( cls.updateChallenge ), "%i", ((rand() << 16) ^ rand()) ^ Com_Milliseconds());
-
-	Info_SetValueForKey( info, "challenge", cls.updateChallenge );
-	Info_SetValueForKey( info, "renderer", cls.glconfig.renderer_string );
-	Info_SetValueForKey( info, "version", com_version->string );
-
-	NET_OutOfBandPrint( NS_CLIENT, cls.updateServer, "getmotd \"%s\"\n", info );
-}
-
-
 /*
 ======================================================================
 
@@ -901,9 +862,6 @@ static void CL_Connect_f()
 		Com_Printf( "usage: connect <server>\n");
 		return;
 	}
-
-	// fire a message off to the motd server
-	CL_RequestMotd();
 
 	// clear any previous "server full" type messages
 	clc.serverMessage[0] = 0;
@@ -960,7 +918,7 @@ static void CL_Connect_f()
 
 static void CL_Rcon_f( void )
 {
-	if ( !rcon_client_password->string ) {
+	if ( !rconPassword->string ) {
 		Com_Printf ("You must set 'rconpassword' before\n"
 					"issuing an rcon command.\n");
 		return;
@@ -975,7 +933,7 @@ static void CL_Rcon_f( void )
 
 	Q_strcat (message, MAX_RCON_MESSAGE, "rcon ");
 
-	Q_strcat (message, MAX_RCON_MESSAGE, rcon_client_password->string);
+	Q_strcat (message, MAX_RCON_MESSAGE, rconPassword->string);
 	Q_strcat (message, MAX_RCON_MESSAGE, " ");
 
 	// https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=543
@@ -1328,26 +1286,6 @@ static void CL_DisconnectPacket( const netadr_t& from )
 }
 
 
-static void CL_MotdPacket( const netadr_t& from )
-{
-	// if not from our server, ignore it
-	if ( !NET_CompareAdr( from, cls.updateServer ) ) {
-		return;
-	}
-
-	const char* s;
-	const char* info = Cmd_Argv(1);
-
-	s = Info_ValueForKey( info, "challenge" );
-	if ( strcmp( s, cls.updateChallenge ) )
-		return;
-
-	s = Info_ValueForKey( info, "motd" );
-	Q_strncpyz( cls.updateInfoString, info, sizeof( cls.updateInfoString ) );
-	Cvar_Set( "cl_motdString", s );
-}
-
-
 // responses to broadcasts, etc
 
 static void CL_ConnectionlessPacket( const netadr_t& from, msg_t* msg )
@@ -1435,7 +1373,6 @@ static void CL_ConnectionlessPacket( const netadr_t& from, msg_t* msg )
 
 	// global MOTD from id
 	if ( !Q_stricmp(c, "motd") ) {
-		CL_MotdPacket( from );
 		return;
 	}
 
@@ -1713,8 +1650,21 @@ static void CL_ShutdownRef()
 	if ( !re.Shutdown ) {
 		return;
 	}
+	Cmd_UnregisterModule( MODULE_RENDERER );
 	re.Shutdown( qtrue );
 	Com_Memset( &re, 0, sizeof( re ) );
+}
+
+
+static void RI_Cmd_RegisterTable( const cmdTableItem_t* cmds, int count )
+{
+	Cmd_RegisterTable( cmds, count, MODULE_RENDERER );
+}
+
+
+static void RI_Cvar_RegisterTable( const cvarTableItem_t* cvars, int count )
+{
+	Cvar_RegisterTable( cvars, count, MODULE_RENDERER );
 }
 
 
@@ -1722,8 +1672,7 @@ static void CL_InitRef()
 {
 	refimport_t ri;
 
-	ri.Cmd_AddCommand = Cmd_AddCommand;
-	ri.Cmd_RemoveCommand = Cmd_RemoveCommand;
+	ri.Cmd_RegisterTable = RI_Cmd_RegisterTable;
 	ri.Cmd_Argc = Cmd_Argc;
 	ri.Cmd_Argv = Cmd_Argv;
 	ri.Printf = CL_RefPrintf;
@@ -1745,7 +1694,9 @@ static void CL_InitRef()
 	ri.FS_FreeFileList = FS_FreeFileList;
 	ri.FS_ListFiles = FS_ListFiles;
 	ri.Cvar_Get = Cvar_Get;
+	ri.Cvar_SetHelp = Cvar_SetHelp;
 	ri.Cvar_Set = Cvar_Set;
+	ri.Cvar_RegisterTable = RI_Cvar_RegisterTable;
 
 	// cinematic stuff
 
@@ -1830,23 +1781,6 @@ static void CL_Snd_Restart_f()
 	S_Init();
 
 	CL_Vid_Restart_f();
-}
-
-
-///////////////////////////////////////////////////////////////
-
-
-static void CL_SetModel_f()
-{
-	char name[256];
-	const char* arg = Cmd_Argv(1);
-
-	if (arg[0]) {
-		Cvar_Set( "model", arg );
-	} else {
-		Cvar_VariableStringBuffer( "model", name, sizeof(name) );
-		Com_Printf("model is set to %s\n", name);
-	}
 }
 
 
@@ -2045,6 +1979,65 @@ static void CL_CancelDownload_f()
 }
 
 
+static const cvarTableItem_t cl_cvars[] =
+{
+	{ &cl_timeout, "cl_timeout", "200", 0, CVART_INTEGER, "30", "300", "connection time-out, in seconds" },
+	{ NULL, "cl_timeNudge", "0", CVAR_TEMP, CVART_INTEGER, NULL, NULL, help_cl_timeNudge },
+	{ &cl_shownet, "cl_shownet", "0", CVAR_TEMP, CVART_INTEGER, "-2", "4", help_cl_shownet },
+	{ &cl_showSend, "cl_showSend", "0", CVAR_TEMP, CVART_BOOL, NULL, NULL, help_cl_showSend },
+	{ &cl_showTimeDelta, "cl_showTimeDelta", "0", CVAR_TEMP, CVART_BOOL, NULL, NULL, "prints delta adjustment values and events" },
+	{ &rconPassword, "rconPassword", "", CVAR_TEMP, CVART_STRING, NULL, NULL, "server password, used by /rcon" },
+	{ &cl_timedemo, "timedemo", "0", 0, CVART_BOOL, NULL, NULL, "demo benchmarking mode" },
+	{ &cl_aviFrameRate, "cl_aviFrameRate", "25", CVAR_ARCHIVE, CVART_INTEGER, "1", "250", "frame-rate for /video" },
+	{ &cl_aviMotionJpeg, "cl_aviMotionJpeg", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "/video stores frames as JPEGs" },
+	{ &rconAddress, "rconAddress", "", 0, CVART_STRING, NULL, NULL, "IP address of the server to /rcon to" },
+	{ &cl_maxpackets, "cl_maxpackets", "125", CVAR_ARCHIVE, CVART_INTEGER, "15", "125", "max. packet upload rate" },
+	{ &cl_packetdup, "cl_packetdup", "1", CVAR_ARCHIVE, CVART_INTEGER, "0", "5", "number of extra transmissions per packet" },
+	{ &cl_allowDownload, "cl_allowDownload", "1", CVAR_ARCHIVE, CVART_INTEGER, "-1", "1", help_cl_allowDownload },
+	{ &cl_inGameVideo, "r_inGameVideo", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "enables roq video playback" },
+	{ &cl_serverStatusResendTime, "cl_serverStatusResendTime", "750", 0, CVART_INTEGER, "500", "1000", "milli-seconds to wait before resending getstatus" },
+	{ NULL, "cl_maxPing", "999", CVAR_ARCHIVE, CVART_INTEGER, "80", "999", "max. ping for the server browser" },
+	{ NULL, "name", "UnnamedPlayer", CVAR_USERINFO | CVAR_ARCHIVE, CVART_STRING, NULL, NULL, "your name" },
+	{ NULL, "rate", "25000", CVAR_USERINFO | CVAR_ARCHIVE, CVART_INTEGER, "4000", "99999", "network transfer rate" },
+	{ NULL, "snaps", "30", CVAR_USERINFO | CVAR_ARCHIVE, CVART_INTEGER }, // documented by the mod
+	{ NULL, "password", "", CVAR_USERINFO, CVART_STRING, NULL, NULL, "used by /connect" }
+};
+
+
+static const cmdTableItem_t cl_cmds[] =
+{
+	{ "cmd", CL_ForwardToServer_f, NULL, "forwards all arguments as a command to the server" },
+	{ "configstrings", CL_Configstrings_f, NULL, "prints all non-empty config strings" },
+	{ "clientinfo", CL_Clientinfo_f, NULL, "prints some client settings" },
+	{ "snd_restart", CL_Snd_Restart_f, NULL, "restarts the sound system" },
+	{ "vid_restart", CL_Vid_Restart_f, NULL, "restarts the video system" },
+	{ "disconnect", CL_Disconnect_f, NULL, "disconnects from the current server" },
+	{ "record", CL_Record_f, CL_CompleteDemoRecord_f, "starts recording a demo" },
+	{ "demo", CL_PlayDemo_f, CL_CompleteDemoPlay_f, "starts demo playback" },
+	{ "cinematic", CL_PlayCinematic_f, NULL, "starts playback of a .roq video file" },
+	{ "stoprecord", CL_StopRecord_f, NULL, "stops demo recording" },
+	{ "connect", CL_Connect_f, NULL, "connects to a server" },
+	{ "reconnect", CL_Reconnect_f, NULL, "reconnects to the current or last server" },
+	{ "localservers", CL_LocalServers_f, NULL, "finds and prints local LAN servers" },
+	{ "globalservers", CL_GlobalServers_f, NULL, "requests server lists from master servers" },
+	{ "rcon", CL_Rcon_f, CL_CompleteRcon_f, "executes the arguments as a command on the server" },
+	{ "ping", CL_Ping_f, NULL, "pings a server" },
+	{ "serverstatus", CL_ServerStatus_f, NULL, "prints server status and player list" },
+	{ "showip", CL_ShowIP_f, NULL, "shows your open IP address(es)" },
+	{ "fs_referencedList", CL_ReferencedPK3List_f, NULL, "prints the names of referenced pak files" },
+	{ "video", CL_Video_f, NULL, "starts writing a .avi file" },
+	{ "stopvideo", CL_StopVideo_f, NULL, "stops writing the .avi file" },
+	{ "dlpak", CL_DownloadPak_f, NULL, "starts a pk3 download by checksum if not existing" },
+	{ "dlmap", CL_DownloadMap_f, NULL, "starts a pk3 download by map name if not existing" },
+	{ "dlmapf", CL_ForceDownloadMap_f, NULL, "start a pk3 download by map name" },
+	{ "dlstop", CL_CancelDownload_f, NULL, "stops the current pk3 download" },
+
+	// we use these until we get proper handling on the mod side
+	{ "cv", CL_CallVote_f, CL_CompleteCallVote_f, "calls a vote" },
+	{ "callvote", CL_CallVote_f, CL_CompleteCallVote_f, "calls a vote" }
+};
+
+
 void CL_Init()
 {
 	//QSUBSYSTEM_INIT_START( "Client" );
@@ -2059,86 +2052,8 @@ void CL_Init()
 
 	CL_InitInput();
 
-	// register our variables
-	//
-	cl_timeout = Cvar_Get ("cl_timeout", "200", 0);
-
-	cl_timeNudge = Cvar_Get ("cl_timeNudge", "0", CVAR_TEMP );
-	cl_shownet = Cvar_Get ("cl_shownet", "0", CVAR_TEMP );
-	cl_showSend = Cvar_Get ("cl_showSend", "0", CVAR_TEMP );
-	cl_showTimeDelta = Cvar_Get ("cl_showTimeDelta", "0", CVAR_TEMP );
-	rcon_client_password = Cvar_Get ("rconPassword", "", CVAR_TEMP );
-
-	cl_timedemo = Cvar_Get ("timedemo", "0", 0);
-	cl_aviFrameRate = Cvar_Get ("cl_aviFrameRate", "25", CVAR_ARCHIVE);
-	cl_aviMotionJpeg = Cvar_Get ("cl_aviMotionJpeg", "1", CVAR_ARCHIVE);
-
-	rconAddress = Cvar_Get ("rconAddress", "", 0);
-
-	cl_maxpackets = Cvar_Get ("cl_maxpackets", "30", CVAR_ARCHIVE );
-	cl_packetdup = Cvar_Get ("cl_packetdup", "1", CVAR_ARCHIVE );
-
-	cl_allowDownload = Cvar_Get ("cl_allowDownload", "1", CVAR_ARCHIVE);
-
-#ifdef MACOS_X
-	// In game video is REALLY slow in Mac OS X right now due to driver slowness
-	cl_inGameVideo = Cvar_Get ("r_inGameVideo", "0", CVAR_ARCHIVE);
-#else
-	cl_inGameVideo = Cvar_Get ("r_inGameVideo", "1", CVAR_ARCHIVE);
-#endif
-
-	cl_serverStatusResendTime = Cvar_Get ("cl_serverStatusResendTime", "750", 0);
-
-	cl_motd = Cvar_Get( "cl_motd", "1", 0 );
-	cl_motdString = Cvar_Get( "cl_motdString", "", CVAR_ROM );
-
-	Cvar_Get( "cl_maxPing", "800", CVAR_ARCHIVE );
-
-
-	// userinfo
-	Cvar_Get ("name", "UnnamedPlayer", CVAR_USERINFO | CVAR_ARCHIVE );
-	Cvar_Get ("rate", "3000", CVAR_USERINFO | CVAR_ARCHIVE );
-	Cvar_Get ("snaps", "20", CVAR_USERINFO | CVAR_ARCHIVE );
-	Cvar_Get ("cl_anonymous", "0", CVAR_USERINFO | CVAR_ARCHIVE );
-	Cvar_Get ("password", "", CVAR_USERINFO);
-
-	// register our commands
-	//
-	Cmd_AddCommand ("cmd", CL_ForwardToServer_f);
-	Cmd_AddCommand ("configstrings", CL_Configstrings_f);
-	Cmd_AddCommand ("clientinfo", CL_Clientinfo_f);
-	Cmd_AddCommand ("snd_restart", CL_Snd_Restart_f);
-	Cmd_AddCommand ("vid_restart", CL_Vid_Restart_f);
-	Cmd_AddCommand ("disconnect", CL_Disconnect_f);
-	Cmd_AddCommand ("record", CL_Record_f);
-	Cmd_SetAutoCompletion ("record", CL_CompleteDemoRecord_f);
-	Cmd_AddCommand ("demo", CL_PlayDemo_f);
-	Cmd_SetAutoCompletion ("demo", CL_CompleteDemoPlay_f);
-	Cmd_AddCommand ("cinematic", CL_PlayCinematic_f);
-	Cmd_AddCommand ("stoprecord", CL_StopRecord_f);
-	Cmd_AddCommand ("connect", CL_Connect_f);
-	Cmd_AddCommand ("reconnect", CL_Reconnect_f);
-	Cmd_AddCommand ("localservers", CL_LocalServers_f);
-	Cmd_AddCommand ("globalservers", CL_GlobalServers_f);
-	Cmd_AddCommand ("rcon", CL_Rcon_f);
-	Cmd_SetAutoCompletion ("rcon", CL_CompleteRcon_f);
-	Cmd_AddCommand ("ping", CL_Ping_f );
-	Cmd_AddCommand ("serverstatus", CL_ServerStatus_f );
-	Cmd_AddCommand ("showip", CL_ShowIP_f );
-	Cmd_AddCommand ("fs_referencedList", CL_ReferencedPK3List_f );
-	Cmd_AddCommand ("model", CL_SetModel_f );
-	Cmd_AddCommand ("video", CL_Video_f );
-	Cmd_AddCommand ("stopvideo", CL_StopVideo_f );
-	Cmd_AddCommand ("dlpak", CL_DownloadPak_f );
-	Cmd_AddCommand ("dlmap", CL_DownloadMap_f );
-	Cmd_AddCommand ("dlmapf", CL_ForceDownloadMap_f );
-	Cmd_AddCommand ("dlstop", CL_CancelDownload_f );
-
-	// we use these until we get proper handling on the mod side
-	Cmd_AddCommand ("cv", CL_CallVote_f );
-	Cmd_AddCommand ("callvote", CL_CallVote_f );
-	Cmd_SetAutoCompletion ("cv", CL_CompleteCallVote_f );
-	Cmd_SetAutoCompletion ("callvote", CL_CompleteCallVote_f );
+	Cvar_RegisterArray( cl_cvars, MODULE_CLIENT );
+	Cmd_RegisterArray( cl_cmds, MODULE_CLIENT );
 
 	CL_InitRef();
 
@@ -2173,6 +2088,9 @@ void CL_Shutdown()
 	CL_Disconnect( qtrue );
 
 	S_Shutdown();
+
+	CL_ShutdownInput();
+
 	CL_ShutdownRef();
 
 	CL_ShutdownUI();
@@ -2180,35 +2098,9 @@ void CL_Shutdown()
 	CL_SaveCommandHistory();
 	CL_MapDownload_Cancel();
 
-	Cmd_RemoveCommand ("cmd");
-	Cmd_RemoveCommand ("configstrings");
-	Cmd_RemoveCommand ("userinfo");
-	Cmd_RemoveCommand ("snd_restart");
-	Cmd_RemoveCommand ("vid_restart");
-	Cmd_RemoveCommand ("disconnect");
-	Cmd_RemoveCommand ("record");
-	Cmd_RemoveCommand ("demo");
-	Cmd_RemoveCommand ("cinematic");
-	Cmd_RemoveCommand ("stoprecord");
-	Cmd_RemoveCommand ("connect");
-	Cmd_RemoveCommand ("localservers");
-	Cmd_RemoveCommand ("globalservers");
-	Cmd_RemoveCommand ("rcon");
-	Cmd_RemoveCommand ("setenv");
-	Cmd_RemoveCommand ("ping");
-	Cmd_RemoveCommand ("serverstatus");
-	Cmd_RemoveCommand ("showip");
-	Cmd_RemoveCommand ("model");
-	Cmd_RemoveCommand ("video");
-	Cmd_RemoveCommand ("stopvideo");
-	Cmd_RemoveCommand ("dlpak");
-	Cmd_RemoveCommand ("dlmap");
-	Cmd_RemoveCommand ("dlmapf");
-	Cmd_RemoveCommand ("dlstop");
+	Cmd_UnregisterModule( MODULE_CLIENT );
 
-	// we use these until we get proper handling on the mod side
-	Cmd_RemoveCommand ("cv");
-	Cmd_RemoveCommand ("callvote");
+	CL_ConShutdown();
 
 	Cvar_Set( "cl_running", "0" );
 

@@ -302,6 +302,30 @@ intptr_t	QDECL VM_Call( vm_t *vm, int callNum, ... );
 void	VM_Debug( int level );
 
 
+///////////////////////////////////////////////////////////////
+
+
+#define MODULE_LIST(X) \
+	X(NONE, "") \
+	X(COMMON, "Common") \
+	X(CLIENT, "Client") \
+	X(SERVER, "Server") \
+	X(RENDERER, "Renderer") \
+	X(SOUND, "Sound") \
+	X(INPUT, "Input") \
+	X(CONSOLE, "Console") \
+	X(CGAME, "CGame") \
+	X(GAME, "Game") \
+	X(UI, "UI")
+
+#define MODULE_ITEM(Enum, Desc) MODULE_##Enum, 
+typedef enum {
+	MODULE_LIST(MODULE_ITEM)
+	MODULE_COUNT
+} module_t;
+#undef MODULE_ITEM
+
+
 /*
 ==============================================================
 
@@ -343,6 +367,13 @@ then searches for a command or variable that matches the first token.
 typedef void (*xcommand_t) (void);
 typedef void (*xcommandCompletion_t) (int startArg, int compArg);
 
+typedef struct cmdTableItem_s {
+	const char*				name;
+	xcommand_t				function;
+	xcommandCompletion_t	completion;
+	const char*				help;
+} cmdTableItem_t;
+
 void Cmd_Init();
 
 // called by the init functions of other parts of the program to
@@ -351,10 +382,22 @@ void Cmd_Init();
 // if function is NULL, the command will be forwarded to the server
 // as a clc_clientCommand instead of executed locally
 void Cmd_AddCommand( const char* cmd_name, xcommand_t function );
-void Cmd_AddCommandEx( const char* cmd_name, xcommand_t function, qbool cgame );
 
 void Cmd_RemoveCommand( const char* cmd_name );
-void Cmd_RemoveCGameCommands();
+
+void Cmd_SetHelp( const char* cmd_name, const char* cmd_help );
+qbool Cmd_GetHelp( const char** desc, const char** help, const char* cmd_name );	// qtrue if the cmd was found
+
+void Cmd_RegisterTable( const cmdTableItem_t* cmds, int count, module_t module );
+void Cmd_UnregisterTable( const cmdTableItem_t* cmds, int count );
+#define Cmd_RegisterArray(a, m)	Cmd_RegisterTable( a, ARRAY_LEN(a), m )
+
+void Cmd_SetModule( const char* cmd_name, module_t module );
+
+// removes all commands that were *only* registered by the given module
+void Cmd_UnregisterModule( module_t module );
+
+void Cmd_GetModuleInfo( module_t* firstModule, int* moduleMask, const char* cmd_name );
 
 // auto-completion of command arguments
 void Cmd_SetAutoCompletion( const char* cmd_name, xcommandCompletion_t complete );
@@ -363,6 +406,9 @@ void Cmd_AutoCompleteArgument( const char* cmd_name, int startArg, int compArg )
 // auto-completion of the command's name
 // callback with each valid string
 void Cmd_CommandCompletion( void(*callback)(const char* s) );
+
+typedef void (*search_callback_t)( const char* name, const char* desc, const char* help, const char* pattern );
+void Cmd_EnumHelp( search_callback_t callback, const char* pattern );
 
 // the functions that execute commands get their parameters with these
 // if arg > argc, Cmd_Argv() will return "", not NULL, so string ops are always safe
@@ -411,21 +457,53 @@ modules of the program.
 
 */
 
+typedef struct intValidator_s {
+	int min;
+	int max;
+} intValidator_t;
+
+typedef struct floatValidator_s {
+	float min;
+	float max;
+} floatValidator_t;
+
+typedef union {
+	intValidator_t		i;
+	floatValidator_s	f;
+} cvarValidator_t;
+
 // nothing outside the Cvar_*() functions should modify these fields!
 typedef struct cvar_s {
 	char		*name;
 	char		*string;
 	char		*resetString;		// cvar_restart will reset to this value
 	char		*latchedString;		// for CVAR_LATCH vars
+	char		*desc;
+	char		*help;
 	int			flags;
+	cvarType_t	type;
+	module_t	firstModule;
+	int			moduleMask;
 	qboolean	modified;			// set each time the cvar is changed
 	int			modificationCount;	// incremented each time the cvar is changed
 	float		value;				// atof( string )
 	int			integer;			// atoi( string )
 	qbool		mismatchPrinted;	// have we already notified of mismatching initial values?
+	cvarValidator_t	validator;
 	struct cvar_s *next;
 	struct cvar_s *hashNext;
 } cvar_t;
+
+typedef struct cvarTableItem_s {
+	cvar_t**		cvar;
+	const char*		name;
+	const char*		reset;
+	int				flags;
+	cvarType_t		type;
+	const char*		min;
+	const char*		max;
+	const char*		help;
+} cvarTableItem_t;
 
 
 cvar_t *Cvar_Get( const char *var_name, const char *value, int flags );
@@ -433,6 +511,19 @@ cvar_t *Cvar_Get( const char *var_name, const char *value, int flags );
 // if it exists, the value will not be changed, but flags will be ORed in
 // that allows variables to be unarchived without needing bitflags
 // if value is "", the value will not override a previously set value.
+
+void	Cvar_SetHelp( const char *var_name, const char *help );
+qbool	Cvar_GetHelp( const char **desc, const char **help, const char* var_name );	// qtrue if the cvar was found
+
+void	Cvar_SetRange( const char *var_name, cvarType_t type, const char *min, const char *max );
+
+void	Cvar_RegisterTable( const cvarTableItem_t* cvars, int count, module_t module );
+#define Cvar_RegisterArray(a, m)	Cvar_RegisterTable( a, ARRAY_LEN(a), m )
+
+void	Cvar_SetModule( const char *var_name, module_t module );
+void	Cvar_GetModuleInfo( module_t *firstModule, int *moduleMask, const char *var_name );
+
+void	Cvar_PrintTypeAndRange( const char *var_name );
 
 void	Cvar_Register( vmCvar_t *vmCvar, const char *varName, const char *defaultValue, int flags );
 // basically a slightly modified Cvar_Get for the interpreted modules
@@ -459,6 +550,8 @@ int Cvar_Flags( const char *var_name );
 
 void	Cvar_CommandCompletion( void(*callback)(const char *s) );
 // callback with each valid string
+
+void	Cvar_EnumHelp( search_callback_t callback, const char* pattern );
 
 void	Cvar_Reset( const char *var_name );
 
@@ -487,9 +580,14 @@ extern	int			cvar_modifiedFlags;
 // etc, variables have been modified since the last check.  The bit
 // can then be cleared to allow another change detection.
 
+
+///////////////////////////////////////////////////////////////
+
+
 void CRC32_Begin( unsigned int* crc );
 void CRC32_ProcessBlock( unsigned int* crc, const void* buffer, unsigned int length );
 void CRC32_End( unsigned int* crc );
+
 
 /*
 ==============================================================
@@ -752,7 +850,6 @@ extern	cvar_t	*com_sv_running;
 extern	cvar_t	*com_cl_running;
 extern	cvar_t	*com_viewlog;			// 0 = hidden, 1 = visible, 2 = minimized
 extern	cvar_t	*com_version;
-extern	cvar_t	*com_buildScript;		// for building release pak files
 extern	cvar_t	*com_journal;
 
 // both client and server must agree to pause
@@ -1025,6 +1122,23 @@ int		StatHuff_WriteSymbol( int symbol, byte* buffer, int bitIndex ); // returns 
 
 
 const char* Q_itohex( uint64_t number, qbool uppercase, qbool prefix );
+
+
+void Help_AllocSplitText( char** desc, char** help, const char* combined );
+
+
+#define COLOR_HELP	"^7"
+#define COLOR_CMD	"^7"
+#define COLOR_CVAR	"^7"
+#define COLOR_VAL	"^7"
+
+
+#define CONSOLE_WIDTH	78
+
+
+void Com_TruncatePrintString( char* buffer, int size, int maxLength );
+
+void Com_PrintModules( module_t firstModule, int moduleMask );
 
 
 #endif // _QCOMMON_H_

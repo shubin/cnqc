@@ -38,11 +38,9 @@ cvar_t	*sv_privateClients;		// number of clients reserved for password
 cvar_t	*sv_hostname;
 cvar_t	*sv_master[MAX_MASTER_SERVERS];		// master server ip address
 cvar_t	*sv_reconnectlimit;		// minimum seconds between connect messages
-cvar_t	*sv_showloss;			// report when usercmds are lost
 cvar_t	*sv_padPackets;			// add nop bytes to messages
 cvar_t	*sv_killserver;			// menu system can set to 1 to shut server down
 cvar_t	*sv_mapname;
-cvar_t	*sv_mapChecksum;
 cvar_t	*sv_serverid;
 cvar_t	*sv_minRate;
 cvar_t	*sv_maxRate;
@@ -53,6 +51,7 @@ cvar_t	*sv_pure;
 cvar_t	*sv_floodProtect;
 cvar_t	*sv_lanForceRate; // dedicated 1 (LAN) server forces local client rates to 99999 (bug #491)
 cvar_t	*sv_strictAuth;
+cvar_t	*sv_minRebootDelayMins;
 
 
 
@@ -792,7 +791,7 @@ void SV_Frame( int msec ) {
 	// Some mods may still have code like "sin(cg.time / 1000.0f)".
 	// IEEE 754 floats have a 23-bit mantissa.
 	// Rounding errors will start after roughly ((1<<23) / (60*1000)) ~ 139.8 minutes.
-	const int minRebootTimeCvar = 60 * 1000 * Cvar_Get( "sv_minRebootDelayMins", "1440", 0 )->integer;
+	const int minRebootTimeCvar = 60 * 1000 * sv_minRebootDelayMins->integer;
 	const int minRebootTimeConst = 60 * 60 * 1000;	// absolute min. time: 1 hour
 	const int maxRebootTime = 0x7FFFFFFF;			// absolute max. time: ~ 24.86 days
 	const int minRebootTime = max( minRebootTimeCvar, minRebootTimeConst );

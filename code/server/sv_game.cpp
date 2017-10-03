@@ -236,9 +236,19 @@ static void SV_GetUsercmd( int clientNum, usercmd_t* cmd )
 
 static qbool SV_G_GetValue( char* value, int valueSize, const char* key )
 {
-	if( Q_stricmp(key, "trap_LocateInteropData") == 0 ) {
-		Com_sprintf( value, valueSize, "%d", G_EXT_LOCATEINTEROPDATA );
-		return qtrue;
+	struct syscall_t { const char* name; int number; };
+	static const syscall_t syscalls[] = {
+		{ "trap_LocateInteropData", G_EXT_LOCATEINTEROPDATA },
+		{ "trap_Cvar_SetRange", G_EXT_CVAR_SETRANGE },
+		{ "trap_Cvar_SetHelp", G_EXT_CVAR_SETHELP },
+		{ "trap_Cmd_SetHelp", G_EXT_CMD_SETHELP }
+	};
+
+	for ( int i = 0; i < ARRAY_LEN( syscalls ); ++i ) {
+		if( Q_stricmp(key, syscalls[i].name) == 0 ) {
+			Com_sprintf( value, valueSize, "%d", syscalls[i].number );
+			return qtrue;
+		}
 	}
 
 	return qfalse;
@@ -266,6 +276,7 @@ static intptr_t SV_GameSystemCalls( intptr_t* args )
 
 	case G_CVAR_REGISTER:
 		Cvar_Register( VMA(1), VMA(2), VMA(3), args[4] );
+		Cvar_SetModule( VMA(2), MODULE_GAME );
 		return 0;
 	case G_CVAR_UPDATE:
 		Cvar_Update( VMA(1) );
@@ -801,6 +812,18 @@ static intptr_t SV_GameSystemCalls( intptr_t* args )
 		interopBufferInSize = args[2];
 		interopBufferOut = VMA(3);
 		interopBufferOutSize = args[4];
+		return 0;
+
+	case G_EXT_CVAR_SETRANGE:
+		Cvar_SetRange( VMA(1), (cvarType_t)args[2], VMA(3), VMA(4) );
+		return 0;
+
+	case G_EXT_CVAR_SETHELP:
+		Cvar_SetHelp( VMA(1), VMA(2) );
+		return 0;
+
+	case G_EXT_CMD_SETHELP:
+		Cmd_SetHelp( VMA(1), VMA(2) );
 		return 0;
 
 	default:

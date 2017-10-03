@@ -1144,6 +1144,8 @@ static const cvar_t* con_history;
 void CL_LoadCommandHistory()
 {
 	con_history = Cvar_Get( "con_history", "0", CVAR_ARCHIVE );
+	Cvar_SetRange( "con_history", CVART_BOOL, NULL, NULL );
+	Cvar_SetHelp( "con_history", "writes the command history to a file on exit" );
 
 	fileHandle_t f;
 	FS_FOpenFileRead( HISTORY_PATH, &f, qfalse );

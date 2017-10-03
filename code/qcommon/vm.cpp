@@ -35,6 +35,7 @@ and one exported function: Perform
 
 #include "vm_local.h"
 #include "crash.h"
+#include "common_help.h"
 
 opcode_info_t ops[ OP_MAX ] =
 {
@@ -128,15 +129,21 @@ static const char *vmName[ VM_COUNT ] = {
 };
 
 
+static const cvarTableItem_t vm_cvars[] =
+{
+	{ NULL, "vm_cgame", "2", CVAR_ARCHIVE, CVART_INTEGER, "0", "2", "how to load the cgame VM" help_vm_load },
+	{ NULL, "vm_game", "2", CVAR_ARCHIVE, CVART_INTEGER, "0", "2", "how to load the qagame VM" help_vm_load },
+	{ NULL, "vm_ui", "2", CVAR_ARCHIVE, CVART_INTEGER, "0", "2", "how to load the ui VM" help_vm_load }
+};
+
+
 /*
 ==============
 VM_Init
 ==============
 */
 void VM_Init( void ) {
-	Cvar_Get( "vm_cgame", "2", CVAR_ARCHIVE );
-	Cvar_Get( "vm_game", "2", CVAR_ARCHIVE );
-	Cvar_Get( "vm_ui", "2", CVAR_ARCHIVE );
+	Cvar_RegisterArray( vm_cvars, MODULE_COMMON );
 
 	Com_Memset( vmTable, 0, sizeof( vmTable ) );
 }

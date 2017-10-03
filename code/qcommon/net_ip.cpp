@@ -768,6 +768,7 @@ static void NET_GetLocalAddress()
 static void NET_OpenIP()
 {
 	const cvar_t* ip = Cvar_Get( "net_ip", "localhost", CVAR_LATCH );
+	Cvar_SetRange( "net_ip", CVART_INTEGER, "0", "65535" );
 	int port = Cvar_Get( "net_port", va( "%i", PORT_SERVER ), CVAR_LATCH )->integer;
 
 	// automatically scan for a valid port, so multiple
@@ -799,10 +800,12 @@ static qboolean NET_GetCvars()
 	if (net_noudp && net_noudp->modified)
 		modified = qtrue;
 	net_noudp = Cvar_Get( "net_noudp", "0", CVAR_LATCH | CVAR_ARCHIVE );
+	Cvar_SetRange( "net_noudp", CVART_BOOL, NULL, NULL );
 
 	if (net_socksEnabled && net_socksEnabled->modified)
 		modified = qtrue;
 	net_socksEnabled = Cvar_Get( "net_socksEnabled", "0", CVAR_LATCH | CVAR_ARCHIVE );
+	Cvar_SetRange( "net_socksEnabled", CVART_BOOL, NULL, NULL );
 
 	if (net_socksEnabled->integer) {
 		if (net_socksServer && net_socksServer->modified)
@@ -812,6 +815,7 @@ static qboolean NET_GetCvars()
 		if (net_socksPort && net_socksPort->modified)
 			modified = qtrue;
 		net_socksPort = Cvar_Get( "net_socksPort", "1080", CVAR_LATCH | CVAR_ARCHIVE );
+		Cvar_SetRange( "net_socksPort", CVART_INTEGER, "0", "65535" );
 
 		if (net_socksUsername && net_socksUsername->modified)
 			modified = qtrue;

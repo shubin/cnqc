@@ -2545,6 +2545,14 @@ static void FS_ReorderPurePaks()
 }
 
 
+static const cmdTableItem_t fs_cmds[] =
+{
+	{ "path", FS_Path_f, NULL, "prints info about the current search path" },
+	{ "dir", FS_Dir_f, NULL, "prints an extension-filtered file list" },
+	{ "fdir", FS_NewDir_f, NULL, "prints a pattern-filtered file list" }
+};
+
+
 static void FS_Startup( const char *gameName )
 {
 	QSUBSYSTEM_INIT_START( "FileSystem" );
@@ -2557,13 +2565,16 @@ static void FS_Startup( const char *gameName )
 	fs_packFiles = 0; 
 
 	fs_debug = Cvar_Get( "fs_debug", "0", 0 );
+	Cvar_SetRange( "fs_debug", CVART_BOOL, NULL, NULL );
+	Cvar_SetHelp( "fs_debug", "prints file open/write accesses" );
 	fs_basepath = Cvar_Get ("fs_basepath", Sys_Cwd(), CVAR_INIT );
 	fs_basegame = Cvar_Get ("fs_basegame", "", CVAR_INIT );
+	fs_gamedirvar = Cvar_Get ("fs_game", APEXGAME, CVAR_INIT | CVAR_SYSTEMINFO );
+	Cvar_SetHelp( "fs_game", "name of the mod folder" );
 	const char* homePath = Sys_DefaultHomePath();
 	if (!homePath || !homePath[0])
 		homePath = fs_basepath->string;
 	fs_homepath = Cvar_Get ("fs_homepath", homePath, CVAR_INIT );
-	fs_gamedirvar = Cvar_Get ("fs_game", APEXGAME, CVAR_INIT|CVAR_SYSTEMINFO );
 
 	// add search path elements in reverse priority order
 	if (fs_basepath->string[0]) {
@@ -2596,15 +2607,12 @@ static void FS_Startup( const char *gameName )
 	}
 
 	Com_ReadCDKey(BASEGAME);
-	cvar_t* fs = Cvar_Get( "fs_game", "", CVAR_INIT|CVAR_SYSTEMINFO );
-	if (fs && fs->string[0] != 0) {
-		Com_AppendCDKey( fs->string );
+	if (fs_gamedirvar && fs_gamedirvar->string[0] != 0) {
+		Com_AppendCDKey( fs_gamedirvar->string );
 	}
 
 	// add our commands
-	Cmd_AddCommand ("path", FS_Path_f);
-	Cmd_AddCommand ("dir", FS_Dir_f );
-	Cmd_AddCommand ("fdir", FS_NewDir_f );
+	Cmd_RegisterArray( fs_cmds, MODULE_COMMON );
 
 	// https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=506
 	// reorder the pure pk3 files according to server order

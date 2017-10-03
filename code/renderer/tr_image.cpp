@@ -862,17 +862,9 @@ static void R_CreateBuiltinImages()
 
 void R_SetColorMappings()
 {
-	tr.overbrightBits = Com_Clamp( 0, 2, r_overBrightBits->integer );
+	tr.overbrightBits = r_overBrightBits->integer;
 	tr.identityLight = 1.0f / (float)( 1 << tr.overbrightBits );
 	tr.identityLightByte = (int)( 255.0f * tr.identityLight );
-
-	if ( r_intensity->value < 1 )
-		ri.Cvar_Set( "r_intensity", "1" );
-
-	if ( r_gamma->value < 0.5f )
-		ri.Cvar_Set( "r_gamma", "0.5" );
-	if ( r_gamma->value > 3.0f )
-		ri.Cvar_Set( "r_gamma", "3.0" );
 
 	for (int i = 0; i < 256; ++i) {
 		s_intensitytable[i] = (byte)min( r_intensity->value * i, 255.0f );

@@ -625,9 +625,6 @@ void CL_GetPing( int n, char *buf, int buflen, int *pingtime )
 		// check for timeout
 		time = cls.realtime - cl_pinglist[n].start;
 		maxPing = Cvar_VariableIntegerValue( "cl_maxPing" );
-		if( maxPing < 100 ) {
-			maxPing = 100;
-		}
 		if (time < maxPing)
 		{
 			// not timed out yet
