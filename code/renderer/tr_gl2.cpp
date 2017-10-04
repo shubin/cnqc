@@ -648,8 +648,6 @@ static void GL2_PostProcessGamma()
 	GL_SelectTexture( 0 );
 	qglBindTexture( GL_TEXTURE_2D, frameBuffersPostProcess[frameBufferReadIndex ^ 1].color );
 	GL2_FullScreenQuad();
-	qglBindTexture( GL_TEXTURE_2D, 0 );
-	GL_Program();
 }
 
 
@@ -703,8 +701,6 @@ static void GL2_PostProcessGreyscale()
 	GL_SelectTexture( 0 );
 	qglBindTexture( GL_TEXTURE_2D, frameBuffersPostProcess[frameBufferReadIndex ^ 1].color );
 	GL2_FullScreenQuad();
-	qglBindTexture( GL_TEXTURE_2D, 0 );
-	GL_Program();
 }
 
 
@@ -770,6 +766,8 @@ void GL2_BeginFrame()
 		GL2_FBO_Bind( frameBufferMain );
 	else
 		GL2_FBO_Bind();
+
+	GL_Program();
 }
 
 
@@ -780,6 +778,11 @@ void GL2_EndFrame()
 
 	GL2_PostProcessGamma();
 	GL2_PostProcessGreyscale();
+
+	// needed for later calls to GL_Bind because
+	// the above functions use qglBindTexture directly
+	glState.texID[glState.currenttmu] = 0;
+
 	GL2_FBO_BlitSSToBackBuffer();
 }
 
