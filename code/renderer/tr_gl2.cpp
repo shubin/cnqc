@@ -720,7 +720,7 @@ static const char* greyscaleFS =
 "{\n"
 "	vec3 base = texture2D(texture, gl_TexCoord[0].xy).rgb;\n"
 "	vec3 grey = vec3(0.299 * base.r + 0.587 * base.g + 0.114 * base.b);\n"
-"	gl_FragColor = vec4(lerp(base, grey, greyscale), 1.0);\n"
+"	gl_FragColor = vec4(mix(base, grey, greyscale), 1.0);\n"
 "}\n"
 "";
 
