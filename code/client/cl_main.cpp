@@ -1736,6 +1736,7 @@ static void CL_Vid_Restart_f()
 
 	CL_ShutdownUI();
 	CL_ShutdownCGame();
+	CL_ShutdownInput();
 	CL_ShutdownRef();
 
 	// client is no longer pure until new checksums are sent
@@ -1764,6 +1765,9 @@ static void CL_Vid_Restart_f()
 
 	// initialize the renderer interface
 	CL_InitRef();
+
+	// initialize input
+	CL_InitInput();
 
 	// startup all the client stuff
 	CL_StartHunkUsers();
@@ -2056,12 +2060,11 @@ void CL_Init()
 
 	cls.realtime = 0;
 
-	CL_InitInput();
-
 	Cvar_RegisterArray( cl_cvars, MODULE_CLIENT );
 	Cmd_RegisterArray( cl_cmds, MODULE_CLIENT );
 
 	CL_InitRef();
+	CL_InitInput();
 
 	SCR_Init();
 
@@ -2096,7 +2099,6 @@ void CL_Shutdown()
 	S_Shutdown();
 
 	CL_ShutdownInput();
-
 	CL_ShutdownRef();
 
 	CL_ShutdownUI();

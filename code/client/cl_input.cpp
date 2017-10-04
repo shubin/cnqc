@@ -828,6 +828,16 @@ static void IN_Button15Down(void) {IN_KeyDown(&in_buttons[15]);}
 static void IN_Button15Up(void) {IN_KeyUp(&in_buttons[15]);}
 
 
+static void IN_Restart_f()
+{
+	Sys_ShutdownInput();
+	CL_ShutdownInput();
+
+	CL_InitInput();
+	Sys_InitInput();
+}
+
+
 static const cvarTableItem_t cl_cvars[] =
 {
 	{ NULL, "cl_drawMouseLag", "0", 0, CVART_BOOL, NULL, NULL, "draws sampling to display/upload delays" },
@@ -855,6 +865,7 @@ static const cvarTableItem_t cl_cvars[] =
 static const cmdTableItem_t cl_cmds[] =
 {
 #define help_button1 "\nYou can't move and there's a chat bubble over your head."
+	{ "in_restart", IN_Restart_f, NULL, "restarts the input system" },
 	{ "+moveup", IN_UpDown, NULL, "starts jumping/moving up" help_plus_minus },
 	{ "-moveup", IN_UpUp, NULL, "stops jumping/moving up" help_plus_minus },
 	{ "+movedown", IN_DownDown, NULL, "starts crouching/moving down" help_plus_minus },
@@ -917,10 +928,6 @@ static const cmdTableItem_t cl_cmds[] =
 	{ "-mlook", IN_MLookUp, NULL, "disables free look when cl_freelook is 0" help_plus_minus }
 #undef help_button1
 };
-
-
-// @TODO: move "in_restart" here and let the platform layer
-// implement Sys_InitInput and Sys_ShutdownInput
 
 
 void CL_InitInput()

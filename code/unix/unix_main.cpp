@@ -713,15 +713,6 @@ sysEvent_t Sys_GetEvent()
 ///////////////////////////////////////////////////////////////
 
 
-#ifndef DEDICATED
-static void Sys_In_Restart_f( void )
-{
-	IN_Shutdown();
-	IN_Init();
-}
-#endif
-
-
 char *Sys_GetClipboardData(void)
 {
   return NULL;
@@ -830,9 +821,6 @@ void  Sys_Print( const char *msg )
 
 void Sys_Init()
 {
-#ifndef DEDICATED
-	Cmd_AddCommand( "in_restart", Sys_In_Restart_f );
-#endif
 	Cvar_Set( "arch", OS_STRING " " ARCH_STRING );
 }
 

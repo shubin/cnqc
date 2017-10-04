@@ -341,7 +341,7 @@ static void IN_Startup()
 }
 
 
-void IN_Init()
+void Sys_InitInput()
 {
 	if (g_wv.inputInitialized)
 		return;
@@ -359,7 +359,7 @@ void IN_Init()
 }
 
 
-void IN_Shutdown()
+void Sys_ShutdownInput()
 {
 	if (!g_wv.inputInitialized)
 		return;
@@ -423,7 +423,7 @@ void IN_Frame()
 {
 	// lazily initialize if needed
 	if ( !com_dedicated->integer && !g_wv.inputInitialized )
-		IN_Init();
+		Sys_InitInput();
 
 	IN_JoyMove();
 	IN_UpdateHotKey();
@@ -1339,9 +1339,6 @@ static void IN_StartupHotKey( qbool fullStartUp )
 
 static void IN_ShutDownHotKey()
 {
-	// @TODO: remove this once Sys_InitInput and Sys_ShutdownInput are done
-	Cmd_RemoveCommand( "minimizekeynames" );
-
 	WIN_UnregisterHotKey();
 }
 

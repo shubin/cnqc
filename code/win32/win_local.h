@@ -31,12 +31,9 @@ void	Sys_DestroyConsole( void );
 const char* Sys_ConsoleInput();
 void Conbuf_AppendText( const char *msg );
 
-
-void	IN_Init();
 void	IN_Activate( qbool active );
 qbool	IN_ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam ); // returns true if the event was handled
 void	IN_Frame();
-void	IN_Shutdown();
 
 void WIN_UpdateMonitorIndexFromCvar();
 void WIN_UpdateMonitorIndexFromMainWindow();

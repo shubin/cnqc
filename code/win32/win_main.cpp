@@ -91,7 +91,7 @@ void QDECL Sys_Error( const char *error, ... )
 	WIN_EndTimePeriod();
 
 #ifndef DEDICATED
-	IN_Shutdown();
+	Sys_ShutdownInput();
 #endif
 
 	// wait for the user to quit
@@ -113,7 +113,7 @@ void Sys_Quit( int status )
 {
 	WIN_EndTimePeriod();
 #ifndef DEDICATED
-	IN_Shutdown();
+	Sys_ShutdownInput();
 #endif
 	Sys_DestroyConsole();
 	exit( status );
@@ -519,15 +519,6 @@ sysEvent_t Sys_GetEvent()
 ///////////////////////////////////////////////////////////////
 
 
-#ifndef DEDICATED
-static void Sys_In_Restart_f( void )
-{
-	IN_Shutdown();
-	IN_Init();
-}
-#endif
-
-
 static void Sys_Net_Restart_f( void )
 {
 	NET_Restart();
@@ -540,10 +531,6 @@ void Sys_Init()
 	// make sure the timer is high precision, otherwise NT gets 18ms resolution
 	WIN_BeginTimePeriod();
 
-#ifndef DEDICATED
-	Cmd_AddCommand( "in_restart", Sys_In_Restart_f );
-	Cmd_SetHelp( "in_restart", "restarts the input system" );
-#endif
 	Cmd_AddCommand( "net_restart", Sys_Net_Restart_f );
 	Cmd_SetHelp( "net_restart", "restarts the network system" );
 
@@ -675,7 +662,7 @@ int WINAPI WinMainImpl( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCm
 
 #ifndef DEDICATED
 	if (!com_dedicated->integer)
-		IN_Init();
+		Sys_InitInput();
 #endif
 
 	int totalMsec = 0, countMsec = 0;

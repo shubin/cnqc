@@ -1063,6 +1063,10 @@ sysEvent_t Sys_GetEvent();
 void Sys_Init();
 void Sys_Quit( int status ); // status is the engine's exit code
 
+// both of these must handle duplicate calls correctly
+void Sys_InitInput();
+void Sys_ShutdownInput();
+
 // general development dll loading for virtual machine testing
 void* QDECL Sys_LoadDll( const char* name, dllSyscall_t *entryPoint, dllSyscall_t systemcalls );
 void Sys_UnloadDll( void* dllHandle );

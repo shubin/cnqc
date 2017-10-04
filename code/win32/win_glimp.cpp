@@ -738,11 +738,7 @@ void GLimp_Shutdown()
 	const char* success[] = { "failed", "success" };
 	int retVal;
 
-	if ( g_wv.inputInitialized )
-	{
-		IN_Shutdown();
-		g_wv.inputInitialized = qfalse;
-	}
+	Sys_ShutdownInput();
 
 	// FIXME: Brian, we need better fallbacks from partially initialized failures
 	if ( !qwglMakeCurrent ) {

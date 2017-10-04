@@ -1092,7 +1092,7 @@ void GLimp_Init( void )
     
   QGL_SwapInterval( dpy, win, r_swapInterval->integer );
 
-	IN_Init();
+	Sys_InitInput();
 }
 
 
@@ -1277,11 +1277,7 @@ static void IN_StartupMouse()
 }
 
 
-
-
-
-
-void IN_Init()
+void Sys_InitInput()
 {
 	QSUBSYSTEM_INIT_START( "Input" );
 	//IN_InitKeyboard();
@@ -1308,7 +1304,7 @@ void IN_Init()
 }
 
 
-void IN_Shutdown(void)
+void Sys_ShutdownInput(void)
 {
   mouse_avail = qfalse;
 
@@ -1316,7 +1312,7 @@ void IN_Shutdown(void)
 
 	if (mouse) {
 		mouse->Shutdown();
-		mouse = 0;
+		mouse = NULL;
 	}
 }
 
