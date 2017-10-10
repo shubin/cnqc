@@ -77,7 +77,6 @@ static struct termios tty_tc;
 static field_t tty_con;
 
 static cvar_t *ttycon_ansicolor = NULL;
-static qboolean ttycon_color_on = qfalse;
 
 static history_t tty_history;
 
@@ -183,14 +182,14 @@ static void Sys_ConsoleInputInit()
   {
     if (isatty(STDIN_FILENO)!=1)
     {
-      Com_Printf("stdin is not a tty, tty console mode failed\n");
+      Com_Printf("stdin is not a tty, tty console mode failed: %s\n", strerror(errno));
       Cvar_Set("ttycon", "0");
       ttycon_on = qfalse;
       return;
     }
     Com_Printf("Started tty console (use +set ttycon 0 to disable)\n");
     Field_Clear(&tty_con);
-    tcgetattr (0, &tty_tc);
+    tcgetattr (STDIN_FILENO, &tty_tc);
     tty_erase = tty_tc.c_cc[VERASE];
     tty_eof = tty_tc.c_cc[VEOF];
     tc = tty_tc;
@@ -210,19 +209,15 @@ static void Sys_ConsoleInputInit()
     tc.c_iflag &= ~(ISTRIP | INPCK);
     tc.c_cc[VMIN] = 1;
     tc.c_cc[VTIME] = 0;
-    tcsetattr (0, TCSADRAIN, &tc);
+    tcsetattr (STDIN_FILENO, TCSADRAIN, &tc);
     ttycon_on = qtrue;
 
     ttycon_ansicolor = Cvar_Get( "ttycon_ansicolor", "0", CVAR_ARCHIVE );
-    if( ttycon_ansicolor && ttycon_ansicolor->value )
-    {
-      ttycon_color_on = qtrue;
-    }
   } else
     ttycon_on = qfalse;
 
 	// make stdin non-blocking
-	fcntl( 0, F_SETFL, fcntl(0, F_GETFL, 0) | FNDELAY );
+	fcntl( STDIN_FILENO, F_SETFL, fcntl(STDIN_FILENO, F_GETFL, 0) | FNDELAY );
 }
 
 
@@ -236,7 +231,7 @@ const char* Sys_ConsoleInput()
 
   if (ttycon && ttycon->value)
   {
-    avail = read(0, &key, 1);
+    avail = read(STDIN_FILENO, &key, 1);
     if (avail != -1)
     {
       // we have something
@@ -449,15 +444,15 @@ const char* Sys_ConsoleInput()
       return NULL;
 
     FD_ZERO(&fdset);
-    FD_SET(0, &fdset); // stdin
+    FD_SET(STDIN_FILENO, &fdset);
     timeout.tv_sec = 0;
     timeout.tv_usec = 0;
-    if (select (1, &fdset, NULL, NULL, &timeout) == -1 || !FD_ISSET(0, &fdset))
+    if (select (1, &fdset, NULL, NULL, &timeout) == -1 || !FD_ISSET(STDIN_FILENO, &fdset))
     {
       return NULL;
     }
 
-    len = read (0, text, sizeof(text));
+    len = read (STDIN_FILENO, text, sizeof(text));
     if (len == 0)
     { // eof!
       stdin_active = qfalse;
@@ -479,12 +474,12 @@ void Sys_ConsoleInputShutdown()
 	if (ttycon_on)
 	{
 		tty_Back(); // delete the leading "]"
-		tcsetattr (0, TCSADRAIN, &tty_tc);
+		tcsetattr (STDIN_FILENO, TCSADRAIN, &tty_tc);
 		ttycon_on = qfalse;
 	}
 
 	// make stdin blocking
-	fcntl( 0, F_SETFL, fcntl(0, F_GETFL, 0) & ~FNDELAY );
+	fcntl( STDIN_FILENO, F_SETFL, fcntl(STDIN_FILENO, F_GETFL, 0) & (~FNDELAY) );
 }
 
 
@@ -737,6 +732,7 @@ static struct Q3ToAnsiColorTable_s
 
 static const int tty_colorTableSize = sizeof( tty_colorTable ) / sizeof( tty_colorTable[0] );
 
+
 static void Sys_ANSIColorify( const char *msg, char *buffer, int bufferSize )
 {
   int   msgLength, pos;
@@ -793,21 +789,45 @@ static void Sys_ANSIColorify( const char *msg, char *buffer, int bufferSize )
   }
 }
 
+
+static char* CleanTermStr( char* string )
+{
+	char* s = string;
+	char* d = string;
+	char c;
+
+	while ((c = *s) != 0 ) {
+		if ( Q_IsColorString( s ) )
+			s++;
+		else
+			*d++ = c;
+		s++;
+	}
+	*d = '\0';
+
+	return string;
+}
+
+
 void  Sys_Print( const char *msg )
 {
+  static char finalMsg[ MAXPRINTMSG ];
+	
   if (ttycon_on)
   {
     tty_Hide();
   }
 
-  if( ttycon_on && ttycon_color_on )
+  if( ttycon_on && ttycon_ansicolor && ttycon_ansicolor->integer )
   {
-    char ansiColorString[ MAXPRINTMSG ];
-    Sys_ANSIColorify( msg, ansiColorString, MAXPRINTMSG );
-    fputs( ansiColorString, stderr );
+    Sys_ANSIColorify( msg, finalMsg, sizeof(finalMsg) );
   }
   else
-    fputs(msg, stderr);
+  {
+    Q_strncpyz( finalMsg, msg, sizeof(finalMsg) );
+    CleanTermStr( finalMsg );
+  }
+  fputs( finalMsg, stdout );
 
   if (ttycon_on)
   {

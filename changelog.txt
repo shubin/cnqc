@@ -143,6 +143,8 @@ add: automatic dedicated server process restarts for crashes and timed reboots (
   this means 2 CNQ3 processes run per server: a parent (fixed pid) and a child (new pid after each restart)
   this behavior can be disabled by passing "nohardreboot" as a command-line argument
 
+fix: color codes (e.g. "^1") don't get printed to the terminal anymore
+
 fix: tty handling of the leading "]" character
 
 fix: dedicated servers no longer insert a leading backslash when running auto-completion

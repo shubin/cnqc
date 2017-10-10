@@ -61,6 +61,7 @@ struct mapDownload_t {
 	qbool lastErrorTimeOut;	// qtrue if the last recv error was a timeout
 	int sourceIndex;		// index into the cl_mapDLSources array
 	qbool exactMatch;		// qtrue if an exact match is required
+	qbool cleared;			// qtrue if Download_Clear was called at least once
 };
 
 
@@ -208,6 +209,7 @@ static void Download_Clear( mapDownload_t* dl )
 	dl->lastErrorTimeOut = qfalse;
 	dl->sourceIndex = 0;
 	dl->exactMatch = qfalse;
+	dl->cleared = qtrue;
 }
 
 
@@ -315,6 +317,9 @@ static qbool Download_Rename( mapDownload_t* dl )
 
 static qbool Download_CleanUp( mapDownload_t* dl, qbool rename )
 {
+	if (!cl_mapDL.cleared)
+		return qfalse;
+
 	if (dl->socket != INVALID_SOCKET) {
 		Q_closesocket(dl->socket);
 		dl->socket = INVALID_SOCKET;
@@ -784,7 +789,7 @@ void CL_MapDownload_Init()
 
 qbool CL_MapDownload_Active()
 {
-	return cl_mapDL.socket != INVALID_SOCKET;
+	return cl_mapDL.cleared && cl_mapDL.socket != INVALID_SOCKET;
 }
 
 
