@@ -877,6 +877,8 @@ static void Lin_HardRebootHandler( int argc, char** argv )
 	args[argc + 0] = (char*)"nohardreboot";
 	args[argc + 1] = NULL;
 
+	SIG_InitParent();
+
 	for (;;) {
 		if (Lin_RunProcess(args) == 0)
 			_exit(0); // quit without calling atexit handlers
@@ -896,7 +898,7 @@ int main( int argc, char** argv )
 	Lin_HardRebootHandler(argc, argv);
 #endif
 
-	SIG_Init();
+	SIG_InitChild();
 	
 	// merge the command line: we need it in a single chunk
 	int len = 1, i;
@@ -918,6 +920,7 @@ int main( int argc, char** argv )
 	Sys_ConsoleInputInit();
 
 	for (;;) {
+		SIG_Frame();
 		Com_Frame();
 	}
 

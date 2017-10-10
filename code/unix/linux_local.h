@@ -38,7 +38,9 @@ void QGL_EnableLogging( qboolean enable );
 void QGL_Shutdown( void );
 
 // signals.c
-void SIG_Init(void);
+void SIG_InitChild();
+void SIG_InitParent();
+void SIG_Frame();
 
 extern int    q_argc;
 extern char** q_argv;

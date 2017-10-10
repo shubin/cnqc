@@ -472,7 +472,7 @@ local function ApplyExeProjectSettings(exeName, server)
 		end
 
 	filter "system:not windows"
-		links { "dl", "m", "backtrace" }
+		links { "dl", "m" }
 		if (server == 0) then
 			buildoptions { "-pthread" }
 			links { "X11", "pthread" }
@@ -655,7 +655,8 @@ solution "cnq3"
 		kind "WindowedApp"
 		language "C++"
 		ApplyExeProjectSettings("cnq3", 0)
-		buildoptions { "-std=c++98" }
+		filter "action:gmake"
+			buildoptions { "-std=c++98" }
 
 	project "cnq3-server"
 
@@ -663,7 +664,8 @@ solution "cnq3"
 		language "C++"
 		defines { "DEDICATED" }
 		ApplyExeProjectSettings("cnq3-server", 1)
-		buildoptions { "-std=c++98" }
+		filter "action:gmake"
+			buildoptions { "-std=c++98" }
 
 	project "botlib"
 
@@ -672,7 +674,8 @@ solution "cnq3"
 		defines { "BOTLIB" }
 		AddSourcesAndHeaders("botlib")
 		ApplyLibProjectSettings()
-		buildoptions { "-std=c++98" }
+		filter "action:gmake"
+			buildoptions { "-std=c++98" }
 
 	project "renderer"
 
@@ -681,7 +684,8 @@ solution "cnq3"
 		AddSourcesAndHeaders("renderer")
 		includedirs { path_src.."/freetype/include" }
 		ApplyLibProjectSettings()
-		buildoptions { "-std=c++98" }
+		filter "action:gmake"
+			buildoptions { "-std=c++98" }
 
 	project "libjpeg-turbo"
 

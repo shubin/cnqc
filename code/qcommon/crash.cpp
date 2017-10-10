@@ -5,14 +5,20 @@
 
 
 typedef struct {
-	char gitHeadHash[24]; // SHA-1 -> 160 bits -> 20 hex chars
-	vm_t* vm;
-	unsigned int crc32; // CRC32
-} vmCrashInfo_t;
+	char			gitHeadHash[24]; // SHA-1 -> 160 bits -> 20 hex chars
+	vm_t*			vm;
+	unsigned int	crc32;
+} vmCrash_t;
 
-static vmCrashInfo_t crash_vm[VM_COUNT];
-static char crash_modName[64];
-static char crash_modVersion[64];
+typedef struct {
+	vmCrash_t	vm[VM_COUNT];
+	char		modName[64];
+	char		modVersion[64];
+} crash_t;
+
+
+static crash_t crash;
+
 
 #if defined(_WIN32)
 #	define NEWLINE	"\n"
@@ -39,13 +45,13 @@ static const char* GetVMName(vmIndex_t vmIndex)
 void Crash_SaveQVMPointer(vmIndex_t vmIndex, vm_t* vm)
 {
 	if (IsVMIndexValid(vmIndex))
-		crash_vm[vmIndex].vm = vm;
+		crash.vm[vmIndex].vm = vm;
 }
 
 void Crash_SaveQVMChecksum(vmIndex_t vmIndex, unsigned int crc32)
 {
 	if (IsVMIndexValid(vmIndex))
-		crash_vm[vmIndex].crc32 = crc32;
+		crash.vm[vmIndex].crc32 = crc32;
 }
 
 void Crash_SaveQVMGitString(const char* varName, const char* varValue)
@@ -63,26 +69,26 @@ void Crash_SaveQVMGitString(const char* varName, const char* varValue)
 	else
 		return;
 
-	Q_strncpyz(crash_vm[index].gitHeadHash, varValue, sizeof(crash_vm[index].gitHeadHash));
+	Q_strncpyz(crash.vm[index].gitHeadHash, varValue, sizeof(crash.vm[index].gitHeadHash));
 }
 
 void Crash_SaveModName(const char* modName)
 {
 	if (modName && *modName != '\0')
-		Q_strncpyz(crash_modName, modName, sizeof(crash_modName));
+		Q_strncpyz(crash.modName, modName, sizeof(crash.modName));
 }
 
 void Crash_SaveModVersion(const char* modVersion)
 {
 	if (modVersion && *modVersion != '\0')
-		Q_strncpyz(crash_modVersion, modVersion, sizeof(crash_modVersion));
+		Q_strncpyz(crash.modVersion, modVersion, sizeof(crash.modVersion));
 }
 
 static void PrintQVMInfo(vmIndex_t vmIndex)
 {
 	static char callStack[MAX_VM_CALL_STACK_DEPTH * 12];
 
-	vmCrashInfo_t* vm = &crash_vm[vmIndex];
+	vmCrash_t* vm = &crash.vm[vmIndex];
 	if (vm->crc32 == 0) {
 		return;
 	}
@@ -131,7 +137,7 @@ static void PrintQVMInfo(vmIndex_t vmIndex)
 static qbool IsAnyVMLoaded()
 {
 	for (int i = 0; i < VM_COUNT; i++) {
-		if (crash_vm[i].crc32 != 0)
+		if (crash.vm[i].crc32 != 0)
 			return qtrue;
 	}
 
@@ -206,8 +212,8 @@ void Crash_PrintToFile(const char* engineFilePath)
 	const unsigned int crc32 = CRC32_HashFile(engineFilePath);
 	if (crc32)
 		JSONW_HexValue("engine_crc32", crc32);
-	JSONW_StringValue("mod_name", crash_modName);
-	JSONW_StringValue("mod_version", crash_modVersion);
+	JSONW_StringValue("mod_name", crash.modName);
+	JSONW_StringValue("mod_version", crash.modVersion);
 
 	if (IsAnyVMLoaded()) {
 		JSONW_BeginNamedArray("vms");
@@ -217,3 +223,67 @@ void Crash_PrintToFile(const char* engineFilePath)
 		JSONW_EndArray();
 	}
 }
+
+
+#if defined(__linux__)
+
+#include <unistd.h>
+
+static void Print(int fd, const char* msg)
+{
+	write(fd, msg, strlen(msg));
+}
+
+static void PrintVMStackTrace(int fd, vmIndex_t vmIndex)
+{
+	Print(fd, GetVMName(vmIndex));
+	Print(fd, ": ");
+
+	vmCrash_t* const vmc = &crash.vm[vmIndex];
+	vm_t* const vm = vmc->vm;
+	if (vm == NULL) {
+		Print(fd, "not loaded\r\n");
+		return;
+	}
+
+	Print(fd, "crc32 ");
+	Print(fd, Q_itohex(vmc->crc32, qtrue, qtrue));
+	Print(fd, " - ");
+
+	int d = vm->callStackDepth;
+	qbool current = qtrue;
+	if (d <= 0 || d > MAX_VM_CALL_STACK_DEPTH) {
+		d = vm->lastCallStackDepth;
+		current = qfalse;
+	}
+
+	if (d <= 0 || d > MAX_VM_CALL_STACK_DEPTH)
+		d = 0;
+
+	Print(fd, current ? "current " : "old ");
+	if (d > 0) {
+		for (int i = 0; i < d; i++) {
+			Print(fd, Q_itohex(vm->callStack[i], qtrue, qtrue));
+			if (i - 1 < d) 
+				Print(fd, " ");
+		}		
+	}
+	Print(fd, "\r\n");
+}
+
+void Crash_PrintVMStackTracesASS(int fd)
+{
+	if (crash.modName[0] != '\0') {
+		Print(fd, "mod: ");
+		Print(fd, crash.modName);
+		Print(fd, " ");
+		Print(fd, crash.modVersion);
+		Print(fd, "\r\n");	
+	}
+
+	for (int i = 0; i < VM_COUNT; i++) {
+		PrintVMStackTrace(fd, (vmIndex_t)i);
+	}
+}
+
+#endif
