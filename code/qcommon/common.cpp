@@ -1355,7 +1355,7 @@ static void Com_InitHunkMemory()
 	// allocate the stack based hunk allocator
 	const cvar_t* cv = Cvar_Get( "com_hunkMegs", XSTRING(DEF_COMHUNKMEGS), CVAR_LATCH | CVAR_ARCHIVE );
 	if (com_dedicated && com_dedicated->integer)
-		Cvar_SetRange( "com_hunkMegs", CVART_INTEGER, XSTRING(MIN_DEDICATED_COMHUNKMEGS), "256" );
+		Cvar_SetRange( "com_hunkMegs", CVART_INTEGER, XSTRING(MIN_COMHUNKMEGS_DED), "256" );
 	else
 		Cvar_SetRange( "com_hunkMegs", CVART_INTEGER, XSTRING(MIN_COMHUNKMEGS), "256" );
 
