@@ -44,12 +44,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #endif
 
 
-#define MIN_DEDICATED_COMHUNKMEGS 8
-#define MIN_COMHUNKMEGS		56
-#define DEF_COMHUNKMEGS		64
-#define DEF_COMZONEMEGS		24
-#define DEF_COMHUNKMEGS_S	XSTRING(DEF_COMHUNKMEGS)
-#define DEF_COMZONEMEGS_S	XSTRING(DEF_COMZONEMEGS)
+#define MIN_COMHUNKMEGS_DED		 8	// for the dedicated server
+#define MIN_COMHUNKMEGS			56
+#define DEF_COMHUNKMEGS			64
+#define DEF_COMZONEMEGS			32
 
 
 static jmp_buf abortframe;		// an ERR_DROP occured, exit the entire frame
@@ -1355,7 +1353,7 @@ static void Com_InitHunkMemory()
 	}
 
 	// allocate the stack based hunk allocator
-	const cvar_t* cv = Cvar_Get( "com_hunkMegs", DEF_COMHUNKMEGS_S, CVAR_LATCH | CVAR_ARCHIVE );
+	const cvar_t* cv = Cvar_Get( "com_hunkMegs", XSTRING(DEF_COMHUNKMEGS), CVAR_LATCH | CVAR_ARCHIVE );
 	if (com_dedicated && com_dedicated->integer)
 		Cvar_SetRange( "com_hunkMegs", CVART_INTEGER, XSTRING(MIN_DEDICATED_COMHUNKMEGS), "256" );
 	else
@@ -1364,7 +1362,7 @@ static void Com_InitHunkMemory()
 	int nMinAlloc;
 	const char* s;
 	if (com_dedicated && com_dedicated->integer) {
-		nMinAlloc = MIN_DEDICATED_COMHUNKMEGS;
+		nMinAlloc = MIN_COMHUNKMEGS_DED;
 		s = "Minimum com_hunkMegs for a dedicated server is %i, allocating %i megs.\n";
 	}
 	else {
