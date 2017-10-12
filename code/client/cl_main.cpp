@@ -2103,7 +2103,6 @@ void CL_Shutdown()
 
 	CL_ShutdownUI();
 
-	CL_SaveCommandHistory();
 	CL_MapDownload_Cancel();
 
 	Cmd_UnregisterModule( MODULE_CLIENT );

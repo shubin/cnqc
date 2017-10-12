@@ -90,7 +90,7 @@ chg: anti-aliasing sample count is set with r_msaa on all platforms (on Windows,
 
 chg: file system start-up will now verify the presence and integrity of baseq3/pak0-8.pk3 instead of only pak0
 
-add: command history saving with con_history (default: 0)
+add: command history saving with con_history (default: 1)
 
 chg: replaced id's Huffman codec code with something both simpler and much faster
 

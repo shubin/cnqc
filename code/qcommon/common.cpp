@@ -80,6 +80,7 @@ cvar_t	*com_noErrorInterrupt;
 #endif
 
 static cvar_t	*com_completionStyle;	// 0 = legacy, 1 = ET-style
+static cvar_t	*con_history;
 
 // com_speeds times
 int		time_game;
@@ -305,6 +306,8 @@ void QDECL Com_Error( int code, const char *fmt, ... )
 
 void Com_Quit( int status )
 {
+	Sys_SaveHistory();
+
 	// don't try to shutdown if we are in a recursive error
 	if ( !com_errorEntered ) {
 		SV_Shutdown( "Server quit" );
@@ -2158,7 +2161,8 @@ static const cvarTableItem_t com_cvars[] =
 #if defined(_WIN32) && defined(_DEBUG)
 	{ &com_noErrorInterrupt, "com_noErrorInterrupt", "0", 0, CVART_BOOL },
 #endif
-	{ &com_completionStyle, "com_completionStyle", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_com_completionStyle }
+	{ &com_completionStyle, "com_completionStyle", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_com_completionStyle },
+	{ &con_history, "con_history", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "writes the command history to a file on exit" }
 };
 
 
@@ -2264,6 +2268,8 @@ void Com_Init( char *commandLine )
 		CL_Init();
 #endif
 	}
+
+	Sys_LoadHistory();
 
 	// set com_frameTime so that if a map is started on the
 	// command line it will still be able to count on com_frameTime
@@ -3127,6 +3133,92 @@ void History_GetNextCommand( field_t* edit, history_t* history, int width )
 	history->display = history->next;
 	Field_Clear( edit );
 	edit->widthInChars = width;
+}
+
+
+// It makes no sense for both executables to share the same command history.
+#if defined(DEDICATED)
+#define HISTORY_PATH "cnq3svcmdhistory"
+#else
+#define HISTORY_PATH "cnq3cmdhistory"
+#endif
+
+
+void History_LoadFromFile( history_t* history )
+{
+	fileHandle_t f;
+	FS_FOpenFileRead( HISTORY_PATH, &f, qfalse );
+	if ( f == 0 )
+		return;
+
+	int count;
+	if ( FS_Read( &count, sizeof(int), f ) != sizeof(int) ||
+		count <= 0 ||
+		count > COMMAND_HISTORY ) {
+		FS_FCloseFile( f );
+		return;
+	}
+
+	int lengths[COMMAND_HISTORY];
+	const int lengthBytes = sizeof(int) * count;
+	if ( FS_Read( lengths, lengthBytes, f ) != lengthBytes ) {
+		FS_FCloseFile( f );
+		return;
+	}
+
+	for ( int i = 0; i < count; ++i ) {
+		const int l = lengths[i];
+		if ( l <= 0 ||
+			FS_Read( history->commands[i].buffer, l, f ) != l ) {
+			FS_FCloseFile( f );
+			return;
+		}
+		history->commands[i].buffer[l] = '\0';
+		history->commands[i].cursor = l;
+	}
+
+	history->next = count;
+	history->display = count;
+	const int totalCount = ARRAY_LEN( history->commands );
+	for ( int i = count; i < totalCount; ++i ) {
+		history->commands[i].buffer[0] = '\0';
+	}
+
+	FS_FCloseFile( f );
+}
+
+
+void History_SaveToFile( const history_t* history )
+{
+	if ( con_history->integer == 0 )
+		return;
+
+	const fileHandle_t f = FS_FOpenFileWrite( HISTORY_PATH );
+	if ( f == 0 )
+		return;
+
+	int count = 0;
+	int lengths[COMMAND_HISTORY];
+	const int totalCount = ARRAY_LEN( history->commands );
+	for ( int i = 0; i < totalCount; ++i ) {
+		const char* const s = history->commands[(history->display + i) % COMMAND_HISTORY].buffer;
+		if ( *s == '\0' )
+			continue;
+
+		lengths[count++] = strlen( s );
+	}
+
+	FS_Write( &count, sizeof(count), f );
+	FS_Write( lengths, sizeof(int) * count, f );
+	for ( int i = 0, j = 0; i < totalCount; ++i ) {
+		const char* const s = history->commands[(history->display + i) % COMMAND_HISTORY].buffer;
+		if ( *s == '\0' )
+			continue;
+
+		FS_Write( s, lengths[j++], f );
+	}
+
+	FS_FCloseFile( f );
 }
 
 

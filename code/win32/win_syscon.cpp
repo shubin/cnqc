@@ -664,3 +664,23 @@ void Sys_SetErrorText( const char *buf )
 		s_wcd.hwndInputLine = NULL;
 	}
 }
+
+
+void Sys_LoadHistory()
+{
+#ifdef DEDICATED
+	History_LoadFromFile( &s_wcd.history );
+#else
+	History_LoadFromFile( &g_history );
+#endif
+}
+
+
+void Sys_SaveHistory()
+{
+#ifdef DEDICATED
+	History_SaveToFile( &s_wcd.history );
+#else
+	History_SaveToFile( &g_history );
+#endif
+}

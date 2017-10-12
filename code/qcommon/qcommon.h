@@ -792,6 +792,8 @@ void History_Clear( history_t* history, int width );
 void History_SaveCommand( history_t* history, const field_t* edit );
 void History_GetPreviousCommand( field_t* edit, history_t* history );
 void History_GetNextCommand( field_t* edit, history_t* history, int width );
+void History_LoadFromFile( history_t* history );
+void History_SaveToFile( const history_t* history );
 
 /*
 ==============================================================
@@ -1108,6 +1110,9 @@ qbool Sys_HardReboot(); // qtrue when the server can restart itself
 
 qbool	Sys_HasCNQ3Parent();					// qtrue if a child of CNQ3
 int		Sys_GetUptimeSeconds( qbool parent );	// negative if not available
+
+void	Sys_LoadHistory();
+void	Sys_SaveHistory();
 
 // huffman.cpp - id's original code
 // used for out-of-band (OOB) datagrams with dynamically created trees

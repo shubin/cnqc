@@ -1000,6 +1000,26 @@ int Sys_GetUptimeSeconds( qbool parent )
 }
 
 
+void Sys_LoadHistory()
+{
+#ifdef DEDICATED
+	History_LoadFromFile( &tty_history );
+#else
+	History_LoadFromFile( &g_history );
+#endif
+}
+
+
+void Sys_SaveHistory()
+{
+#ifdef DEDICATED
+	History_SaveToFile( &tty_history );
+#else
+	History_SaveToFile( &g_history );
+#endif
+}
+
+
 int main( int argc, char** argv )
 {
 	q_argc = argc;

@@ -310,8 +310,6 @@ void CL_ConInit()
 	History_Clear( &g_history, g_console_field_width );
 	Con_ClearNotify();
 
-	CL_LoadCommandHistory();
-
 	Cmd_RegisterArray( con_cmds, MODULE_CONSOLE );
 }
 
