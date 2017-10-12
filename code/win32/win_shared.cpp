@@ -47,3 +47,38 @@ qbool Sys_HardReboot()
 	return qfalse;
 }
 
+
+qbool Sys_HasCNQ3Parent()
+{
+	return qfalse;
+}
+
+
+int Sys_GetUptimeSeconds( qbool parent )
+{
+	if (parent)
+		return -1;
+
+	FILETIME startFileTime;
+	FILETIME trash[3];
+	if (GetProcessTimes(GetCurrentProcess(), &startFileTime, &trash[0], &trash[1], &trash[2]) == 0)
+		return -1;
+
+	SYSTEMTIME endSystemTime;
+	GetSystemTime(&endSystemTime);
+
+	FILETIME endFileTime;
+	if (SystemTimeToFileTime(&endSystemTime, &endFileTime) == 0)
+		return -1;
+
+	// 1 FILETIME unit is 100-nanoseconds
+	ULARGE_INTEGER start, end;
+	start.LowPart = startFileTime.dwLowDateTime;
+	start.HighPart = startFileTime.dwHighDateTime;
+	end.LowPart = endFileTime.dwLowDateTime;
+	end.HighPart = endFileTime.dwHighDateTime;
+	const int seconds = (int)((end.QuadPart - start.QuadPart) / 1e7);
+
+	return seconds;
+}
+

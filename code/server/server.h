@@ -77,6 +77,8 @@ struct server_t {
 	int				gameClientSize;		// will be > sizeof(playerState_t) due to game private data
 
 	int				restartTime;
+
+	int				mapLoadTime;
 };
 
 

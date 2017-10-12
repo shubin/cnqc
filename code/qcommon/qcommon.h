@@ -1106,6 +1106,9 @@ qbool Sys_LowPhysicalMemory( void );
 
 qbool Sys_HardReboot(); // qtrue when the server can restart itself
 
+qbool	Sys_HasCNQ3Parent();					// qtrue if a child of CNQ3
+int		Sys_GetUptimeSeconds( qbool parent );	// negative if not available
+
 // huffman.cpp - id's original code
 // used for out-of-band (OOB) datagrams with dynamically created trees
 void	DynHuff_Compress( msg_t* buf, int offset );

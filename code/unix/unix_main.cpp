@@ -31,6 +31,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <sys/stat.h>
+#include <sys/sysinfo.h>
 #include <string.h>
 #include <ctype.h>
 #include <sys/wait.h>
@@ -909,6 +910,96 @@ static void Lin_HardRebootHandler( int argc, char** argv )
 #endif
 
 
+static qbool lin_hasParent = qfalse;
+static pid_t lix_parentPid;
+
+
+static const char* Lin_GetExeName(const char* path)
+{
+	const char* lastSlash = strrchr(path, '/');
+	if (lastSlash == NULL)
+		return path;
+
+	return lastSlash + 1;
+}
+
+
+static void Lin_TrackParentProcess()
+{
+	static char cmdLine[1024];
+
+	char fileName[128];
+	Com_sprintf(fileName, sizeof(fileName), "/proc/%d/cmdline", (int)getppid());
+
+	const int fd = open(fileName, O_RDONLY);
+	if (fd == -1)
+		return;
+
+	const qbool hasCmdLine = read(fd, cmdLine, sizeof(cmdLine)) > 0;
+	close(fd);
+
+	if (!hasCmdLine)
+		return;
+
+	cmdLine[sizeof(cmdLine) - 1] = '\0';
+	lin_hasParent = strcmp(Lin_GetExeName(cmdLine), Lin_GetExeName(q_argv[0])) == 0;
+}
+
+
+qbool Sys_HasCNQ3Parent()
+{
+	return lin_hasParent;
+}
+
+
+static int Sys_GetProcessUptime( pid_t pid )
+{
+	// length must be in sync with the fscanf call!
+	static char word[256];
+
+	// The process start time is the 22nd column and
+	// encoded as jiffies after system boot.
+	const int jiffiesPerSec = sysconf(_SC_CLK_TCK);
+	if (jiffiesPerSec <= 0)
+		return -1;
+
+	char fileName[128];
+	Com_sprintf(fileName, sizeof(fileName), "/proc/%ld/stat", (long)pid);
+	FILE* const file = fopen(fileName, "r");
+	if (file == NULL)
+		return -1;
+
+	for (int i = 0; i < 21; ++i) {
+		if (fscanf(file, "%255s", word) != 1) {
+			fclose(file);
+			return -1;
+		}
+	}
+
+	int jiffies;
+	const qbool success = fscanf(file, "%d", &jiffies) == 1;
+	fclose(file);
+
+	if (!success)
+		return -1;
+
+	const int secondsSinceBoot = jiffies / jiffiesPerSec;
+	struct sysinfo info;
+	sysinfo(&info);
+
+	return (int)info.uptime - secondsSinceBoot;
+}
+
+
+int Sys_GetUptimeSeconds( qbool parent )
+{
+	if (!lin_hasParent)
+		return -1;
+
+	return Sys_GetProcessUptime( parent ? getppid() : getpid() );
+}
+
+
 int main( int argc, char** argv )
 {
 	q_argc = argc;
@@ -938,6 +1029,7 @@ int main( int argc, char** argv )
 	Com_Printf( "Working directory: %s\n", Sys_Cwd() );
 
 	Sys_ConsoleInputInit();
+	Lin_TrackParentProcess();
 
 	for (;;) {
 		SIG_Frame();

@@ -522,6 +522,8 @@ void SV_SpawnServer( const char* mapname )
 
 	Hunk_SetMark();
 
+	sv.mapLoadTime = Sys_Milliseconds();
+
 	QSUBSYSTEM_INIT_DONE( "Server" );
 }
 

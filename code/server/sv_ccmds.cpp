@@ -695,6 +695,65 @@ static void SV_ServerRestart_f()
 }
 
 
+static void SV_RestartProcess_f()
+{
+	if ( !Sys_HasCNQ3Parent() ) {
+		Com_Printf( "this server isn't controlled by a parent CNQ3 process\n" );
+		return;
+	}
+
+	Com_Quit(1);
+}
+
+
+static const char* SV_FormatUptime( int seconds )
+{
+	static char result[32];
+
+	static const int unitCount = 4;
+	static const char* units[unitCount] = { "s", "m", "h", "d" };
+	static const int divisors[unitCount] = { 1, 60, 60, 24 };
+
+	if ( seconds <= 0 )
+		return "nada";
+
+	int uptime[unitCount] = { seconds, 0, 0, 0 };
+	for ( int i = 1; i < unitCount; ++i ) {
+		uptime[i] = uptime[i-1] / divisors[i];
+		uptime[i-1] -= uptime[i] * divisors[i];
+	}
+
+	result[0] = '\0';
+	for ( int i = unitCount - 1; i >= 0; --i ) {
+		if ( uptime[i] <= 0 )
+			continue;
+
+		Q_strcat( result, sizeof( result ), va( "%d%s", uptime[i], units[i] ) );
+		if ( i > 0 && uptime[i-1] > 0 )
+			Q_strcat( result, sizeof( result ), " " );
+	}
+
+	return result;
+}
+
+
+static void SV_Uptime_f()
+{
+	if (Sys_HasCNQ3Parent()) {
+		const int parentTime = Sys_GetUptimeSeconds( qtrue );
+		Com_Printf( "Parent process : %s\n", parentTime >= 0 ? SV_FormatUptime(parentTime) : "unknown" );
+	}
+
+	const int childTime = Sys_GetUptimeSeconds( qfalse );
+	Com_Printf( "This process   : %s\n", childTime >= 0 ? SV_FormatUptime(childTime) : "unknown" );
+
+	int mapTime = -1;
+	if ( Cvar_VariableIntegerValue( "sv_running" ) )
+		mapTime =  ( Sys_Milliseconds() - sv.mapLoadTime ) / 1000;
+	Com_Printf( "Current map    : %s\n", mapTime >= 0 ? SV_FormatUptime(mapTime) : "no map loaded" );
+}
+
+
 static const cmdTableItem_t sv_cmds[] =
 {
 	{ "heartbeat", SV_Heartbeat_f, NULL, "sends a heartbeat to master servers" },
@@ -711,7 +770,9 @@ static const cmdTableItem_t sv_cmds[] =
 	{ "map", SV_Map_f, SV_CompleteMap_f, "loads a map" },
 	{ "devmap", SV_DevMap_f, SV_CompleteMap_f, "loads a map with cheats enabled" },
 	{ "killserver", SV_KillServer_f, NULL, "shuts the server down" },
-	{ "sv_restart", SV_ServerRestart_f, NULL, "restarts the server" }
+	{ "sv_restart", SV_ServerRestart_f, NULL, "restarts the server" },
+	{ "sv_restartProcess", SV_RestartProcess_f, NULL, "restarts the server's child process" },
+	{ "uptime", SV_Uptime_f, NULL, "prints the server's uptimes" }
 };
 
 

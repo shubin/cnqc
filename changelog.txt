@@ -1,6 +1,8 @@
 
 DD Mmm 17 - 1.49
 
+add: uptime command that prints uptimes for the process, the current map and the parent process
+
 add: keys F13 to F24 are now bindable
 
 add: new cvar type and range extension for compatible mods like CPMA 1.50
@@ -142,6 +144,7 @@ Linux:
 add: automatic dedicated server process restarts for crashes and timed reboots (sv_minRebootDelayMins)
   this means 2 CNQ3 processes run per server: a parent (fixed pid) and a child (new pid after each restart)
   this behavior can be disabled by passing "nohardreboot" as a command-line argument
+  the new command sv_restartProcess can be used to shut down the child process and start a new one
 
 fix: color codes (e.g. "^1") don't get printed to the terminal anymore
 
