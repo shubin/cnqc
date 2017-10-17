@@ -450,10 +450,11 @@ const char *Q_stristr( const char *s, const char *find )
 {
 	char c;
 	if ((c = *find++) != 0) {
+		const size_t len = strlen(find);
+
 		if (c >= 'a' && c <= 'z')
 			c -= ('a' - 'A');
 
-		const size_t len = strlen(find);
 		do {
 			char sc;
 			do {
