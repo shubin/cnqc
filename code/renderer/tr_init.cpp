@@ -461,6 +461,7 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_height, "r_height", "720", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "240", "65535", "custom window height" help_r_mode0 },
 	{ &r_customaspect, "r_customaspect", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0.1", "10", "custom pixel aspect ratio" help_r_mode0 },
 	{ &r_vertexLight, "r_vertexLight", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, "disables lightmap texture blending" },
+	// note that r_subdivisions > 64 will create rendering artefacts because you'll see the other side of a curved surface when against it
 	{ &r_subdivisions, "r_subdivisions", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "1", "64", help_r_subdivisions },
 #ifdef USE_R_SMP
 	{ &r_smp, "r_smp", "0", CVAR_ARCHIVE | CVAR_LATCH },

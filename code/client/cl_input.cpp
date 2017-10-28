@@ -844,7 +844,7 @@ static const cvarTableItem_t cl_cvars[] =
 	{ &m_speed, "m_speed", "2", CVAR_ARCHIVE, CVART_FLOAT, "0", "100", "mouse sensitivity" },
 	{ &m_accel, "m_accel", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", NULL, "mouse acceleration" },
 	{ &m_accelStyle, "m_accelStyle", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "1", "0=original, 1=new" },
-	{ &m_accelOffset, "m_accelOffset", "0", CVAR_ARCHIVE, CVART_FLOAT, "0.001", "5000", "offset for the power function\nfor m_accelStyle 1 only" },
+	{ &m_accelOffset, "m_accelOffset", "5", CVAR_ARCHIVE, CVART_FLOAT, "0.001", "5000", "offset for the power function\nfor m_accelStyle 1 only" },
 	{ &m_limit, "m_limit", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", NULL, "mouse speed cap (0=disabled)\nfor m_accelStyle 0 only" },
 	{ &m_pitch, "m_pitch", "0.022", CVAR_ARCHIVE, CVART_FLOAT, "-100", "100", "post-accel vertical mouse sens." },
 	{ &m_yaw, "m_yaw", "0.022", CVAR_ARCHIVE, CVART_FLOAT, "-100", "100", "post-accel horizontal mouse sens." },
