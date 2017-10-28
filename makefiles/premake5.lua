@@ -319,11 +319,12 @@ local function ApplyExeProjectSettings(exeName, server)
 		"win32/win_syscon.cpp"
 	}
 
-	local server_sources_unix =
+	local server_sources_linux =
 	{
-		"unix/unix_main.cpp",
-		"unix/unix_shared.cpp",
-		"unix/linux_signals.cpp"
+		"linux/linux_main.cpp",
+		"linux/linux_shared.cpp",
+		"linux/linux_signals.cpp",
+		"linux/linux_tty.cpp"
 	}
 
 	local client_sources =
@@ -395,15 +396,16 @@ local function ApplyExeProjectSettings(exeName, server)
 		"win32/win_qgl.c"
 	}
 
-	local client_sources_unix =
+	local client_sources_linux =
 	{
-		"unix/unix_main.cpp",
-		"unix/unix_shared.cpp",
-		"unix/linux_joystick.c",
-		"unix/linux_signals.cpp",
-		"unix/linux_qgl.c",
-		"unix/linux_snd.c",
-		"unix/linux_glimp.cpp"
+		"linux/linux_main.cpp",
+		"linux/linux_qgl.c",
+		"linux/linux_shared.cpp",
+		"linux/linux_signals.cpp",
+		"linux/linux_tty.cpp",
+		"linux/sdl_core.cpp",
+		"linux/sdl_glimp.cpp",
+		"linux/sdl_snd.cpp"
 	}
 
 	AddHeaders("botlib")
@@ -435,9 +437,9 @@ local function ApplyExeProjectSettings(exeName, server)
 
 	filter { "system:not windows" }
 		if (server == 1) then
-			AddSourcesFromArray(".", server_sources_unix)
+			AddSourcesFromArray(".", server_sources_linux)
 		else
-			AddSourcesFromArray(".", client_sources_unix)
+			AddSourcesFromArray(".", client_sources_linux)
 		end
 
 	-- create git info header
@@ -474,8 +476,7 @@ local function ApplyExeProjectSettings(exeName, server)
 	filter "system:not windows"
 		links { "dl", "m" }
 		if (server == 0) then
-			buildoptions { "-pthread" }
-			links { "X11", "pthread" }
+			links { "SDL2" }
 		end
 
 	-- RC will compile the .rc into a .res

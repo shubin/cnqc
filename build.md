@@ -49,7 +49,10 @@ Building on Linux with GCC
 
 Requirements:
 
-- NASM | On Debian and Ubuntu, run `sudo apt-get install nasm` to install it
+| Name  | Server | Client | Package name (apt-get) |
+|-------|:------:|:------:|------------------------|
+| NASM  | X      | X      | nasm |
+| SDL 2 |        | X      | libsdl2-dev |
 
 Options:
 
@@ -79,7 +82,19 @@ There are 2 environment variables used for compiling and debugging:
 | QUAKE3DIR | required for building  | optional |
 | CPMADIR   | required for debugging | unused   |
 
-Build with other compilers
---------------------------
+Building with other compilers
+-----------------------------
 
 While it's not officially supported, you can modify the premake Lua script and run premake on it to generate new makefiles for your own needs.
+
+Bonus: Building SDL 2 from source on Linux
+------------------------------------------
+
+- Download the sources of the latest stable release
+- Extract to sdl-src
+- Create sdl-build next to sdl-src (it *has* to be out-of-tree)
+- Navigate to the sdl-build directory with `cd`
+- Run `../sdl-src/configure`
+- Run `make`
+- As superuser, run `make install` (or `sudo make install`)
+- Run `ldconfig` to update the library paths

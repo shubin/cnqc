@@ -135,6 +135,10 @@ all: $(TARGETDIR) $(OBJDIR) prebuild prelink $(TARGET)
 endif
 
 OBJECTS := \
+	$(OBJDIR)/linux_main.o \
+	$(OBJDIR)/linux_shared.o \
+	$(OBJDIR)/linux_signals.o \
+	$(OBJDIR)/linux_tty.o \
 	$(OBJDIR)/cm_load.o \
 	$(OBJDIR)/cm_patch.o \
 	$(OBJDIR)/cm_polylib.o \
@@ -168,9 +172,6 @@ OBJECTS := \
 	$(OBJDIR)/sv_net_chan.o \
 	$(OBJDIR)/sv_snapshot.o \
 	$(OBJDIR)/sv_world.o \
-	$(OBJDIR)/linux_signals.o \
-	$(OBJDIR)/unix_main.o \
-	$(OBJDIR)/unix_shared.o \
 
 RESOURCES := \
 
@@ -228,6 +229,18 @@ $(GCH): $(PCH)
 	$(SILENT) $(CXX) -x c++-header $(ALL_CXXFLAGS) -o "$@" -MF "$(@:%.gch=%.d)" -c "$<"
 endif
 
+$(OBJDIR)/linux_main.o: ../../code/linux/linux_main.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/linux_shared.o: ../../code/linux/linux_shared.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/linux_signals.o: ../../code/linux/linux_signals.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/linux_tty.o: ../../code/linux/linux_tty.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/cm_load.o: ../../code/qcommon/cm_load.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
@@ -325,15 +338,6 @@ $(OBJDIR)/sv_snapshot.o: ../../code/server/sv_snapshot.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/sv_world.o: ../../code/server/sv_world.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/linux_signals.o: ../../code/unix/linux_signals.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/unix_main.o: ../../code/unix/unix_main.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/unix_shared.o: ../../code/unix/unix_shared.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 

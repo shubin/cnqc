@@ -141,6 +141,21 @@ fix: in raw mouse input mode, keeping any button pressed while focusing the wind
 
 Linux:
 
+chg: the client requires SDL 2 - the following things are handled by it:
+  window, GL context, video modes, audio, kb and mouse input, monitor list, clipboard
+
+add: in_noGrab <0|1> (default: 0) disables input grabbing
+
+add: m_relative <0|1> (default: 1) enables SDL's relative mouse mode
+  you might want to set it to 0 if you have a messed up input driver
+
+add: s_autoMute selects when the audio output should be disabled
+  s_autoMute 0 = never mute
+  s_autoMute 1 (default) = mute when the window doesn't have input focus
+  s_autoMute 2 = mute when the window is minimized
+
+add: minimize command to minimize the client's window
+
 add: automatic dedicated server process restarts for crashes and timed reboots (sv_minRebootDelayMins)
   this means 2 CNQ3 processes run per server: a parent (fixed pid) and a child (new pid after each restart)
   this behavior can be disabled by passing "nohardreboot" as a command-line argument
@@ -155,14 +170,6 @@ fix: dedicated servers no longer insert a leading backslash when running auto-co
 fix: the crash handler will reset tty input mode correctly
 
 chg: tty input behavior matches in-game behavior when cgame is running and fixed the truncated tty input
-
-fix: clear modifier keys on focus change to avoid ctrl/alt/shift being "stuck"
-
-chg: new Linux mouse input code, support for raw input with XInput 2
-  in_mouse 0 = no input
-  in_mouse 1 = raw input (XInput 2)
-  in_mouse 2 = normal input (XWindows)
-  m_device to select a device explicity when using raw input
 
 
 17 Sep 11 - 1.47

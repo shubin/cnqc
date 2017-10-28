@@ -21,7 +21,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include <signal.h>
 #include <execinfo.h>
-#include <backtrace.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -263,7 +262,7 @@ static void Sig_PrintSignalCaught(int sig)
 
 static void Sig_HandleExit()
 {
-	Sys_ConsoleInputShutdown();
+	Lin_ConsoleInputShutdown();
 }
 
 
@@ -321,7 +320,7 @@ static void Sig_HandleCrash(int sig)
 	//
 
 	Sig_PrintAttempt("restore tty settings");
-	Sys_ConsoleInputShutdown();
+	Lin_ConsoleInputShutdown();
 	Sig_PrintDone();
 
 	Sig_PrintAttempt("write JSON report");

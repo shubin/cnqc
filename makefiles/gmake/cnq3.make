@@ -19,10 +19,10 @@ ifeq ($(config),debug_x32)
   INCLUDES += -I../../code/freetype/include
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
-  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -g -Wno-unused-parameter -Wno-write-strings -pthread -x c++ -std=c++98
+  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -g -Wno-unused-parameter -Wno-write-strings -x c++ -std=c++98
   ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CFLAGS) -fno-exceptions -fno-rtti
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-  LIBS += ../../.build/debug_x32/libbotlib.a ../../.build/debug_x32/librenderer.a ../../.build/debug_x32/libfreetype.a ../../.build/debug_x32/liblibjpeg-turbo.a -ldl -lm -lX11 -lpthread
+  LIBS += ../../.build/debug_x32/libbotlib.a ../../.build/debug_x32/librenderer.a ../../.build/debug_x32/libfreetype.a ../../.build/debug_x32/liblibjpeg-turbo.a -ldl -lm -lSDL2
   LDDEPS += ../../.build/debug_x32/libbotlib.a ../../.build/debug_x32/librenderer.a ../../.build/debug_x32/libfreetype.a ../../.build/debug_x32/liblibjpeg-turbo.a
   ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -L../../.build/debug_x32 -m32 
   LINKCMD = $(CXX) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
@@ -50,10 +50,10 @@ ifeq ($(config),debug_x64)
   INCLUDES += -I../../code/freetype/include
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
-  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g -Wno-unused-parameter -Wno-write-strings -pthread -x c++ -std=c++98
+  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g -Wno-unused-parameter -Wno-write-strings -x c++ -std=c++98
   ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CFLAGS) -fno-exceptions -fno-rtti
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-  LIBS += ../../.build/debug_x64/libbotlib.a ../../.build/debug_x64/librenderer.a ../../.build/debug_x64/libfreetype.a ../../.build/debug_x64/liblibjpeg-turbo.a -ldl -lm -lX11 -lpthread
+  LIBS += ../../.build/debug_x64/libbotlib.a ../../.build/debug_x64/librenderer.a ../../.build/debug_x64/libfreetype.a ../../.build/debug_x64/liblibjpeg-turbo.a -ldl -lm -lSDL2
   LDDEPS += ../../.build/debug_x64/libbotlib.a ../../.build/debug_x64/librenderer.a ../../.build/debug_x64/libfreetype.a ../../.build/debug_x64/liblibjpeg-turbo.a
   ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib64 -L../../.build/debug_x64 -m64 
   LINKCMD = $(CXX) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
@@ -81,10 +81,10 @@ ifeq ($(config),release_x32)
   INCLUDES += -I../../code/freetype/include
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
-  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -fomit-frame-pointer -ffast-math -Os -g -msse2 -Wno-unused-parameter -Wno-write-strings -g1 -pthread -x c++ -std=c++98
+  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -fomit-frame-pointer -ffast-math -Os -g -msse2 -Wno-unused-parameter -Wno-write-strings -g1 -x c++ -std=c++98
   ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CFLAGS) -fno-exceptions -fno-rtti
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-  LIBS += ../../.build/release_x32/libbotlib.a ../../.build/release_x32/librenderer.a ../../.build/release_x32/libfreetype.a ../../.build/release_x32/liblibjpeg-turbo.a -ldl -lm -lX11 -lpthread
+  LIBS += ../../.build/release_x32/libbotlib.a ../../.build/release_x32/librenderer.a ../../.build/release_x32/libfreetype.a ../../.build/release_x32/liblibjpeg-turbo.a -ldl -lm -lSDL2
   LDDEPS += ../../.build/release_x32/libbotlib.a ../../.build/release_x32/librenderer.a ../../.build/release_x32/libfreetype.a ../../.build/release_x32/liblibjpeg-turbo.a
   ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -L../../.build/release_x32 -m32 
   LINKCMD = $(CXX) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
@@ -112,10 +112,10 @@ ifeq ($(config),release_x64)
   INCLUDES += -I../../code/freetype/include
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
-  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -fomit-frame-pointer -ffast-math -Os -g -msse2 -Wno-unused-parameter -Wno-write-strings -g1 -pthread -x c++ -std=c++98
+  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -fomit-frame-pointer -ffast-math -Os -g -msse2 -Wno-unused-parameter -Wno-write-strings -g1 -x c++ -std=c++98
   ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CFLAGS) -fno-exceptions -fno-rtti
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-  LIBS += ../../.build/release_x64/libbotlib.a ../../.build/release_x64/librenderer.a ../../.build/release_x64/libfreetype.a ../../.build/release_x64/liblibjpeg-turbo.a -ldl -lm -lX11 -lpthread
+  LIBS += ../../.build/release_x64/libbotlib.a ../../.build/release_x64/librenderer.a ../../.build/release_x64/libfreetype.a ../../.build/release_x64/liblibjpeg-turbo.a -ldl -lm -lSDL2
   LDDEPS += ../../.build/release_x64/libbotlib.a ../../.build/release_x64/librenderer.a ../../.build/release_x64/libfreetype.a ../../.build/release_x64/liblibjpeg-turbo.a
   ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib64 -L../../.build/release_x64 -m64 
   LINKCMD = $(CXX) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
@@ -154,6 +154,14 @@ OBJECTS := \
 	$(OBJDIR)/snd_main.o \
 	$(OBJDIR)/snd_mem.o \
 	$(OBJDIR)/snd_mix.o \
+	$(OBJDIR)/linux_main.o \
+	$(OBJDIR)/linux_qgl.o \
+	$(OBJDIR)/linux_shared.o \
+	$(OBJDIR)/linux_signals.o \
+	$(OBJDIR)/linux_tty.o \
+	$(OBJDIR)/sdl_core.o \
+	$(OBJDIR)/sdl_glimp.o \
+	$(OBJDIR)/sdl_snd.o \
 	$(OBJDIR)/cm_load.o \
 	$(OBJDIR)/cm_patch.o \
 	$(OBJDIR)/cm_polylib.o \
@@ -187,13 +195,6 @@ OBJECTS := \
 	$(OBJDIR)/sv_net_chan.o \
 	$(OBJDIR)/sv_snapshot.o \
 	$(OBJDIR)/sv_world.o \
-	$(OBJDIR)/linux_glimp.o \
-	$(OBJDIR)/linux_joystick.o \
-	$(OBJDIR)/linux_qgl.o \
-	$(OBJDIR)/linux_signals.o \
-	$(OBJDIR)/linux_snd.o \
-	$(OBJDIR)/unix_main.o \
-	$(OBJDIR)/unix_shared.o \
 
 RESOURCES := \
 
@@ -308,6 +309,30 @@ $(OBJDIR)/snd_mem.o: ../../code/client/snd_mem.cpp
 $(OBJDIR)/snd_mix.o: ../../code/client/snd_mix.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/linux_main.o: ../../code/linux/linux_main.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/linux_qgl.o: ../../code/linux/linux_qgl.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/linux_shared.o: ../../code/linux/linux_shared.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/linux_signals.o: ../../code/linux/linux_signals.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/linux_tty.o: ../../code/linux/linux_tty.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/sdl_core.o: ../../code/linux/sdl_core.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/sdl_glimp.o: ../../code/linux/sdl_glimp.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/sdl_snd.o: ../../code/linux/sdl_snd.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/cm_load.o: ../../code/qcommon/cm_load.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
@@ -405,27 +430,6 @@ $(OBJDIR)/sv_snapshot.o: ../../code/server/sv_snapshot.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/sv_world.o: ../../code/server/sv_world.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/linux_glimp.o: ../../code/unix/linux_glimp.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/linux_joystick.o: ../../code/unix/linux_joystick.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/linux_qgl.o: ../../code/unix/linux_qgl.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/linux_signals.o: ../../code/unix/linux_signals.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/linux_snd.o: ../../code/unix/linux_snd.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/unix_main.o: ../../code/unix/unix_main.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/unix_shared.o: ../../code/unix/unix_shared.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 

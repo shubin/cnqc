@@ -30,12 +30,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ** QGL_Shutdown() - unloads libraries, NULLs function pointers
 */
 
-#include "../qcommon/q_shared.h"
-#include <unistd.h>
-#include <sys/types.h>
-#include <float.h>
-#include "unix_glw.h"
-#include <dlfcn.h>
+
+#include <SDL2/SDL.h>
+
 #include "../renderer/tr_local.h"
 
 
@@ -748,30 +745,6 @@ static void ( APIENTRY * dllViewport )(GLint x, GLint y, GLsizei width, GLsizei 
 */
 void QGL_Shutdown( void )
 {
-	if ( glw_state.OpenGLLib )
-	{
-		// 25/09/05 Tim Angus <tim@ngus.net>
-		// Certain combinations of hardware and software, specifically
-		// Linux/SMP/Nvidia/agpgart (OK, OK. MY combination of hardware and
-		// software), seem to cause a catastrophic (hard reboot required) crash
-		// when libGL is dynamically unloaded. I'm unsure of the precise cause,
-		// suffice to say I don't see anything in the Q3 code that could cause it.
-		// I suspect it's an Nvidia driver bug, but without the source or means to
-		// debug I obviously can't prove (or disprove) this. Interestingly (though
-		// perhaps not suprisingly), Enemy Territory and Doom 3 both exhibit the
-		// same problem.
-		//
-		// After many, many reboots and prodding here and there, it seems that a
-		// placing a short delay before libGL is unloaded works around the problem.
-		// This delay is changable via the r_GLlibCoolDownMsec cvar (nice name
-		// huh?), and it defaults to 0. For me, 500 seems to work.
-		//if( r_GLlibCoolDownMsec->integer )
-		usleep( 500 * 1000 );
-
-		dlclose ( glw_state.OpenGLLib );
-		glw_state.OpenGLLib = NULL;
-	}
-
 	qglAccum                     = NULL;
 	qglAlphaFunc                 = NULL;
 	qglAreTexturesResident       = NULL;
@@ -1130,23 +1103,7 @@ void QGL_Shutdown( void )
 **
 */
 
-static void *QGL_GetProcAddress( const char *symbol )
-{
-	void *sym;
-
-	if ( qglXGetProcAddress )
-	{
-		sym = qglXGetProcAddress( symbol );
-		if ( sym )
-		{
-			return sym;
-		}
-	}
-
-	return dlsym( glw_state.OpenGLLib, symbol );
-}
-
-#define GPA( a ) QGL_GetProcAddress( a )
+#define GPA( a ) SDL_GL_GetProcAddress( a )
 
 
 /*
@@ -1160,20 +1117,9 @@ static void *QGL_GetProcAddress( const char *symbol )
 **
 */
 
-qboolean QGL_Init( const char *dllname )
+qbool QGL_Init( const char * )
 {
-	if (glw_state.OpenGLLib == 0)
-	{
-		glw_state.OpenGLLib = dlopen( dllname, RTLD_LAZY|RTLD_GLOBAL );
-	}
-
-	if ( glw_state.OpenGLLib == 0 ) {
-		ri.Printf( PRINT_ALL, "QGL_Init: Failed to load %s: %s\n", dllname, dlerror() );
-		return qfalse;
-	}
-
 	qglXGetProcAddress           = (void* (*)( const char *symbol ))GPA( "glXGetProcAddress" );
-
 	qglAccum                     = dllAccum				=(void (*)(GLenum, GLfloat))GPA( "glAccum" );
 	qglAlphaFunc                 = dllAlphaFunc			=(void (*)(GLenum, GLclampf))GPA( "glAlphaFunc" );
 	qglAreTexturesResident       = dllAreTexturesResident		=(GLboolean (*)(GLsizei, const GLuint*, GLboolean*))GPA( "glAreTexturesResident" );
@@ -1592,7 +1538,6 @@ qbool GLW_InitGL2()
 {
 	if (atof((const char*)qglGetString(GL_VERSION)) < 2.0f)
 	{
-		Com_Error( ERR_FATAL, "OpenGL 2 is the required minimum" );
 		return qfalse;
 	}
 
@@ -1651,43 +1596,25 @@ qbool GLW_InitGL2()
 
 typedef void ( APIENTRY * PFNGLTEXIMAGE2DMULTISAMPLE )(GLenum, GLsizei, GLenum, GLsizei, GLsizei, GLboolean);
 
+// 3.0
 PFNGLRENDERBUFFERSTORAGEMULTISAMPLEPROC qglRenderbufferStorageMultisample;
-PFNGLTEXIMAGE2DMULTISAMPLE qglTexImage2DMultisample;
 
+// 3.2
+PFNGLTEXIMAGE2DMULTISAMPLE qglTexImage2DMultisample;
 
 
 qbool GLW_InitGL3()
 {
-	if (atof((const char*)qglGetString(GL_VERSION)) < 3.2f)
+	if (atof((const char*)qglGetString(GL_VERSION)) < 3.0f)
 	{
 		return qfalse;
 	}
-	
+
+	// 3.0
 	QGL_EXT( glRenderbufferStorageMultisample, PFNGLRENDERBUFFERSTORAGEMULTISAMPLEPROC );
+
+	// 3.2
 	QGL_EXT( glTexImage2DMultisample, PFNGLTEXIMAGE2DMULTISAMPLE );
 
 	return qtrue;
 }
-
-
-void QGL_SwapInterval( Display *dpy, Window win, int interval )
-{
-	if( qglSwapIntervalEXT )
-	{
-		qglSwapIntervalEXT( interval );
-	}
-	else if ( qglXSwapIntervalEXT )
-	{
-		qglXSwapIntervalEXT( dpy, win, interval );
-	}
-	else if ( qglXSwapIntervalMESA )
-	{
-		qglXSwapIntervalMESA( interval );
-	}
-	else if ( qglXSwapIntervalSGI )
-	{
-		qglXSwapIntervalSGI( (unsigned int)interval );
-	}
-}
-
-// END linux_qgl.c

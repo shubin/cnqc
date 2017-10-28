@@ -193,7 +193,7 @@ static qbool GL2_DynLights_MultitextureStage( int stage )
 		qglDrawElements( GL_TRIANGLES, tess.numIndexes, GL_INDEX_TYPE, tess.indexes );
 		return qtrue;
 	}
-	
+
 	if ( r_fullbright->integer ) {
 		if ( pStage->type == ST_LIGHTMAP ) {
 			Com_Memset( tess.svars.colors, tr.identityLightByte, tess.numVertexes * 4 );
@@ -270,7 +270,7 @@ void GL2_DynLights_StageIterator()
 		// so color changes are ignored unless we "update" the color pointer again
 		qglColorPointer( 4, GL_UNSIGNED_BYTE, 0, tess.svars.colors );
 		qglTexCoordPointer( 2, GL_FLOAT, 0, tess.svars.texcoords );
-		
+
 		if ( pStage->mtStages ) {
 			// we can't really cope with massive collapses, so
 			assert( pStage->mtStages == 1 );
@@ -282,7 +282,7 @@ void GL2_DynLights_StageIterator()
 
 		qglDrawElements( GL_TRIANGLES, tess.numIndexes, GL_INDEX_TYPE, tess.indexes );
 	}
-	
+
 	if ( tess.fogNum && tess.shader->fogPass )
 		RB_FogPass();
 
@@ -414,7 +414,7 @@ static const char* GL2_GetErrorString( GLenum ec )
 		CASE( GL_STACK_UNDERFLOW );
 		CASE( GL_STACK_OVERFLOW );
 		default: return "?";
-	}		
+	}
 }
 
 
@@ -540,13 +540,16 @@ static qbool GL2_FBO_CreateMS( FrameBuffer& fb )
 static qbool GL2_FBO_Init()
 {
 	const int msaa = r_msaa->integer;
-	const qbool enableAA = msaa >= 2 && msaa <= 16 && qglRenderbufferStorageMultisample != NULL;
-	frameBufferMultiSampling = enableAA;
+	const qbool validOption = msaa >= 2 && msaa <= 16;
+	const qbool enable = validOption && qglRenderbufferStorageMultisample != NULL;
+	frameBufferMultiSampling = enable;
+	if ( validOption && !enable )
+		Com_Printf( "Warning: MSAA requested but disabled because glRenderbufferStorageMultisample wasn't found\n" );
 
-	if ( !enableAA )
+	if ( !enable )
 		return	GL2_FBO_CreateSS( frameBuffersPostProcess[0], qtrue ) &&
 				GL2_FBO_CreateSS( frameBuffersPostProcess[1], qtrue );
-		
+
 	return	GL2_FBO_CreateMS( frameBufferMain ) &&
 			GL2_FBO_CreateSS( frameBuffersPostProcess[0], qfalse ) &&
 			GL2_FBO_CreateSS( frameBuffersPostProcess[1], qfalse );
@@ -641,7 +644,7 @@ static void GL2_PostProcessGamma()
 
 	GL2_FBO_Swap();
 	GL2_FBO_Bind();
-	
+
 	GL_Program( gammaProg );
 	qglUniform1i( gammaProgAttribs.texture, 0 ); // we use texture unit 0
 	qglUniform4f( gammaProgAttribs.gammaOverbright, gamma, gamma, gamma, obScale );
@@ -694,7 +697,7 @@ static void GL2_PostProcessGreyscale()
 
 	GL2_FBO_Swap();
 	GL2_FBO_Bind();
-	
+
 	GL_Program( greyscaleProg );
 	qglUniform1i( greyscaleProgAttribs.texture, 0 ); // we use texture unit 0
 	qglUniform1f( greyscaleProgAttribs.greyscale, greyscale );
@@ -734,7 +737,7 @@ qbool QGL_InitGL2()
 
 	if ( !GL2_CreateProgram( dynLightProg, dynLightVS, dynLightFS ) ) {
 		Com_Printf( "ERROR: failed to compile dynamic light shaders\n" );
-		return qfalse;	
+		return qfalse;
 	}
 	dynLightProgAttribs.osEyePos = qglGetUniformLocation( dynLightProg.p, "osEyePos" );
 	dynLightProgAttribs.osLightPos = qglGetUniformLocation( dynLightProg.p, "osLightPos" );
@@ -751,7 +754,7 @@ qbool QGL_InitGL2()
 	greyscaleProgramValid = GL2_CreateProgram( greyscaleProg, greyscaleVS, greyscaleFS );
 	if ( greyscaleProgramValid ) {
 		greyscaleProgAttribs.texture = qglGetUniformLocation( greyscaleProg.p, "texture" );
-		greyscaleProgAttribs.greyscale = qglGetUniformLocation( greyscaleProg.p, "greyscale" );	
+		greyscaleProgAttribs.greyscale = qglGetUniformLocation( greyscaleProg.p, "greyscale" );
 	} else {
 		Com_Printf( "ERROR: failed to compile greyscale shaders\n" );
 	}
