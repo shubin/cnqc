@@ -1665,7 +1665,7 @@ static int FS_AddFileToList( const char *name, char *list[MAX_FOUND_FILES], int 
 Returns a uniqued list of files that match the given criteria
 from all search paths
 */
-static char** FS_ListFilteredFiles( const char *path, const char *extension, const char* filter, int *numfiles, int filters )
+static char** FS_ListFilteredFilesEx( const char *path, const char *extension, const char* filter, int *numfiles, int filters, qbool respectPurity )
 {
 	int				nfiles;
 	char			*list[MAX_FOUND_FILES];
@@ -1761,7 +1761,7 @@ static char** FS_ListFilteredFiles( const char *path, const char *extension, con
 			char	*name;
 
 			// don't scan directories for files if we are pure
-			if ( fs_numServerPaks )
+			if ( respectPurity && fs_numServerPaks )
 				continue;
 
 			netpath = FS_BuildOSPath( search->dir->path, search->dir->gamedir, path );
@@ -1789,6 +1789,16 @@ static char** FS_ListFilteredFiles( const char *path, const char *extension, con
 	listCopy[i] = NULL;
 
 	return listCopy;
+}
+
+static char** FS_ListFilteredFiles( const char *path, const char *extension, const char* filter, int *numfiles, int filters )
+{
+	return FS_ListFilteredFilesEx( path, extension, filter, numfiles, filters, qtrue );
+}
+
+static char** FS_ListFilteredFilesIgnorePurity( const char *path, const char *extension, const char* filter, int *numfiles, int filters )
+{
+	return FS_ListFilteredFilesEx( path, extension, filter, numfiles, filters, qfalse );
 }
 
 /*
@@ -3150,7 +3160,7 @@ void FS_FilenameCompletion( const char *dir, const char *ext, qbool stripExt,
 	int		i;
 	char	filename[ MAX_STRING_CHARS ];
 
-	filenames = FS_ListFilteredFiles( dir, ext, NULL, &nfiles, filters );
+	filenames = FS_ListFilteredFilesIgnorePurity( dir, ext, NULL, &nfiles, filters );
 
 	FS_SortFileList( filenames, nfiles );
 
