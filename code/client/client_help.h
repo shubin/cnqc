@@ -40,3 +40,14 @@
 "    0 = disabled\n" \
 "    1 = horizontal axis\n" \
 "    2 = vertical axis"
+
+#define help_bind_extra \
+"Use /bindkeylist to print the list of key names."
+
+#define help_bind \
+"binds a command to a key\n" \
+help_bind_extra
+
+#define help_unbind \
+"unbinds a key\n" \
+help_bind_extra

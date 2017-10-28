@@ -20,6 +20,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 #include "client.h"
+#include "client_help.h"
 
 /*
 
@@ -872,16 +873,79 @@ static void Key_Bindlist_f()
 }
 
 
+// returns qtrue when the key should be printed by Key_BindKeyList_f
+
+static qboolean Key_IsPrintedKeyName( const char* n )
+{
+	return ( strstr( n, "AUX" ) != n ) && ( strstr( n, "WORLD_" ) != n );
+}
+
+
+// prints the list of key names usable with /bind
+
+void Key_BindKeyList_f( void )
+{
+	// the keynames array ends with a "NULL" entry
+	const int count = ( sizeof( keynames ) / sizeof( keynames[0] ) ) - 1;
+	
+	int maxLength = 0;
+	for ( int keyIdx = 0; keyIdx < count; keyIdx++ ) 
+	{
+		const char* const name = keynames[keyIdx].name;
+		if ( !name || !Key_IsPrintedKeyName( name ) )
+			continue;
+
+		const int l = strlen( name );
+		maxLength = max( maxLength, l );
+	}
+	const int columnCount = 64 / (maxLength + 1);
+
+	for ( int keyIdx = 0, colIdx = 0; keyIdx < count; keyIdx++ )
+	{
+		const char* const name = keynames[keyIdx].name;
+		if ( !name || !Key_IsPrintedKeyName( name ) )
+			continue;
+
+		if ( colIdx == 0 )
+		{
+			Com_Printf("  ");
+		}
+		Com_Printf( "%s ", name );
+
+		colIdx++;
+		if ( colIdx == columnCount )
+		{
+			colIdx = 0;
+			Com_Printf( "\n" );
+		}
+		else
+		{
+			const int l = strlen( name );
+			for ( int spaceIdx = 0; spaceIdx < maxLength - l; spaceIdx++ )
+			{
+				Com_Printf( " " );
+			}
+		}
+	}
+	Com_Printf("\n");
+}
+
+
+static const cmdTableItem_t cl_cmds[] =
+{
+	{ "bind", Key_Bind_f, Key_CompleteBind_f, help_bind },
+	{ "unbind", Key_Unbind_f, Key_CompleteUnbind_f, help_unbind },
+	{ "unbindall", Key_Unbindall_f, NULL, "unbinds all keys" },
+	{ "bindlist", Key_Bindlist_f, NULL, "prints all bound keys" },
+	{ "bindkeylist", Key_BindKeyList_f, NULL, "prints all bindable keys" }
+};
+
+
 void CL_InitKeyCommands()
 {
 	COMPILE_TIME_ASSERT( K_LAST_KEY <= MAX_KEYS );
 
-	Cmd_AddCommand( "bind", Key_Bind_f );
-	Cmd_SetAutoCompletion( "bind", Key_CompleteBind_f );
-	Cmd_AddCommand( "unbind", Key_Unbind_f );
-	Cmd_SetAutoCompletion( "unbind", Key_CompleteUnbind_f );
-	Cmd_AddCommand( "unbindall", Key_Unbindall_f );
-	Cmd_AddCommand( "bindlist", Key_Bindlist_f );
+	Cmd_RegisterArray( cl_cmds, MODULE_CLIENT );
 }
 
 
