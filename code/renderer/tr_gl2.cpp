@@ -312,8 +312,8 @@ static qbool GL2_CreateShader( GLuint* shaderPtr, GLenum shaderType, const char*
 	GLint logLength = 0;
 	qglGetShaderiv( shader, GL_INFO_LOG_LENGTH, &logLength );
 
-	static char log[1024];
-	qglGetShaderInfoLog( shader, logLength, NULL, log );
+	static char log[4096]; // I've seen logs over 3 KB in size.
+	qglGetShaderInfoLog( shader, sizeof(log), NULL, log );
 	Com_Printf( "ERROR: %s shader: %s", shaderType == GL_VERTEX_SHADER ? "vertex" : "fragment", log );
 
 	return qfalse;
