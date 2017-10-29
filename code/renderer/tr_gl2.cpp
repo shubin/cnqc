@@ -779,6 +779,11 @@ void GL2_EndFrame()
 	if ( frameBufferMultiSampling )
 		GL2_FBO_BlitMSToSS();
 
+	// this call is needed because there is no insurance for
+	// what the state might be right now
+	// we disable depth test, depth write and blending
+	GL_State( GLS_DEPTHTEST_DISABLE );
+
 	GL2_PostProcessGamma();
 	GL2_PostProcessGreyscale();
 
