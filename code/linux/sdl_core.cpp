@@ -130,6 +130,29 @@ static int QuakeKeyFromSDLKey( SDL_Keysym key )
 		case SDLK_KP_PLUS: return K_KP_PLUS;
 		case SDLK_KP_MULTIPLY: return K_KP_STAR;
 		case SDLK_BACKSLASH: return K_BACKSLASH;
+		case SDLK_PERIOD: return '.';
+		case SDLK_COMMA: return ',';
+		case SDLK_EXCLAIM: return '!';
+		case SDLK_HASH: return '#';
+		case SDLK_PERCENT: return '%';
+		case SDLK_DOLLAR: return '$';
+		case SDLK_AMPERSAND: return '&';
+		case SDLK_QUOTE: return '\'';
+		case SDLK_LEFTPAREN: return '(';
+		case SDLK_RIGHTPAREN: return ')';
+		case SDLK_ASTERISK: return '*';
+		case SDLK_PLUS: return '+';
+		case SDLK_MINUS: return '-';
+		case SDLK_SLASH: return '/';
+		case SDLK_COLON: return ':';
+		case SDLK_LESS: return '<';
+		case SDLK_EQUALS: return '=';
+		case SDLK_GREATER: return '>';
+		case SDLK_QUESTION: return '?';
+		case SDLK_AT: return '@';
+		case SDLK_LEFTBRACKET: return '[';
+		case SDLK_RIGHTBRACKET: return ']';
+		case SDLK_UNDERSCORE: return '_';
 		// missing:
 		// K_KP_NUMLOCK
 		// K_KP_EQUALS
@@ -166,6 +189,10 @@ static void sdl_Text( const SDL_TextInputEvent* event )
 static void sdl_MouseMotion( const SDL_MouseMotionEvent* event )
 {
 	if (!sdl_inputActive)
+		return;
+
+	// SDL sometimes sends events with both values set to 0
+	if ((event->xrel | event->yrel) == 0)
 		return;
 
 	Lin_QueEvent(Sys_Milliseconds(), SE_MOUSE, event->xrel, event->yrel, 0, NULL);
