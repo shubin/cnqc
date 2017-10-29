@@ -137,7 +137,7 @@ qbool rawmouse_t::ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam )
 	static const int riBtnDnFlags[5] = { RI_MOUSE_BUTTON_1_DOWN, RI_MOUSE_BUTTON_2_DOWN, RI_MOUSE_BUTTON_3_DOWN, RI_MOUSE_BUTTON_4_DOWN, RI_MOUSE_BUTTON_5_DOWN };
 	static const int riBtnUpFlags[5] = { RI_MOUSE_BUTTON_1_UP, RI_MOUSE_BUTTON_2_UP, RI_MOUSE_BUTTON_3_UP, RI_MOUSE_BUTTON_4_UP, RI_MOUSE_BUTTON_5_UP };
 
-	if (!active || msg != WM_INPUT)
+	if (msg != WM_INPUT)
 		return qfalse;
 
 	HRAWINPUT h = (HRAWINPUT)lParam;
@@ -154,19 +154,21 @@ qbool rawmouse_t::ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam )
 
 	const int dx = (int)ri.data.mouse.lLastX;
 	const int dy = (int)ri.data.mouse.lLastY;
-	if (dx != 0 || dy != 0)
+	if (active && (dx != 0 || dy != 0))
 		Sys_QueEvent( g_wv.sysMsgTime, SE_MOUSE, dx, dy, 0, NULL );
 
 	if (!ri.data.mouse.usButtonFlags) // no button or wheel transitions
 		return qfalse;
 
-	if (ri.data.mouse.usButtonFlags & RI_MOUSE_WHEEL)
+	if (active && (ri.data.mouse.usButtonFlags & RI_MOUSE_WHEEL) != 0)
 		UpdateWheel( (SHORT)ri.data.mouse.usButtonData );
 
 	for (int i = 0; i < 5; ++i) {
-		if (ri.data.mouse.usButtonFlags & riBtnDnFlags[i])
+		if (active && (ri.data.mouse.usButtonFlags & riBtnDnFlags[i]) != 0)
 			Sys_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MOUSE1 + i, qtrue, 0, NULL );
 
+		// we always send the button up events to avoid
+		// buttons getting "stuck" when bringing the console down
 		if (ri.data.mouse.usButtonFlags & riBtnUpFlags[i])
 			Sys_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MOUSE1 + i, qfalse, 0, NULL );
 	}
