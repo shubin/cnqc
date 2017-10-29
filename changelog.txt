@@ -1,6 +1,8 @@
 
 DD Mmm 17 - 1.49
 
+add: in_noGrab <0|1> (default: 0) disables input grabbing
+
 add: bindkeylist command to print all bindable key names
 
 add: uptime command that prints uptimes for the process, the current map and the parent process
@@ -145,8 +147,6 @@ Linux:
 
 chg: the client requires SDL 2 - the following things are handled by it:
   window, GL context, video modes, audio, kb and mouse input, monitor list, clipboard
-
-add: in_noGrab <0|1> (default: 0) disables input grabbing
 
 add: m_relative <0|1> (default: 1) enables SDL's relative mouse mode
   you might want to set it to 0 if you have a messed up input driver

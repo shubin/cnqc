@@ -13,7 +13,7 @@ static cvar_t* m_relative;
 static cvar_t* s_autoMute;
 
 static const cvarTableItem_t in_cvars[] = {
-	{ &in_noGrab, "in_noGrab", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "disables input grabbing" },
+	{ &in_noGrab, "in_noGrab", "0", 0, CVART_BOOL, NULL, NULL, "disables input grabbing" },
 	{ &m_relative, "m_relative", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "enables SDL's relative mouse mode" },
 	{ &s_autoMute, "s_autoMute", "1", CVAR_ARCHIVE, CVART_INTEGER, "0", "2", "0=never, 1=when unfocused, 2=when minimized" }
 };

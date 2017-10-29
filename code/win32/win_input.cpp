@@ -25,6 +25,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "win_help.h"
 
 
+static cvar_t* in_noGrab;
+
+
 struct Mouse {
 	Mouse() : active(qfalse), wheel(0) {}
 
@@ -279,6 +282,10 @@ static void IN_StartupMouse()
 	Cvar_SetHelp( "in_mouse", help_in_mouse );
 	in_mouse->modified = qfalse;
 
+	in_noGrab = Cvar_Get( "in_noGrab", "0", 0 );
+	Cvar_SetRange( "in_noGrab", CVART_BOOL, NULL, NULL );
+	Cvar_SetHelp( "in_noGrab", "disables input grabbing" );
+
 	if (!in_mouse->integer) {
 		Com_Printf( "Mouse not active.\n" );
 		return;
@@ -413,6 +420,9 @@ void IN_Activate( qbool active )
 
 static qbool IN_ShouldBeActive()
 {
+	if ( in_noGrab && in_noGrab->integer )
+		return qfalse;
+
 	return g_wv.activeApp && (!(cls.keyCatchers & KEYCATCH_CONSOLE) || Cvar_VariableIntegerValue("r_fullscreen"));
 }
 
