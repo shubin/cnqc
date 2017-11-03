@@ -738,12 +738,7 @@ static void ( APIENTRY * dllVertexPointer )(GLint size, GLenum type, GLsizei str
 static void ( APIENTRY * dllViewport )(GLint x, GLint y, GLsizei width, GLsizei height);
 
 
-/*
-** QGL_Shutdown
-**
-** Unloads the specified DLL then nulls out all the proc pointers.
-*/
-void QGL_Shutdown( void )
+void Lin_UnloadGL()
 {
 	qglAccum                     = NULL;
 	qglAlphaFunc                 = NULL;
@@ -1092,32 +1087,12 @@ void QGL_Shutdown( void )
 	qglXSwapIntervalEXT          = NULL;
 	qglXSwapIntervalMESA         = NULL;
 	qglXSwapIntervalSGI          = NULL;
-} // QGL_Shutdown
+}
 
-
-/*
-** GPA
-**
-** This'll setup a wrapper around calling GetProcAddress for all our
-** GL to QGL bindings, hopefully making them less cumbersome to setup
-**
-*/
 
 #define GPA( a ) SDL_GL_GetProcAddress( a )
 
-
-/*
-** QGL_Init
-**
-** This is responsible for binding our qgl function pointers to
-** the appropriate GL stuff.  In Windows this means doing a
-** LoadLibrary and a bunch of calls to GetProcAddress.  On other
-** operating systems we need to do the right thing, whatever that
-** might be.
-**
-*/
-
-qbool QGL_Init( const char * )
+qbool Lin_LoadGL()
 {
 	qglXGetProcAddress           = (void* (*)( const char *symbol ))GPA( "glXGetProcAddress" );
 	qglAccum                     = dllAccum				=(void (*)(GLenum, GLfloat))GPA( "glAccum" );
@@ -1485,8 +1460,19 @@ qbool QGL_Init( const char * )
 }
 
 
-#define QGL_EXT(fn, type) q##fn = (type)GPA( #fn ); \
-	if (!q##fn) Com_Error( ERR_FATAL, "QGL_EXT: "#fn" not found" );
+//
+// Linux-specific OpenGL extensions
+//
+
+static qbool LIN_InitPlatformGL( const char** )
+{
+	return qtrue;
+}
+
+
+//
+// OpenGL 2
+//
 
 PFNGLCREATESHADERPROC qglCreateShader;
 PFNGLSHADERSOURCEPROC qglShaderSource;
@@ -1533,13 +1519,13 @@ PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC qglGetFramebufferAttachmentParamete
 PFNGLGENERATEMIPMAPPROC qglGenerateMipmap;
 PFNGLBLITFRAMEBUFFERPROC qglBlitFramebuffer;
 
+#define QGL_EXT(fn, type) q##fn = (type)GPA( #fn ); \
+	do { if (!q##fn) { *extension = #fn; return qfalse; } } while(0)
 
-qbool GLW_InitGL2()
+static qbool LIN_InitGL2( const char** extension )
 {
 	if (atof((const char*)qglGetString(GL_VERSION)) < 2.0f)
-	{
 		return qfalse;
-	}
 
 	QGL_EXT( glCreateShader, PFNGLCREATESHADERPROC );
 	QGL_EXT( glShaderSource, PFNGLSHADERSOURCEPROC );
@@ -1589,10 +1575,12 @@ qbool GLW_InitGL2()
 	return qtrue;
 }
 
-
 #undef QGL_EXT
-#define QGL_EXT(fn, type) q##fn = (type)GPA( #fn )
 
+
+//
+// OpenGL 3+
+//
 
 typedef void ( APIENTRY * PFNGLTEXIMAGE2DMULTISAMPLE )(GLenum, GLsizei, GLenum, GLsizei, GLsizei, GLboolean);
 
@@ -1602,19 +1590,29 @@ PFNGLRENDERBUFFERSTORAGEMULTISAMPLEPROC qglRenderbufferStorageMultisample;
 // 3.2
 PFNGLTEXIMAGE2DMULTISAMPLE qglTexImage2DMultisample;
 
+#define QGL_EXT(fn, type) q##fn = (type)GPA( #fn )
 
-qbool GLW_InitGL3()
+static void LIN_InitGL3()
 {
 	if (atof((const char*)qglGetString(GL_VERSION)) < 3.0f)
-	{
-		return qfalse;
-	}
+		return;
 
 	// 3.0
 	QGL_EXT( glRenderbufferStorageMultisample, PFNGLRENDERBUFFERSTORAGEMULTISAMPLEPROC );
 
 	// 3.2
 	QGL_EXT( glTexImage2DMultisample, PFNGLTEXIMAGE2DMULTISAMPLE );
+}
+
+#undef QGL_EXT
+
+
+qbool Sys_GL_LoadExtensions( const char** extension )
+{
+	if (!LIN_InitPlatformGL(extension) || !LIN_InitGL2(extension))
+		return qfalse;
+
+	LIN_InitGL3();
 
 	return qtrue;
 }

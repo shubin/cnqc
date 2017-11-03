@@ -26,10 +26,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 void Sys_QueEvent( int time, sysEventType_t type, int value, int value2, int ptrLength, void *ptr );
 
-void	Sys_CreateConsole( void );
-void	Sys_DestroyConsole( void );
-const char* Sys_ConsoleInput();
-void Conbuf_AppendText( const char *msg );
+void		Sys_CreateConsole( void );
+void		Sys_DestroyConsole( void );
+const char*	Sys_ConsoleInput();
+
+void	Conbuf_AppendText( const char *msg );
 
 void	IN_Activate( qbool active );
 qbool	IN_ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam ); // returns true if the event was handled
@@ -48,14 +49,19 @@ void SNDDMA_Activate();
 LRESULT CALLBACK MainWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam );
 
 // crash handling
-LONG CALLBACK WIN_HandleException( EXCEPTION_POINTERS* ep );
-void WIN_HandleExit();
-void WIN_EndTimePeriod();
+LONG CALLBACK	WIN_HandleException( EXCEPTION_POINTERS* ep );
+void			WIN_HandleExit();
+void			WIN_EndTimePeriod();
+
+// opening OpenGL and loading core functions
+extern "C" {
+	qbool	WIN_LoadGL( const char* dllName );
+	void	WIN_UnloadGL();
+}
 
 #define MAX_MONITOR_COUNT 16
 
-typedef struct
-{
+typedef struct {
 	HWND		hWnd;
 	HINSTANCE	hInstance;
 	qbool		activeApp;

@@ -1141,10 +1141,24 @@ IMPLEMENTATION SPECIFIC FUNCTIONS
 ====================================================================
 */
 
-void	GLimp_Init();
-void	GLimp_Shutdown();
-void	GLimp_EndFrame();
+// OpenGL initialization:
+// - loading OpenGL and getting core function pointers
+// - creating a window and changing video mode if needed,
+//   respecting r_fullscreen, r_mode, r_width, r_height
+// - creating a valid OpenGL context and making it current
+// - filling up the right glconfig fields (see glconfig_t definition)
+void	Sys_GL_Init();
 
+// OpenGL shutdown:
+// - unloading OpenGL and zeroing the core function pointers
+// - destroying the GL context, window and other associated resources
+// - resetting the proper video mode if necessary
+void	Sys_GL_Shutdown();
+
+// Swaps buffers and applies r_swapInterval. 
+void	Sys_GL_EndFrame();
+
+// SMP
 qbool	GLimp_SpawnRenderThread( void (*function)( void ) );
 void*	GLimp_RendererSleep( void );
 void	GLimp_FrontEndSleep( void );
@@ -1498,14 +1512,18 @@ extern glconfig_t glConfig;
 
 // the "private" glconfig: implementation specifics for the renderer
 struct glinfo_t {
+	// used by platform layer
 	qbool	isFullscreen;
 	int		displayFrequency;
 
+	// used by platform layer and renderer
 	qbool	smpActive;
 
+	// used by renderer
 	GLint	maxTextureSize;
 	GLint	maxDrawElementsI;
 	GLint	maxDrawElementsV;
+	GLint	maxAnisotropy;
 };
 
 extern glinfo_t glInfo;
@@ -1529,10 +1547,12 @@ private:
 };
 
 
-extern void GL2_DynLights_SetupLight();
-extern void GL2_DynLights_StageIterator();
-extern void GL2_BeginFrame();
-extern void GL2_EndFrame();
+// tr_gl2.cpp
+qbool	GL2_Init();
+void	GL2_DynLights_SetupLight();
+void	GL2_DynLights_StageIterator();
+void	GL2_BeginFrame();
+void	GL2_EndFrame();
 
 
 extern int re_cameraMatrixTime;

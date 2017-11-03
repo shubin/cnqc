@@ -19,56 +19,26 @@ along with Quake III Arena source code; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
-/*
-** QGL.H
-*/
+#pragma once
 
-#ifndef __QGL_H__
-#define __QGL_H__
 
-#if defined( __LINT__ )
-
-#include <GL/gl.h>
-
-#elif defined( _WIN32 )
+#if defined( _WIN32 )
 
 #include "../win32/windows.h"
 #include <GL/gl.h>
 #include "../win32/glext.h"
 
-#elif defined(MACOS_X)
+#elif defined( __linux__ )
 
-#include <OpenGL/OpenGL.h>
-#include <OpenGL/gl.h>
-#include <OpenGL/glu.h>
-#ifndef GL_EXT_abgr
-#include <OpenGL/glext.h>
-#endif
-
-// This can be defined to use the CGLMacro.h support which avoids looking up
-// the current context.
-//#define USE_CGLMACROS
-
-#ifdef USE_CGLMACROS
-#include "macosx_local.h"
-#define cgl_ctx glw_state._cgl_ctx
-#include <OpenGL/CGLMacro.h>
-#endif
-
-#elif defined( __linux__ ) || defined(__FreeBSD__)
-
-#include <GL/gl.h>
-#include <GL/glx.h>
-
-#elif defined( __sun )
 #include <GL/gl.h>
 #include <GL/glx.h>
 
 #else
 
-#include <gl.h>
+#error "Unsupported platform"
 
 #endif
+
 
 #ifndef APIENTRY
 #define APIENTRY
@@ -77,34 +47,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define WINAPI
 #endif
 
-///////////////////////////////////////////////////////////////
 
 extern "C" {
 
-qbool QGL_Init( const char* dllname );
-void QGL_Shutdown();
-
-// extensions will be function pointers on all platforms
-
-extern	void ( APIENTRY * qglActiveTextureARB )( GLenum texture );
-extern	void ( APIENTRY * qglClientActiveTextureARB )( GLenum texture );
-
-extern PFNGLLOCKARRAYSEXTPROC qglLockArraysEXT;
-extern PFNGLUNLOCKARRAYSEXTPROC qglUnlockArraysEXT;
-
-
-// non-dlopening systems will just redefine qgl* to gl*
-#if !defined( _WIN32 ) && !defined(MACOS_X) && !defined( __linux__ ) && !defined( __FreeBSD__ ) && !defined(__sun) // rb010123
-
-#include "qgl_linked.h"
-
-#elif (defined(MACOS_X) && !defined(USE_SDL_VIDEO))
-// This includes #ifdefs for optional logging and GL error checking after every GL call as well as #defines to prevent incorrect usage of the non-'qgl' versions of the GL API.
-#include "macosx_qgl.h"
-
-#else
-
-// windows systems use a function pointer for each call so we can load minidrivers
+//
+// OpenGL 1.X functions
+//
 
 extern  void ( APIENTRY * qglAccum )(GLenum op, GLfloat value);
 extern  void ( APIENTRY * qglAlphaFunc )(GLenum func, GLclampf ref);
@@ -443,7 +391,22 @@ extern  void ( APIENTRY * qglVertex4sv )(const GLshort *v);
 extern  void ( APIENTRY * qglVertexPointer )(GLint size, GLenum type, GLsizei stride, const GLvoid *pointer);
 extern  void ( APIENTRY * qglViewport )(GLint x, GLint y, GLsizei width, GLsizei height);
 
+
+//
+// mandatory (and really old) OpenGL extensions
+//
+
+extern	void (APIENTRY * qglActiveTextureARB)(GLenum texture);
+extern	void (APIENTRY * qglClientActiveTextureARB)(GLenum texture);
+extern	PFNGLLOCKARRAYSEXTPROC qglLockArraysEXT;
+extern	PFNGLUNLOCKARRAYSEXTPROC qglUnlockArraysEXT;
+
+
 #if defined( _WIN32 )
+
+//
+// Windows extensions
+//
 
 extern int   ( WINAPI * qwglChoosePixelFormat )(HDC, CONST PIXELFORMATDESCRIPTOR *);
 extern int   ( WINAPI * qwglChoosePixelFormatARB )(HDC, const int*, const FLOAT*, UINT, int*, UINT*);
@@ -470,30 +433,22 @@ extern BOOL ( WINAPI * qwglSwapLayerBuffers)(HDC, UINT);
 
 extern BOOL ( WINAPI * qwglSwapIntervalEXT)( int interval );
 
-#endif	// _WIN32
-
-};
+#endif
 
 
-#if ( (defined __linux__ ) || (defined __FreeBSD__ ) || (defined __sun) )
-
-//GLX Functions
-extern XVisualInfo * (*qglXChooseVisual)( Display *dpy, int screen, int *attribList );
-extern GLXContext (*qglXCreateContext)( Display *dpy, XVisualInfo *vis, GLXContext shareList, Bool direct );
-extern void (*qglXDestroyContext)( Display *dpy, GLXContext ctx );
-extern Bool (*qglXMakeCurrent)( Display *dpy, GLXDrawable drawable, GLXContext ctx);
-extern void (*qglXCopyContext)( Display *dpy, GLXContext src, GLXContext dst, GLuint mask );
-extern void (*qglXSwapBuffers)( Display *dpy, GLXDrawable drawable );
-
-#endif // __linux__ || __FreeBSD__ || __sun // rb010123
+// Sys_GL_LoadExtensions rules:
+// - OpenGL 2 extensions are mandatory
+// - OpenGL 3+ extensions are optional
+// - platform-specific extensions are not mandatory,
+//   but the implementation is free to return qfalse if one is missing
+// - when returning qfalse, set *extension to point to the name of the missing extension
+//   the string should either be a string literal or returned by va()
+qbool Sys_GL_LoadExtensions( const char** extension );
 
 
-#endif	// _WIN32 && __linux__
-
-
-extern "C" {
-
-qbool GLW_InitGL2();
+//
+// OpenGL 2.X functions
+//
 
 extern PFNGLCREATESHADERPROC qglCreateShader;
 extern PFNGLSHADERSOURCEPROC qglShaderSource;
@@ -540,14 +495,12 @@ extern PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC qglGetFramebufferAttachmentP
 extern PFNGLGENERATEMIPMAPPROC qglGenerateMipmap;
 extern PFNGLBLITFRAMEBUFFERPROC qglBlitFramebuffer;
 
-qbool GLW_InitGL3();
+
+//
+// OpenGL 3+ functions
+//
 
 extern PFNGLRENDERBUFFERSTORAGEMULTISAMPLEPROC qglRenderbufferStorageMultisample;
 extern void (APIENTRY* qglTexImage2DMultisample)(GLenum, GLsizei, GLenum, GLsizei, GLsizei, GLboolean);
 
 };
-
-qbool QGL_InitGL2();
-
-
-#endif

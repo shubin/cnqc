@@ -1,9 +1,10 @@
 #define help_r_ext_max_anisotropy \
 "max. allowed anisotropy ratio\n" \
 "For anisotropic filtering to be enabled, this needs to be 2 or higher.\n" \
-"    2 =  8-16 tap filtering\n" \
-"    4 = 16-32 tap filtering\n" \
-"    8 = 32-64 tap filtering"
+"    2 =  8- 16 tap filtering\n" \
+"    4 = 16- 32 tap filtering\n" \
+"    8 = 32- 64 tap filtering\n" \
+"   16 = 64-128 tap filtering"
 
 #define help_r_picmip \
 "lowest allowed mip level\n" \

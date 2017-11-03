@@ -728,7 +728,7 @@ static const char* greyscaleFS =
 "";
 
 
-qbool QGL_InitGL2()
+qbool GL2_Init()
 {
 	if ( !GL2_FBO_Init() ) {
 		Com_Printf( "ERROR: failed to create framebuffer objects\n" );

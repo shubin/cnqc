@@ -135,49 +135,57 @@ typedef enum {
 	STEREO_RIGHT
 } stereoFrame_t;
 
-
 /*
-there are two "glconfig" types: this one is exposed to vm's, client, etc,
-and is immutable because the layout has to match what cgame and ui expect
+glconfig_t
 
-the "real" one is correctly local to the renderer
-*/
+Contains variables specific to the OpenGL configuration
+being run right now. These are constant once the OpenGL
+subsystem is initialized.
 
-/*
-** glconfig_t
-**
-** Contains variables specific to the OpenGL configuration
-** being run right now.  These are constant once the OpenGL
-** subsystem is initialized.
+This type is exposed to VMs and the client. It is immutable because 
+the layout has to match what the cgame and ui VMs expect.
+
+There is an equivalent to this that is local to the renderer.
+
+Fields prefixed with "unused_" are unused _by the engine_,
+but might still be read by mods other than CPMA.
 */
 
 typedef struct {
+	// filled by the renderer
 	char	renderer_string[MAX_STRING_CHARS];
 	char	vendor_string[MAX_STRING_CHARS];
 	char	version_string[MAX_STRING_CHARS];
 	char	extensions_string[BIG_INFO_STRING];
 
-	int		unused1, unused2;
+	int		unused_maxTextureSize;
+	int		unused_maxActiveTextures;
 
-	int		colorBits, depthBits, stencilBits;
+	// filled by the platform layer
+	int		colorBits;		// 32
+	int		depthBits;		// 24
+	int		stencilBits;	//  8
 
-	int		unused3, unused4;
+	int		unused_driverType;		// 0 for ICD
+	int		unused_hardwareType;	// 0 for generic
 
-	int		unused10; // gamma
+	qbool	unused_deviceSupportsGamma;		// qtrue
 
-	int		unused5, unused6;
+	int		unused_textureCompression;		// 0 for none
+	qbool	unused_textureEnvAddAvailable;	// qtrue
 
-	int		vidWidth, vidHeight;
-	// aspect is the screen's physical width / height, which may be different
+	// windowAspect is the screen's physical width / height, which may be different
 	// than scrWidth / scrHeight if the pixels are non-square
 	// normal screens should be 4/3, but wide aspect monitors may be 16/9
+
+	// filled by the platform layer
+	int		vidWidth, vidHeight;
 	float	windowAspect;
 
-	int		unused7, unused8;
-
-	qbool	unused11; // stereo
-
-	int		unused9;
+	int		unused_displayFrequency;	// 0
+	qbool	unused_isFullscreen;		// r_fullscreen->integer
+	qbool	unused_stereoEnabled;		// qfalse
+	qbool	unused_smpActive;			// qfalse
 } glconfig_t;
 
 

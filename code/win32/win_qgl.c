@@ -19,25 +19,13 @@ along with Quake III Arena source code; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
-/*
-** QGL_WIN.C
-**
-** This file implements the operating system binding of GL to QGL function
-** pointers.  When doing a port of Quake3 you must implement the following
-** two functions:
-**
-** QGL_Init() - loads libraries, assigns function pointers, etc.
-** QGL_Shutdown() - unloads libraries, NULLs function pointers
-*/
-
 #include "../qcommon/q_shared.h"
-
 #define WIN32_LEAN_AND_MEAN
 #include "../win32/windows.h"
 #include <GL/gl.h>
 #include "glext.h"
-
 #include "glw_win.h"
+
 
 int ( WINAPI * qwglSwapIntervalEXT)( int interval );
 
@@ -411,21 +399,10 @@ PFNGLLOCKARRAYSEXTPROC qglLockArraysEXT;
 PFNGLUNLOCKARRAYSEXTPROC qglUnlockArraysEXT;
 
 
-/*
-** QGL_Shutdown
-**
-** Unloads the specified DLL then nulls out all the proc pointers.  This
-** is only called during a hard shutdown of the OGL subsystem (e.g. vid_restart).
-*/
-void QGL_Shutdown()
+void WIN_UnloadGL()
 {
-	//ri.Printf( PRINT_ALL, "...shutting down QGL\n" );
-
 	if ( glw_state.hinstOpenGL )
-	{
-		//ri.Printf( PRINT_ALL, "...unloading OpenGL DLL\n" );
 		FreeLibrary( glw_state.hinstOpenGL );
-	}
 
 	glw_state.hinstOpenGL = NULL;
 
@@ -795,20 +772,16 @@ void QGL_Shutdown()
 #pragma warning( disable : 4047 4133 ) // various WINGDIAPI/FARPROC mismatches
 #endif
 
+
+//
+// core OpenGL functions
+//
+
 #define QGL_GPA(fn) q##fn = GetProcAddress( glw_state.hinstOpenGL, #fn )
 
-/*
-** QGL_Init
-**
-** This is responsible for binding our qgl function pointers to
-** the appropriate GL stuff.  In Windows this means doing a
-** LoadLibrary and a bunch of calls to GetProcAddress.  On other
-** operating systems we need to do the right thing, whatever that
-** might be.
-*/
-qbool QGL_Init( const char* dllname )
+qbool WIN_LoadGL( const char* dllName )
 {
-	if ( ( glw_state.hinstOpenGL = LoadLibrary( dllname ) ) == 0 )
+	if ( ( glw_state.hinstOpenGL = LoadLibrary( dllName ) ) == 0 )
 		return qfalse;
 
 	QGL_GPA( glAccum );
@@ -1169,36 +1142,43 @@ qbool QGL_Init( const char* dllname )
 	QGL_GPA( wglSetPixelFormat );
 	QGL_GPA( wglSwapBuffers );
 
-	// required extensions
-	qglLockArraysEXT = 0;
-	qglUnlockArraysEXT = 0;
-	qglActiveTextureARB = 0;
-	qglClientActiveTextureARB = 0;
-
-	// optional extensions
-	qwglSwapIntervalEXT = 0;
-	qwglChoosePixelFormatARB = 0;
-
 	return qtrue;
 };
 
 #undef QGL_GPA
 
-#ifdef _MSC_VER
-#pragma warning( default : 4047 4133 )
-#endif
 
+//
+// platform-specific OpenGL extensions
+//
 
-///////////////////////////////////////////////////////////////
-
-// the logfile system is obsolete - use GLIntercept
-
-// note that all GL2 functions have to be retrieved by wglGPA
-// which means they can't be set up until AFTER there's a current context
-
-
+#define QGL_EXT_OPT(fn) q##fn = qwglGetProcAddress( #fn )
 #define QGL_EXT(fn) q##fn = qwglGetProcAddress( #fn ); \
-	if (!q##fn) Com_Error( ERR_FATAL, "QGL_EXT: "#fn" not found" );
+	do { if (!q##fn) { *extension = #fn; return qfalse; } } while(0)
+
+static qbool WIN_InitPlatformGL( const char** extension )
+{
+	// required extensions
+	QGL_EXT( glLockArraysEXT );
+	QGL_EXT( glUnlockArraysEXT );
+	QGL_EXT( glActiveTextureARB );
+	QGL_EXT( glClientActiveTextureARB );
+
+	// optional extensions
+	QGL_EXT_OPT( wglSwapIntervalEXT );
+	QGL_EXT_OPT( wglChoosePixelFormatARB );
+	QGL_EXT_OPT( wglSwapIntervalEXT );
+
+	return qtrue;
+}
+
+#undef QGL_EXT
+#undef QGL_EXT_OPT
+
+
+//
+// OpenGL 2
+//
 
 PFNGLCREATESHADERPROC qglCreateShader;
 PFNGLSHADERSOURCEPROC qglShaderSource;
@@ -1245,8 +1225,10 @@ PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC qglGetFramebufferAttachmentParamete
 PFNGLGENERATEMIPMAPPROC qglGenerateMipmap;
 PFNGLBLITFRAMEBUFFERPROC qglBlitFramebuffer;
 
+#define QGL_EXT(fn) q##fn = qwglGetProcAddress( #fn ); \
+	do { if (!q##fn) { *extension = #fn; return qfalse; } } while(0)
 
-qbool GLW_InitGL2()
+static qbool WIN_InitGL2( const char** extension )
 {
 	if (atof((const char*)qglGetString(GL_VERSION)) < 2.0f)
 		return qfalse;
@@ -1299,23 +1281,36 @@ qbool GLW_InitGL2()
 	return qtrue;
 }
 
+#undef QGL_EXT
+
+
+//
+// OpenGL 3+
+//
 
 PFNGLRENDERBUFFERSTORAGEMULTISAMPLEPROC qglRenderbufferStorageMultisample;
 void (APIENTRY* qglTexImage2DMultisample)(GLenum, GLsizei, GLenum, GLsizei, GLsizei, GLboolean);
 
-
-#undef QGL_EXT
 #define QGL_EXT(fn) q##fn = qwglGetProcAddress( #fn )
 
-
-qbool GLW_InitGL3()
+static void WIN_InitGL3()
 {
 	if (atof((const char*)qglGetString(GL_VERSION)) < 3.2f)
-		return qfalse;
+		return;
 
 	QGL_EXT( glRenderbufferStorageMultisample );
 	QGL_EXT( glTexImage2DMultisample );
+}
+
+#undef QGL_EXT
+
+
+qbool Sys_GL_LoadExtensions( const char** extension )
+{
+	if ( !WIN_InitPlatformGL(extension) || !WIN_InitGL2(extension) )
+		return qfalse;
+
+	WIN_InitGL3();
 
 	return qtrue;
 }
-

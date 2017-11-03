@@ -1032,7 +1032,7 @@ static const void* RB_SwapBuffers( const void* data )
 		qglFinish();
 	}
 
-	GLimp_EndFrame();
+	Sys_GL_EndFrame();
 
 	backEnd.projection2D = qfalse;
 	backEnd.pc = backEnd.pc3D;

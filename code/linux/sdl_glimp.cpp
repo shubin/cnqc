@@ -137,32 +137,7 @@ static void sdl_PrintMonitorList()
 }
 
 
-// @TODO: this should be handled by the renderer, not the platform layer!
-static void GLW_InitExtensions()
-{
-	ri.Printf(PRINT_ALL, "Initializing OpenGL extensions\n");
-
-	int maxAnisotropy = 0;
-	if (strstr(glConfig.extensions_string, "GL_EXT_texture_filter_anisotropic")) {
-		if (r_ext_max_anisotropy->integer > 1) {
-			qglGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maxAnisotropy);
-			if (maxAnisotropy <= 0) {
-				ri.Printf(PRINT_DEVELOPER, "...GL_EXT_texture_filter_anisotropic not properly supported!\n");
-				maxAnisotropy = 0;
-			} else {
-				ri.Printf(PRINT_DEVELOPER, "...using GL_EXT_texture_filter_anisotropic (max: %i)\n", maxAnisotropy);
-			}
-		} else {
-			ri.Printf(PRINT_DEVELOPER, "...ignoring GL_EXT_texture_filter_anisotropic\n");
-		}
-	} else {
-		ri.Printf(PRINT_DEVELOPER, "...GL_EXT_texture_filter_anisotropic not found\n");
-	}
-	Cvar_Set("r_ext_max_anisotropy", va("%i", maxAnisotropy));
-}
-
-
-void GLimp_Init()
+void Sys_GL_Init()
 {
 	if (glimp.window != NULL)
 		return;
@@ -220,26 +195,12 @@ void GLimp_Init()
 	if (SDL_GL_MakeCurrent(glimp.window, glimp.glContext) < 0)
 		ri.Error(ERR_FATAL, "GLimp_Init - SDL_GL_MakeCurrent failed: %s\n", SDL_GetError());
 
-	if (!QGL_Init(NULL))
+	if (!Lin_LoadGL())
 		ri.Error(ERR_FATAL, "GLimp_Init - failed to initialize core OpenGL\n");
-
-	GLW_InitExtensions();
-
-	if (!GLW_InitGL2())
-		ri.Error(ERR_FATAL, "GLimp_Init - could not find or initialize a suitable OpenGL 2+ subsystem\n");
-
-	GLW_InitGL3();
-
-	if (!QGL_InitGL2())
-		ri.Error(ERR_FATAL, "GLimp_Init - could not initialize OpenGL 2 objects\n");
-
-	SDL_GL_SetSwapInterval(r_swapInterval->integer);
-
-	ri.Printf(PRINT_ALL, "Loaded OpenGL %s\n", (const char*)qglGetString(GL_VERSION));
 }
 
 
-void GLimp_Shutdown()
+void Sys_GL_Shutdown()
 {
 	if (glimp.glContext != NULL) {
 		SDL_GL_DeleteContext(glimp.glContext);
@@ -252,14 +213,11 @@ void GLimp_Shutdown()
 	}
 
 	SDL_GL_UnloadLibrary();
-	QGL_Shutdown();
-
-	memset(&glConfig, 0, sizeof(glConfig));
-	memset(&glState, 0, sizeof(glState));
+	Lin_UnloadGL();
 }
 
 
-void GLimp_EndFrame()
+void Sys_GL_EndFrame()
 {
 	if (r_swapInterval->modified) {
 		r_swapInterval->modified = qfalse;

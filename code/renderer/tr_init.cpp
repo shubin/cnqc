@@ -171,6 +171,50 @@ static void GL_SetDefaultState()
 }
 
 
+static void GL_InitGLConfig()
+{
+	Q_strncpyz( glConfig.vendor_string, (const char*)qglGetString( GL_VENDOR ), sizeof( glConfig.vendor_string ) );
+	Q_strncpyz( glConfig.renderer_string, (const char*)qglGetString( GL_RENDERER ), sizeof( glConfig.renderer_string ) );
+	Q_strncpyz( glConfig.version_string, (const char*)qglGetString( GL_VERSION ), sizeof( glConfig.version_string ) );
+	Q_strncpyz( glConfig.extensions_string, (const char*)qglGetString( GL_EXTENSIONS ), sizeof( glConfig.extensions_string ) );
+	qglGetIntegerv( GL_MAX_TEXTURE_SIZE, &glConfig.unused_maxTextureSize );
+	glConfig.unused_maxActiveTextures = 0;
+	glConfig.unused_driverType = 0;		// ICD
+	glConfig.unused_hardwareType = 0;	// generic
+	glConfig.unused_deviceSupportsGamma = qtrue;
+	glConfig.unused_textureCompression = 0;	// no compression
+	glConfig.unused_textureEnvAddAvailable = qtrue;
+	glConfig.unused_displayFrequency = 0;
+	glConfig.unused_isFullscreen = !!r_fullscreen->integer;
+	glConfig.unused_stereoEnabled = qfalse;
+	glConfig.unused_smpActive = qfalse;
+}
+
+
+static void GL_InitGLInfo()
+{
+	qglGetIntegerv( GL_MAX_TEXTURE_SIZE, &glInfo.maxTextureSize );
+	qglGetIntegerv( GL_MAX_ELEMENTS_INDICES, &glInfo.maxDrawElementsI );
+	qglGetIntegerv( GL_MAX_ELEMENTS_VERTICES, &glInfo.maxDrawElementsV );
+
+	if ( strstr( glConfig.extensions_string, "GL_EXT_texture_filter_anisotropic" ) )
+		qglGetIntegerv( GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &glInfo.maxAnisotropy );
+	else
+		glInfo.maxAnisotropy = 0;
+}
+
+
+static void GL_InitExtensions()
+{
+	const char* missingExtension = NULL;
+	if ( !Sys_GL_LoadExtensions( &missingExtension ) )
+		ri.Error( ERR_FATAL, "GL_InitExtensions() - failed to load %s\n", missingExtension ? missingExtension : "a required extension" );
+
+	if ( !GL2_Init() )
+		ri.Error( ERR_FATAL, "GL_InitExtensions() - failed to create GL2 objects\n" );
+}
+
+
 /*
 ** InitOpenGL
 **
@@ -181,25 +225,20 @@ static void GL_SetDefaultState()
 */
 static void InitOpenGL()
 {
-	//
-	// initialize OS specific portions of the renderer
-	//
-	// GLimp_Init directly or indirectly references the following cvars:
-	//		- r_fullscreen
-	//		- r_mode
-	//		- r_(color|depth|stencil)bits
-	//		- r_ignorehwgamma
-	//		- r_gamma
-	//
+	// Sys_GL_Init initializes OS-specific portions of the renderer
+	// it directly or indirectly references the following cvars:
+	// r_fullscreen, r_mode, r_width, r_height
 
 	if ( glConfig.vidWidth == 0 )
 	{
-		GLimp_Init();
+		// the order of these calls can not be changed
+		Sys_GL_Init();
+		GL_InitGLConfig();
+		GL_InitGLInfo();
+		GL_InitExtensions();
 
-		qglGetIntegerv( GL_MAX_TEXTURE_SIZE, &glInfo.maxTextureSize );
-
-		qglGetIntegerv( GL_MAX_ELEMENTS_INDICES, &glInfo.maxDrawElementsI );
-		qglGetIntegerv( GL_MAX_ELEMENTS_VERTICES, &glInfo.maxDrawElementsV );
+		// apply the current V-Sync option after the first rendered frame
+		r_swapInterval->modified = qtrue;
 	}
 
 	// init command buffers and SMP
@@ -448,7 +487,7 @@ static const cvarTableItem_t r_cvars[] =
 	//
 	// latched and archived variables
 	//
-	{ &r_ext_max_anisotropy, "r_ext_max_anisotropy", "4", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "4", help_r_ext_max_anisotropy },
+	{ &r_ext_max_anisotropy, "r_ext_max_anisotropy", "16", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "16", help_r_ext_max_anisotropy },
 	{ &r_msaa, "r_msaa", "4", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "16", "anti-aliasing sample count, 0=off" },
 	{ &r_picmip, "r_picmip", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "16", help_r_picmip },
 	{ &r_roundImagesDown, "r_roundImagesDown", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_roundImagesDown },
@@ -631,7 +670,9 @@ static void RE_Shutdown( qbool destroyWindow )
 	
 	// shut down platform specific OpenGL stuff
 	if ( destroyWindow ) {
-		GLimp_Shutdown();
+		Sys_GL_Shutdown();
+		memset( &glConfig, 0, sizeof( glConfig ) );
+		memset( &glState, 0, sizeof( glState ) );
 	}
 
 	tr.registered = qfalse;

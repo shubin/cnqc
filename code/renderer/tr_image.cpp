@@ -407,8 +407,8 @@ done:
 
 	qglGetTexLevelParameteriv( GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, (GLint*)&image->format );
 
-	if (r_ext_max_anisotropy->integer > 1)
-		qglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, r_ext_max_anisotropy->integer );
+	if ( glInfo.maxAnisotropy >= 2 && r_ext_max_anisotropy->integer >= 2 )
+		qglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, min( r_ext_max_anisotropy->integer, glInfo.maxAnisotropy ) );
 
 	if ( image->flags & IMG_NOMIPMAP ) {
 		qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );

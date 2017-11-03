@@ -602,80 +602,24 @@ static qbool GLW_SetMode( qbool cdsFullscreen )
 }
 
 
-static void GLW_InitExtensions()
-{
-	ri.Printf( PRINT_DEVELOPER, "Initializing OpenGL extensions\n" );
-
-#define QGL_EXT(T, fn) q##fn = (T)qwglGetProcAddress( #fn ); \
-	if (!q##fn) Com_Error( ERR_FATAL, "QGL_EXT: required extension "#fn" not found" );
-
-	QGL_EXT( PFNGLLOCKARRAYSEXTPROC, glLockArraysEXT );
-	QGL_EXT( PFNGLUNLOCKARRAYSEXTPROC, glUnlockArraysEXT );
-	QGL_EXT( PFNGLACTIVETEXTUREARBPROC, glActiveTextureARB );
-	QGL_EXT( PFNGLCLIENTACTIVETEXTUREARBPROC, glClientActiveTextureARB );
-
-#undef QGL_EXT
-
-	// WGL_EXT_swap_control
-	qwglSwapIntervalEXT = ( BOOL (WINAPI *)(int)) qwglGetProcAddress( "wglSwapIntervalEXT" );
-	if ( qwglSwapIntervalEXT )
-	{
-		ri.Printf( PRINT_DEVELOPER, "...using WGL_EXT_swap_control\n" );
-		r_swapInterval->modified = qtrue;	// force a set next frame
-	}
-	else
-	{
-		ri.Printf( PRINT_DEVELOPER, "...WGL_EXT_swap_control not found\n" );
-	}
-
-	int maxAnisotropy = 0;
-	if ( strstr( glConfig.extensions_string, "GL_EXT_texture_filter_anisotropic" ) )
-	{
-		if (r_ext_max_anisotropy->integer > 1) {
-			qglGetIntegerv( GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maxAnisotropy );
-			if ( maxAnisotropy <= 0 ) {
-				ri.Printf( PRINT_DEVELOPER, "...GL_EXT_texture_filter_anisotropic not properly supported!\n" );
-				maxAnisotropy = 0;
-			}
-			else
-			{
-				ri.Printf( PRINT_DEVELOPER, "...using GL_EXT_texture_filter_anisotropic (max: %i)\n", maxAnisotropy );
-			}
-		}
-		else
-		{
-			ri.Printf( PRINT_DEVELOPER, "...ignoring GL_EXT_texture_filter_anisotropic\n" );
-		}
-	}
-	else
-	{
-		ri.Printf( PRINT_DEVELOPER, "...GL_EXT_texture_filter_anisotropic not found\n" );
-	}
-	Cvar_Set( "r_ext_max_anisotropy", va("%i", maxAnisotropy) );
-
-}
-
-
 static qbool GLW_LoadOpenGL()
 {
 	// only real GL implementations are acceptable
-	const char* OPENGL_DRIVER_NAME = "opengl32";
-
 	// load the driver and bind our function pointers to it
-	if ( QGL_Init( OPENGL_DRIVER_NAME ) ) {
+	if ( WIN_LoadGL( "opengl32" ) ) {
 		// create the window and set up the context
 		if ( GLW_SetMode( (qbool)!!r_fullscreen->integer ) ) {
 			return qtrue;
 		}
 	}
 
-	QGL_Shutdown();
+	WIN_UnloadGL();
 
 	return qfalse;
 }
 
 
-void GLimp_EndFrame()
+void Sys_GL_EndFrame()
 {
 	if ( r_swapInterval->modified ) {
 		r_swapInterval->modified = qfalse;
@@ -692,15 +636,7 @@ void GLimp_EndFrame()
 ///////////////////////////////////////////////////////////////
 
 
-/*
-This is the platform specific OpenGL initialization function.
-It is responsible for loading OpenGL, initializing it, setting
-extensions, creating a window of the appropriate size, doing
-fullscreen manipulations, etc.  Its overall responsibility is
-to make sure that a functional OpenGL subsystem is operating
-when it returns to the ref.
-*/
-void GLimp_Init()
+void Sys_GL_Init()
 {
 	ri.Printf( PRINT_DEVELOPER, "Initializing OpenGL subsystem\n" );
 
@@ -711,29 +647,10 @@ void GLimp_Init()
 	// load appropriate DLL and initialize subsystem
 	if (!GLW_LoadOpenGL())
 		ri.Error( ERR_FATAL, "GLimp_Init() - could not load OpenGL subsystem\n" );
-
-	// get our config strings
-	Q_strncpyz( glConfig.vendor_string, (const char*)qglGetString (GL_VENDOR), sizeof( glConfig.vendor_string ) );
-	Q_strncpyz( glConfig.renderer_string, (const char*)qglGetString (GL_RENDERER), sizeof( glConfig.renderer_string ) );
-	Q_strncpyz( glConfig.version_string, (const char*)qglGetString (GL_VERSION), sizeof( glConfig.version_string ) );
-	Q_strncpyz( glConfig.extensions_string, (const char*)qglGetString (GL_EXTENSIONS), sizeof( glConfig.extensions_string ) );
-
-	GLW_InitExtensions();
-
-	if (!GLW_InitGL2())
-		ri.Error( ERR_FATAL, "GLimp_Init() - could not find OpenGL 2 extensions\n" );
-
-	// GL2 is mandatory, GL3+ isn't
-	GLW_InitGL3();
-
-	if (!QGL_InitGL2())
-		ri.Error( ERR_FATAL, "GLimp_Init() - could not initialize OpenGL 2 objects\n" );
 }
 
 
-// do all OS specific shutdown procedures for the OpenGL subsystem
-
-void GLimp_Shutdown()
+void Sys_GL_Shutdown()
 {
 	const char* success[] = { "failed", "success" };
 	int retVal;
@@ -787,11 +704,8 @@ void GLimp_Shutdown()
 		GLW_ResetDisplaySettings( qtrue );
 	}
 
-	// shutdown QGL subsystem
-	QGL_Shutdown();
-
-	memset( &glConfig, 0, sizeof( glConfig ) );
-	memset( &glState, 0, sizeof( glState ) );
+	// shutdown OpenGL subsystem
+	WIN_UnloadGL();
 }
 
 
