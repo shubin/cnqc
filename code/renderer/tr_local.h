@@ -54,12 +54,6 @@ typedef struct {
 //endif
 
 
-// everything that is needed by the backend needs
-// to be double buffered to allow it to run in
-// parallel on a dual cpu machine
-#define	SMP_FRAMES		2
-
-
 // a trRefEntity_t has all the information passed in by the cgame
 // as well as some locally derived info
 
@@ -812,7 +806,6 @@ typedef struct {
 // all state modified by the back end is separated from the front end state
 
 typedef struct {
-	int				smpFrame;
 	trRefdef_t		refdef;
 	viewParms_t		viewParms;
 	orientationr_t	orient;
@@ -850,8 +843,6 @@ typedef struct {
 	int		sceneCount;		// incremented every scene
 	int		viewCount;		// incremented every view (twice a scene if portaled) and every R_MarkFragments call
 	int		lightCount;		// incremented for each dlight in the view
-
-	int		smpFrame;		// toggles from 0 to 1 every EndFrame
 
 	int		frameSceneNum;	// zeroed at RE_BeginFrame
 
@@ -988,12 +979,6 @@ extern	cvar_t	*r_portalOnly;
 
 extern	cvar_t	*r_subdivisions;
 extern	cvar_t	*r_lodCurveError;
-
-#ifdef USE_R_SMP
-extern	cvar_t	*r_smp;
-extern	cvar_t	*r_showSmp;
-extern	cvar_t	*r_skipBackEnd;
-#endif
 
 extern	cvar_t	*r_ignoreGLErrors;
 
@@ -1158,12 +1143,6 @@ void	Sys_GL_Shutdown();
 // Swaps buffers and applies r_swapInterval. 
 void	Sys_GL_EndFrame();
 
-// SMP
-qbool	GLimp_SpawnRenderThread( void (*function)( void ) );
-void*	GLimp_RendererSleep( void );
-void	GLimp_FrontEndSleep( void );
-void	GLimp_WakeRenderer( void *data );
-
 
 /*
 ====================================================================
@@ -1313,7 +1292,8 @@ SCENE GENERATION
 ============================================================
 */
 
-void R_ToggleSmpFrame();
+// clears counters and back-end commands
+void R_ClearFrame();
 
 void RE_ClearScene();
 void RE_AddRefEntityToScene( const refEntity_t *ent, qbool intShaderTime );
@@ -1364,7 +1344,6 @@ RENDERER BACK END FUNCTIONS
 =============================================================
 */
 
-void RB_RenderThread( void );
 void RB_ExecuteRenderCommands( const void *data );
 
 /*
@@ -1461,10 +1440,8 @@ typedef enum {
 #define MAX_DLIGHTS		32			// completely arbitrary now  :D
 #define MAX_REFENTITIES	1023		// can't be increased without changing drawsurf bit packing
 
-// all of the information needed by the back end must be
-// contained in a backEndData_t.  This entire structure is
-// duplicated so the front and back end can run in parallel
-// on an SMP machine
+// all of the information needed by the back-end must be
+// contained in a backEndData_t instance
 typedef struct {
 	drawSurf_t	drawSurfs[MAX_DRAWSURFS];
 	litSurf_t	litSurfs[MAX_DRAWSURFS];
@@ -1478,16 +1455,11 @@ typedef struct {
 extern	int		max_polys;
 extern	int		max_polyverts;
 
-extern	backEndData_t	*backEndData[SMP_FRAMES];	// the second one may not be allocated
-
-extern	volatile qbool	renderThreadActive;
+extern	backEndData_t	*backEndData;
 
 
 void *R_GetCommandBuffer( int bytes );
 void RB_ExecuteRenderCommands( const void *data );
-
-void R_InitCommandBuffers();
-void R_ShutdownCommandBuffers();
 
 void R_SyncRenderThread( void );
 
@@ -1515,9 +1487,6 @@ struct glinfo_t {
 	// used by platform layer
 	qbool	isFullscreen;
 	int		displayFrequency;
-
-	// used by platform layer and renderer
-	qbool	smpActive;
 
 	// used by renderer
 	GLint	maxTextureSize;

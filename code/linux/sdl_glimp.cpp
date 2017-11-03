@@ -169,11 +169,11 @@ void Sys_GL_Init()
 
 	// @TODO: make a cvar defaulting to an empty string for this? e.g. value: "libGL.so.1"
 	if (SDL_GL_LoadLibrary(NULL) < 0)
-		ri.Error(ERR_FATAL, "GLimp_Init - SDL_GL_LoadLibrary failed: %s\n", SDL_GetError());
+		ri.Error(ERR_FATAL, "Sys_GL_Init - SDL_GL_LoadLibrary failed: %s\n", SDL_GetError());
 
 	glimp.window = SDL_CreateWindow("CNQ3", deskropRect.x, deskropRect.y, glConfig.vidWidth, glConfig.vidHeight, windowFlags);
 	if (glimp.window == NULL)
-		ri.Error(ERR_FATAL, "GLimp_Init - SDL_CreateWindow failed: %s\n", SDL_GetError());
+		ri.Error(ERR_FATAL, "Sys_GL_Init - SDL_CreateWindow failed: %s\n", SDL_GetError());
 
 	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
 	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
@@ -187,16 +187,16 @@ void Sys_GL_Init()
 	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
 	glimp.glContext = SDL_GL_CreateContext(glimp.window);
 	if (glimp.glContext == NULL)
-		ri.Error(ERR_FATAL, "GLimp_Init - SDL_GL_CreateContext failed: %s\n", SDL_GetError());
+		ri.Error(ERR_FATAL, "Sys_GL_Init - SDL_GL_CreateContext failed: %s\n", SDL_GetError());
 	glConfig.colorBits = 32;
 	glConfig.depthBits = 24;
 	glConfig.stencilBits = 8;
 
 	if (SDL_GL_MakeCurrent(glimp.window, glimp.glContext) < 0)
-		ri.Error(ERR_FATAL, "GLimp_Init - SDL_GL_MakeCurrent failed: %s\n", SDL_GetError());
+		ri.Error(ERR_FATAL, "Sys_GL_Init - SDL_GL_MakeCurrent failed: %s\n", SDL_GetError());
 
 	if (!Lin_LoadGL())
-		ri.Error(ERR_FATAL, "GLimp_Init - failed to initialize core OpenGL\n");
+		ri.Error(ERR_FATAL, "Sys_GL_Init - failed to initialize core OpenGL\n");
 }
 
 
@@ -225,26 +225,4 @@ void Sys_GL_EndFrame()
 	}
 
 	SDL_GL_SwapWindow(glimp.window);
-}
-
-
-qbool GLimp_SpawnRenderThread( void (*function)() )
-{
-	return qfalse;
-}
-
-
-void* GLimp_RendererSleep()
-{
-	return NULL;
-}
-
-
-void GLimp_FrontEnderSleep()
-{
-}
-
-
-void GLimp_WakeRenderer( void* data )
-{
 }

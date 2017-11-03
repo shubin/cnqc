@@ -21,42 +21,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "tr_local.h"
 
-volatile qbool	renderThreadActive;
-
-
-void R_InitCommandBuffers()
-{
-	glInfo.smpActive = qfalse;
-#ifdef USE_R_SMP
-	if ( !r_smp->integer )
-		return;
-
-	ri.Printf( PRINT_ALL, "Trying SMP acceleration...\n" );
-	if ( GLimp_SpawnRenderThread( RB_RenderThread ) ) {
-		ri.Printf( PRINT_ALL, "...succeeded.\n" );
-		glInfo.smpActive = qtrue;
-	} else {
-		ri.Printf( PRINT_ALL, "...failed.\n" );
-	}
-#endif	
-}
-
-
-void R_ShutdownCommandBuffers()
-{
-	// kill the rendering thread
-#ifdef USE_R_SMP
-	if ( glInfo.smpActive ) {
-		GLimp_WakeRenderer( NULL );
-	}
-#endif	
-    glInfo.smpActive = qfalse;
-}
-
 
 static void R_IssueRenderCommands()
 {
-	renderCommandList_t* cmdList = &backEndData[tr.smpFrame]->commands;
+	renderCommandList_t* cmdList = &backEndData->commands;
 
 	// add an end-of-list command
 	*(int *)(cmdList->cmds + cmdList->used) = RC_END_OF_LIST;
@@ -64,38 +32,7 @@ static void R_IssueRenderCommands()
 	// clear it out, in case this is a sync and not a buffer flip
 	cmdList->used = 0;
 
-#ifdef USE_R_SMP
-	if ( glInfo.smpActive ) {
-		static int c_blockedOnRender, c_blockedOnMain;
-
-		// if the render thread is not idle, wait for it
-		if ( renderThreadActive ) {
-			c_blockedOnRender++;
-			if ( r_showSmp->integer ) {
-				ri.Printf( PRINT_ALL, "R" );
-			}
-		} else {
-			c_blockedOnMain++;
-			if ( r_showSmp->integer ) {
-				ri.Printf( PRINT_ALL, "." );
-			}
-		}
-		// sleep until the renderer has completed
-		GLimp_FrontEndSleep();
-	}
-
-	// actually start the commands going
-	if ( !r_skipBackEnd->integer ) {
-		// let it start on the new batch
-		if ( !glInfo.smpActive ) {
-			RB_ExecuteRenderCommands( cmdList->cmds );
-		} else {
-			GLimp_WakeRenderer( cmdList );
-		}
-	}
-#else
     RB_ExecuteRenderCommands( cmdList->cmds );
-#endif
 }
 
 
@@ -114,13 +51,6 @@ void R_SyncRenderThread( void ) {
 		return;
 	}
 	R_IssueRenderCommands();
-
-#ifdef USE_R_SMP
-	if ( !glInfo.smpActive ) {
-		return;
-	}
-	GLimp_FrontEndSleep();
-#endif	
 }
 
 /*
@@ -134,7 +64,7 @@ render thread if needed.
 void *R_GetCommandBuffer( int bytes ) {
 	renderCommandList_t	*cmdList;
 
-	cmdList = &backEndData[tr.smpFrame]->commands;
+	cmdList = &backEndData->commands;
 	bytes = PAD(bytes, sizeof(void *));
 
 	// always leave room for the end of list command
@@ -288,9 +218,7 @@ void RE_EndFrame( int* pcFE, int* pc2D, int* pc3D )
 
 	R_IssueRenderCommands();
 
-	// use the other buffers next frame, because another CPU
-	// may still be rendering into the current ones
-	R_ToggleSmpFrame();
+	R_ClearFrame();
 
 	if (pcFE)
 		Com_Memcpy( pcFE, &tr.pc, sizeof( tr.pc ) );

@@ -710,12 +710,6 @@ static qbool SurfIsOffscreen( const drawSurf_t* drawSurf )
 	int i;
 	unsigned int pointAnd = (unsigned int)~0;
 
-#ifdef USE_R_SMP
-	if ( glInfo.smpActive ) {		// FIXME!  we can't do RB_BeginSurface/RB_EndSurface stuff with smp!
-		return qfalse;
-	}
-#endif	
-
 	R_RotateForViewer();
 
 	R_DecomposeSort( drawSurf->sort, &entityNum, &shader, &fogNum );

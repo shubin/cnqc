@@ -2150,15 +2150,6 @@ shader_t* R_FindShader( const char *name, int lightmapIndex, qbool mipRawImage )
 		}
 	}
 
-	// no, uploading is done by, duh, UPLOAD, so let that worry about it
-#ifdef USE_R_SMP
-	// make sure the render thread is stopped, because we are probably
-	// going to have to upload an image
-	if (r_smp->integer) {
-		R_SyncRenderThread();
-	}
-#endif	
-
 	// clear the global shader
 	Com_Memset( &shader, 0, sizeof( shader ) );
 	Com_Memset( &stages, 0, sizeof( stages ) );
@@ -2265,14 +2256,6 @@ qhandle_t RE_RegisterShaderFromImage( const char* name, const image_t* image )
 			return sh->index;
 		}
 	}
-
-	// make sure the render thread is stopped, because we are probably
-	// going to have to upload an image
-#ifdef USE_R_SMP
-	if (r_smp->integer) {
-		R_SyncRenderThread();
-	}
-#endif	
 
 	// clear the global shader
 	Com_Memset( &shader, 0, sizeof( shader ) );

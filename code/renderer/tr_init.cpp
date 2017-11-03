@@ -37,12 +37,6 @@ cvar_t	*r_displayRefresh;
 
 cvar_t	*r_detailTextures;
 
-#ifdef USE_R_SMP
-cvar_t	*r_smp;
-cvar_t	*r_showSmp;
-cvar_t	*r_skipBackEnd;
-#endif
-
 cvar_t	*r_intensity;
 cvar_t	*r_gamma;
 cvar_t	*r_greyscale;
@@ -240,9 +234,6 @@ static void InitOpenGL()
 		// apply the current V-Sync option after the first rendered frame
 		r_swapInterval->modified = qtrue;
 	}
-
-	// init command buffers and SMP
-	R_InitCommandBuffers();
 
 	GfxInfo_f();
 
@@ -459,11 +450,6 @@ void GfxInfo_f( void )
 	}
 
 	ri.Printf( PRINT_DEVELOPER, "CPU: %s\n", sys_cpustring->string );
-#ifdef USE_R_SMP
-	if ( glInfo.smpActive ) {
-		ri.Printf( PRINT_ALL, "Using dual processor acceleration\n" );
-	}
-#endif	
 }
 
 
@@ -502,11 +488,6 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_vertexLight, "r_vertexLight", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, "disables lightmap texture blending" },
 	// note that r_subdivisions > 64 will create rendering artefacts because you'll see the other side of a curved surface when against it
 	{ &r_subdivisions, "r_subdivisions", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "1", "64", help_r_subdivisions },
-#ifdef USE_R_SMP
-	{ &r_smp, "r_smp", "0", CVAR_ARCHIVE | CVAR_LATCH },
-	{ &r_showSmp, "r_showSmp", "0", CVAR_CHEAT },
-	{ &r_skipBackEnd, "r_skipBackEnd", "0", CVAR_CHEAT },
-#endif
 
 	//
 	// latched variables that can only change over a restart
@@ -617,23 +598,12 @@ void R_Init()
 	max_polys = max( r_maxpolys->integer, DEFAULT_MAX_POLYS );
 	max_polyverts = max( r_maxpolyverts->integer, DEFAULT_MAX_POLYVERTS );
 
-	byte* ptr = (byte*)ri.Hunk_Alloc( sizeof( *backEndData[0] ) + sizeof(srfPoly_t) * max_polys + sizeof(polyVert_t) * max_polyverts, h_low );
-	backEndData[0] = (backEndData_t*)ptr;
-	backEndData[0]->polys = (srfPoly_t *) (ptr + sizeof( *backEndData[0] ));
-	backEndData[0]->polyVerts = (polyVert_t *) (ptr + sizeof( *backEndData[0] ) + sizeof(srfPoly_t) * max_polys);
+	byte* ptr = (byte*)ri.Hunk_Alloc( sizeof(backEndData_t) + sizeof(srfPoly_t) * max_polys + sizeof(polyVert_t) * max_polyverts, h_low );
+	backEndData = (backEndData_t*)ptr;
+	backEndData->polys = (srfPoly_t*)(ptr + sizeof(backEndData_t));
+	backEndData->polyVerts = (polyVert_t*)(ptr + sizeof(backEndData_t) + sizeof(srfPoly_t) * max_polys);
 
-	backEndData[1] = NULL;
-#ifdef USE_R_SMP
-	if (r_smp->integer) {
-		ptr = (byte*)ri.Hunk_Alloc( sizeof( *backEndData[1] ) + sizeof(srfPoly_t) * max_polys + sizeof(polyVert_t) * max_polyverts, h_low );
-		backEndData[1] = (backEndData_t*)ptr;
-		backEndData[1]->polys = (srfPoly_t *) (ptr + sizeof( *backEndData[1] ));
-		backEndData[1]->polyVerts = (polyVert_t *) (ptr + sizeof( *backEndData[1] ) + sizeof(srfPoly_t) * max_polys);
-	}
-#endif
-	
-
-	R_ToggleSmpFrame();
+	R_ClearFrame();
 
 	InitOpenGL();
 
@@ -662,7 +632,6 @@ static void RE_Shutdown( qbool destroyWindow )
 	if ( tr.registered ) {
 		ri.Cmd_UnregisterModule();
 		R_SyncRenderThread();
-		R_ShutdownCommandBuffers();
 		R_DeleteTextures();
 	}
 
