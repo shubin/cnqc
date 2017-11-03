@@ -222,14 +222,14 @@ LRESULT CALLBACK MainWndProc (
 			// but anyone running vista is a moron anyway, so fkit  :P
 			if (i > 0) {
 				while (i >= WHEEL_DELTA) {
-					Sys_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MWHEELUP, qtrue, 0, NULL );
-					Sys_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MWHEELUP, qfalse, 0, NULL );
+					WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MWHEELUP, qtrue, 0, NULL );
+					WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MWHEELUP, qfalse, 0, NULL );
 					i -= WHEEL_DELTA;
 				}
 			} else {
 				while (i <= -WHEEL_DELTA) {
-					Sys_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MWHEELDOWN, qtrue, 0, NULL );
-					Sys_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MWHEELDOWN, qfalse, 0, NULL );
+					WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MWHEELDOWN, qtrue, 0, NULL );
+					WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MWHEELDOWN, qfalse, 0, NULL );
 					i += WHEEL_DELTA;
 				}
 			}
@@ -269,7 +269,7 @@ LRESULT CALLBACK MainWndProc (
 
 	case WM_ACTIVATE:
 		WIN_AppActivate( (LOWORD(wParam) != WA_INACTIVE), !!(BOOL)HIWORD(wParam) );
-		SNDDMA_Activate();
+		WIN_S_WindowActivate();
 		break;
 
 	case WM_MOVE:
@@ -317,19 +317,19 @@ LRESULT CALLBACK MainWndProc (
 		}
 		// fall through
 	case WM_KEYDOWN:
-		Sys_QueEvent( g_wv.sysMsgTime, SE_KEY, MapKey( wParam, lParam ), qtrue, 0, NULL );
+		WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, MapKey( wParam, lParam ), qtrue, 0, NULL );
 		break;
 
 	case WM_SYSKEYUP:
 	case WM_KEYUP:
-		Sys_QueEvent( g_wv.sysMsgTime, SE_KEY, MapKey( wParam, lParam ), qfalse, 0, NULL );
+		WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, MapKey( wParam, lParam ), qfalse, 0, NULL );
 		break;
 
 	case WM_CHAR:
 		{
 			const char scanCode = (char)( ( lParam >> 16 ) & 0xFF );
 			if ( scanCode != 0x29 ) // never send an event for the console key ('~' or '`')
-				Sys_QueEvent( g_wv.sysMsgTime, SE_CHAR, wParam, 0, 0, NULL );
+				WIN_QueEvent( g_wv.sysMsgTime, SE_CHAR, wParam, 0, 0, NULL );
 		}
 		break;
 

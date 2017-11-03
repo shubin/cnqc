@@ -1518,8 +1518,8 @@ private:
 
 // tr_gl2.cpp
 qbool	GL2_Init();
-void	GL2_DynLights_SetupLight();
-void	GL2_DynLights_StageIterator();
+void	GL2_SetupDynLight();
+void	GL2_StageIterator();
 void	GL2_BeginFrame();
 void	GL2_EndFrame();
 

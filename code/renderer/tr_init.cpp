@@ -213,7 +213,7 @@ static void GL_InitExtensions()
 ** InitOpenGL
 **
 ** This function is responsible for initializing a valid OpenGL subsystem.  This
-** is done by calling GLimp_Init (which gives us a working OGL subsystem) then
+** is done by calling Sys_GL_Init (which gives us a working OGL subsystem) then
 ** setting variables, checking GL constants, and reporting the gfx system config
 ** to the user.
 */

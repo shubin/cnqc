@@ -327,12 +327,12 @@ void SNDDMA_Submit( void )
 
 /*
 =================
-SNDDMA_Activate
+WIN_S_WindowActivate
 
-When we change windows we need to do this
+Called in reaction to WM_ACTIVATE
 =================
 */
-void SNDDMA_Activate()
+void WIN_S_WindowActivate()
 {
 	if ( !pDS ) {
 		return;

@@ -24,18 +24,20 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "windows.h"
 
 
-void Sys_QueEvent( int time, sysEventType_t type, int value, int value2, int ptrLength, void *ptr );
+void WIN_QueEvent( int time, sysEventType_t type, int value, int value2, int ptrLength, void *ptr );
 
-void		Sys_CreateConsole( void );
-void		Sys_DestroyConsole( void );
-const char*	Sys_ConsoleInput();
+// "early console" window management
+void		WIN_CreateConsole();
+void		WIN_DestroyConsole();
+const char*	WIN_ConsoleInput();
+void		WIN_AppendConsoleText( const char *msg );
 
-void	Conbuf_AppendText( const char *msg );
-
+// input
 void	IN_Activate( qbool active );
 qbool	IN_ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam ); // returns true if the event was handled
 void	IN_Frame();
 
+// misc. Windows-specific stuff
 void WIN_UpdateMonitorIndexFromCvar();
 void WIN_UpdateMonitorIndexFromMainWindow();
 void WIN_UpdateResolution( int width, int height );
@@ -44,7 +46,8 @@ void WIN_UnregisterHotKey();
 void WIN_SetGameDisplaySettings();
 void WIN_SetDesktopDisplaySettings();
 
-void SNDDMA_Activate();
+// sound - called in reaction to WM_ACTIVATE
+void WIN_S_WindowActivate();
 
 LRESULT CALLBACK MainWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam );
 

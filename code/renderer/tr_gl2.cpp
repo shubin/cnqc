@@ -47,15 +47,25 @@ static GLSL_DynLightProgramAttribs dynLightProgAttribs;
 ///////////////////////////////////////////////////////////////
 
 
-static void GL2_DynLights_Setup()
+void GL2_SetupDynLight()
 {
-	const shaderStage_t* pStage = tess.xstages[tess.shader->lightingStages[ST_DIFFUSE]];
-	GL_SelectTexture( 0 );
-	R_BindAnimatedImage( &pStage->bundle );
+	GL_Program( dynLightProg );
+
+	const dlight_t* dl = tess.light;
+	vec3_t lightColor;
+	VectorCopy( dl->color, lightColor );
+
+	qglUniform4f( dynLightProgAttribs.osLightPos, dl->transformed[0], dl->transformed[1], dl->transformed[2], 0.0f );
+	qglUniform4f( dynLightProgAttribs.osEyePos, backEnd.orient.viewOrigin[0], backEnd.orient.viewOrigin[1], backEnd.orient.viewOrigin[2], 0.0f );
+	qglUniform4f( dynLightProgAttribs.lightColorRadius, lightColor[0], lightColor[1], lightColor[2], 1.0f / Square(dl->radius) );
+	qglUniform1i( dynLightProgAttribs.texture, 0 ); // we use texture unit 0
 }
 
 
-static void GL2_DynLights_Lighting()
+///////////////////////////////////////////////////////////////
+
+
+static void GL2_StageIterator_Lighting()
 {
 	backEnd.pc[RB_LIT_VERTICES_LATECULLTEST] += tess.numVertexes;
 
@@ -115,31 +125,15 @@ static void GL2_DynLights_Lighting()
 
 	GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE | GLS_DEPTHFUNC_EQUAL );
 
-	GL2_DynLights_Setup();
+	const shaderStage_t* const pStage = tess.xstages[tess.shader->lightingStages[ST_DIFFUSE]];
+	GL_SelectTexture( 0 );
+	R_BindAnimatedImage( &pStage->bundle );
 
 	qglDrawElements( GL_TRIANGLES, numIndexes, GL_INDEX_TYPE, hitIndexes );
 }
 
 
-///////////////////////////////////////////////////////////////
-
-
-void GL2_DynLights_SetupLight()
-{
-	GL_Program( dynLightProg );
-
-	const dlight_t* dl = tess.light;
-	vec3_t lightColor;
-	VectorCopy( dl->color, lightColor );
-
-	qglUniform4f( dynLightProgAttribs.osLightPos, dl->transformed[0], dl->transformed[1], dl->transformed[2], 0.0f );
-	qglUniform4f( dynLightProgAttribs.osEyePos, backEnd.orient.viewOrigin[0], backEnd.orient.viewOrigin[1], backEnd.orient.viewOrigin[2], 0.0f );
-	qglUniform4f( dynLightProgAttribs.lightColorRadius, lightColor[0], lightColor[1], lightColor[2], 1.0f / Square(dl->radius) );
-	qglUniform1i( dynLightProgAttribs.texture, 0 ); // we use texture unit 0
-}
-
-
-static void GL2_DynLights_LightingPass()
+static void GL2_StageIterator_LightingPass()
 {
 	if (tess.shader->lightingStages[ST_DIFFUSE] == -1)
 		return;
@@ -164,7 +158,7 @@ static void GL2_DynLights_LightingPass()
 	qglVertexPointer( 3, GL_FLOAT, 16, tess.xyz );
 	qglLockArraysEXT( 0, tess.numVertexes );
 
-	GL2_DynLights_Lighting();
+	GL2_StageIterator_Lighting();
 
 	qglUnlockArraysEXT();
 
@@ -176,7 +170,7 @@ static void GL2_DynLights_LightingPass()
 
 
 // returns qtrue if needs to break early
-static qbool GL2_DynLights_MultitextureStage( int stage )
+static qbool GL2_StageIterator_MultitextureStage( int stage )
 {
 	static stageVars_t svarsMT; // this is a huge struct
 
@@ -227,10 +221,10 @@ static qbool GL2_DynLights_MultitextureStage( int stage )
 }
 
 
-void GL2_DynLights_StageIterator()
+void GL2_StageIterator()
 {
 	if (tess.pass == shaderCommands_t::TP_LIGHT) {
-		GL2_DynLights_LightingPass();
+		GL2_StageIterator_LightingPass();
 		return;
 	}
 
@@ -274,7 +268,7 @@ void GL2_DynLights_StageIterator()
 		if ( pStage->mtStages ) {
 			// we can't really cope with massive collapses, so
 			assert( pStage->mtStages == 1 );
-			if ( GL2_DynLights_MultitextureStage( stage ) )
+			if ( GL2_StageIterator_MultitextureStage( stage ) )
 				break;
 			stage += pStage->mtStages;
 			continue;
@@ -314,7 +308,7 @@ static qbool GL2_CreateShader( GLuint* shaderPtr, GLenum shaderType, const char*
 
 	static char log[4096]; // I've seen logs over 3 KB in size.
 	qglGetShaderInfoLog( shader, sizeof(log), NULL, log );
-	Com_Printf( "ERROR: %s shader: %s", shaderType == GL_VERTEX_SHADER ? "vertex" : "fragment", log );
+	ri.Printf( PRINT_ERROR, "%s shader: %s\n", shaderType == GL_VERTEX_SHADER ? "Vertex" : "Fragment", log );
 
 	return qfalse;
 }
@@ -433,10 +427,10 @@ static void GL2_CheckError( const char* call, const char* function, const char* 
 		++file;
 	}
 
-	Com_Printf( "%s failed\n", call );
-	Com_Printf( "%s:%d in %s\n", fileName, line, function );
-	Com_Printf( "Error code: 0x%X (%d)\n", (unsigned int)ec, (int)ec );
-	Com_Printf( "Error message: %s\n", GL2_GetErrorString(ec) );
+	ri.Printf( PRINT_ERROR, "%s failed\n", call );
+	ri.Printf( PRINT_ERROR, "%s:%d in %s\n", fileName, line, function );
+	ri.Printf( PRINT_ERROR, "GL error code: 0x%X (%d)\n", (unsigned int)ec, (int)ec );
+	ri.Printf( PRINT_ERROR, "GL error message: %s\n", GL2_GetErrorString(ec) );
 }
 
 
@@ -489,8 +483,8 @@ static qbool GL2_FBO_CreateSS( FrameBuffer& fb, qbool depthStencil )
 	const GLenum fboStatus = qglCheckFramebufferStatus( GL_FRAMEBUFFER );
 	if ( fboStatus != GL_FRAMEBUFFER_COMPLETE )
 	{
-		Com_Printf( "Failed to create FBO (status 0x%X, error 0x%X)\n", (unsigned int)fboStatus, (unsigned int)qglGetError() );
-		Com_Printf( "FBO status string: %s\n", GL2_GetFBOStatusString(fboStatus) );
+		ri.Printf( PRINT_ERROR, "Failed to create FBO (status 0x%X, error 0x%X)\n", (unsigned int)fboStatus, (unsigned int)qglGetError() );
+		ri.Printf( PRINT_ERROR, "FBO status string: %s\n", GL2_GetFBOStatusString(fboStatus) );
 		return qfalse;
 	}
 
@@ -524,8 +518,8 @@ static qbool GL2_FBO_CreateMS( FrameBuffer& fb )
 	const GLenum fboStatus = qglCheckFramebufferStatus( GL_FRAMEBUFFER );
 	if ( fboStatus != GL_FRAMEBUFFER_COMPLETE )
 	{
-		Com_Printf( "Failed to create FBO (status 0x%X, error 0x%X)\n", (unsigned int)fboStatus, (unsigned int)qglGetError() );
-		Com_Printf( "FBO status string: %s\n", GL2_GetFBOStatusString(fboStatus) );
+		ri.Printf( PRINT_ERROR, "Failed to create FBO (status 0x%X, error 0x%X)\n", (unsigned int)fboStatus, (unsigned int)qglGetError() );
+		ri.Printf( PRINT_ERROR, "FBO status string: %s\n", GL2_GetFBOStatusString(fboStatus) );
 		return qfalse;
 	}
 
@@ -544,7 +538,7 @@ static qbool GL2_FBO_Init()
 	const qbool enable = validOption && qglRenderbufferStorageMultisample != NULL;
 	frameBufferMultiSampling = enable;
 	if ( validOption && !enable )
-		Com_Printf( "Warning: MSAA requested but disabled because glRenderbufferStorageMultisample wasn't found\n" );
+		ri.Printf( PRINT_WARNING, "MSAA requested but disabled because glRenderbufferStorageMultisample wasn't found\n" );
 
 	if ( !enable )
 		return	GL2_FBO_CreateSS( frameBuffersPostProcess[0], qtrue ) &&
@@ -731,12 +725,12 @@ static const char* greyscaleFS =
 qbool GL2_Init()
 {
 	if ( !GL2_FBO_Init() ) {
-		Com_Printf( "ERROR: failed to create framebuffer objects\n" );
+		ri.Printf( PRINT_ERROR, "Failed to create FBOs\n" );
 		return qfalse;
 	}
 
 	if ( !GL2_CreateProgram( dynLightProg, dynLightVS, dynLightFS ) ) {
-		Com_Printf( "ERROR: failed to compile dynamic light shaders\n" );
+		ri.Printf( PRINT_ERROR, "Failed to compile dynamic light shaders\n" );
 		return qfalse;
 	}
 	dynLightProgAttribs.osEyePos = qglGetUniformLocation( dynLightProg.p, "osEyePos" );
@@ -745,7 +739,7 @@ qbool GL2_Init()
 	dynLightProgAttribs.lightColorRadius = qglGetUniformLocation( dynLightProg.p, "lightColorRadius" );
 
 	if ( !GL2_CreateProgram( gammaProg, gammaVS, gammaFS ) ) {
-		Com_Printf( "ERROR: failed to compile gamma correction shaders\n" );
+		ri.Printf( PRINT_ERROR, "Failed to compile gamma correction shaders\n" );
 		return qfalse;
 	}
 	gammaProgAttribs.texture = qglGetUniformLocation( gammaProg.p, "texture" );
@@ -756,7 +750,7 @@ qbool GL2_Init()
 		greyscaleProgAttribs.texture = qglGetUniformLocation( greyscaleProg.p, "texture" );
 		greyscaleProgAttribs.greyscale = qglGetUniformLocation( greyscaleProg.p, "greyscale" );
 	} else {
-		Com_Printf( "ERROR: failed to compile greyscale shaders\n" );
+		ri.Printf( PRINT_ERROR, "Failed to compile greyscale shaders\n" );
 	}
 
 	return qtrue;

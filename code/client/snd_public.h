@@ -62,6 +62,3 @@ sfxHandle_t S_RegisterSound( const char* sample );
 void S_DisplayFreeMemory();
 
 void S_ClearSoundBuffer();
-
-void SNDDMA_Activate();
-

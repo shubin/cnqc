@@ -82,8 +82,8 @@ void QDECL Sys_Error( const char *error, ... )
 	vsprintf (text, error, argptr);
 	va_end (argptr);
 
-	Conbuf_AppendText( text );
-	Conbuf_AppendText( "\n" );
+	WIN_AppendConsoleText( text );
+	WIN_AppendConsoleText( "\n" );
 
 	Sys_SetErrorText( text );
 	Sys_ShowConsole( 1, qtrue );
@@ -103,7 +103,7 @@ void QDECL Sys_Error( const char *error, ... )
 		DispatchMessage(&msg);
 	}
 
-	Sys_DestroyConsole();
+	WIN_DestroyConsole();
 
 	exit(1);
 }
@@ -115,14 +115,14 @@ void Sys_Quit( int status )
 #ifndef DEDICATED
 	Sys_ShutdownInput();
 #endif
-	Sys_DestroyConsole();
+	WIN_DestroyConsole();
 	exit( status );
 }
 
 
 void Sys_Print( const char *msg )
 {
-	Conbuf_AppendText( msg );
+	WIN_AppendConsoleText( msg );
 }
 
 
@@ -427,7 +427,7 @@ static int			eventHead, eventTail;
 // a time of 0 will get the current time
 // ptr should either be null, or point to a block of data that can be freed by the game later
 
-void Sys_QueEvent( int time, sysEventType_t type, int value, int value2, int ptrLength, void *ptr )
+void WIN_QueEvent( int time, sysEventType_t type, int value, int value2, int ptrLength, void *ptr )
 {
 	sysEvent_t* ev = &eventQue[ eventHead & MASK_QUED_EVENTS ];
 
@@ -479,12 +479,12 @@ sysEvent_t Sys_GetEvent()
 	}
 
 	// check for console commands
-	const char* s = Sys_ConsoleInput();
+	const char* s = WIN_ConsoleInput();
 	if ( s ) {
 		int len = strlen( s ) + 1;
 		char* b = (char*)Z_Malloc( len );
 		Q_strncpyz( b, s, len-1 );
-		Sys_QueEvent( 0, SE_CONSOLE, 0, 0, len, b );
+		WIN_QueEvent( 0, SE_CONSOLE, 0, 0, len, b );
 	}
 
 	// check for network packets
@@ -499,7 +499,7 @@ sysEvent_t Sys_GetEvent()
 		netadr_t* buf = (netadr_t*)Z_Malloc( len );
 		*buf = adr;
 		memcpy( buf+1, &netmsg.data[netmsg.readcount], netmsg.cursize - netmsg.readcount );
-		Sys_QueEvent( 0, SE_PACKET, 0, 0, len, buf );
+		WIN_QueEvent( 0, SE_PACKET, 0, 0, len, buf );
 	}
 
 	// return if we have data
@@ -639,7 +639,7 @@ int WINAPI WinMainImpl( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCm
 	WIN_InitMonitorList();
 
 	// done before Com/Sys_Init since we need this for error output
-	Sys_CreateConsole();
+	WIN_CreateConsole();
 
 	// get the initial time base
 	Sys_Milliseconds();

@@ -126,7 +126,7 @@ static LONG WINAPI ConWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 		if ( ( com_dedicated && com_dedicated->integer ) )
 		{
 			cmdString = CopyString( "quit" );
-			Sys_QueEvent( 0, SE_CONSOLE, 0, 0, strlen( cmdString ) + 1, cmdString );
+			WIN_QueEvent( 0, SE_CONSOLE, 0, 0, strlen( cmdString ) + 1, cmdString );
 		}
 		else if ( s_wcd.quitOnClose )
 		{
@@ -189,7 +189,7 @@ static LONG WINAPI ConWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 			else
 			{
 				cmdString = CopyString( "quit" );
-				Sys_QueEvent( 0, SE_CONSOLE, 0, 0, strlen( cmdString ) + 1, cmdString );
+				WIN_QueEvent( 0, SE_CONSOLE, 0, 0, strlen( cmdString ) + 1, cmdString );
 			}
 		}
 		else if ( wParam == CLEAR_ID )
@@ -358,7 +358,7 @@ LONG WINAPI InputLineWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 /*
 ** Sys_CreateConsole
 */
-void Sys_CreateConsole( void )
+void WIN_CreateConsole( void )
 {
 	const int desiredw = 540;
 	const int desiredh = 450;
@@ -501,7 +501,7 @@ void Sys_CreateConsole( void )
 /*
 ** Sys_DestroyConsole
 */
-void Sys_DestroyConsole( void ) {
+void WIN_DestroyConsole( void ) {
 	if ( s_wcd.hWnd ) {
 		ShowWindow( s_wcd.hWnd, SW_HIDE );
 		CloseWindow( s_wcd.hWnd );
@@ -546,7 +546,7 @@ void Sys_ShowConsole( int visLevel, qbool quitOnClose )
 }
 
 
-const char* Sys_ConsoleInput()
+const char* WIN_ConsoleInput()
 {
 	if ( s_wcd.consoleText[0] == 0 )
 	{
@@ -560,10 +560,7 @@ const char* Sys_ConsoleInput()
 }
 
 
-/*
-** Conbuf_AppendText
-*/
-void Conbuf_AppendText( const char *pMsg )
+void WIN_AppendConsoleText( const char *pMsg )
 {
 #define CONSOLE_BUFFER_SIZE		16384
 
@@ -643,9 +640,7 @@ void Conbuf_AppendText( const char *pMsg )
 	SendMessage( s_wcd.hwndBuffer, EM_REPLACESEL, 0, (LPARAM) buffer );
 }
 
-/*
-** Sys_SetErrorText
-*/
+
 void Sys_SetErrorText( const char *buf )
 {
 	Q_strncpyz( s_wcd.errorString, buf, sizeof( s_wcd.errorString ) );

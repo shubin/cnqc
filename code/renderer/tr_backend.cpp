@@ -602,7 +602,7 @@ static void RB_RenderLitSurfList( dlight_t* dl )
 				R_RotateForEntity( backEnd.currentEntity, &backEnd.viewParms, &backEnd.orient );
 
 				R_TransformDlights( 1, dl, &backEnd.orient );
-				GL2_DynLights_SetupLight();
+				GL2_SetupDynLight();
 
 				if ( backEnd.currentEntity->e.renderfx & RF_DEPTHHACK ) {
 					// hack the depth range to prevent view model from poking into walls
@@ -616,7 +616,7 @@ static void RB_RenderLitSurfList( dlight_t* dl )
 				// the world (like water) continue with the wrong frame
 				tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
 				R_TransformDlights( 1, dl, &backEnd.orient );
-				GL2_DynLights_SetupLight();
+				GL2_SetupDynLight();
 			}
 
 			qglLoadMatrixf( backEnd.orient.modelMatrix );

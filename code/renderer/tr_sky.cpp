@@ -589,7 +589,7 @@ void RB_StageIteratorSky()
 	// which will be drawn by the generic shader routine
 	R_BuildCloudData( &tess );
 	if (tess.numVertexes)
-		GL2_DynLights_StageIterator();
+		GL2_StageIterator();
 
 	// back to normal depth range
 	qglDepthRange( 0.0, 1.0 );

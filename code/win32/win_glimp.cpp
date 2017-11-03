@@ -23,12 +23,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ** WIN_GLIMP.C
 **
 ** This file contains ALL Win32 specific stuff having to do with the
-** OpenGL refresh.  When a port is being made the following functions
+** OpenGL refresh. When a port is being made the following functions
 ** must be implemented by the port:
 **
-** GLimp_EndFrame
-** GLimp_Init
-** GLimp_Shutdown
+** Sys_GL_EndFrame
+** Sys_GL_Init
+** Sys_GL_Shutdown
 **
 ** Note that the GLW_xxx functions are Windows specific GL-subsystem
 ** related functions that are relevant ONLY to win_glimp.c
@@ -643,7 +643,7 @@ void Sys_GL_Init()
 
 	// load appropriate DLL and initialize subsystem
 	if (!GLW_LoadOpenGL())
-		ri.Error( ERR_FATAL, "GLimp_Init() - could not load OpenGL subsystem\n" );
+		ri.Error( ERR_FATAL, "Sys_GL_Init - could not load OpenGL subsystem\n" );
 }
 
 

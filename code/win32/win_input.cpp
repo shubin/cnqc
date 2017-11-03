@@ -54,14 +54,14 @@ void Mouse::UpdateWheel( int delta )
 	wheel += delta;
 
 	while (wheel >= WHEEL_DELTA) {
-		Sys_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MWHEELUP, qtrue, 0, NULL );
-		Sys_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MWHEELUP, qfalse, 0, NULL );
+		WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MWHEELUP, qtrue, 0, NULL );
+		WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MWHEELUP, qfalse, 0, NULL );
 		wheel -= WHEEL_DELTA;
 	}
 
 	while (wheel <= -WHEEL_DELTA) {
-		Sys_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MWHEELDOWN, qtrue, 0, NULL );
-		Sys_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MWHEELDOWN, qfalse, 0, NULL );
+		WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MWHEELDOWN, qtrue, 0, NULL );
+		WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MWHEELDOWN, qfalse, 0, NULL );
 		wheel += WHEEL_DELTA;
 	}
 }
@@ -155,7 +155,7 @@ qbool rawmouse_t::ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam )
 	const int dx = (int)ri.data.mouse.lLastX;
 	const int dy = (int)ri.data.mouse.lLastY;
 	if (active && (dx != 0 || dy != 0))
-		Sys_QueEvent( g_wv.sysMsgTime, SE_MOUSE, dx, dy, 0, NULL );
+		WIN_QueEvent( g_wv.sysMsgTime, SE_MOUSE, dx, dy, 0, NULL );
 
 	if (!ri.data.mouse.usButtonFlags) // no button or wheel transitions
 		return qfalse;
@@ -165,12 +165,12 @@ qbool rawmouse_t::ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam )
 
 	for (int i = 0; i < 5; ++i) {
 		if (active && (ri.data.mouse.usButtonFlags & riBtnDnFlags[i]) != 0)
-			Sys_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MOUSE1 + i, qtrue, 0, NULL );
+			WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MOUSE1 + i, qtrue, 0, NULL );
 
 		// we always send the button up events to avoid
 		// buttons getting "stuck" when bringing the console down
 		if (ri.data.mouse.usButtonFlags & riBtnUpFlags[i])
-			Sys_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MOUSE1 + i, qfalse, 0, NULL );
+			WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MOUSE1 + i, qfalse, 0, NULL );
 	}
 
 	return qfalse;
@@ -225,14 +225,14 @@ qbool winmouse_t::ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam )
 	UpdateWindowCenter();
 
 #define QUEUE_WM_BUTTON( qbutton, mask ) \
-	Sys_QueEvent( g_wv.sysMsgTime, SE_KEY, qbutton, (wParam & mask), 0, NULL );
+	WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, qbutton, (wParam & mask), 0, NULL );
 
 	POINT p;
 	GetCursorPos( &p );
 	const int dx = p.x - window_center_x;
 	const int dy = p.y - window_center_y;
 	if (dx != 0 || dy != 0) {
-		Sys_QueEvent( g_wv.sysMsgTime, SE_MOUSE, dx, dy, 0, NULL );
+		WIN_QueEvent( g_wv.sysMsgTime, SE_MOUSE, dx, dy, 0, NULL );
 		SetCursorPos( window_center_x, window_center_y );
 	}
 
@@ -620,10 +620,10 @@ static void IN_JoyMove()
 	buttonstate = joy.ji.dwButtons;
 	for ( i=0 ; i < joy.jc.wNumButtons ; i++ ) {
 		if ( (buttonstate & (1<<i)) && !(joy.oldbuttonstate & (1<<i)) ) {
-			Sys_QueEvent( g_wv.sysMsgTime, SE_KEY, K_JOY1 + i, qtrue, 0, NULL );
+			WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, K_JOY1 + i, qtrue, 0, NULL );
 		}
 		if ( !(buttonstate & (1<<i)) && (joy.oldbuttonstate & (1<<i)) ) {
-			Sys_QueEvent( g_wv.sysMsgTime, SE_KEY, K_JOY1 + i, qfalse, 0, NULL );
+			WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, K_JOY1 + i, qfalse, 0, NULL );
 		}
 	}
 	joy.oldbuttonstate = buttonstate;
@@ -659,11 +659,11 @@ static void IN_JoyMove()
 	// determine which bits have changed and key an auxillary event for each change
 	for (i=0 ; i < 16 ; i++) {
 		if ( (povstate & (1<<i)) && !(joy.oldpovstate & (1<<i)) ) {
-			Sys_QueEvent( g_wv.sysMsgTime, SE_KEY, joyDirectionKeys[i], qtrue, 0, NULL );
+			WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, joyDirectionKeys[i], qtrue, 0, NULL );
 		}
 
 		if ( !(povstate & (1<<i)) && (joy.oldpovstate & (1<<i)) ) {
-			Sys_QueEvent( g_wv.sysMsgTime, SE_KEY, joyDirectionKeys[i], qfalse, 0, NULL );
+			WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, joyDirectionKeys[i], qfalse, 0, NULL );
 		}
 	}
 	joy.oldpovstate = povstate;
@@ -673,7 +673,7 @@ static void IN_JoyMove()
 		x = JoyToI( joy.ji.dwUpos ) * in_joyBallScale->value;
 		y = JoyToI( joy.ji.dwVpos ) * in_joyBallScale->value;
 		if ( x || y ) {
-			Sys_QueEvent( g_wv.sysMsgTime, SE_MOUSE, x, y, 0, NULL );
+			WIN_QueEvent( g_wv.sysMsgTime, SE_MOUSE, x, y, 0, NULL );
 		}
 	}
 }
@@ -713,7 +713,7 @@ static void MIDI_NoteOff( int note )
 	if ( qkey > 255 || qkey < K_AUX1 )
 		return;
 
-	Sys_QueEvent( g_wv.sysMsgTime, SE_KEY, qkey, qfalse, 0, NULL );
+	WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, qkey, qfalse, 0, NULL );
 }
 
 static void MIDI_NoteOn( int note, int velocity )
@@ -728,7 +728,7 @@ static void MIDI_NoteOn( int note, int velocity )
 	if ( qkey > 255 || qkey < K_AUX1 )
 		return;
 
-	Sys_QueEvent( g_wv.sysMsgTime, SE_KEY, qkey, qtrue, 0, NULL );
+	WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, qkey, qtrue, 0, NULL );
 }
 
 static void CALLBACK MidiInProc( HMIDIIN hMidiIn, UINT uMsg, DWORD dwInstance, DWORD dwParam1, DWORD dwParam2 )
@@ -762,7 +762,7 @@ static void CALLBACK MidiInProc( HMIDIIN hMidiIn, UINT uMsg, DWORD dwInstance, D
 		break;
 	}
 
-//	Sys_QueEvent( sys_msg_time, SE_KEY, wMsg, qtrue, 0, NULL );
+//	WIN_QueEvent( sys_msg_time, SE_KEY, wMsg, qtrue, 0, NULL );
 }
 
 static void MidiInfo_f( void )
