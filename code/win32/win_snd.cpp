@@ -55,12 +55,8 @@ static const char *DSoundError( int error ) {
 	return "unknown";
 }
 
-/*
-==================
-SNDDMA_Shutdown
-==================
-*/
-void SNDDMA_Shutdown( void ) {
+
+void Sys_S_Shutdown( void ) {
 	Com_DPrintf( "Shutting down sound system\n" );
 
 	if ( pDS ) {
@@ -124,7 +120,7 @@ static qbool SNDDMA_InitDS()
 	}
 	else {
 		Com_Printf("failed\n");
-		SNDDMA_Shutdown();
+		Sys_S_Shutdown();
 		return qfalse;
 	}
 
@@ -134,7 +130,7 @@ static qbool SNDDMA_InitDS()
 
 	if ( DS_OK != pDS->SetCooperativeLevel( g_wv.hWnd, DSSCL_PRIORITY ) ) {
 		Com_Printf ("failed\n");
-		SNDDMA_Shutdown();
+		Sys_S_Shutdown();
 		return qfalse;
 	}
 	Com_DPrintf("ok\n" );
@@ -173,7 +169,7 @@ static qbool SNDDMA_InitDS()
 		dsbuf.dwFlags = DSBCAPS_LOCSOFTWARE | DSBCAPS_GETCURRENTPOSITION2;
 		if (DS_OK != pDS->CreateSoundBuffer( &dsbuf, &pDSBuf, NULL )) {
 			Com_Printf( "failed\n" );
-			SNDDMA_Shutdown();
+			Sys_S_Shutdown();
 			return qfalse;
 		}
 		Com_DPrintf( "forced to software.  ok\n" );
@@ -182,14 +178,14 @@ static qbool SNDDMA_InitDS()
 	// Make sure mixer is active
 	if ( DS_OK != pDSBuf->Play( 0, 0, DSBPLAY_LOOPING ) ) {
 		Com_Printf ("*** Looped sound play failed ***\n");
-		SNDDMA_Shutdown ();
+		Sys_S_Shutdown ();
 		return qfalse;
 	}
 
 	// get the returned buffer size
 	if ( DS_OK != pDSBuf->GetCaps(&dsbcaps) ) {
 		Com_Printf ("*** GetCaps failed ***\n");
-		SNDDMA_Shutdown ();
+		Sys_S_Shutdown ();
 		return qfalse;
 	}
 
@@ -204,16 +200,16 @@ static qbool SNDDMA_InitDS()
 
 	sample16 = (dma.samplebits/8) - 1;
 
-	SNDDMA_BeginPainting();
+	Sys_S_BeginPainting();
 	if (dma.buffer)
 		memset(dma.buffer, 0, dma.samples * dma.samplebits/8);
-	SNDDMA_Submit();
+	Sys_S_Submit();
 
 	return qtrue;
 }
 
 
-qbool SNDDMA_Init(void)
+qbool Sys_S_Init(void)
 {
 	CoInitialize(NULL);
 
@@ -230,16 +226,7 @@ qbool SNDDMA_Init(void)
 }
 
 
-/*
-==============
-SNDDMA_GetDMAPos
-
-return the current sample position (in mono samples read)
-inside the recirculating dma buffer, so the mixing code will know
-how many sample are required to fill it up.
-===============
-*/
-int SNDDMA_GetDMAPos( void ) {
+int Sys_S_GetDMAPos( void ) {
 	MMTIME	mmtime;
 	int		s;
 	DWORD	dwWrite;
@@ -256,14 +243,8 @@ int SNDDMA_GetDMAPos( void ) {
 	return s;
 }
 
-/*
-==============
-SNDDMA_BeginPainting
 
-Makes sure dma.buffer is valid
-===============
-*/
-void SNDDMA_BeginPainting( void ) {
+void Sys_S_BeginPainting( void ) {
 	int		reps;
 	DWORD	dwSize2;
 	DWORD	*pbuf, *pbuf2;
@@ -309,15 +290,8 @@ void SNDDMA_BeginPainting( void ) {
 	dma.buffer = (unsigned char *)pbuf;
 }
 
-/*
-==============
-SNDDMA_Submit
 
-Send sound to device if buffer isn't really the dma buffer
-Also unlocks the dsound buffer
-===============
-*/
-void SNDDMA_Submit( void )
+void Sys_S_Submit( void )
 {
 	if ( pDSBuf ) {
 		pDSBuf->Unlock( dma.buffer, locksize, NULL, 0 );
@@ -325,13 +299,7 @@ void SNDDMA_Submit( void )
 }
 
 
-/*
-=================
-WIN_S_WindowActivate
-
-Called in reaction to WM_ACTIVATE
-=================
-*/
+// Called in reaction to WM_ACTIVATE
 void WIN_S_WindowActivate()
 {
 	if ( !pDS ) {
@@ -340,7 +308,6 @@ void WIN_S_WindowActivate()
 
 	if ( DS_OK != pDS->SetCooperativeLevel( g_wv.hWnd, DSSCL_PRIORITY ) ) {
 		Com_Printf ("sound SetCooperativeLevel failed\n");
-		SNDDMA_Shutdown();
+		Sys_S_Shutdown();
 	}
 }
-

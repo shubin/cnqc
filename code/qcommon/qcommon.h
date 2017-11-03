@@ -1060,21 +1060,26 @@ typedef struct {
 	void			*evPtr;			// this must be manually freed if not NULL
 } sysEvent_t;
 
-sysEvent_t Sys_GetEvent();
+sysEvent_t	Sys_GetEvent();
 
-void Sys_Init();
-void Sys_Quit( int status ); // status is the engine's exit code
+void	Sys_Init();
+void	Sys_Quit( int status ); // status is the engine's exit code
 
 // both of these must handle duplicate calls correctly
-void Sys_InitInput();
-void Sys_ShutdownInput();
+// and are only called in a full input subsystem restart (i.e. in_restart)
+void	Sys_InitInput();
+void	Sys_ShutdownInput();
 
 // general development dll loading for virtual machine testing
-void* QDECL Sys_LoadDll( const char* name, dllSyscall_t *entryPoint, dllSyscall_t systemcalls );
-void Sys_UnloadDll( void* dllHandle );
+void* QDECL	Sys_LoadDll( const char* name, dllSyscall_t *entryPoint, dllSyscall_t systemcalls );
+void		Sys_UnloadDll( void* dllHandle );
 
-void	QDECL Sys_Error( const char *error, ...);
-char	*Sys_GetClipboardData( void );	// note that this isn't journaled...
+void QDECL	Sys_Error( const char *error, ...);
+
+// allowed to fail and return NULL
+// if it succeeds, returns memory allocated by Z_Malloc
+// note that this isn't journaled
+char	*Sys_GetClipboardData( void );
 
 void	Sys_Print( const char *msg );
 
@@ -1083,30 +1088,28 @@ void	Sys_Print( const char *msg );
 int		Sys_Milliseconds();
 
 // the system console is shown when a dedicated server is running
-void	Sys_DisplaySystemConsole( qbool show );
-
 void	Sys_ShowConsole( int level, qbool quitOnClose );
+
 void	Sys_SetErrorText( const char *text );
 
+// net_ip.cpp
+// system-specific but not implemented in the platform layer
 qbool	Sys_GetPacket( netadr_t* net_from, msg_t* net_message );
 void	Sys_SendPacket( int length, const void *data, netadr_t to );
-
-qbool	Sys_StringToAdr( const char *s, netadr_t *a );
-//Does NOT parse port numbers, only base addresses.
-
+qbool	Sys_StringToAdr( const char *s, netadr_t *a );	// does NOT parse port numbers, only base addresses
 qbool	Sys_IsLANAddress( const netadr_t& adr );
 void	Sys_ShowIP();
 
-void Sys_Mkdir( const char* path );
+void		Sys_Mkdir( const char* path );
 const char* Sys_Cwd();
 const char* Sys_DefaultHomePath();
 
-char** Sys_ListFiles( const char *directory, const char *extension, const char *filter, int *numfiles, qbool wantsubs );
+char**	Sys_ListFiles( const char *directory, const char *extension, const char *filter, int *numfiles, qbool wantsubs );
 void	Sys_FreeFileList( char **list );
 
-qbool Sys_LowPhysicalMemory( void );
+qbool	Sys_LowPhysicalMemory( void );
 
-qbool Sys_HardReboot(); // qtrue when the server can restart itself
+qbool	Sys_HardReboot(); // qtrue when the server can restart itself
 
 qbool	Sys_HasCNQ3Parent();					// qtrue if a child of CNQ3
 int		Sys_GetUptimeSeconds( qbool parent );	// negative if not available

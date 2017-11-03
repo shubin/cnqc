@@ -63,7 +63,7 @@ static void FillAudioBufferCallback( void* userData, Uint8* sdlBuffer, int sdlBy
 }
 
 
-qbool SNDDMA_Init()
+qbool Sys_S_Init()
 {
 	if (audio.valid)
 		return qtrue;
@@ -86,7 +86,7 @@ qbool SNDDMA_Init()
 	audio.device = SDL_OpenAudioDevice(NULL, 0, &desired, &obtained, 0);
 	if (audio.device == 0) {
 		Com_Printf("SDL_OpenAudioDevice failed: %s\n", SDL_GetError());
-		SNDDMA_Shutdown();
+		Sys_S_Shutdown();
 		return qfalse;
 	}
 
@@ -109,7 +109,7 @@ qbool SNDDMA_Init()
 }
 
 
-int SNDDMA_GetDMAPos()
+int Sys_S_GetDMAPos()
 {
 	if (!audio.valid)
 		return 0;
@@ -118,7 +118,7 @@ int SNDDMA_GetDMAPos()
 }
 
 
-void SNDDMA_Shutdown()
+void Sys_S_Shutdown()
 {
 	if (audio.device != 0) {
 		SDL_PauseAudioDevice(audio.device, 1);
@@ -135,7 +135,7 @@ void SNDDMA_Shutdown()
 }
 
 
-void SNDDMA_Submit()
+void Sys_S_Submit()
 {
 	if (!audio.valid)
 		return;
@@ -145,7 +145,7 @@ void SNDDMA_Submit()
 }
 
 
-void SNDDMA_BeginPainting()
+void Sys_S_BeginPainting()
 {
 	if (!audio.valid)
 		return;

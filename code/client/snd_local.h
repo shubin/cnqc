@@ -119,11 +119,23 @@ typedef struct
 ====================================================================
 */
 
-qbool SNDDMA_Init();
-int SNDDMA_GetDMAPos();
-void SNDDMA_Shutdown();
-void SNDDMA_BeginPainting();
-void SNDDMA_Submit();
+qbool	Sys_S_Init();
+void	Sys_S_Shutdown();
+
+// Returns the current sample position (in mono samples read)
+// inside the DMA ring buffer so the mixing code knows
+// how many sample are required to fill it up.
+int		Sys_S_GetDMAPos();
+
+// Makes sure dma.buffer is valid and accessible.
+// If necessary, acquires a lock.
+void	Sys_S_BeginPainting();
+
+// Sends sound to device if dma.buffer isn't really the DMA buffer.
+// If a lock was acquired by Sys_S_BeginPainting,
+// Sys_S_Submit will release it.
+void	Sys_S_Submit();
+
 
 #define	MAX_CHANNELS			96
 

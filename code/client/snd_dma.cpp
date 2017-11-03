@@ -476,12 +476,12 @@ static void S_Base_ClearSoundBuffer()
 
 	s_rawend = 0;
 
-	SNDDMA_BeginPainting();
+	Sys_S_BeginPainting();
 	if (dma.buffer) {
 		int clear = (dma.samplebits == 8) ? 0x80 : 0x00;
 		Com_Memset( dma.buffer, clear, dma.samples * dma.samplebits/8 );
 	}
-	SNDDMA_Submit();
+	Sys_S_Submit();
 }
 
 
@@ -844,7 +844,7 @@ static void S_GetSoundtime()
 
 	// it is possible to miscount buffers if it has wrapped twice between
 	// calls to S_Update.  Oh well.
-	int samplepos = SNDDMA_GetDMAPos();
+	int samplepos = Sys_S_GetDMAPos();
 	if (samplepos < oldsamplepos) {
 		buffers++;	// buffer wrapped
 		if (s_paintedtime > 0x40000000) {
@@ -913,11 +913,11 @@ static void S_Update_DMA()
 	if (endtime - s_soundtime > samps)
 		endtime = s_soundtime + samps;
 
-	SNDDMA_BeginPainting();
+	Sys_S_BeginPainting();
 
 	S_PaintChannels( endtime );
 
-	SNDDMA_Submit();
+	Sys_S_Submit();
 }
 
 
@@ -1090,7 +1090,7 @@ static void S_Base_Shutdown()
 		return;
 	}
 
-	SNDDMA_Shutdown();
+	Sys_S_Shutdown();
 
 	s_soundStarted = qfalse;
 
@@ -1113,7 +1113,7 @@ qbool S_Base_Init( soundInterface_t *si )
 
 	Cvar_RegisterArray( cl_cvars, MODULE_SOUND );
 
-	if (!SNDDMA_Init())
+	if (!Sys_S_Init())
 		return qfalse;
 
 	s_soundStarted = qtrue;
