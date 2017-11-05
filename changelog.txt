@@ -1,6 +1,11 @@
 
 DD Mmm 17 - 1.49
 
+add: new commands to take screenshots with the console hidden
+  screenshotnc for TARGA (.tga) images
+  screenshotncJPEG for JPEG (.jpg) images
+  they will be used for end-game screenshots by CPMA 1.50+ with compatible engines
+
 add: in_noGrab <0|1> (default: 0) disables input grabbing
 
 add: bindkeylist command to print all bindable key names

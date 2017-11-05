@@ -58,6 +58,8 @@ struct console_t {
 
 	int		times[CON_NOTIFYLINES];	// cls.realtime time the line was generated
 								// for transparent notify lines
+
+	qbool	wasActive;		// was active before Con_PushConsoleInvisible was called?
 };
 
 static console_t con;
@@ -68,6 +70,13 @@ static console_t con;
 
 int g_console_field_width = CONSOLE_WIDTH;
 
+
+float Con_SetConsoleVisibility( float fraction )
+{
+	const float oldValue = con.displayFrac;
+	con.displayFrac = fraction;
+	return oldValue;
+}
 
 void Con_ToggleConsole_f()
 {

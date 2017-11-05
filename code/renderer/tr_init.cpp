@@ -29,6 +29,10 @@ glinfo_t	glInfo;
 
 glstate_t	glState;
 
+screenshotCommand_t	r_delayedScreenshot;
+qbool				r_delayedScreenshotPending = qfalse;
+int					r_delayedScreenshotFrame = 0;
+
 static void GfxInfo_f( void );
 
 cvar_t	*r_verbose;
@@ -331,6 +335,9 @@ static void RB_TakeScreenshotJPG( int x, int y, int width, int height, const cha
 
 const void* RB_TakeScreenshotCmd( const screenshotCommand_t* cmd )
 {
+	// NOTE: the current read buffer is the last FBO color attachment texture that was written to
+	// therefore, qglReadPixels will get the latest data even with double/triple buffering enabled
+
 	switch (cmd->type) {
 		case screenshotCommand_t::SS_JPG:
 			RB_TakeScreenshotJPG( cmd->x, cmd->y, cmd->width, cmd->height, cmd->fileName );
@@ -339,6 +346,13 @@ const void* RB_TakeScreenshotCmd( const screenshotCommand_t* cmd )
 			RB_TakeScreenshotTGA( cmd->x, cmd->y, cmd->width, cmd->height, cmd->fileName );
 			break;
 	}
+
+	if (cmd->conVis > 0.0f) {
+		ri.SetConsoleVisibility( cmd->conVis );
+		r_delayedScreenshotPending = qfalse;
+		r_delayedScreenshotFrame = 0;
+	}
+
 	return (const void*)(cmd + 1);
 }
 
@@ -346,13 +360,21 @@ const void* RB_TakeScreenshotCmd( const screenshotCommand_t* cmd )
 // screenshot filename is YYYY_MM_DD-HH_MM_SS-TTT
 // so you can find the damn things and you never run out of them for movies  :)
 
-static void R_TakeScreenshot( const char* ext, screenshotCommand_t::ss_type type )
+static void R_TakeScreenshot( const char* ext, screenshotCommand_t::ss_type type, qbool hideConsole )
 {
 	static char s[MAX_OSPATH]; // bad things may happen if we somehow manage to take 2 ss in 1 frame
 
-	screenshotCommand_t* cmd = (screenshotCommand_t*)R_GetCommandBuffer( sizeof(*cmd) );
-	if ( !cmd )
-		return;
+	const float conVis = hideConsole ? ri.SetConsoleVisibility( 0.0f ) : 0.0f;
+	screenshotCommand_t* cmd;
+	if ( conVis > 0.0f ) {
+		cmd = &r_delayedScreenshot;
+		r_delayedScreenshotPending = qtrue;
+		r_delayedScreenshotFrame = 0;
+	} else {
+		cmd = (screenshotCommand_t*)R_GetCommandBuffer( sizeof(screenshotCommand_t) );
+		if ( !cmd )
+			return;
+	}
 
 	if (ri.Cmd_Argc() == 2) {
 		Com_sprintf( s, sizeof(s), "screenshots/%s.%s", ri.Cmd_Argv(1), ext );
@@ -372,18 +394,31 @@ static void R_TakeScreenshot( const char* ext, screenshotCommand_t::ss_type type
 	cmd->height = glConfig.vidHeight;
 	cmd->fileName = s;
 	cmd->type = type;
+	cmd->conVis = conVis;
 }
 
 
-static void R_ScreenShotTGA_f(void)
+static void R_ScreenShotTGA_f()
 {
-	R_TakeScreenshot( "tga", screenshotCommand_t::SS_TGA );
+	R_TakeScreenshot( "tga", screenshotCommand_t::SS_TGA, qfalse );
 }
 
 
-static void R_ScreenShotJPG_f(void)
+static void R_ScreenShotJPG_f()
 {
-	R_TakeScreenshot( "jpg", screenshotCommand_t::SS_JPG );
+	R_TakeScreenshot( "jpg", screenshotCommand_t::SS_JPG, qfalse );
+}
+
+
+static void R_ScreenShotNoConTGA_f()
+{
+	R_TakeScreenshot( "tga", screenshotCommand_t::SS_TGA, qtrue );
+}
+
+
+static void R_ScreenShotNoConJPG_f()
+{
+	R_TakeScreenshot( "jpg", screenshotCommand_t::SS_JPG, qtrue );
 }
 
 
@@ -464,7 +499,9 @@ static const cmdTableItem_t r_cmds[] =
 	{ "skinlist", R_SkinList_f, NULL, "prints loaded skins" },
 	{ "modellist", R_Modellist_f, NULL, "prints loaded models" },
 	{ "screenshot", R_ScreenShotTGA_f, NULL, "takes a TARGA (.tga) screenshot" },
-	{ "screenshotJPEG", R_ScreenShotJPG_f, NULL, "takes a JPEG (.jpg) screenshot" }
+	{ "screenshotJPEG", R_ScreenShotJPG_f, NULL, "takes a JPEG (.jpg) screenshot" },
+	{ "screenshotnc", R_ScreenShotNoConTGA_f, NULL, "takes a TARGA screenshot w/o the console" },
+	{ "screenshotncJPEG", R_ScreenShotNoConJPG_f, NULL, "takes a JPEG screenshot w/o the console" }
 };
 
 

@@ -1679,6 +1679,7 @@ static void CL_InitRef()
 {
 	refimport_t ri;
 
+	ri.SetConsoleVisibility = Con_SetConsoleVisibility;
 	ri.Cmd_RegisterTable = RI_Cmd_RegisterTable;
 	ri.Cmd_UnregisterModule = RI_Cmd_UnregisterModule;
 	ri.Cmd_Argc = Cmd_Argc;

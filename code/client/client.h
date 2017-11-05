@@ -401,6 +401,7 @@ qbool	CL_UpdateVisiblePings_f( int source );
 //
 void CL_ConInit();
 void CL_ConShutdown();
+float Con_SetConsoleVisibility( float fraction );
 void Con_ToggleConsole_f();
 void Con_ClearNotify();
 void Con_RunConsole();

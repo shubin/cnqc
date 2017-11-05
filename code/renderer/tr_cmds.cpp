@@ -203,6 +203,19 @@ void RE_BeginFrame( stereoFrame_t stereoFrame )
 	}
 
 	//
+	// delayed screenshot
+	//
+	if ( r_delayedScreenshotPending ) {
+		r_delayedScreenshotFrame++;
+		if ( r_delayedScreenshotFrame >= 2 ) {
+			R_CMD( screenshotCommand_t, RC_SCREENSHOT );
+			*cmd = r_delayedScreenshot;
+			r_delayedScreenshotPending = qfalse;
+			r_delayedScreenshotFrame = 0;
+		}
+	}
+
+	//
 	// draw buffer stuff
 	//
 	R_CMD( beginFrameCommand_t, RC_BEGIN_FRAME );

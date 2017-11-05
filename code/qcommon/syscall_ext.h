@@ -45,3 +45,11 @@ extern dllSyscall_t syscall;
 		} \
 	} while (0)
 #endif
+
+#define GET_CMD(Name) \
+	do { \
+		if (trap_GetValue(syscallStr, sizeof(syscallStr), #Name) && \
+			syscallStr[0] == '1') { \
+			cpma_ext.Name = qtrue; \
+		} \
+	} while (0)

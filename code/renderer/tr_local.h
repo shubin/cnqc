@@ -1412,6 +1412,8 @@ typedef struct {
 	int height;
 	const char* fileName;
 	enum ss_type { SS_TGA, SS_JPG } type;
+	float conVis;	// if > 0, this is a delayed screenshot and we need to 
+					// restore the console visibility to that value
 } screenshotCommand_t;
 
 const void* RB_TakeScreenshotCmd( const screenshotCommand_t* cmd );
@@ -1525,6 +1527,10 @@ void	GL2_EndFrame();
 
 
 extern int re_cameraMatrixTime;
+
+extern screenshotCommand_t	r_delayedScreenshot;
+extern qbool				r_delayedScreenshotPending;
+extern int					r_delayedScreenshotFrame;
 
 
 #endif //TR_LOCAL_H

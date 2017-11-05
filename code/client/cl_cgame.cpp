@@ -299,13 +299,17 @@ static qbool CL_CG_GetValue( char* value, int valueSize, const char* key )
 {
 	struct syscall_t { const char* name; int number; };
 	static const syscall_t syscalls[] = {
+		// syscalls
 		{ "trap_LocateInteropData", CG_EXT_LOCATEINTEROPDATA },
 		{ "trap_R_AddRefEntityToScene2", CG_EXT_R_ADDREFENTITYTOSCENE2 },
 		{ "trap_R_ForceFixedDLights", CG_EXT_R_FORCEFIXEDDLIGHTS },
 		{ "trap_SetInputForwarding", CG_EXT_SETINPUTFORWARDING },
 		{ "trap_Cvar_SetRange", CG_EXT_CVAR_SETRANGE },
 		{ "trap_Cvar_SetHelp", CG_EXT_CVAR_SETHELP },
-		{ "trap_Cmd_SetHelp", CG_EXT_CMD_SETHELP }
+		{ "trap_Cmd_SetHelp", CG_EXT_CMD_SETHELP },
+		// commands
+		{ "screenshotnc", 1 },
+		{ "screenshotncJPEG", 1 }
 	};
 
 	for ( int i = 0; i < ARRAY_LEN( syscalls ); ++i ) {

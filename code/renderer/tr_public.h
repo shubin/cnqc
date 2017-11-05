@@ -167,6 +167,8 @@ typedef struct {
 // these are the functions imported by the refresh module
 //
 typedef struct {
+	float	(*SetConsoleVisibility)( float fraction );
+
 	// print message on the local console
 	void	(QDECL *Printf)( printParm_t printLevel, const char *fmt, ... );
 
