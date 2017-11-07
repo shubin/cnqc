@@ -22,6 +22,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "client.h"
+#include "client_help.h"
 #include "snd_codec.h"
 #include "snd_local.h"
 #include "snd_public.h"
@@ -29,6 +30,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 cvar_t *s_volume;
 cvar_t *s_musicVolume;
 cvar_t *s_initsound;
+cvar_t *s_autoMute;
 
 static soundInterface_t si;
 
@@ -235,7 +237,8 @@ static const cvarTableItem_t cl_cvars[] =
 {
 	{ &s_volume, "s_volume", "0.8", CVAR_ARCHIVE, CVART_FLOAT, "0", "1", "global sound volume" },
 	{ &s_musicVolume, "s_musicvolume", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", "16", "music volume" },
-	{ &s_initsound, "s_initsound", "1", 0, CVART_BOOL, NULL, NULL, "enables the audio system" }
+	{ &s_initsound, "s_initsound", "1", 0, CVART_BOOL, NULL, NULL, "enables the audio system" },
+	{ &s_autoMute, "s_autoMute", "1", CVAR_ARCHIVE, CVART_INTEGER, "0", "2", help_s_autoMute }
 };
 
 

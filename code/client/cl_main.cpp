@@ -45,6 +45,8 @@ cvar_t	*cl_aviMotionJpeg;
 cvar_t	*cl_allowDownload;
 cvar_t	*cl_inGameVideo;
 
+cvar_t	*cl_matchAlerts;
+
 clientActive_t		cl;
 clientConnection_t	clc;
 clientStatic_t		cls;
@@ -2013,7 +2015,8 @@ static const cvarTableItem_t cl_cvars[] =
 	{ NULL, "name", "UnnamedPlayer", CVAR_USERINFO | CVAR_ARCHIVE, CVART_STRING, NULL, NULL, "your name" },
 	{ NULL, "rate", "25000", CVAR_USERINFO | CVAR_ARCHIVE, CVART_INTEGER, "4000", "99999", "network transfer rate" },
 	{ NULL, "snaps", "30", CVAR_USERINFO | CVAR_ARCHIVE, CVART_INTEGER }, // documented by the mod
-	{ NULL, "password", "", CVAR_USERINFO, CVART_STRING, NULL, NULL, "used by /connect" }
+	{ NULL, "password", "", CVAR_USERINFO, CVART_STRING, NULL, NULL, "used by /connect" },
+	{ &cl_matchAlerts, "cl_matchAlerts", "7", CVAR_ARCHIVE, CVART_BITMASK, "0", XSTRING(MAF_MAX), help_cl_matchAlerts }
 };
 
 

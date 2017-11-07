@@ -547,19 +547,110 @@ void Sys_Init()
 ///////////////////////////////////////////////////////////////
 
 
+#ifndef DEDICATED
+
+
+static void WIN_StartTaskBarFlashing()
+{
+	FLASHWINFO info;
+	ZeroMemory( &info, sizeof( info ) );
+	info.cbSize = sizeof( info );
+	info.dwFlags = FLASHW_TRAY | FLASHW_TIMERNOFG;
+	info.dwTimeout = 0;	// use the default value
+	info.hwnd = g_wv.hWnd;
+	info.uCount = 0;	// it's continuous because of FLASHW_TIMERNOFG
+	FlashWindowEx( &info );
+}
+
+
+static void WIN_StopTaskBarFlashing()
+{
+	FLASHWINFO info;
+	ZeroMemory( &info, sizeof( info ) );
+	info.cbSize = sizeof( info );
+	info.dwFlags = FLASHW_STOP;
+	info.hwnd = g_wv.hWnd;
+	FlashWindowEx( &info );
+}
+
+
+static void WIN_MatchStartAlert()
+{
+	const int alerts = cl_matchAlerts->integer;
+	const qbool unfocusedBit = ( alerts & MAF_UNFOCUSED ) != 0;
+	const qbool minimized = !!IsIconic( g_wv.hWnd );
+	const qbool hasFocus = GetFocus() == g_wv.hWnd;
+	const qbool enable = minimized || ( unfocusedBit && !hasFocus );
+	if ( !enable )
+		return;
+
+	const qbool flashBit = ( alerts & MAF_FLASH ) != 0;
+	const qbool beepBit = ( alerts & MAF_BEEP ) != 0;
+	const qbool unmuteBit = ( alerts & MAF_UNMUTE ) != 0;
+
+	if ( flashBit )
+		WIN_StartTaskBarFlashing();
+
+	if ( beepBit )
+		MessageBeep( MB_OK );
+
+	if ( unmuteBit )
+		g_wv.forceUnmute = qtrue;
+}
+
+
+static void WIN_MatchEndAlert()
+{
+	g_wv.forceUnmute = qfalse;
+
+	WIN_StopTaskBarFlashing();
+}
+
+
+void Sys_MatchAlert( sysMatchAlertEvent_t event )
+{
+	if ( event == SMAE_MATCH_START )
+		WIN_MatchStartAlert();
+	else if ( event == SMAE_MATCH_END )
+		WIN_MatchEndAlert();
+}
+
+
+static void S_Frame()
+{
+	if ( g_wv.forceUnmute ) {
+		WIN_S_Mute( qfalse );
+		return;
+	}	
+
+	qbool mute = qfalse;
+	if ( s_autoMute->integer == AMM_UNFOCUSED ) {
+		const qbool hasFocus = GetFocus() == g_wv.hWnd;
+		mute = !hasFocus;
+	} else if ( s_autoMute->integer == AMM_MINIMIZED ) {
+		const qbool minimized = !!IsIconic( g_wv.hWnd );
+		mute = minimized;
+	}
+	WIN_S_Mute( mute );
+}
+
+
+#endif
+
+
+///////////////////////////////////////////////////////////////
+
+
 static BOOL CALLBACK WIN_MonitorEnumCallback( HMONITOR hMonitor, HDC hdcMonitor, LPRECT lprcMonitor, LPARAM dwData )
 {
-	if ( lprcMonitor )
-	{
+	if ( lprcMonitor ) {
 		g_wv.monitorRects[g_wv.monitorCount] = *lprcMonitor;
 		g_wv.hMonitors[g_wv.monitorCount] = hMonitor;
 		g_wv.monitorCount++;
 	}
 
 	if ( g_wv.monitorCount >= MAX_MONITOR_COUNT )
-	{
 		return FALSE;
-	}
 	
 	return TRUE;
 }
@@ -571,10 +662,8 @@ static void WIN_InitMonitorList()
 
 	const POINT zero = { 0, 0 };
 	const HMONITOR hMonitor = MonitorFromPoint( zero, MONITOR_DEFAULTTOPRIMARY );
-	for ( int i = 0; i < g_wv.monitorCount; i++ )
-	{
-		if ( hMonitor ==  g_wv.hMonitors[i] )
-		{
+	for ( int i = 0; i < g_wv.monitorCount; i++ ) {
+		if ( hMonitor ==  g_wv.hMonitors[i] ) {
 			g_wv.primaryMonitor = i;
 			g_wv.monitor = i;
 			break;
@@ -590,8 +679,7 @@ void WIN_UpdateMonitorIndexFromCvar()
 	const int monitor = Cvar_Get( "r_monitor", "0", CVAR_ARCHIVE | CVAR_LATCH )->integer;
 	Cvar_SetRange( "r_monitor", CVART_INTEGER, "0", va("%d", g_wv.monitorCount) );
 	Cvar_SetHelp( "r_monitor", "1-based monitor index, 0=primary" );
-	if ( monitor <= 0 || monitor > g_wv.monitorCount )
-	{
+	if ( monitor <= 0 || monitor > g_wv.monitorCount ) {
 		g_wv.monitor = g_wv.primaryMonitor;
 		return;
 	}
@@ -603,10 +691,8 @@ void WIN_UpdateMonitorIndexFromCvar()
 void WIN_UpdateMonitorIndexFromMainWindow()
 {
 	const HMONITOR hMonitor = MonitorFromWindow( g_wv.hWnd, MONITOR_DEFAULTTONEAREST );
-	for ( int i = 0; i < g_wv.monitorCount; i++ )
-	{
-		if ( hMonitor == g_wv.hMonitors[i] )
-		{
+	for ( int i = 0; i < g_wv.monitorCount; i++ ) {
+		if ( hMonitor == g_wv.hMonitors[i] ) {
 			g_wv.monitor = i;
 			break;
 		}
@@ -615,8 +701,7 @@ void WIN_UpdateMonitorIndexFromMainWindow()
 	// if r_monitor is 0 and we're already on the primary monitor,
 	// don't change the cvar to a non-zero number
 	if ( Cvar_VariableIntegerValue( "r_monitor" ) == 0 &&
-		 g_wv.monitor == g_wv.primaryMonitor )
-	{
+		 g_wv.monitor == g_wv.primaryMonitor ) {
 		return;
 	}
 
@@ -679,6 +764,7 @@ int WINAPI WinMainImpl( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCm
 #ifndef DEDICATED
 		// make sure mouse and joystick are only called once a frame
 		IN_Frame();
+		S_Frame();
 #endif
 
 		// run the game

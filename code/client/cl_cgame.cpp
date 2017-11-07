@@ -307,6 +307,7 @@ static qbool CL_CG_GetValue( char* value, int valueSize, const char* key )
 		{ "trap_Cvar_SetRange", CG_EXT_CVAR_SETRANGE },
 		{ "trap_Cvar_SetHelp", CG_EXT_CVAR_SETHELP },
 		{ "trap_Cmd_SetHelp", CG_EXT_CMD_SETHELP },
+		{ "trap_MatchAlertEvent", CG_EXT_MATCHALERTEVENT },
 		// commands
 		{ "screenshotnc", 1 },
 		{ "screenshotncJPEG", 1 }
@@ -608,6 +609,10 @@ static intptr_t CL_CgameSystemCalls( intptr_t *args )
 
 	case CG_EXT_CMD_SETHELP:
 		Cmd_SetHelp( VMA(1), VMA(2) );
+		return 0;
+
+	case CG_EXT_MATCHALERTEVENT:
+		Sys_MatchAlert( (sysMatchAlertEvent_t)args[1] );
 		return 0;
 
 	default:

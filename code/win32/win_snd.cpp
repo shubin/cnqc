@@ -160,13 +160,13 @@ static qbool SNDDMA_InitDS()
 	dsbcaps.dwSize = sizeof(dsbcaps);
 
 	Com_DPrintf( "...creating secondary buffer: " );
-	dsbuf.dwFlags = DSBCAPS_LOCHARDWARE | DSBCAPS_GETCURRENTPOSITION2;
+	dsbuf.dwFlags = DSBCAPS_LOCHARDWARE | DSBCAPS_GETCURRENTPOSITION2 | DSBCAPS_GLOBALFOCUS | DSBCAPS_CTRLVOLUME;
 	if (DS_OK == pDS->CreateSoundBuffer( &dsbuf, &pDSBuf, NULL )) {
 		Com_Printf( "locked hardware.  ok\n" );
 	}
 	else {
 		// Couldn't get hardware, fallback to software.
-		dsbuf.dwFlags = DSBCAPS_LOCSOFTWARE | DSBCAPS_GETCURRENTPOSITION2;
+		dsbuf.dwFlags = DSBCAPS_LOCSOFTWARE | DSBCAPS_GETCURRENTPOSITION2 | DSBCAPS_GLOBALFOCUS | DSBCAPS_CTRLVOLUME;
 		if (DS_OK != pDS->CreateSoundBuffer( &dsbuf, &pDSBuf, NULL )) {
 			Com_Printf( "failed\n" );
 			Sys_S_Shutdown();
@@ -299,15 +299,21 @@ void Sys_S_Submit( void )
 }
 
 
-// Called in reaction to WM_ACTIVATE
-void WIN_S_WindowActivate()
+void WIN_S_Mute( qbool mute )
 {
-	if ( !pDS ) {
+	if (!pDSBuf) {
 		return;
 	}
 
-	if ( DS_OK != pDS->SetCooperativeLevel( g_wv.hWnd, DSSCL_PRIORITY ) ) {
-		Com_Printf ("sound SetCooperativeLevel failed\n");
-		Sys_S_Shutdown();
+	static LONG lVolume = DSBVOLUME_MIN;
+	static qbool bWasMuted = qfalse;
+
+	if (mute && !bWasMuted) {
+		pDSBuf->GetVolume(&lVolume);
+		pDSBuf->SetVolume(DSBVOLUME_MIN);
+		bWasMuted = qtrue;
+	} else if (!mute && bWasMuted && lVolume != DSBVOLUME_MIN) {
+		pDSBuf->SetVolume(lVolume);
+		bWasMuted = qfalse;
 	}
 }

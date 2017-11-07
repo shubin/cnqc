@@ -51,3 +51,16 @@ help_bind_extra
 #define help_unbind \
 "unbinds a key\n" \
 help_bind_extra
+
+#define help_cl_matchAlerts \
+"lets you know when a match is starting\n" \
+"    1 = when unfocused (otherwise only when minimized)\n" \
+"    2 = flash the task bar (Windows only)\n" \
+"    4 = beep once (Windows only)\n" \
+"    8 = unmute"
+
+#define help_s_autoMute \
+"selects when the audio output should be disabled\n" \
+"    0 = never\n" \
+"    1 = window is not focused\n" \
+"    2 = window is minimized"

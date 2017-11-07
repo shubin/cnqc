@@ -10,12 +10,12 @@ static qbool sdl_inputActive = qfalse;
 
 static cvar_t* in_noGrab;
 static cvar_t* m_relative;
-static cvar_t* s_autoMute;
+
+static qbool sdl_forceUnmute = qfalse; // overrides s_autoMute
 
 static const cvarTableItem_t in_cvars[] = {
 	{ &in_noGrab, "in_noGrab", "0", 0, CVART_BOOL, NULL, NULL, "disables input grabbing" },
-	{ &m_relative, "m_relative", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "enables SDL's relative mouse mode" },
-	{ &s_autoMute, "s_autoMute", "1", CVAR_ARCHIVE, CVART_INTEGER, "0", "2", "0=never, 1=when unfocused, 2=when minimized" }
+	{ &m_relative, "m_relative", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "enables SDL's relative mouse mode" }
 };
 
 static void Minimize_f();
@@ -263,6 +263,7 @@ static void sdl_Window( const SDL_WindowEvent* event )
 	//SDL_WINDOWEVENT_FOCUS_GAINED // kb focus gained
 	//SDL_WINDOWEVENT_FOCUS_LOST // kb focus lost
 	//SDL_WINDOWEVENT_CLOSE
+	//SDL_WINDOWEVENT_MOVED
 
 	switch (event->event) {
 		case SDL_WINDOWEVENT_MAXIMIZED:
@@ -273,6 +274,20 @@ static void sdl_Window( const SDL_WindowEvent* event )
 			// if this turns out to be too expensive, track movement and
 			// only call when movement stops
 			sdl_UpdateMonitorIndexFromWindow();
+			break;
+
+		default:
+			break;
+	}
+
+	switch (event->event) {
+		case SDL_WINDOWEVENT_SHOWN:
+		case SDL_WINDOWEVENT_MAXIMIZED:
+		case SDL_WINDOWEVENT_RESTORED:
+		case SDL_WINDOWEVENT_FOCUS_GAINED:
+			// these mean the user reacted to the alert and
+			// it can now be stopped
+			sdl_forceUnmute = qfalse;
 			break;
 
 		default:
@@ -385,6 +400,26 @@ static qbool sdl_IsInputActive()
 }
 
 
+static void S_Frame()
+{
+	if (sdl_forceUnmute) {
+		sdl_MuteAudio(qfalse);
+		return;
+	}
+
+	qbool mute = qfalse;
+	if (s_autoMute->integer == AMM_UNFOCUSED) {
+		const qbool hasFocus = (SDL_GetWindowFlags(glimp.window) & SDL_WINDOW_INPUT_FOCUS) != 0;
+		mute = !hasFocus;
+	} else if (s_autoMute->integer == AMM_MINIMIZED) {
+		const Uint32 hidingFlags = SDL_WINDOW_HIDDEN | SDL_WINDOW_MINIMIZED;
+		const qbool hidden = (SDL_GetWindowFlags(glimp.window) & hidingFlags) != 0;
+		mute = hidden;
+	}
+	sdl_MuteAudio(mute);
+}
+
+
 void sdl_Frame()
 {
 	sdl_inputActive = sdl_IsInputActive();
@@ -395,16 +430,7 @@ void sdl_Frame()
 	SDL_ShowCursor(sdl_inputActive ? SDL_DISABLE : SDL_ENABLE);
 	// @NOTE: SDL_WarpMouseInWindow generates a motion event
 
-	if (s_autoMute->integer == 1) {
-		const qbool hasFocus = (SDL_GetWindowFlags(glimp.window) & SDL_WINDOW_INPUT_FOCUS) != 0;
-		sdl_MuteAudio(!hasFocus);
-	} else if (s_autoMute->integer == 2) {
-		const Uint32 hidingFlags = SDL_WINDOW_HIDDEN | SDL_WINDOW_MINIMIZED;
-		const qbool hidden = (SDL_GetWindowFlags(glimp.window) & hidingFlags) != 0;
-		sdl_MuteAudio(hidden);
-	} else {
-		sdl_MuteAudio(qfalse);
-	}
+	S_Frame();
 }
 
 
@@ -483,4 +509,35 @@ char* Sys_GetClipboardData()
 	SDL_free(textUTF8);
 
 	return text;
+}
+
+
+void Lin_MatchStartAlert()
+{
+	const int alerts = cl_matchAlerts->integer;
+	const qbool unmuteBit = (alerts & MAF_UNMUTE) != 0;
+	if (!unmuteBit)
+		return;
+
+	const qbool unfocusedBit = (alerts & MAF_UNFOCUSED) != 0;	
+	const qbool hasFocus = (SDL_GetWindowFlags(glimp.window) & SDL_WINDOW_INPUT_FOCUS) != 0;
+	const Uint32 hidingFlags = SDL_WINDOW_HIDDEN | SDL_WINDOW_MINIMIZED;
+	const qbool hidden = (SDL_GetWindowFlags(glimp.window) & hidingFlags) != 0;
+	if (hidden || (unfocusedBit && !hasFocus))
+		sdl_forceUnmute = qtrue;
+}
+
+
+void Lin_MatchEndAlert()
+{
+	sdl_forceUnmute = qfalse;
+}
+
+
+void Sys_MatchAlert( sysMatchAlertEvent_t event )
+{
+	if (event == SMAE_MATCH_START)
+		Lin_MatchStartAlert();
+	else if (event == SMAE_MATCH_END)
+		Lin_MatchEndAlert();
 }

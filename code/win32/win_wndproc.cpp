@@ -269,7 +269,7 @@ LRESULT CALLBACK MainWndProc (
 
 	case WM_ACTIVATE:
 		WIN_AppActivate( (LOWORD(wParam) != WA_INACTIVE), !!(BOOL)HIWORD(wParam) );
-		WIN_S_WindowActivate();
+		WIN_S_Mute( !g_wv.activeApp );
 		break;
 
 	case WM_MOVE:
@@ -361,6 +361,7 @@ LRESULT CALLBACK MainWndProc (
 			}
 		}
 		g_wv.activeApp = (qbool)!IsIconic( hWnd );
+		g_wv.forceUnmute = qfalse;
 		break;
 
 	case WM_KILLFOCUS:

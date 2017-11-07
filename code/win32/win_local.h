@@ -46,8 +46,8 @@ void WIN_UnregisterHotKey();
 void WIN_SetGameDisplaySettings();
 void WIN_SetDesktopDisplaySettings();
 
-// sound - called in reaction to WM_ACTIVATE
-void WIN_S_WindowActivate();
+// sound
+void WIN_S_Mute( qbool mute );
 
 LRESULT CALLBACK MainWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam );
 
@@ -85,6 +85,8 @@ typedef struct {
 	UINT		minimizeHotKeyMods;
 
 	qbool		inputInitialized;
+
+	qbool		forceUnmute;	// overrides s_autoMute
 } WinVars_t;
 
 extern WinVars_t g_wv;

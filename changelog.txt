@@ -1,6 +1,17 @@
 
 DD Mmm 17 - 1.49
 
+add: s_autoMute selects when the audio output should be disabled
+  s_autoMute 0 = never mute
+  s_autoMute 1 (default) = mute when the window doesn't have input focus
+  s_autoMute 2 = mute when the window is minimized
+
+add: cl_matchAlerts (bitmask, default: 7) lets you know when a match is starting
+  1 - when unfocused (otherwise only when minimized)
+  2 - flash the task bar (Windows only)
+  4 - beep once (Windows only)
+  8 - unmute (temporarily overrides s_autoMute)
+
 add: new commands to take screenshots with the console hidden
   screenshotnc for TARGA (.tga) images
   screenshotncJPEG for JPEG (.jpg) images
@@ -155,11 +166,6 @@ chg: the client requires SDL 2 - the following things are handled by it:
 
 add: m_relative <0|1> (default: 1) enables SDL's relative mouse mode
   you might want to set it to 0 if you have a messed up input driver
-
-add: s_autoMute selects when the audio output should be disabled
-  s_autoMute 0 = never mute
-  s_autoMute 1 (default) = mute when the window doesn't have input focus
-  s_autoMute 2 = mute when the window is minimized
 
 add: minimize command to minimize the client's window
 

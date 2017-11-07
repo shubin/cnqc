@@ -312,6 +312,21 @@ extern	refexport_t		re;		// interface to refresh .dll
 //
 // cvars
 //
+
+// match alert flags (cl_matchAlerts)
+#define MAF_UNFOCUSED	1	// enable even when the window is visible but unfocused (otherwise only when minimized)
+#define MAF_FLASH		2	// Windows: flash the task bar until unminimized / focused
+#define MAF_BEEP		4	// Windows: play a message box beep sound once
+#define MAF_UNMUTE		8	// unmute the audio
+#define MAF_MAX			15	// max. bit mask value
+
+// auto-mute modes (s_autoMute)
+typedef enum {
+	AMM_NEVER,
+	AMM_UNFOCUSED,
+	AMM_MINIMIZED
+} autoMuteMode_t;
+
 extern	cvar_t	*cl_debugMove;
 extern	cvar_t	*cl_timegraph;
 extern	cvar_t	*cl_maxpackets;
@@ -327,6 +342,10 @@ extern	cvar_t	*cl_aviMotionJpeg;
 
 extern	cvar_t	*cl_allowDownload;	// 0=off, 1=CNQ3, -1=id
 extern	cvar_t	*cl_inGameVideo;
+
+extern	cvar_t	*cl_matchAlerts;	// bit mask, see the MAF_* constants
+
+extern	cvar_t	*s_autoMute;
 
 //=================================================
 
@@ -494,3 +513,13 @@ qbool CL_MapDownload_Active();
 void CL_MapDownload_Cancel();
 void CL_MapDownload_DrawConsole( float cw, float ch );
 void CL_MapDownload_CrashCleanUp();
+
+//
+// OS-specific
+//
+typedef enum {
+	SMAE_MATCH_START,
+	SMAE_MATCH_END
+} sysMatchAlertEvent_t;
+
+void Sys_MatchAlert( sysMatchAlertEvent_t event );
