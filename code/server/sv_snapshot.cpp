@@ -638,7 +638,10 @@ void SV_SendClientMessages( void ) {
 
 	// send a message to each connected client
 	for (i=0, c = svs.clients ; i < sv_maxclients->integer ; i++, c++) {
-		if (c->state == CS_FREE || c->state == CS_ZOMBIE) {
+		// yes, we keep sending data to CS_ZOMBIE clients
+		// if we don't, kicked clients never get the reliable "disconnect" command
+		// and keep cgame loaded instead of dropping back to the main menu
+		if (c->state == CS_FREE) {
 			continue;		// not connected
 		}
 
