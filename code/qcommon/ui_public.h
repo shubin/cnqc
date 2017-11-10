@@ -146,7 +146,9 @@ typedef enum {
 	UI_EXT_R_ADDREFENTITYTOSCENE2,
 	UI_EXT_CVAR_SETRANGE,
 	UI_EXT_CVAR_SETHELP,
-	UI_EXT_CMD_SETHELP
+	UI_EXT_CMD_SETHELP,
+	UI_EXT_ERROR2,
+	UI_EXT_ENABLEERRORCALLBACK
 } uiImport_t;
 
 
@@ -294,6 +296,7 @@ typedef enum {
 
 	UI_DRAW_CONNECT_SCREEN,
 //	void	UI_DrawConnectScreen( qboolean overlay );
+
 	UI_HASUNIQUECDKEY
 // if !overlay, the background will be drawn, otherwise it will be
 // overlayed over whatever the cgame has drawn.

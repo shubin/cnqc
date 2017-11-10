@@ -1,6 +1,8 @@
 
 DD Mmm 17 - 1.49
 
+add: with compatible mods, drop and disconnect errors will be displayed in the UI
+
 add: s_autoMute selects when the audio output should be disabled
   s_autoMute 0 = never mute
   s_autoMute 1 (default) = mute when the window doesn't have input focus

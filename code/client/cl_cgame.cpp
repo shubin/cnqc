@@ -308,6 +308,7 @@ static qbool CL_CG_GetValue( char* value, int valueSize, const char* key )
 		{ "trap_Cvar_SetHelp", CG_EXT_CVAR_SETHELP },
 		{ "trap_Cmd_SetHelp", CG_EXT_CMD_SETHELP },
 		{ "trap_MatchAlertEvent", CG_EXT_MATCHALERTEVENT },
+		{ "trap_Error2", CG_EXT_ERROR2 },
 		// commands
 		{ "screenshotnc", 1 },
 		{ "screenshotncJPEG", 1 }
@@ -336,7 +337,7 @@ static intptr_t CL_CgameSystemCalls( intptr_t *args )
 		Com_Printf( "%s", (const char*)VMA(1) );
 		return 0;
 	case CG_ERROR:
-		Com_Error( ERR_DROP, "%s", (const char*)VMA(1) );
+		Com_ErrorExt( ERR_DROP, EXT_ERRMOD_CGAME, qtrue, "%s", (const char*)VMA(1) );
 		return 0;
 	case CG_MILLISECONDS:
 		return Sys_Milliseconds();
@@ -613,6 +614,10 @@ static intptr_t CL_CgameSystemCalls( intptr_t *args )
 
 	case CG_EXT_MATCHALERTEVENT:
 		Sys_MatchAlert( (sysMatchAlertEvent_t)args[1] );
+		return 0;
+
+	case CG_EXT_ERROR2:
+		Com_ErrorExt( ERR_DROP, EXT_ERRMOD_CGAME, (qbool)args[2], "%s", (const char*)VMA(1) );
 		return 0;
 
 	default:

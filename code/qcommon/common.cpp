@@ -221,10 +221,26 @@ void QDECL Com_DPrintf( const char *fmt, ...)
 }
 
 
-void QDECL Com_Error( int code, const char *fmt, ... )
+void QDECL Com_Error( int level, const char* fmt, ... )
+{
+	static char msg[MAXPRINTMSG];
+
+	va_list argptr;
+	va_start( argptr, fmt );
+	Q_vsnprintf( msg, sizeof(msg), fmt, argptr );
+	Com_ErrorExt( level, EXT_ERRMOD_ENGINE, qtrue, "%s", msg );
+	va_end(argptr);
+}
+
+
+void QDECL Com_ErrorExt( int code, int module, qbool realError, const char *fmt, ... )
 {
 	static int	lastErrorTime;
 	static int	errorCount;
+
+#ifndef DEDICATED
+	void CL_ForwardUIError( int level, int module, const char* error ); // client.h
+#endif
 
 	// make sure we can get at our local stuff
 	FS_PureServerSetLoadedPaks( "" );
@@ -266,15 +282,22 @@ void QDECL Com_Error( int code, const char *fmt, ... )
 #ifndef DEDICATED
 		CL_Disconnect( qtrue );
 		CL_FlushMemory();
+		if ( realError )
+			CL_ForwardUIError( EXT_ERRLEV_SVDISC, module, com_errorMessage );
 #endif
 		com_errorEntered = qfalse;
 		longjmp (abortframe, -1);
 	} else if ( code == ERR_DROP || code == ERR_DISCONNECT ) {
-		Com_Printf( "********************\nERROR: %s\n********************\n", com_errorMessage );
+		if (realError)
+			Com_Printf( "********************\nERROR: %s\n********************\n", com_errorMessage );
+		else
+			Com_Printf( "ERROR: %s\n", com_errorMessage );
 		SV_Shutdown( va("Server crashed: %s",  com_errorMessage) );
 #ifndef DEDICATED
 		CL_Disconnect( qtrue );
-		CL_FlushMemory();
+		CL_FlushMemory(); // shuts down the VMs and starts them back up
+		if ( realError )
+			CL_ForwardUIError( code == ERR_DROP ? EXT_ERRLEV_DROP : EXT_ERRLEV_DISC, module, com_errorMessage );
 #endif
 		com_errorEntered = qfalse;
 		longjmp (abortframe, -1);

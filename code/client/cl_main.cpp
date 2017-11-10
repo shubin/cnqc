@@ -843,7 +843,7 @@ void CL_Disconnect_f( void )
 {
 	SCR_StopCinematic();
 	if ( cls.state != CA_DISCONNECTED && cls.state != CA_CINEMATIC ) {
-		Com_Error (ERR_DISCONNECT, "Disconnected from server");
+		Com_ErrorExt( ERR_DISCONNECT, EXT_ERRMOD_ENGINE, qfalse, "Disconnected from server" );
 	}
 }
 

@@ -241,7 +241,8 @@ static qbool SV_G_GetValue( char* value, int valueSize, const char* key )
 		{ "trap_LocateInteropData", G_EXT_LOCATEINTEROPDATA },
 		{ "trap_Cvar_SetRange", G_EXT_CVAR_SETRANGE },
 		{ "trap_Cvar_SetHelp", G_EXT_CVAR_SETHELP },
-		{ "trap_Cmd_SetHelp", G_EXT_CMD_SETHELP }
+		{ "trap_Cmd_SetHelp", G_EXT_CMD_SETHELP },
+		{ "trap_Error2", G_EXT_ERROR2 }
 	};
 
 	for ( int i = 0; i < ARRAY_LEN( syscalls ); ++i ) {
@@ -267,7 +268,7 @@ static intptr_t SV_GameSystemCalls( intptr_t* args )
 		Com_Printf( "%s", (const char*)VMA(1) );
 		return 0;
 	case G_ERROR:
-		Com_Error( ERR_DROP, "%s", (const char*)VMA(1) );
+		Com_ErrorExt( ERR_DROP, EXT_ERRMOD_GAME, qtrue, "%s", (const char*)VMA(1) );
 		return 0;
 	case G_MILLISECONDS:
 		return Sys_Milliseconds();
@@ -824,6 +825,10 @@ static intptr_t SV_GameSystemCalls( intptr_t* args )
 
 	case G_EXT_CMD_SETHELP:
 		Cmd_SetHelp( VMA(1), VMA(2) );
+		return 0;
+
+	case G_EXT_ERROR2:
+		Com_ErrorExt( ERR_DROP, EXT_ERRMOD_GAME, (qbool)args[2], "%s", (const char*)VMA(1) );
 		return 0;
 
 	default:

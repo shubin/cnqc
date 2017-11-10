@@ -759,7 +759,9 @@ static qbool CL_UI_GetValue( char* value, int valueSize, const char* key )
 		{ "trap_R_AddRefEntityToScene2", UI_EXT_R_ADDREFENTITYTOSCENE2 },
 		{ "trap_Cvar_SetRange", UI_EXT_CVAR_SETRANGE },
 		{ "trap_Cvar_SetHelp", UI_EXT_CVAR_SETHELP },
-		{ "trap_Cmd_SetHelp", UI_EXT_CMD_SETHELP }
+		{ "trap_Cmd_SetHelp", UI_EXT_CMD_SETHELP },
+		{ "trap_Error2", UI_EXT_ERROR2 },
+		{ "trap_EnableErrorCallback", UI_EXT_ENABLEERRORCALLBACK }
 	};
 
 	for ( int i = 0; i < ARRAY_LEN( syscalls ); ++i ) {
@@ -782,7 +784,7 @@ static intptr_t CL_UISystemCalls( intptr_t* args )
 {
 	switch( args[0] ) {
 	case UI_ERROR:
-		Com_Error( ERR_DROP, "%s", (const char*)VMA(1) );
+		Com_ErrorExt( ERR_DROP, EXT_ERRMOD_UI, qtrue, "%s", (const char*)VMA(1) );
 		return 0;
 
 	case UI_PRINT:
@@ -1134,6 +1136,14 @@ static intptr_t CL_UISystemCalls( intptr_t* args )
 		Cmd_SetHelp( VMA(1), VMA(2) );
 		return 0;
 
+	case UI_EXT_ERROR2:
+		Com_ErrorExt( ERR_DROP, EXT_ERRMOD_UI, (qbool)args[2], "%s", (const char*)VMA(1) );
+		return 0;
+
+	case UI_EXT_ENABLEERRORCALLBACK:
+		cls.uiErrorCallbackVMCall = (int)args[1];
+		return 0;
+
 	default:
 		Com_Error( ERR_DROP, "Bad UI system trap: %i", args[0] );
 	}
@@ -1144,6 +1154,7 @@ static intptr_t CL_UISystemCalls( intptr_t* args )
 
 void CL_ShutdownUI()
 {
+	cls.uiErrorCallbackVMCall = 0;
 	cls.keyCatchers &= ~KEYCATCH_UI;
 	cls.uiStarted = qfalse;
 	if ( !uivm )
@@ -1173,7 +1184,18 @@ void CL_InitUI()
 	}
 
 	// init for this gamestate
+	cls.uiErrorCallbackVMCall = 0;
 	VM_Call( uivm, UI_INIT, (cls.state >= CA_AUTHORIZING && cls.state < CA_ACTIVE) );
+}
+
+
+void CL_ForwardUIError( int level, int module, const char* error )
+{
+	if ( uivm == NULL || cls.uiErrorCallbackVMCall == 0 )
+		return;
+
+	Q_strncpyz( (char*)interopBufferOut, error, interopBufferOutSize );
+	VM_Call( uivm, cls.uiErrorCallbackVMCall, level, module );
 }
 
 

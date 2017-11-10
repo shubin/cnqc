@@ -259,8 +259,11 @@ typedef struct {
 	qbool	uiStarted;
 	qbool	cgameStarted;
 
-	// forward input to cgame regardless of keycatcher state?
+	// extension: forward input to cgame regardless of keycatcher state?
 	int			cgameForwardInput;	// 1=mouse, 2=keys (note: we don't forward the escape key)
+
+	// extension: forward errors to ui?
+	int			uiErrorCallbackVMCall;	// 0 when not available
 
 	int			framecount;
 	int			frametime;			// msec since last frame
@@ -477,6 +480,7 @@ void CL_SetCGameTime();
 //
 void CL_InitUI();
 void CL_ShutdownUI();
+void CL_ForwardUIError( int level, int module, const char* error );
 int Key_GetCatcher( void );
 void Key_SetCatcher( int catcher );
 void LAN_LoadCachedServers( void );

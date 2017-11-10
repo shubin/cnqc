@@ -501,9 +501,25 @@ void PerpendicularVector( vec3_t dst, const vec3_t src );
 ///////////////////////////////////////////////////////////////
 
 
+// error extension
+typedef enum {
+	EXT_ERRMOD_ENGINE,
+	EXT_ERRMOD_CGAME,
+	EXT_ERRMOD_GAME,
+	EXT_ERRMOD_UI
+} extErrorModule_t;
+
+// error extension
+typedef enum {
+	EXT_ERRLEV_DROP,	// ERR_DROP
+	EXT_ERRLEV_DISC,	// ERR_DISCONNECT
+	EXT_ERRLEV_SVDISC	// ERR_SERVERDISCONNECT
+} extErrorLevel_t;
+
 const char* QDECL va( const char* format, ... );
 
 void QDECL Com_Error( int level, const char* error, ... );
+void QDECL Com_ErrorExt( int level, int module, qbool realError, const char* error, ... );
 void QDECL Com_Printf( const char* msg, ... );
 void QDECL Com_sprintf (char *dest, int size, const char *fmt, ...);
 
