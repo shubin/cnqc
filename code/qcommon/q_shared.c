@@ -652,13 +652,13 @@ void QDECL Com_sprintf( char *dest, int size, const char *fmt, ...) {
 	if ( len >= sizeof( bigbuffer ) ) {
 		Com_Error( ERR_FATAL, "Com_sprintf: overflowed bigbuffer" );
 	}
+	// don't spam overflow warnings to end-users, especially since it's a perfectly normal
+	// thing to happen with command and cvar auto-completion
+#if defined(_DEBUG) || defined(DEBUG)
 	if (len >= size) {
 		Com_Printf ("Com_sprintf: overflow of %i in %i\n", len, size);
-#if defined(_DEBUG) && defined(_MSC_VER)
-		if (IsDebuggerPresent())
-			__debugbreak();
-#endif
 	}
+#endif
 	Q_strncpyz (dest, bigbuffer, size );
 }
 

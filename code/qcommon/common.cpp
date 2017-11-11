@@ -2726,11 +2726,12 @@ static void PrintCmdMatches( const char *s )
 	const char* desc;
 	const char* help;
 	Cmd_GetHelp( &desc, &help, s );
-	
+	const char h = help != NULL ? 'h' : ' ';
+
 	if ( desc )
-		Com_sprintf( msg, sizeof(msg), "    "COLOR_CMD"%s - "COLOR_HELP"%s\n", s, desc );
+		Com_sprintf( msg, sizeof(msg), " %c  "COLOR_CMD"%s - "COLOR_HELP"%s\n", h, s, desc );
 	else
-		Com_sprintf( msg, sizeof(msg), "    "COLOR_CMD"%s\n", s );
+		Com_sprintf( msg, sizeof(msg), " %c  "COLOR_CMD"%s\n", h, s );
 
 	Com_TruncatePrintString( msg, sizeof(msg), CONSOLE_WIDTH );
 	Com_Printf( msg );
@@ -2746,10 +2747,13 @@ static void PrintCvarMatches( const char *s )
 	const char* desc;
 	const char* help;
 	Cvar_GetHelp( &desc, &help, s );
+	const char h = help != NULL ? 'h' : ' ';
+	const char u = ( Cvar_Flags(s) & CVAR_USER_CREATED ) != 0 ? '?' : h;
+
 	if ( desc )
-		Com_sprintf( msg, sizeof(msg), "    "COLOR_CVAR"%s^7 = \""COLOR_VAL"%s^7\" - "COLOR_HELP"%s\n", s, Cvar_VariableString( s ), desc );
+		Com_sprintf( msg, sizeof(msg), " %c  "COLOR_CVAR"%s^7 = \""COLOR_VAL"%s^7\" - "COLOR_HELP"%s\n", u, s, Cvar_VariableString( s ), desc );
 	else
-		Com_sprintf( msg, sizeof(msg), "    "COLOR_CVAR"%s^7 = \""COLOR_VAL"%s^7\"\n", s, Cvar_VariableString( s ) );
+		Com_sprintf( msg, sizeof(msg), " %c  "COLOR_CVAR"%s^7 = \""COLOR_VAL"%s^7\"\n", u, s, Cvar_VariableString( s ) );
 
 	Com_TruncatePrintString( msg, sizeof(msg), CONSOLE_WIDTH );
 	Com_Printf( msg );
