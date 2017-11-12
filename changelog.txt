@@ -1,6 +1,8 @@
 
 DD Mmm 17 - 1.49
 
+add: cvar_trim command to remove all user-created cvars
+
 add: with compatible mods, drop and disconnect errors will be displayed in the UI
 
 add: s_autoMute selects when the audio output should be disabled

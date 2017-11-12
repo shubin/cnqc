@@ -810,9 +810,7 @@ static void Cvar_List_f( void )
 }
 
 
-// resets all cvars to their hardcoded values
-
-static void Cvar_Restart_f( void )
+static void Cvar_Restart( qbool reset )
 {
 	cvar_t	*var;
 	cvar_t	**prev;
@@ -858,10 +856,44 @@ static void Cvar_Restart_f( void )
 			continue;
 		}
 
-		Cvar_Set( var->name, var->resetString );
+		if ( reset ) {
+			Cvar_Set( var->name, var->resetString );
+		}
 
 		prev = &var->next;
 	}
+}
+
+
+// removes all user-created cvars
+// resets all cvars to their hardcoded values
+
+static void Cvar_Restart_f( void )
+{
+	Cvar_Restart( qtrue );
+}
+
+
+// removes all user-created cvars
+// this will only accept to run when both the server and client are running unless forced
+
+static void Cvar_Trim_f()
+{
+	if ( Cmd_Argc() == 2 && !Q_stricmp( Cmd_Argv(1), "-f" ) ) {
+		Cvar_Restart( qfalse );
+		return;
+	}
+
+	if (com_cl_running && com_cl_running->integer &&
+		com_sv_running && com_sv_running->integer ) {
+		Cvar_Restart( qfalse );
+		return;
+	}
+
+	Com_Printf( "You're not running a listen server, so not all subsystems/VMs are loaded.\n" );
+	Com_Printf( "This means you'd remove cvars that are probably best kept around.\n" );
+	Com_Printf( "If you don't care, you can force the call by running '/%s -f'.\n", Cmd_Argv(0) );
+	Com_Printf( "You've been warned.\n" );
 }
 
 
@@ -970,7 +1002,8 @@ static const cmdTableItem_t cl_cmds[] =
 	{ "seta", Cvar_SetA_f, Cvar_CompleteName, "like /set with the archive flag" },
 	{ "reset", Cvar_Reset_f, Cvar_CompleteName, "sets a cvar back to its default value" },
 	{ "cvarlist", Cvar_List_f, NULL, help_cvarlist },
-	{ "cvar_restart", Cvar_Restart_f, NULL, "restarts the cvar system" }
+	{ "cvar_restart", Cvar_Restart_f, NULL, "restarts the cvar system" },
+	{ "cvar_trim", Cvar_Trim_f, NULL, "removes user-created cvars" }
 };
 
 
