@@ -64,3 +64,7 @@ help_bind_extra
 "    0 = never\n" \
 "    1 = window is not focused\n" \
 "    2 = window is minimized"
+
+#define help_con_notifytime \
+"seconds messages stay visible in the notify area\n" \
+"If -1, CPMA will draw the notify area with the 'Console' SuperHUD element."

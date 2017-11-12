@@ -291,7 +291,7 @@ static const cvarTableItem_t con_cvars[] =
 	// bugs in the renderer's overflow handling will cause crashes
 	// if the console has too many polys/verts because of too small a font
 	{ &con_noprint, "con_noprint", "0", 0, CVART_BOOL, NULL, NULL, "disables console printing and history writing" },
-	{ &con_notifytime, "con_notifytime", "3", CVAR_ARCHIVE, CVART_FLOAT, "-1", "30", "number of seconds a notify line stays visible" },
+	{ &con_notifytime, "con_notifytime", "3", CVAR_ARCHIVE, CVART_FLOAT, "-1", "30", help_con_notifytime },
 	{ &con_scale, "con_scale", "1.2", CVAR_ARCHIVE, CVART_FLOAT, "0.25", "10", "console text scaling factor" },
 	{ &con_scaleMode, "con_scaleMode", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "2", help_con_scaleMode },
 	{ &con_speed, "con_speed", "1000", CVAR_ARCHIVE, CVART_FLOAT, "0.1", "1000", "console opening/closing speed" }
