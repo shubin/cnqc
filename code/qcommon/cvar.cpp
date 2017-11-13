@@ -800,7 +800,7 @@ static void Cvar_List_f( void )
 		Com_Printf( (var->flags & CVAR_ARCHIVE) ? "A" : " " );
 		Com_Printf( (var->flags & CVAR_LATCH) ? "L" : " " );
 		Com_Printf( (var->flags & CVAR_CHEAT) ? "C" : " " );
-		Com_Printf( (var->flags & CVAR_USER_CREATED) ? "?" : " " );
+		Com_Printf( (var->flags & CVAR_USER_CREATED) ? "?" : (var->help ? "h" : " ") );
 
 		Com_Printf(" %s \"%s\"\n", var->name, var->string);
 	}

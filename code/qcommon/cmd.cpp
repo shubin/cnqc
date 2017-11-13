@@ -753,7 +753,8 @@ static void Cmd_List_f()
 	for (const cmd_function_t* cmd = cmd_functions; cmd; cmd = cmd->next) {
 		if (match && !Com_Filter(match, cmd->name))
 			continue;
-		Com_Printf( "%s\n", cmd->name );
+		const char h = cmd->help != NULL ? 'h' : ' ';
+		Com_Printf( " %c  %s\n", h, cmd->name );
 		++i;
 	}
 
