@@ -450,7 +450,11 @@ qbool Cvar_GetHelp( const char **desc, const char **help, const char* var_name )
 {
 	cvar_t* var = Cvar_FindVar( var_name );
 	if ( !var )
+	{
+		*desc = NULL;
+		*help = NULL;
 		return qfalse;
+	}
 
 	*desc = var->desc;
 	*help = var->help;

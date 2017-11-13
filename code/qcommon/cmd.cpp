@@ -640,6 +640,8 @@ qbool Cmd_GetHelp( const char** desc, const char** help, const char* cmd_name )
 		}
 	}
 
+	*desc = NULL;
+	*help = NULL;
 	return qfalse;
 }
 
