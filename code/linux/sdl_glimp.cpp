@@ -143,7 +143,12 @@ void Sys_GL_Init()
 		return;
 
 	Cvar_RegisterArray(glimp_cvars, MODULE_CLIENT);
-	Cmd_RegisterArray(glimp_cmds, MODULE_CLIENT);
+
+	static qbool firstInit = qtrue;
+	if (firstInit) {
+		Cmd_RegisterArray(glimp_cmds, MODULE_CLIENT);
+		firstInit = qfalse;
+	}
 
 	sdl_CreateMonitorList();
 	sdl_UpdateMonitorIndexFromCvar();
