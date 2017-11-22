@@ -340,7 +340,7 @@ static qbool GLW_InitDriver()
 
 // responsible for creating the Win32 window and initializing the OpenGL driver.
 
-static qbool GLW_CreateWindow( int width, int height )
+static qbool GLW_CreateWindow()
 {
 	static qbool s_classRegistered = qfalse;
 
@@ -377,13 +377,13 @@ static qbool GLW_CreateWindow( int width, int height )
 		RECT r;
 		r.left = 0;
 		r.top = 0;
-		r.right  = width;
-		r.bottom = height;
+		r.right  = glInfo.winWidth;
+		r.bottom = glInfo.winHeight;
 
 		int style = WS_VISIBLE | WS_CLIPCHILDREN;
 		int exstyle = 0;
 
-		if ( glInfo.isFullscreen )
+		if ( glInfo.winFullscreen )
 		{
 			style |= WS_POPUP;
 			exstyle |= WS_EX_TOPMOST;
@@ -402,7 +402,7 @@ static qbool GLW_CreateWindow( int width, int height )
 		int dx = 0;
 		int dy = 0;
 
-		if ( !glInfo.isFullscreen )
+		if ( !glInfo.winFullscreen )
 		{
 			dx = ri.Cvar_Get( "vid_xpos", "0", 0 )->integer;
 			dy = ri.Cvar_Get( "vid_ypos", "0", 0 )->integer;
@@ -548,25 +548,21 @@ void WIN_SetDesktopDisplaySettings()
 }
 
 
-static qbool GLW_SetMode( qbool cdsFullscreen )
+static qbool GLW_SetMode()
 {
-	glInfo.isFullscreen = cdsFullscreen;
 	WIN_UpdateMonitorIndexFromCvar();
-	if ( !R_GetModeInfo( &glConfig.vidWidth, &glConfig.vidHeight, &glConfig.windowAspect ) ) {
-		const RECT& monRect = g_wv.monitorRects[g_wv.monitor];
-		glConfig.vidWidth = monRect.right - monRect.left;
-		glConfig.vidHeight = monRect.bottom - monRect.top;
-		glConfig.windowAspect = (float)glConfig.vidWidth / glConfig.vidHeight;
-		cdsFullscreen = qfalse;
-	}
-	//ri.Printf( PRINT_DEVELOPER, "...setting mode %dx%d %s\n", glConfig.vidWidth, glConfig.vidHeight, cdsFullscreen ? "FS" : "W" );
+
+	const RECT& monRect = g_wv.monitorRects[g_wv.monitor];
+	const int desktopWidth = (int)(monRect.right - monRect.left);
+	const int desktopHeight = (int)(monRect.bottom - monRect.top);
+	R_ConfigureVideoMode( desktopWidth, desktopHeight );
 
 	DEVMODE dm;
 	ZeroMemory( &dm, sizeof( dm ) );
 	dm.dmSize = sizeof( dm );
 
-	if (cdsFullscreen != glw_state.cdsDevModeValid) {
-		if (cdsFullscreen) {
+	if (glInfo.vidFullscreen != glw_state.cdsDevModeValid) {
+		if (glInfo.vidFullscreen) {
 			dm.dmPelsWidth  = glConfig.vidWidth;
 			dm.dmPelsHeight = glConfig.vidHeight;
 			dm.dmFields     = DM_PELSWIDTH | DM_PELSHEIGHT;
@@ -584,7 +580,7 @@ static qbool GLW_SetMode( qbool cdsFullscreen )
 			dm.dmPosition.y = monRect.top;
 			dm.dmFields |= DM_POSITION;
 
-			glInfo.isFullscreen = GLW_SetDisplaySettings( dm );
+			glInfo.vidFullscreen = GLW_SetDisplaySettings( dm );
 		}
 		else
 		{
@@ -592,7 +588,7 @@ static qbool GLW_SetMode( qbool cdsFullscreen )
 		}
 	}
 
-	if (!GLW_CreateWindow( glConfig.vidWidth, glConfig.vidHeight ))
+	if (!GLW_CreateWindow())
 		return qfalse;
 
 	if (EnumDisplaySettingsA( GLW_GetCurrentDisplayDeviceName(), ENUM_CURRENT_SETTINGS, &dm ))
@@ -608,7 +604,7 @@ static qbool GLW_LoadOpenGL()
 	// load the driver and bind our function pointers to it
 	if ( WIN_LoadGL( "opengl32" ) ) {
 		// create the window and set up the context
-		if ( GLW_SetMode( (qbool)!!r_fullscreen->integer ) ) {
+		if ( GLW_SetMode() ) {
 			return qtrue;
 		}
 	}
@@ -708,7 +704,7 @@ void Sys_GL_Shutdown()
 
 void WIN_UpdateResolution( int width, int height )
 {
-	glConfig.vidWidth = width;
-	glConfig.vidHeight = height;
+	glInfo.winWidth = width;
+	glInfo.winHeight = height;
 }
 

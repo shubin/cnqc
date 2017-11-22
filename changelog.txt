@@ -1,6 +1,18 @@
 
 DD Mmm 17 - 1.49
 
+chg: r_mode selects the video mode
+  r_mode 0 (default) = no screen mode change, desktop resolution
+  r_mode 1 = no screen mode change, custom resolution, custom upscale mode
+  r_mode 2 = screen mode change, custom resolution (for the CRT users)
+  Custom resolution means using r_width and r_height.
+  Custom upscale mode means using r_blitMode.
+
+add: r_blitMode selects the upscale mode used by r_mode 1
+  r_blitMode 0 (default) = aspect-ratio preserving (black bars if necessary)
+  r_blitMode 1 = no scaling, centered
+  r_blitMode 2 = full-screen stretching (no black bars)
+
 add: cvar_trim command to remove all user-created cvars
 
 add: with compatible mods, drop and disconnect errors will be displayed in the UI

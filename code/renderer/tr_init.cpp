@@ -71,6 +71,7 @@ cvar_t	*r_ignoreGLErrors;
 cvar_t	*r_vertexLight;
 cvar_t	*r_uiFullScreen;
 cvar_t	*r_mode;
+cvar_t	*r_blitMode;
 cvar_t	*r_nobind;
 cvar_t	*r_singleShader;
 cvar_t	*r_roundImagesDown;
@@ -280,15 +281,34 @@ void GL_CheckErrors()
 }
 
 
-qbool R_GetModeInfo(int* width, int* height, float* aspect)
+void R_ConfigureVideoMode( int desktopWidth, int desktopHeight )
 {
-	if (r_fullscreen->integer && !r_mode->integer)
-		return qfalse;
+	glInfo.winFullscreen = !!r_fullscreen->integer;
+	glInfo.vidFullscreen = r_fullscreen->integer && r_mode->integer == VIDEOMODE_CHANGE;
 
-	*width = r_width->integer;
-	*height = r_height->integer;
-	*aspect = r_customaspect->value;
-	return qtrue;
+	if (r_fullscreen->integer && r_mode->integer == VIDEOMODE_DESKTOPRES) {
+		glConfig.vidWidth = desktopWidth;
+		glConfig.vidHeight = desktopHeight;
+		glConfig.windowAspect = (float)glConfig.vidWidth / (float)glConfig.vidHeight;
+		glInfo.winWidth = desktopWidth;
+		glInfo.winHeight = desktopHeight;
+		return;
+	}
+
+	if (r_fullscreen->integer && r_mode->integer == VIDEOMODE_UPSCALE) {
+		glConfig.vidWidth = r_width->integer;
+		glConfig.vidHeight = r_height->integer;
+		glConfig.windowAspect = (float)glConfig.vidWidth / (float)glConfig.vidHeight;
+		glInfo.winWidth = desktopWidth;
+		glInfo.winHeight = desktopHeight;
+		return;
+	}
+		
+	glConfig.vidWidth = r_width->integer;
+	glConfig.vidHeight = r_height->integer;
+	glConfig.windowAspect = (float)glConfig.vidWidth / (float)glConfig.vidHeight;
+	glInfo.winWidth = r_width->integer;
+	glInfo.winHeight = r_height->integer;
 }
 
 
@@ -517,11 +537,12 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_colorMipLevels, "r_colorMipLevels", "0", CVAR_LATCH, CVART_BOOL, NULL, NULL, "colorizes textures based on their mip level" },
 	{ &r_detailTextures, "r_detailtextures", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, "enables detail textures shader stages" },
 	{ &r_overBrightBits, "r_overBrightBits", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "2", help_r_overBrightBits },
-	{ &r_mode, "r_mode", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_mode },
+	{ &r_mode, "r_mode", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", XSTRING(VIDEOMODE_MAX), help_r_mode },
+	{ &r_blitMode, "r_blitMode", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", XSTRING(BLITMODE_MAX), help_r_blitMode },
 	{ &r_fullscreen, "r_fullscreen", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, "full-screen mode" },
-	{ &r_width, "r_width", "1280", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "320", "65535", "custom window width" help_r_mode0 },
-	{ &r_height, "r_height", "720", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "240", "65535", "custom window height" help_r_mode0 },
-	{ &r_customaspect, "r_customaspect", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0.1", "10", "custom pixel aspect ratio" help_r_mode0 },
+	{ &r_width, "r_width", "1280", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "320", "65535", "custom window/render width" help_r_mode01 },
+	{ &r_height, "r_height", "720", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "240", "65535", "custom window/render height" help_r_mode01 },
+	{ &r_customaspect, "r_customaspect", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0.1", "10", "custom pixel aspect ratio" help_r_mode01 },
 	{ &r_vertexLight, "r_vertexLight", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, "disables lightmap texture blending" },
 	// note that r_subdivisions > 64 will create rendering artefacts because you'll see the other side of a curved surface when against it
 	{ &r_subdivisions, "r_subdivisions", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "1", "64", help_r_subdivisions },

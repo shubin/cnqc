@@ -151,20 +151,14 @@ void Sys_GL_Init()
 
 	SDL_Rect deskropRect;
 	sdl_GetSafeDesktopRect(&deskropRect);
-
-	const qbool desktopRes = !R_GetModeInfo(&glConfig.vidWidth, &glConfig.vidHeight, &glConfig.windowAspect);
-	if (desktopRes) {
-		glConfig.vidWidth = deskropRect.w;
-		glConfig.vidHeight = deskropRect.h;
-		glConfig.windowAspect = (float)glConfig.vidWidth / (float)glConfig.vidHeight;
-	}
+	R_ConfigureVideoMode(deskropRect.w, deskropRect.h);
 
 	Uint32 windowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN;
-	if (r_fullscreen->integer) {
-		if (desktopRes)
-			windowFlags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
-		else
+	if (glInfo.winFullscreen) {
+		if (glInfo.vidFullscreen)
 			windowFlags |= SDL_WINDOW_FULLSCREEN;
+		else
+			windowFlags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
 	}
 
 	// @TODO: make a cvar defaulting to an empty string for this? e.g. value: "libGL.so.1"

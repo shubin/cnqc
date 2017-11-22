@@ -29,12 +29,22 @@
 "    2 = 4x"
 
 #define help_r_mode \
-"enables custom resolution for r_fullscreen 1\n" \
-"    0 = desktop resolution\n" \
-"    1 = custom resolution (r_width x r_height)"
+"video mode to use when r_fullscreen is 1\n" \
+"    0 = no video mode change, desktop resolution\n" \
+"    1 = no video mode change, custom resolution, custom upscaling\n" \
+"    2 = video mode change, custom resolution\n" \
+"Custom resolutions use r_width and r_height.\n" \
+"Custom upscaling uses r_blitMode."
 
-#define help_r_mode0 \
-"\nOnly used when r_mode is 0 and r_fullscreen is 1."
+#define help_r_blitMode \
+"image upscaling mode for r_mode 1\n" \
+"This will only be active when r_fullscreen is 1 and r_mode is 1.\n" \
+"    0 = aspect-ratio preserving upscale (black bars if necessary)\n" \
+"    1 = no scaling, centered\n" \
+"    2 = full-screen stretching (no black bars)"
+
+#define help_r_mode01 \
+"\nOnly used when r_mode is 0 or 1 and r_fullscreen is 1."
 
 #define help_r_subdivisions \
 "tessellation step size for patch surfaces\n" \

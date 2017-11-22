@@ -572,15 +572,43 @@ static void GL2_FBO_Swap()
 
 static void GL2_FBO_BlitSSToBackBuffer()
 {
+	// fixing up the blit mode here to avoid unnecessary qglClear calls
+	int blitMode = r_blitMode->integer;
+	if ( r_mode->integer != VIDEOMODE_UPSCALE )
+		blitMode = BLITMODE_STRETCHED;
+
+	if ( blitMode != BLITMODE_STRETCHED ) {
+		qglBindFramebuffer( GL_FRAMEBUFFER, 0 );
+		qglClearColor( 0.0f, 0.0f, 0.0f, 0.0f );
+		qglClear( GL_COLOR_BUFFER_BIT );
+	}
+
 	const FrameBuffer& fbo = frameBuffersPostProcess[frameBufferReadIndex];
 	qglBindFramebuffer( GL_READ_FRAMEBUFFER, fbo.fbo );
 	qglBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0 );
 	qglReadBuffer( GL_COLOR_ATTACHMENT0 );
 	qglDrawBuffer( GL_BACK );
 
-	const int w = glConfig.vidWidth;
-	const int h = glConfig.vidHeight;
-	qglBlitFramebuffer( 0, 0, w, h, 0, 0, w, h, GL_COLOR_BUFFER_BIT, GL_LINEAR );
+	const int sw = glConfig.vidWidth;
+	const int sh = glConfig.vidHeight;
+	const int dw = glInfo.winWidth;
+	const int dh = glInfo.winHeight;
+	if ( blitMode == BLITMODE_STRETCHED ) {
+		qglBlitFramebuffer( 0, 0, sw, sh, 0, 0, dw, dh, GL_COLOR_BUFFER_BIT, GL_LINEAR );
+	} else if ( blitMode == BLITMODE_CENTERED ) {
+		const int dx = ( dw - sw ) / 2;
+		const int dy = ( dh - sh ) / 2;
+		qglBlitFramebuffer( 0, 0, sw, sh, dx, dy, dx + sw, dy + sh, GL_COLOR_BUFFER_BIT, GL_LINEAR );
+	} else { // blitMode == BLITMODE_ASPECT
+		const float rx = (float)dw / (float)sw;
+		const float ry = (float)dh / (float)sh;
+		const float ar = min( rx, ry );
+		const int w = (int)( sw * ar );
+		const int h = (int)( sh * ar );
+		const int x = ( dw - w ) / 2;
+		const int y = ( dh - h ) / 2;
+		qglBlitFramebuffer( 0, 0, sw, sh, x, y, x + w, y + h, GL_COLOR_BUFFER_BIT, GL_LINEAR );
+	}
 }
 
 
@@ -777,6 +805,8 @@ void GL2_EndFrame()
 	// what the state might be right now
 	// we disable depth test, depth write and blending
 	GL_State( GLS_DEPTHTEST_DISABLE );
+
+	qglScissor( 0, 0, glInfo.winWidth, glInfo.winHeight );
 
 	GL2_PostProcessGamma();
 	GL2_PostProcessGreyscale();

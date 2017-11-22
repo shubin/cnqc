@@ -923,6 +923,19 @@ extern glstate_t	glState;		// outside of TR since it shouldn't be cleared during
 //
 // cvars
 //
+
+// r_mode
+#define VIDEOMODE_DESKTOPRES	0	// no mode change, render size = desktop size
+#define VIDEOMODE_UPSCALE		1	// no mode change, render size < desktop size
+#define VIDEOMODE_CHANGE		2	// mode change - only makes sense for CRT users
+#define VIDEOMODE_MAX			2
+
+// r_blitMode
+#define BLITMODE_ASPECT		0	// aspect-ratio preserving stretch
+#define BLITMODE_CENTERED	1	// no stretch, displayed at the center
+#define BLITMODE_STRETCHED	2	// dumb stretch, takes the full screen
+#define BLITMODE_MAX		2
+
 extern cvar_t	*r_verbose;				// used for verbose debug spew
 
 extern cvar_t	*r_measureOverdraw;		// enables stencil buffer overdraw measurement
@@ -943,7 +956,8 @@ extern	cvar_t	*r_novis;				// disable/enable usage of PVS
 extern	cvar_t	*r_nocull;
 extern	cvar_t	*r_nocurves;
 
-extern cvar_t	*r_mode;				// video mode
+extern cvar_t	*r_mode;				// see VIDEOMODE_*
+extern cvar_t	*r_blitMode;			// see BLITMODE_*
 extern cvar_t	*r_fullscreen;
 extern cvar_t	*r_displayRefresh;		// optional display refresh option
 
@@ -1084,7 +1098,7 @@ qbool	R_GetEntityToken( char *buffer, int size );
 model_t* R_AllocModel();
 
 void	R_Init();
-qbool	R_GetModeInfo( int* width, int* height, float* aspect );
+void	R_ConfigureVideoMode( int desktopWidth, int desktopHeight );	// writes to glConfig and glInfo
 
 #define IMG_NOPICMIP 0x0001  // images that must never be downsampled
 #define IMG_NOMIPMAP 0x0002  // 2D elements that will never be "distant" - implies IMG_NOPICMIP
@@ -1487,8 +1501,10 @@ extern glconfig_t glConfig;
 // the "private" glconfig: implementation specifics for the renderer
 struct glinfo_t {
 	// used by platform layer
-	qbool	isFullscreen;
+	qbool	winFullscreen;			// the window takes the entire screen
+	qbool	vidFullscreen;			// change the video mode
 	int		displayFrequency;
+	int		winWidth, winHeight;
 
 	// used by renderer
 	GLint	maxTextureSize;
