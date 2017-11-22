@@ -33,13 +33,13 @@ static byte* fileBase;
 
 static void R_ColorShiftLightingBytes( const byte in[4], byte out[4] )
 {
-	// shift the color data based on overbright range
-	const int shift = Com_ClampInt( 0, 2, r_mapOverBrightBits->integer - tr.overbrightBits );
+	const float brightness = Com_Clamp( 0.25f, 32.0f, r_mapBrightness->value - r_brightness->value );
+	const int scale16 = (int)( brightness * 65536.0f );
 
-	// shift the data based on overbright range
-	int r = in[0] << shift;
-	int g = in[1] << shift;
-	int b = in[2] << shift;
+	// scale based on brightness
+	int r = ( (int)in[0] * scale16 ) >> 16;
+	int g = ( (int)in[1] * scale16 ) >> 16;
+	int b = ( (int)in[2] * scale16 ) >> 16;
 
 	// normalize by color instead of saturating to white
 	if ( ( r | g | b ) > 255 ) {

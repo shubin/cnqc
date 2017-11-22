@@ -14,19 +14,9 @@
 "allows image downscaling before texture upload\n" \
 "The maximum scale ratio is 2 on both the horizontal and vertical axis."
 
-#define help_r_overBrightBits \
-"linear brightness scale\n" \
-"    0 = 1x\n" \
-"    1 = 2x\n" \
-"    2 = 4x"
-
-#define help_r_mapOverBrightBits \
-"linear map brightness scale\n" \
-"This increases the maximum brightness of the map.\n" \
-"The amount of over-brighting applied is r_mapOverBrightBits - r_overBrightBits.\n" \
-"    0 = 1x\n" \
-"    1 = 2x\n" \
-"    2 = 4x"
+#define help_r_mapBrightness \
+"brightness of lightmap textures\n" \
+"The lightmaps' brightness will be: r_mapBrightness - r_brightness."
 
 #define help_r_mode \
 "video mode to use when r_fullscreen is 1\n" \

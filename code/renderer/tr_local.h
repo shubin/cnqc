@@ -873,7 +873,6 @@ typedef struct {
 
 	float					identityLight;		// 1.0 / ( 1 << overbrightBits )
 	int						identityLightByte;	// identityLight * 255
-	int						overbrightBits;		// r_overbrightBits->integer
 
 	orientationr_t			orient;					// for current entity
 
@@ -996,8 +995,8 @@ extern	cvar_t	*r_lodCurveError;
 
 extern	cvar_t	*r_ignoreGLErrors;
 
-extern	cvar_t	*r_overBrightBits;
-extern	cvar_t	*r_mapOverBrightBits;
+extern	cvar_t	*r_brightness;
+extern	cvar_t	*r_mapBrightness;
 
 extern	cvar_t	*r_debugSurface;
 

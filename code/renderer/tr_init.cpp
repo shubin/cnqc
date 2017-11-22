@@ -95,8 +95,8 @@ cvar_t	*r_width;
 cvar_t	*r_height;
 cvar_t	*r_customaspect;
 
-cvar_t	*r_overBrightBits;
-cvar_t	*r_mapOverBrightBits;
+cvar_t	*r_brightness;
+cvar_t	*r_mapBrightness;
 
 cvar_t	*r_debugSurface;
 
@@ -495,8 +495,6 @@ void GfxInfo_f( void )
 	else
 		ri.Printf( PRINT_ALL, "\n" );
 
-	ri.Printf( PRINT_DEVELOPER, "GAMMA: %d overbright bits\n", tr.overbrightBits );
-
 	ri.Printf( PRINT_DEVELOPER, "texturemode: %s\n", r_textureMode->string );
 	ri.Printf( PRINT_DEVELOPER, "picmip: %d\n", r_picmip->integer );
 	ri.Printf( PRINT_DEVELOPER, "ambient pass: %s\n", r_vertexLight->integer ? "vertex" : "lightmap" );
@@ -536,9 +534,13 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_roundImagesDown, "r_roundImagesDown", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_roundImagesDown },
 	{ &r_colorMipLevels, "r_colorMipLevels", "0", CVAR_LATCH, CVART_BOOL, NULL, NULL, "colorizes textures based on their mip level" },
 	{ &r_detailTextures, "r_detailtextures", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, "enables detail textures shader stages" },
-	{ &r_overBrightBits, "r_overBrightBits", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "2", help_r_overBrightBits },
 	{ &r_mode, "r_mode", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", XSTRING(VIDEOMODE_MAX), help_r_mode },
 	{ &r_blitMode, "r_blitMode", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", XSTRING(BLITMODE_MAX), help_r_blitMode },
+	{ &r_brightness, "r_brightness", "2", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "0.25", "32", "overall brightness" },
+	// should be called r_lightmapBrightness
+	{ &r_mapBrightness, "r_mapBrightness", "4", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "0.25", "32", help_r_mapBrightness },
+	// should be called r_textureBrightness
+	{ &r_intensity, "r_intensity", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "1", NULL, "brightness of non-lightmap textures" },
 	{ &r_fullscreen, "r_fullscreen", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, "full-screen mode" },
 	{ &r_width, "r_width", "1280", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "320", "65535", "custom window/render width" help_r_mode01 },
 	{ &r_height, "r_height", "720", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "240", "65535", "custom window/render height" help_r_mode01 },
@@ -551,8 +553,6 @@ static const cvarTableItem_t r_cvars[] =
 	// latched variables that can only change over a restart
 	//
 	{ &r_displayRefresh, "r_displayRefresh", "0", CVAR_LATCH, CVART_INTEGER, "0", "480", "0 lets the driver decide" },
-	{ &r_mapOverBrightBits, "r_mapOverBrightBits", "2", CVAR_LATCH, CVART_INTEGER, "0", "2", help_r_mapOverBrightBits },
-	{ &r_intensity, "r_intensity", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "1", NULL, "linear brightness scale for textures and dynamic lights" },
 	{ &r_singleShader, "r_singleShader", "0", CVAR_CHEAT | CVAR_LATCH },
 
 	//

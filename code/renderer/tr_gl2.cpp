@@ -657,11 +657,10 @@ static GLSL_GammaProgramAttribs gammaProgAttribs;
 
 static void GL2_PostProcessGamma()
 {
-	const int obBits = r_overBrightBits->integer;
-	const float obScale = (float)( 1 << obBits );
+	const float brightness = r_brightness->value;
 	const float gamma = 1.0f / r_gamma->value;
 
-	if ( gamma == 1.0f && obBits == 0 )
+	if ( gamma == 1.0f && brightness == 1.0f )
 		return;
 
 	GL2_FBO_Swap();
@@ -669,7 +668,7 @@ static void GL2_PostProcessGamma()
 
 	GL_Program( gammaProg );
 	qglUniform1i( gammaProgAttribs.texture, 0 ); // we use texture unit 0
-	qglUniform4f( gammaProgAttribs.gammaOverbright, gamma, gamma, gamma, obScale );
+	qglUniform4f( gammaProgAttribs.gammaOverbright, gamma, gamma, gamma, brightness );
 	GL_SelectTexture( 0 );
 	qglBindTexture( GL_TEXTURE_2D, frameBuffersPostProcess[frameBufferReadIndex ^ 1].color );
 	GL2_FullScreenQuad();

@@ -862,8 +862,7 @@ static void R_CreateBuiltinImages()
 
 void R_SetColorMappings()
 {
-	tr.overbrightBits = r_overBrightBits->integer;
-	tr.identityLight = 1.0f / (float)( 1 << tr.overbrightBits );
+	tr.identityLight = 1.0f / r_brightness->value;
 	tr.identityLightByte = (int)( 255.0f * tr.identityLight );
 
 	for (int i = 0; i < 256; ++i) {

@@ -1,6 +1,11 @@
 
 DD Mmm 17 - 1.49
 
+chg: r_brightness    <0.25..32> (default: 2) replaces r_overBrightBits
+     r_mapBrightness <0.25..32> (default: 4) replaces r_mapOverBrightBits
+  the new cvars use floating-point values (more control) and a linear scale (more intuitive)
+  new_cvar_value = pow(2, old_cvar_value), i.e. 0->1, 1->2, 2->4, 3->8, 4->16
+
 chg: r_mode selects the video mode
   r_mode 0 (default) = no screen mode change, desktop resolution
   r_mode 1 = no screen mode change, custom resolution, custom upscale mode
