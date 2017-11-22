@@ -1,20 +1,31 @@
 #include "linux_local.h"
 
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_syswm.h>
 #include "sdl_local.h"
 #include <stdlib.h>
 
 
-static qbool sdl_inputActive = qfalse;
+// About in_focusDelay:
+// Suppose you have the game focused in windowed mode with the console down,
+// open the command window (alt+F2), then press return or escape.
+// On my machine, SDL will first send the X11 FocusIn event and *after that*
+// the keypress event for escape or return. For oj, it's the reverse...
+// In my scenario, clearing key states after reception of the FocusIn event
+// won't prevent the application from receiving the undesired keypresses.
 
+static cvar_t*	in_noGrab;
+static cvar_t*	in_focusDelay;
+static cvar_t*	m_relative;
 
-static cvar_t* in_noGrab;
-static cvar_t* m_relative;
-
-static qbool sdl_forceUnmute = qfalse; // overrides s_autoMute
+static qbool 	sdl_inputActive	= qfalse;
+static qbool	sdl_forceUnmute	= qfalse;	// overrides s_autoMute
+static int		sdl_focusTime	= INT_MIN;	// timestamp of last X11 FocusIn event
+static qbool	sdl_focused		= qtrue;	// does the X11 window have the focus?
 
 static const cvarTableItem_t in_cvars[] = {
 	{ &in_noGrab, "in_noGrab", "0", 0, CVART_BOOL, NULL, NULL, "disables input grabbing" },
+	{ &in_focusDelay, "in_focusDelay", "5", CVAR_ARCHIVE, CVART_INTEGER, "0", "100", "milli-seconds keypresses are off after window focus" },
 	{ &m_relative, "m_relative", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "enables SDL's relative mouse mode" }
 };
 
@@ -296,6 +307,33 @@ static void sdl_Window( const SDL_WindowEvent* event )
 }
 
 
+static void sdl_X11( const XEvent* event )
+{
+	switch (event->type) {
+		case FocusIn:
+			// see in_focusDelay explanation at the top
+			sdl_focusTime = Sys_Milliseconds();
+			sdl_focused = qtrue;
+			break;
+
+		case FocusOut:
+			// set modifier keys as released to prevent
+			// accidental combos such alt+enter right after
+			// getting focus
+			// e.g. alt gets "stuck", pressing only enter
+			// does a video restart as if pressing alt+enter
+			Lin_QueEvent(0, SE_KEY, K_ALT,   qfalse, 0, NULL);
+			Lin_QueEvent(0, SE_KEY, K_CTRL,  qfalse, 0, NULL);
+			Lin_QueEvent(0, SE_KEY, K_SHIFT, qfalse, 0, NULL);
+			sdl_focused = qfalse;
+			break;
+
+		default:
+			break;
+	}
+}
+
+
 static void sdl_Event( const SDL_Event* event )
 {
 	switch (event->type) {
@@ -304,35 +342,50 @@ static void sdl_Event( const SDL_Event* event )
 		break;
 
 	case SDL_KEYDOWN:
-		sdl_Key(&event->key, qtrue);
+		if (sdl_focused && Sys_Milliseconds() - sdl_focusTime >= in_focusDelay->integer)
+			sdl_Key(&event->key, qtrue);
 		break;
 
 	case SDL_KEYUP:
+		// always forward releases
 		sdl_Key(&event->key, qfalse);
 		break;
 
 	case SDL_TEXTINPUT:
-		sdl_Text(&event->text);
+		if (sdl_focused)
+			sdl_Text(&event->text);
 		break;
 
 	case SDL_MOUSEMOTION:
-		sdl_MouseMotion(&event->motion);
+		if (sdl_focused)
+			sdl_MouseMotion(&event->motion);
 		break;
 
 	case SDL_MOUSEBUTTONDOWN:
-		sdl_MouseButton(&event->button, qtrue);
+		if (sdl_focused)
+			sdl_MouseButton(&event->button, qtrue);
 		break;
 
 	case SDL_MOUSEBUTTONUP:
+		// always forward releases
 		sdl_MouseButton(&event->button, qfalse);
 		break;
 
 	case SDL_MOUSEWHEEL:
-		sdl_MouseWheel(&event->wheel);
+		if (sdl_focused)
+			sdl_MouseWheel(&event->wheel);
 		break;
 
 	case SDL_WINDOWEVENT:
 		sdl_Window(&event->window);
+		break;
+
+	case SDL_SYSWMEVENT:
+		{
+			const SDL_SysWMmsg* msg = event->syswm.msg;
+			if (msg->subsystem == SDL_SYSWM_X11)
+				sdl_X11(&msg->msg.x11.event);
+		}
 		break;
 
 	default:
@@ -361,7 +414,8 @@ qbool sdl_Init()
 		SDL_SetHintWithPriority(SDL_HINT_NO_SIGNAL_HANDLERS, "1", SDL_HINT_OVERRIDE);
 #endif
 	SDL_LogSetAllPriority(SDL_LOG_PRIORITY_CRITICAL);
-	SDL_StartTextInput();
+	SDL_StartTextInput();	// enables SDL_TEXTINPUT events
+	SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
 
 	return qtrue;
 }

@@ -188,6 +188,8 @@ chg: the client requires SDL 2 - the following things are handled by it:
 add: m_relative <0|1> (default: 1) enables SDL's relative mouse mode
   you might want to set it to 0 if you have a messed up input driver
 
+add: in_focusDelay <0..100> (default: 5) is the time in ms keypresses are ignored after the window gets the focus
+
 add: minimize command to minimize the client's window
 
 add: automatic dedicated server process restarts for crashes and timed reboots (sv_minRebootDelayMins)
