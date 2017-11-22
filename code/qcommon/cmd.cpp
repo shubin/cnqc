@@ -539,7 +539,7 @@ void Cmd_AddCommand( const char* cmd_name, xcommand_t function )
 
 	// fail if the command already exists
 	for ( cmd = cmd_functions ; cmd ; cmd = cmd->next ) {
-		if ( !strcmp( cmd_name, cmd->name ) ) {
+		if ( !Q_stricmp( cmd_name, cmd->name ) ) {
 			// allow completion-only commands to be silently doubled
 			if ( function ) {
 				Com_Printf( "Cmd_AddCommand: %s already defined\n", cmd_name );
@@ -607,7 +607,7 @@ void Cmd_RemoveCommand( const char* cmd_name )
 			// command wasn't active
 			return;
 		}
-		if ( !strcmp( cmd_name, cmd->name ) ) {
+		if ( !Q_stricmp( cmd_name, cmd->name ) ) {
 			*back = cmd->next;
 			Cmd_Free( cmd );
 			return;
@@ -621,7 +621,7 @@ void Cmd_SetHelp( const char* cmd_name, const char* cmd_help )
 {
 	cmd_function_t* cmd;
 	for ( cmd = cmd_functions; cmd; cmd = cmd->next ) {
-		if ( !strcmp( cmd_name, cmd->name ) ) {
+		if ( !Q_stricmp( cmd_name, cmd->name ) ) {
 			Help_AllocSplitText( &cmd->desc, &cmd->help, cmd_help );
 			return;
 		}
@@ -633,7 +633,7 @@ qbool Cmd_GetHelp( const char** desc, const char** help, const char* cmd_name )
 {
 	cmd_function_t* cmd;
 	for ( cmd = cmd_functions; cmd; cmd = cmd->next ) {
-		if ( !strcmp( cmd_name, cmd->name ) ) {
+		if ( !Q_stricmp( cmd_name, cmd->name ) ) {
 			*desc = cmd->desc;
 			*help = cmd->help;
 			return qtrue;
@@ -650,7 +650,7 @@ void Cmd_SetAutoCompletion( const char* cmd_name, xcommandCompletion_t completio
 {
 	cmd_function_t* cmd;
 	for ( cmd = cmd_functions; cmd; cmd = cmd->next ) {
-		if ( !strcmp( cmd_name, cmd->name ) ) {
+		if ( !Q_stricmp( cmd_name, cmd->name ) ) {
 			cmd->completion = completion;
 			return;
 		}
@@ -662,7 +662,7 @@ void Cmd_AutoCompleteArgument( const char* cmd_name, int startArg, int compArg )
 {
 	const cmd_function_t* cmd;
 	for ( cmd = cmd_functions; cmd; cmd = cmd->next ) {
-		if ( !strcmp( cmd_name, cmd->name ) ) {
+		if ( !Q_stricmp( cmd_name, cmd->name ) ) {
 			if ( cmd->completion )
 				cmd->completion( startArg, compArg );
 			return;
@@ -805,7 +805,7 @@ void Cmd_SetModule( const char* cmd_name, module_t module )
 {
 	cmd_function_t* cmd;
 	for ( cmd = cmd_functions; cmd; cmd = cmd->next ) {
-		if ( !strcmp( cmd_name, cmd->name ) ) {
+		if ( !Q_stricmp( cmd_name, cmd->name ) ) {
 			cmd->moduleMask |= 1 << (int)module;
 			if ( cmd->firstModule == MODULE_NONE )
 				cmd->firstModule = module;
@@ -838,7 +838,7 @@ void Cmd_GetModuleInfo( module_t* firstModule, int* moduleMask, const char* cmd_
 {
 	cmd_function_t* cmd;
 	for ( cmd = cmd_functions; cmd; cmd = cmd->next ) {
-		if ( !strcmp( cmd_name, cmd->name ) ) {
+		if ( !Q_stricmp( cmd_name, cmd->name ) ) {
 			*firstModule = cmd->firstModule;
 			*moduleMask = cmd->moduleMask;
 			return;
