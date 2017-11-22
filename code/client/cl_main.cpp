@@ -1219,9 +1219,10 @@ static qbool CL_StartDownloads()
 	
 	if (pakCount > 0) {
 		const qbool dlStarted = pakCount == 1 ?
-			// we know exactly which pk3 we need, so no need to send a map name
-			CL_PakDownload_Start(pakChecksums[0], qfalse) :
-			// we send the map's name and a list of pk3 checksums (qmd4)
+			// we know exactly which pk3 we need, we don't send a map name to the server
+			// (but we use one for error messages)
+			CL_PakDownload_Start(pakChecksums[0], qfalse, mapName) :
+			// we send the map's name and a list of pk3 checksums (qmd4) to the server
 			CL_MapDownload_Start_PakChecksums(mapName, pakChecksums, pakCount, exactMatch);
 
 		if (dlStarted) {
@@ -1952,7 +1953,7 @@ static void CL_DownloadPak_f()
 		return;
 	}
 
-	CL_PakDownload_Start( checksum, qtrue );
+	CL_PakDownload_Start( checksum, qtrue, NULL );
 }
 
 

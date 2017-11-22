@@ -510,7 +510,7 @@ qbool CL_VideoRecording( void );
 qbool CL_MapDownload_Start( const char* mapName, qbool fromCommand );
 qbool CL_MapDownload_Start_MapChecksum( const char* mapName, unsigned int mapCrc32, qbool exactMatch );
 qbool CL_MapDownload_Start_PakChecksums( const char* mapName, unsigned int* pakChecksums, int pakCount, qbool exactMatch );
-qbool CL_PakDownload_Start( unsigned int pakChecksum, qbool fromCommand );
+qbool CL_PakDownload_Start( unsigned int pakChecksum, qbool fromCommand, const char* mapName ); // mapName can be NULL
 void CL_MapDownload_Continue();
 void CL_MapDownload_Init();
 qbool CL_MapDownload_Active();

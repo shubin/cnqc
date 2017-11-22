@@ -62,6 +62,7 @@ struct mapDownload_t {
 	int sourceIndex;		// index into the cl_mapDLSources array
 	qbool exactMatch;		// qtrue if an exact match is required
 	qbool cleared;			// qtrue if Download_Clear was called at least once
+	qbool realMapName;		// qtrue if the name of a .bsp - otherwise, might be invalid or auto-generated
 };
 
 
@@ -118,9 +119,14 @@ static void PrintError( mapDownload_t* dl, const char* format, ... )
 	Q_vsnprintf(dl->tempMessage, sizeof(dl->tempMessage), format, ap);
 	va_end(ap);
 
-	Q_strncpyz(dl->errorMessage, "^bMap DL failed: ^7", sizeof(dl->errorMessage));
-	Q_strcat(dl->errorMessage, sizeof(dl->errorMessage), dl->tempMessage);
-	if (dl->errorMessage[strlen(dl->errorMessage) - 1] != '\n')
+	if (dl->realMapName && dl->mapName[0] != '\0')
+		Com_sprintf(dl->errorMessage, sizeof(dl->errorMessage), "^bMap DL failed: ^7map '%s' - %s", dl->mapName, dl->tempMessage);
+	else
+		Com_sprintf(dl->errorMessage, sizeof(dl->errorMessage), "^bMap DL failed: ^7%s", dl->tempMessage);
+
+	// only append a line return if there wasn't one already
+	const int l = strlen(dl->errorMessage);
+	if (l > 0 && dl->errorMessage[l - 1] != '\n')
 		Q_strcat(dl->errorMessage, sizeof(dl->errorMessage), "\n");
 
 	Com_Printf(dl->errorMessage);
@@ -193,6 +199,7 @@ static qbool IsSocketTimeoutError()
 
 static void Download_Clear( mapDownload_t* dl )
 {
+	// NOTE: we must not reset mapName, realMapName
 	*dl->tempPath = '\0';
 	*dl->finalName = '\0';
 	*dl->errorMessage = '\0';
@@ -641,11 +648,12 @@ int Download_Continue( mapDownload_t* dl )
 }
 
 
-static qbool CL_MapDownload_StartImpl( const char* mapName, int source, const char* query, qbool fromCommand, qbool exactMatch )
+static qbool CL_MapDownload_StartImpl( const char* mapName, int source, const char* query, qbool fromCommand, qbool exactMatch, qbool realMapName )
 {
 	Com_Printf("Attempting download from the %s map server...\n", cl_mapDLSources[source].name);
 
 	Q_strncpyz(cl_mapDL.mapName, mapName, sizeof(cl_mapDL.mapName));
+	cl_mapDL.realMapName = realMapName;
 
 	const qbool success = Download_Begin(&cl_mapDL, cl_mapDLSources[source].port, cl_mapDLSources[source].hostName, query);	
 	if (!success) {
@@ -687,11 +695,11 @@ qbool CL_MapDownload_Start( const char* mapName, qbool fromCommand )
 
 	char query[256];
 	(*cl_mapDLSources[0].formatQuery)(query, sizeof(query), mapName);
-	if (CL_MapDownload_StartImpl(mapName, 0, query, fromCommand, qfalse))
+	if (CL_MapDownload_StartImpl(mapName, 0, query, fromCommand, qfalse, qtrue))
 		return qtrue;
 
 	(*cl_mapDLSources[1].formatQuery)(query, sizeof(query), mapName);
-	return CL_MapDownload_StartImpl(mapName, 1, query, fromCommand, qfalse);
+	return CL_MapDownload_StartImpl(mapName, 1, query, fromCommand, qfalse, qtrue);
 }
 
 
@@ -705,7 +713,7 @@ qbool CL_MapDownload_Start_MapChecksum( const char* mapName, unsigned int mapCrc
 	if (!exactMatch)
 		Q_strcat(query, sizeof(query), "&e=0");
 
-	return CL_MapDownload_StartImpl(mapName, 0, query, qfalse, exactMatch);
+	return CL_MapDownload_StartImpl(mapName, 0, query, qfalse, exactMatch, qtrue);
 }
 
 
@@ -723,11 +731,11 @@ qbool CL_MapDownload_Start_PakChecksums( const char* mapName, unsigned int* pakC
 	if (!exactMatch)
 		Q_strcat(query, sizeof(query), "&e=0");
 
-	return CL_MapDownload_StartImpl(mapName, 0, query, qfalse, exactMatch);
+	return CL_MapDownload_StartImpl(mapName, 0, query, qfalse, exactMatch, qtrue);
 }
 
 
-qbool CL_PakDownload_Start( unsigned int checksum, qbool fromCommand )
+qbool CL_PakDownload_Start( unsigned int checksum, qbool fromCommand, const char* mapName )
 {
 	if (checksum == 0 || CL_MapDownload_CheckActive())
 		return qfalse;
@@ -735,10 +743,15 @@ qbool CL_PakDownload_Start( unsigned int checksum, qbool fromCommand )
 	char query[64];
 	Com_sprintf(query, sizeof(query), "pak?%x", checksum);
 
-	char mapName[64];
-	Com_sprintf(mapName, sizeof(mapName), "%x", checksum);
+	qbool realMapName = qtrue;
+	char name[64];
+	if (mapName == NULL || mapName[0] == '\0') {
+		Com_sprintf(name, sizeof(name), "%x", checksum);
+		mapName = name;
+		realMapName = qfalse;
+	}
 
-	return CL_MapDownload_StartImpl(mapName, 0, query, fromCommand, qtrue);
+	return CL_MapDownload_StartImpl(mapName, 0, query, fromCommand, qtrue, realMapName);
 }
 
 
@@ -775,7 +788,7 @@ void CL_MapDownload_Continue()
 		} else if (cl_mapDL.sourceIndex == 0 && !cl_mapDL.exactMatch) {
 			char query[256];
 			(*cl_mapDLSources[1].formatQuery)(query, sizeof(query), cl_mapDL.mapName);
-			CL_MapDownload_StartImpl(cl_mapDL.mapName, 1, query, cl_mapDL.fromCommand, qfalse);
+			CL_MapDownload_StartImpl(cl_mapDL.mapName, 1, query, cl_mapDL.fromCommand, qfalse, cl_mapDL.realMapName);
 		}
 	}
 }
