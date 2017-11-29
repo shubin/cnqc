@@ -30,6 +30,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <sys/types.h>
 #include <dirent.h>
 #include <errno.h>
+#include <inttypes.h>
 #ifdef DEDICATED
 #include <sys/wait.h>
 #endif
@@ -285,7 +286,7 @@ static int Sys_GetProcessUptime( pid_t pid )
 		return -1;
 
 	char fileName[128];
-	Com_sprintf(fileName, sizeof(fileName), "/proc/%ld/stat", (long)pid);
+	Com_sprintf(fileName, sizeof(fileName), "/proc/%" PRIu64 "/stat", (uint64_t)pid);
 	FILE* const file = fopen(fileName, "r");
 	if (file == NULL)
 		return -1;
@@ -297,18 +298,19 @@ static int Sys_GetProcessUptime( pid_t pid )
 		}
 	}
 
-	int jiffies;
-	const qbool success = fscanf(file, "%d", &jiffies) == 1;
+	int64_t jiffies;
+	const bool success = fscanf(file, "%" PRId64, &jiffies) == 1;
 	fclose(file);
 
 	if (!success)
 		return -1;
 
-	const int secondsSinceBoot = jiffies / jiffiesPerSec;
+	const int64_t secondsSinceBoot = jiffies / (int64_t)jiffiesPerSec;
 	struct sysinfo info;
 	sysinfo(&info);
+	const int64_t uptime = (int64_t)info.uptime - secondsSinceBoot;
 
-	return (int)info.uptime - secondsSinceBoot;
+	return (int)uptime;
 }
 
 
