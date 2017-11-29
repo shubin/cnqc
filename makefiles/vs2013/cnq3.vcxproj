@@ -118,7 +118,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>Winmm.lib;ws2_32.lib;Version.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\..\.build\debug_x32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalOptions> ..\..\code\win32\winquake.res /STACK:8388608 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions> ..\..\code\win32\winquake.res /STACK:8388608 /MANIFEST:EMBED /MANIFESTINPUT:..\..\code\win32\client.manifest %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
       <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
@@ -147,7 +147,7 @@ copy "..\..\.bin\debug_x32\cnq3-x86.pdb" "$(QUAKE3DIR)"</Command>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>Winmm.lib;ws2_32.lib;Version.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\..\.build\debug_x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalOptions> ..\..\code\win32\winquake.res /STACK:8388608 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions> ..\..\code\win32\winquake.res /STACK:8388608 /MANIFEST:EMBED /MANIFESTINPUT:..\..\code\win32\client.manifest %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
       <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
@@ -187,7 +187,7 @@ copy "..\..\.bin\debug_x64\cnq3-x64.pdb" "$(QUAKE3DIR)"</Command>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>Winmm.lib;ws2_32.lib;Version.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\..\.build\release_x32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalOptions> ..\..\code\win32\winquake.res /STACK:8388608 /OPT:REF /OPT:ICF %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions> ..\..\code\win32\winquake.res /STACK:8388608 /MANIFEST:EMBED /MANIFESTINPUT:..\..\code\win32\client.manifest /OPT:REF /OPT:ICF %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
       <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
@@ -226,7 +226,7 @@ copy "..\..\.bin\release_x32\cnq3-x86.pdb" "$(QUAKE3DIR)"</Command>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>Winmm.lib;ws2_32.lib;Version.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\..\.build\release_x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalOptions> ..\..\code\win32\winquake.res /STACK:8388608 /OPT:REF /OPT:ICF %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions> ..\..\code\win32\winquake.res /STACK:8388608 /MANIFEST:EMBED /MANIFESTINPUT:..\..\code\win32\client.manifest /OPT:REF /OPT:ICF %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
       <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
@@ -299,7 +299,6 @@ copy "..\..\.bin\release_x64\cnq3-x64.pdb" "$(QUAKE3DIR)"</Command>
     <ClInclude Include="..\..\code\qcommon\vm_local.h" />
     <ClInclude Include="..\..\code\qcommon\vm_shim.h" />
     <ClInclude Include="..\..\code\renderer\qgl.h" />
-    <ClInclude Include="..\..\code\renderer\qgl_linked.h" />
     <ClInclude Include="..\..\code\renderer\stb_image.h" />
     <ClInclude Include="..\..\code\renderer\tr_help.h" />
     <ClInclude Include="..\..\code\renderer\tr_local.h" />

@@ -210,9 +210,6 @@
     <ClInclude Include="..\..\code\renderer\qgl.h">
       <Filter>renderer</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\code\renderer\qgl_linked.h">
-      <Filter>renderer</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\code\renderer\stb_image.h">
       <Filter>renderer</Filter>
     </ClInclude>

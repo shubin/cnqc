@@ -206,7 +206,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\..\code\renderer\qgl.h" />
-    <ClInclude Include="..\..\code\renderer\qgl_linked.h" />
     <ClInclude Include="..\..\code\renderer\stb_image.h" />
     <ClInclude Include="..\..\code\renderer\tr_help.h" />
     <ClInclude Include="..\..\code\renderer\tr_local.h" />

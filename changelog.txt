@@ -165,6 +165,8 @@ chg: remove the byzantine r_mode usage added in 1.47
 
 Windows:
 
+fix: disabled DPI scaling on the client
+
 add: in_minimize registers a hotkey to minimize/restore the client
   key names must be separated by white space and there can be at most 2 modifier keys
 	

@@ -483,6 +483,9 @@ local function ApplyExeProjectSettings(exeName, server)
 	-- LINK accepts .res files directly
 	filter "action:vs*"
 		linkoptions { path.translate(make_path_src.."/win32/winquake.res", "\\"), "/STACK:8388608" }
+		if (server == 0) then
+			linkoptions { "/MANIFEST:EMBED", "/MANIFESTINPUT:"..path.translate(make_path_src.."/win32/client.manifest", "\\") }
+		end
 
 	filter { "action:vs*", "configurations:release" }
 		linkoptions { "/OPT:REF", "/OPT:ICF" }
