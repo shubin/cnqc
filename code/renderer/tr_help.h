@@ -14,10 +14,6 @@
 "allows image downscaling before texture upload\n" \
 "The maximum scale ratio is 2 on both the horizontal and vertical axis."
 
-#define help_r_mapBrightness \
-"brightness of lightmap textures\n" \
-"The lightmaps' brightness will be: r_mapBrightness - r_brightness."
-
 #define help_r_mode \
 "video mode to use when r_fullscreen is 1\n" \
 "    0 = no video mode change, desktop resolution\n" \

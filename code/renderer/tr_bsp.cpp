@@ -33,8 +33,7 @@ static byte* fileBase;
 
 static void R_ColorShiftLightingBytes( const byte in[4], byte out[4] )
 {
-	const float brightness = Com_Clamp( 0.25f, 32.0f, r_mapBrightness->value - r_brightness->value );
-	const int scale16 = (int)( brightness * 65536.0f );
+	const int scale16 = (int)( r_mapBrightness->value * 65536.0f );
 
 	// scale based on brightness
 	int r = ( (int)in[0] * scale16 ) >> 16;
