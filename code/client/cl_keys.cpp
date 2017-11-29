@@ -41,8 +41,9 @@ static qbool key_overstrikeMode;
 
 typedef struct {
 	qbool	down;
-	int			repeats;		// if > 1, it is autorepeating
-	char		*binding;
+	qbool	sendMinusCmd;	// if +cmd was sent on first key press
+	int		repeats;		// if > 1, it is autorepeating
+	char	*binding;
 } qkey_t;
 
 #define MAX_KEYS 256
@@ -966,7 +967,7 @@ static void CL_AddKeyUpCommands( int key, const char* kb )
 	for ( i = 0; ; i++ ) {
 		if ( kb[i] == ';' || !kb[i] ) {
 			*buttonPtr = '\0';
-			if ( button[0] == '+') {
+			if ( button[0] == '+' && keys[key].sendMinusCmd ) {
 				// button commands add keynum and time as parms so that multiple
 				// sources can be discriminated and subframe corrected
                 char	cmd[1024];
@@ -1007,6 +1008,9 @@ void CL_KeyEvent( int key, qbool down, unsigned time )
 	if (down) {
 		keys[key].repeats++;
 		if ( keys[key].repeats == 1) {
+			const qbool cgameForwarding = (cls.cgameForwardInput & 2) && cgvm;
+			const qbool disconnected = cls.state == CA_DISCONNECTED;
+			keys[key].sendMinusCmd = !cls.keyCatchers && !cgameForwarding && !disconnected;
 			anykeydown++;
 		}
 	} else {
@@ -1201,7 +1205,8 @@ void Key_ClearStates()
 		if ( keys[i].down ) {
 			CL_KeyEvent( i, qfalse, 0 );
 		}
-		keys[i].down = 0;
+		keys[i].down = qfalse;
+		keys[i].sendMinusCmd = qfalse;
 		keys[i].repeats = 0;
 	}
 

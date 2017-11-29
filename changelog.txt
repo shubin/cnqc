@@ -1,6 +1,8 @@
 
 DD Mmm 17 - 1.49
 
+fix: the release of a key bound to "+vstr a b" would execute "b" even though the key press didn't execute "a"
+
 chg: r_brightness    <0.25..32.0> (default: 2) replaces r_overBrightBits
      r_mapBrightness <0.25..32.0> (default: 2) replaces r_mapOverBrightBits
   the new cvars use floating-point values (more control) and a linear scale (more intuitive)
