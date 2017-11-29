@@ -1504,6 +1504,7 @@ static shader_t* GeneratePermanentShader()
 
 	for ( int i = 0; i < newShader->numStages; ++i ) {
 		if ( !stages[i].active ) {
+			newShader->numStages = i;
 			break;
 		}
 		newShader->stages[i] = RI_New<shaderStage_t>();

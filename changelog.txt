@@ -1,6 +1,8 @@
 
 DD Mmm 17 - 1.49
 
+fix: crash when the number of shader stages was wrong (would happen with the "brandon" player model)
+
 fix: the release of a key bound to "+vstr a b" would execute "b" even though the key press didn't execute "a"
 
 chg: r_brightness    <0.25..32.0> (default: 2) replaces r_overBrightBits
