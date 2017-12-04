@@ -29,7 +29,7 @@ static cvar_t* in_noGrab;
 
 
 struct Mouse {
-	Mouse() : active(qfalse), wheel(0) {}
+	Mouse() : active(qfalse) {}
 
 	qbool IsActive() const { return active; }
 
@@ -42,7 +42,6 @@ protected:
 	void UpdateWheel( int delta );	// queues mouse wheel events if needed
 
 	qbool active;
-	int wheel;
 };
 
 static Mouse* mouse;
@@ -51,18 +50,18 @@ static qbool mouseSettingsSet = qfalse;
 
 void Mouse::UpdateWheel( int delta )
 {
-	wheel += delta;
-
-	while (wheel >= WHEEL_DELTA) {
-		WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MWHEELUP, qtrue, 0, NULL );
-		WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MWHEELUP, qfalse, 0, NULL );
-		wheel -= WHEEL_DELTA;
-	}
-
-	while (wheel <= -WHEEL_DELTA) {
-		WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MWHEELDOWN, qtrue, 0, NULL );
-		WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MWHEELDOWN, qfalse, 0, NULL );
-		wheel += WHEEL_DELTA;
+	if (delta > 0) {
+		while (delta >= WHEEL_DELTA) {
+			WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MWHEELUP, qtrue,  0, NULL );
+			WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MWHEELUP, qfalse, 0, NULL );
+			delta -= WHEEL_DELTA;
+		}
+	} else {
+		while (delta <= -WHEEL_DELTA) {
+			WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MWHEELDOWN, qtrue,  0, NULL );
+			WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MWHEELDOWN, qfalse, 0, NULL );
+			delta += WHEEL_DELTA;
+		}
 	}
 }
 
@@ -82,8 +81,6 @@ static rawmouse_t rawmouse;
 
 qbool rawmouse_t::Init()
 {
-	wheel = 0;
-
 	// Problems with the RIDEV_NOLEGACY flag:
 	// - When focusing the app while pressing a mouse button, the cursor becomes visible and stays so indefinitely
 	//   despite properly having done the repeated calls to ShowCursor(FALSE) until the counter is negative.
@@ -111,7 +108,6 @@ qbool rawmouse_t::Init()
 
 qbool rawmouse_t::Activate( qbool _active )
 {
-	wheel = 0;
 	active = _active;
 
 	return qtrue;
@@ -160,7 +156,7 @@ qbool rawmouse_t::ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam )
 	if (!ri.data.mouse.usButtonFlags) // no button or wheel transitions
 		return qfalse;
 
-	if (active && (ri.data.mouse.usButtonFlags & RI_MOUSE_WHEEL) != 0)
+	if ((ri.data.mouse.usButtonFlags & RI_MOUSE_WHEEL) != 0)
 		UpdateWheel( (SHORT)ri.data.mouse.usButtonData );
 
 	for (int i = 0; i < 5; ++i) {
@@ -204,7 +200,6 @@ void winmouse_t::UpdateWindowCenter()
 
 qbool winmouse_t::Activate( qbool _active )
 {
-	wheel = 0;
 	active = _active;
 
 	if (!_active)
@@ -219,8 +214,12 @@ qbool winmouse_t::Activate( qbool _active )
 
 qbool winmouse_t::ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam )
 {
-	if ( !active )
+	if ( !active ) {
+		if ( msg == WM_MOUSEWHEEL )
+			UpdateWheel( GET_WHEEL_DELTA_WPARAM(wParam) );
+
 		return qfalse;
+	}
 
 	UpdateWindowCenter();
 

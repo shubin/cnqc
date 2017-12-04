@@ -214,30 +214,6 @@ LRESULT CALLBACK MainWndProc (
 {
 	switch (uMsg)
 	{
-
-	case WM_MOUSEWHEEL:
-		{
-			int i = (short)HIWORD(wParam);
-			// note: apparently the vista mouse driver often returns < WHEEL_DELTA
-			// but anyone running vista is a moron anyway, so fkit  :P
-			if (i > 0) {
-				while (i >= WHEEL_DELTA) {
-					WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MWHEELUP, qtrue, 0, NULL );
-					WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MWHEELUP, qfalse, 0, NULL );
-					i -= WHEEL_DELTA;
-				}
-			} else {
-				while (i <= -WHEEL_DELTA) {
-					WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MWHEELDOWN, qtrue, 0, NULL );
-					WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MWHEELDOWN, qfalse, 0, NULL );
-					i += WHEEL_DELTA;
-				}
-			}
-			// when an application processes the WM_MOUSEWHEEL message, it must return zero
-			return 0;
-		}
-		break;
-
 	case WM_CREATE:
 
 		g_wv.hWnd = hWnd;
@@ -373,7 +349,7 @@ LRESULT CALLBACK MainWndProc (
 	default:
 		// this is complicated because Win32 seems to pack multiple mouse events into
 		// one update sometimes, so we always check all states and look for events
-		if ( uMsg == WM_INPUT || (uMsg >= WM_MOUSEFIRST && uMsg <= WM_MOUSELAST) )
+		if ( uMsg == WM_INPUT || (uMsg >= WM_MOUSEFIRST && uMsg <= WM_MOUSELAST) || uMsg == WM_MOUSEWHEEL )
 			if ( IN_ProcessMessage(uMsg, wParam, lParam) )
 				return 0;
 		break;
