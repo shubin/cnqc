@@ -391,6 +391,13 @@ void SCR_UpdateScreen()
 		Com_Error( ERR_FATAL, "SCR_UpdateScreen: recursively called" );
 	}
 
+	// Why set to 1 and 0 explicitly?
+	// Because the increment/decrement approach doesn't work.
+	// One of the calls below might invoke Com_Error, which will in turn
+	// call longjmp and "abort" the current frame, meaning the end of this
+	// function (or any function for that matter) is not always reached.
+	recursive = 1;
+
 	SCR_DrawScreenField( STEREO_CENTER );
 
 	if ( com_speeds->integer ) {
@@ -406,6 +413,6 @@ void SCR_UpdateScreen()
 		re.EndFrame( NULL, NULL, NULL );
 	}
 
-	--recursive;
+	recursive = 0;
 }
 
