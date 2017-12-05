@@ -755,13 +755,17 @@ static qbool CL_UI_GetValue( char* value, int valueSize, const char* key )
 {
 	struct syscall_t { const char* name; int number; };
 	static const syscall_t syscalls[] = {
+		// syscalls
 		{ "trap_LocateInteropData", UI_EXT_LOCATEINTEROPDATA },
 		{ "trap_R_AddRefEntityToScene2", UI_EXT_R_ADDREFENTITYTOSCENE2 },
 		{ "trap_Cvar_SetRange", UI_EXT_CVAR_SETRANGE },
 		{ "trap_Cvar_SetHelp", UI_EXT_CVAR_SETHELP },
 		{ "trap_Cmd_SetHelp", UI_EXT_CMD_SETHELP },
 		{ "trap_Error2", UI_EXT_ERROR2 },
-		{ "trap_EnableErrorCallback", UI_EXT_ENABLEERRORCALLBACK }
+		{ "trap_EnableErrorCallback", UI_EXT_ENABLEERRORCALLBACK },
+		// commands
+		{ "screenshotnc", 1 },
+		{ "screenshotncJPEG", 1 }
 	};
 
 	for ( int i = 0; i < ARRAY_LEN( syscalls ); ++i ) {
