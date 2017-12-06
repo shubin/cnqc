@@ -706,5 +706,10 @@ void WIN_UpdateResolution( int width, int height )
 {
 	glInfo.winWidth = width;
 	glInfo.winHeight = height;
+	if ( r_fullscreen->integer == 0 )
+	{
+		glConfig.vidWidth = width;
+		glConfig.vidHeight = height;
+	}
 }
 
