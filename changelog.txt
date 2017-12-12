@@ -1,6 +1,9 @@
 
 DD Mmm 17 - 1.49
 
+fix: taking screenshots with a render width (r_width) that wasn't a multiple of 4
+  would either crash or produce bad screenshots
+
 fix: false positives of the "SCR_UpdateScreen: recursively called" fatal error
   repro: connect, get kicked, connect, get kicked
 

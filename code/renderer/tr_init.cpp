@@ -167,6 +167,11 @@ static void GL_SetDefaultState()
 	qglEnable( GL_SCISSOR_TEST );
 	qglDisable( GL_CULL_FACE );
 	qglDisable( GL_BLEND );
+
+	// Needed for some of our qglReadPixels calls.
+	// The default alignment is 4.
+	// RGB with width 1366 -> not a multiple of 4!
+	qglPixelStorei( GL_PACK_ALIGNMENT, 1 );
 }
 
 
