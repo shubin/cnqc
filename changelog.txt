@@ -11,22 +11,22 @@ fix: crash when the number of shader stages was wrong (would happen with the "br
 
 fix: the release of a key bound to "+vstr a b" would execute "b" even though the key press didn't execute "a"
 
-chg: r_brightness    <0.25..32.0> (default: 2) replaces r_overBrightBits
-     r_mapBrightness <0.25..32.0> (default: 2) replaces r_mapOverBrightBits
+chg: r_brightness    <0.25 to 32.0> (default: 2) replaces r_overBrightBits
+     r_mapBrightness <0.25 to 32.0> (default: 2) replaces r_mapOverBrightBits
   the new cvars use floating-point values (more control) and a linear scale (more intuitive)
   to convert the old engine values to the new values:
   r_brightness    = pow(2, r_overBrightBits)
-  r_mapBrightness = pow(2, clamp(r_mapOverBrightBits - r_overBrightBits, 0, 2))
+  r_mapBrightness = pow(2, max(r_mapOverBrightBits - r_overBrightBits, 0))
 
-chg: r_mode selects the video mode
-  r_mode 0 (default) = no screen mode change, desktop resolution
+chg: r_mode <0|1|2> (default: 0) selects the video mode
+  r_mode 0 = no screen mode change, desktop resolution
   r_mode 1 = no screen mode change, custom resolution, custom upscale mode
   r_mode 2 = screen mode change, custom resolution (for the CRT users)
   Custom resolution means using r_width and r_height.
   Custom upscale mode means using r_blitMode.
 
-add: r_blitMode selects the upscale mode used by r_mode 1
-  r_blitMode 0 (default) = aspect-ratio preserving (black bars if necessary)
+add: r_blitMode <0|1|2> (default: 0) selects the upscale mode used by r_mode 1
+  r_blitMode 0 = aspect-ratio preserving (black bars if necessary)
   r_blitMode 1 = no scaling, centered
   r_blitMode 2 = full-screen stretching (no black bars)
 
@@ -34,12 +34,12 @@ add: cvar_trim command to remove all user-created cvars
 
 add: with compatible mods, drop and disconnect errors will be displayed in the UI
 
-add: s_autoMute selects when the audio output should be disabled
+add: s_autoMute <0|1|2> (default: 1) selects when the audio output should be disabled
   s_autoMute 0 = never mute
-  s_autoMute 1 (default) = mute when the window doesn't have input focus
+  s_autoMute 1 = mute when the window doesn't have input focus
   s_autoMute 2 = mute when the window is minimized
 
-add: cl_matchAlerts (bitmask, default: 7) lets you know when a match is starting
+add: cl_matchAlerts <bitmask> (default: 7) lets you know when a match is starting
   1 - when unfocused (otherwise only when minimized)
   2 - flash the task bar (Windows only)
   4 - beep once (Windows only)
@@ -75,10 +75,10 @@ add: new CNQ3 download system that uses checksums to get the right pak files
   CNQ3   | fast  | pure servers, demos | map server(s) | not guaranteed    | none
   id     | slow  | pure servers only   | the Q3 server | guaranteed        | sv_allowDownload 1
 
-chg: cl_allowDownload can be used to select the download system
-  cl_allowDownload  0 = downloads disabled
-  cl_allowDownload  1 (default) = CNQ3 download system
+chg: cl_allowDownload <-1|0|1> (default: 1) can be used to select the download system
   cl_allowDownload -1 = id's original download system
+  cl_allowDownload  0 = downloads disabled
+  cl_allowDownload  1 = CNQ3 download system
 
 add: new commands for manually initiating and canceling fast downloads:
   dlpak  <checksum> to download a pak by its checksum if the pak doesn't exist locally
@@ -90,14 +90,13 @@ fix: r_fullbright is no longer latched and actually does its job
 
 fix: r_lightmap is now archived and actually does its job
 
-add: r_greyscale to control how monochromatic the final image looks
-  r_greyscale 0 (default) = full color (nothing done)
-  r_greyscale 1 = monochrome
-  r_greyscale ]0 1[ for linear interpolations between the 2 extremes
+add: r_greyscale <0.0 to 1.0> (default: 0) to control how monochromatic the final image looks
+  r_greyscale 0 = full color (nothing done)
+  r_greyscale 1 = completely monochrome
 
-add: com_completionStyle to select the auto-completion style
-  com_completionStyle 0 (default) = always print all results
-  com_completionStyle 1 = cycle results like Enemy Territory's console
+add: com_completionStyle <0|1> (default: 0) to select the auto-completion style
+  com_completionStyle 0 = always print all results
+  com_completionStyle 1 = print once, then cycle results like Enemy Territory's console
 
 chg: cvars and commands are alphabetically sorted
 
@@ -109,22 +108,26 @@ chg: using stb_image to load png and tga images
 
 fix: libjpeg errors no longer shut down the engine
 
-add: m_accelStyle to control the mouse accel style and m_accelOffset for style 1
-  m_accelStyle 0 (default) = legacy CNQ3 accel style
+add: m_accelStyle <0|1> (default: 0) to control the mouse accel style
+  m_accelStyle 0 = legacy CNQ3 accel style
   m_accelStyle 1 = new accel style, similar to quake3e's cl_mouseAccelStyle 1
 
-add: sv_minRebootDelayMins to control early server reboots (default: 1440, minimum: 60)
+add: m_accelOffset <0.001 to 5000> (default: 5) to control the power offset with m_accelStyle 1
+
+add: sv_minRebootDelayMins <60 to infinity> (default: 1440)
+	the min. amount of minutes to wait for before restarting the server
+	a scheduled restart won't happen until there are no more human players connected
 
 fix: broken rendering when the 2nd stage of a collapsed shader stage pair had non-white colors
 
 fix: shader stages using "wave" were not animated when the server time was too large
 
-add: con_scaleMode specifies the console text scaling mode
-  con_scaleMode 0 (default) = text size scales with con_scale but not the resolution
+add: con_scaleMode <0|1|2> (default: 0) specifies the console text scaling mode
+  con_scaleMode 0 = text size scales with con_scale but not the resolution
   con_scaleMode 1 = text size scales with con_scale and the resolution
   con_scaleMode 2 = text size is always 8x12
 
-chg: con_scale only specifies the console text scaling factor and nothing else
+chg: con_scale <0.25 to 10.0> (default: 1.2) specifies the console text scaling factor and nothing else
 
 fix: the pukka3tourney2 slime wasn't green with r_vertexLight 1
 
@@ -147,9 +150,9 @@ add: command history saving with con_history (default: 1)
 
 chg: replaced id's Huffman codec code with something both simpler and much faster
 
-add: improved multi-monitor support and added r_monitor to select the monitor
+add: r_monitor <0 to monitor count> (default: 0) to select the monitor to display the game on
   r_monitor is the 1-based index of the monitor to use
-  r_monitor 0 (default) = use the primary monitor
+  r_monitor 0 = use the primary monitor
   r_monitor N = use monitor number N
 
 fix: fixed the start-up console window staying visible when starting in full-screen
@@ -202,7 +205,7 @@ chg: the client requires SDL 2 - the following things are handled by it:
 add: m_relative <0|1> (default: 1) enables SDL's relative mouse mode
   you might want to set it to 0 if you have a messed up input driver
 
-add: in_focusDelay <0..100> (default: 5) is the time in ms keypresses are ignored after the window gets the focus
+add: in_focusDelay <0 to 100> (default: 5) is the time in ms keypresses are ignored after the window gets the focus
 
 add: minimize command to minimize the client's window
 
