@@ -94,9 +94,9 @@ add: r_greyscale <0.0 to 1.0> (default: 0) to control how monochromatic the fina
   r_greyscale 0 = full color (nothing done)
   r_greyscale 1 = completely monochrome
 
-add: com_completionStyle <0|1> (default: 0) to select the auto-completion style
-  com_completionStyle 0 = always print all results
-  com_completionStyle 1 = print once, then cycle results like Enemy Territory's console
+add: con_completionStyle <0|1> (default: 0) to select the auto-completion style
+  con_completionStyle 0 = always print all results
+  con_completionStyle 1 = print once, then cycle results like Enemy Territory's console
 
 chg: cvars and commands are alphabetically sorted
 
@@ -114,8 +114,8 @@ add: m_accelStyle <0|1> (default: 0) to control the mouse accel style
 
 add: m_accelOffset <0.001 to 5000> (default: 5) to control the power offset with m_accelStyle 1
 
-add: sv_minRebootDelayMins <60 to infinity> (default: 1440)
-	the min. amount of minutes to wait for before restarting the server
+add: sv_minRestartDelay <2 to 48> (default: 2)
+	the min. amount of hours to wait for before restarting the server
 	a scheduled restart won't happen until there are no more human players connected
 
 fix: broken rendering when the 2nd stage of a collapsed shader stage pair had non-white colors

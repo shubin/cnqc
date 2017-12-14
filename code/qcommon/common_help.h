@@ -37,10 +37,10 @@ help_pattern_matching \
 "    1 = visible\n" \
 "    2 = minimized"
 
-#define help_com_completionStyle \
+#define help_con_completionStyle \
 "auto-completion style\n" \
-"    0 = legacy, always print all results\n" \
-"    1 = ET-style, print once then cycle"
+"    0 = legacy: always prints all results\n" \
+"    1 = ET-style: prints once then cycles reults"
 
 #define help_qport \
 "internal network port\n" \

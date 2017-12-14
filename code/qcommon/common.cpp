@@ -79,7 +79,7 @@ cvar_t	*sv_packetdelay = 0;
 cvar_t	*com_noErrorInterrupt;
 #endif
 
-static cvar_t	*com_completionStyle;	// 0 = legacy, 1 = ET-style
+static cvar_t	*con_completionStyle;	// 0 = legacy, 1 = ET-style
 static cvar_t	*con_history;
 
 // com_speeds times
@@ -2184,7 +2184,7 @@ static const cvarTableItem_t com_cvars[] =
 #if defined(_WIN32) && defined(_DEBUG)
 	{ &com_noErrorInterrupt, "com_noErrorInterrupt", "0", 0, CVART_BOOL },
 #endif
-	{ &com_completionStyle, "com_completionStyle", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_com_completionStyle },
+	{ &con_completionStyle, "con_completionStyle", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_con_completionStyle },
 	{ &con_history, "con_history", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "writes the command history to a file on exit" }
 };
 
@@ -2892,7 +2892,7 @@ static void Field_AutoCompleteCmdOrVarName( int startArg, int compArg, qbool sea
 		return;
 
 	// we found 2+ matches
-	if ( com_completionStyle->integer ) {
+	if ( con_completionStyle->integer ) {
 		const int delta = String_HasLeadingSlash( field->buffer ) ? 0 : 1;
 		field->acStartArg = startArg;
 		field->acCompArg = compArg;
@@ -2948,7 +2948,7 @@ static void Field_AutoCompleteCommandArgument( int startArg, int compArg )
 	Cmd_AutoCompleteArgument( cmdName, startArg, compArg );
 
 	// we found 2+ matches
-	if ( field->acOffset == 0 && matchCount >= 2 && com_completionStyle->integer ) {
+	if ( field->acOffset == 0 && matchCount >= 2 && con_completionStyle->integer ) {
 		const int delta = String_HasLeadingSlash( field->buffer ) ? 0 : 1;
 		field->acStartArg = startArg;
 		field->acCompArg = compArg;

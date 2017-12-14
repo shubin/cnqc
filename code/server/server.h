@@ -248,7 +248,7 @@ extern	cvar_t	*sv_pure;
 extern	cvar_t	*sv_floodProtect;
 extern	cvar_t	*sv_lanForceRate;
 extern	cvar_t	*sv_strictAuth;
-extern	cvar_t	*sv_minRebootDelayMins;
+extern	cvar_t	*sv_minRestartDelay;
 
 //===========================================================
 

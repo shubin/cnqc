@@ -565,7 +565,7 @@ static const cvarTableItem_t sv_cvars[] =
 	{ NULL, "sv_mapChecksum", "", CVAR_ROM, CVART_INTEGER, NULL, NULL, ".bsp file checksum" },
 	{ &sv_lanForceRate, "sv_lanForceRate", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "1 means uncapped rate on LAN" },
 	{ &sv_strictAuth, "sv_strictAuth", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "requires CD key authentication" },
-	{ &sv_minRebootDelayMins, "sv_minRebootDelayMins", "120", 0, CVART_INTEGER, "60", NULL, "min. minutes before rebooting the server" }
+	{ &sv_minRestartDelay, "sv_minRestartDelay", "2", 0, CVART_INTEGER, "1", "48", "min. hours to wait before restarting the server" }
 };
 
 

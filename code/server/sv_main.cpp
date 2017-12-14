@@ -49,9 +49,9 @@ cvar_t	*sv_maxPing;
 cvar_t	*sv_gametype;
 cvar_t	*sv_pure;
 cvar_t	*sv_floodProtect;
-cvar_t	*sv_lanForceRate; // dedicated 1 (LAN) server forces local client rates to 99999 (bug #491)
+cvar_t	*sv_lanForceRate;		// dedicated 1 (LAN) server forces local client rates to 99999 (bug #491)
 cvar_t	*sv_strictAuth;
-cvar_t	*sv_minRebootDelayMins;
+cvar_t	*sv_minRestartDelay;	// min. time before restart in hours
 
 
 
@@ -791,17 +791,14 @@ void SV_Frame( int msec ) {
 	// Some mods may still have code like "sin(cg.time / 1000.0f)".
 	// IEEE 754 floats have a 23-bit mantissa.
 	// Rounding errors will start after roughly ((1<<23) / (60*1000)) ~ 139.8 minutes.
-	const int minRebootTimeCvar = 60 * 1000 * sv_minRebootDelayMins->integer;
-	const int minRebootTimeConst = 60 * 60 * 1000;	// absolute min. time: 1 hour
-	const int maxRebootTime = 0x7FFFFFFF;			// absolute max. time: ~ 24.86 days
-	const int minRebootTime = max( minRebootTimeCvar, minRebootTimeConst );
+	// All timestamps here are in milli-seconds, like svs.time.
+	// Absolute max. time with signed 32-bits: 0x7FFFFFFF ms ~ 24.86 days.
+	const int maxRebootTime = 0x7FC9117F; // 1 hour before max. time
+	const int minRebootTime = 60 * 60 * 1000 * sv_minRestartDelay->integer;	// the cvar's unit is hours
 	if ( svs.time >= minRebootTime && !hasHuman ) {
 		SV_IntegerOverflowShutDown( "Restarting server early to avoid time wrapping and/or precision issues" );
 		return;
 	}
-
-	if ( minRebootTimeCvar < minRebootTimeConst )
-		Cvar_Set( "sv_minRebootDelayMins", va( "%d", minRebootTimeConst / (60 * 1000) ) );
     
 	// If the time is close to hitting the 32nd bit, kick all clients and clear svs.time
 	// rather than checking for negative time wraparound everywhere.
