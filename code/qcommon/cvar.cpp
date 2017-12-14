@@ -182,7 +182,7 @@ static qbool Cvar_IsValidGet( cvar_t *var, const char *value )
 
 static qbool Cvar_IsValidSet( cvar_t *var, const char *value )
 {
-#define WARNING( Message )	{ Com_Printf( "WARNING %s: " Message "\n", var->name ); return qfalse; }
+#define WARNING( Message )	{ Com_Printf( "^3%s: " Message "\n", var->name ); return qfalse; }
 
 	if ( var->type == CVART_STRING )
 		return qtrue;
@@ -465,7 +465,7 @@ qbool Cvar_GetHelp( const char **desc, const char **help, const char* var_name )
 
 void Cvar_SetRange( const char *var_name, cvarType_t type, const char *minStr, const char *maxStr )
 {
-#define WARNING( Message ) { assert(0); Com_Printf( "Cvar_SetRange on %s: " Message "\n", var_name ); return; }
+#define WARNING( Message ) { assert(0); Com_Printf( "^3Cvar_SetRange on %s: " Message "\n", var_name ); return; }
 
 	cvar_t* var = Cvar_FindVar( var_name );
 	if( !var )
@@ -566,48 +566,56 @@ static const char* Cvar_FormatRangeFloat( float vf )
 }
 
 
-void Cvar_PrintTypeAndRange( const char *var_name )
+static void Cvar_PrintTypeAndRange( const cvar_t *var )
 {
-	cvar_t* var = Cvar_FindVar( var_name );
-	if ( !var )
-		return;
-
 	if ( var->type == CVART_BOOL ) {
-		Com_Printf( "%s <0|1> (default: %s)\n", var_name, var->resetString );
+		Com_Printf( "0|1" );
 	} else if ( var->type == CVART_BITMASK ) {
-		Com_Printf( "%s <bitmask> (default: %s)\n", var_name, var->resetString );
+		Com_Printf( "bitmask" );
 	} else if ( var->type == CVART_FLOAT ) {
 		const float minV = var->validator.f.min;
 		const float maxV = var->validator.f.max;
 		if ( minV == -FLT_MAX && maxV == FLT_MAX ) {
-			Com_Printf( "%s <float_value> (default: %s)\n", var_name, var->resetString);
+			Com_Printf( "float_value" );
 		} else {
 			const char* min = minV == -FLT_MAX ? "-inf" : Cvar_FormatRangeFloat( minV );
 			const char* max = maxV == +FLT_MAX ? "+inf" : Cvar_FormatRangeFloat( maxV );
-			Com_Printf( "%s <%s..%s> (default: %s)\n", var_name, min, max, var->resetString );
+			Com_Printf( "%s to %s", min, max );
 		}
 	} else if ( var->type == CVART_INTEGER ) {
 		const int minV = var->validator.i.min;
 		const int maxV = var->validator.i.max;
 		const int diff = maxV - minV;
 		if( minV == INT_MIN && maxV == INT_MAX ) {
-			Com_Printf( "%s <integer_value> (default: %s)\n", var_name, var->resetString );
+			Com_Printf( "integer_value" );
 		} else if ( diff == 0 ) {
-			Com_Printf( "%s <%d> (default: %s)\n", var_name, minV, var->resetString );
+			Com_Printf( "%d", minV );
 		} else if ( diff == 1 ) {
-			Com_Printf( "%s <%d|%d> (default: %s)\n", var_name, minV, minV + 1, var->resetString );
+			Com_Printf( "%d|%d", minV, minV + 1 );
 		} else if ( diff == 2 ) {
-			Com_Printf( "%s <%d|%d|%d> (default: %s)\n", var_name, minV, minV + 1, minV + 2, var->resetString );
+			Com_Printf( "%d|%d|%d", minV, minV + 1, minV + 2 );
 		} else if ( diff == 3 ) {
-			Com_Printf( "%s <%d|%d|%d|%d> (default: %s)\n", var_name, minV, minV + 1, minV + 2, minV + 3, var->resetString );
+			Com_Printf( "%d|%d|%d|%d", minV, minV + 1, minV + 2, minV + 3 );
 		} else {
 			const char* min = minV == INT_MIN ? "-inf" : va( "%d", minV );
 			const char* max = maxV == INT_MAX ? "+inf" : va( "%d", maxV );
-			Com_Printf( "%s <%s..%s> (default: %s)\n", var_name, min, max, var->resetString );
+			Com_Printf( "%s to %s", min, max );
 		}
 	} else {
-		Com_Printf( "%s <string> (default: %s)\n", var_name, var->resetString );
+		Com_Printf( "string" );
 	}
+}
+
+
+void Cvar_PrintFirstHelpLine( const char *var_name )
+{
+	cvar_t* var = Cvar_FindVar( var_name );
+	if ( !var )
+		return;
+
+	Com_Printf( "%s <", var_name );
+	Cvar_PrintTypeAndRange( var );
+	Com_Printf( "> (default: %s)\n", var->resetString );
 }
 
 
@@ -663,10 +671,12 @@ qbool Cvar_Command()
 
 	// perform a variable print or set
 	if ( Cmd_Argc() == 1 ) {
-		Com_Printf ("\"%s\" is:\"%s" S_COLOR_WHITE "\" default:\"%s" 
-			S_COLOR_WHITE "\"\n", v->name, v->string, v->resetString );
+		const char* q = v->type == CVART_STRING ? "\"" : "";
+		Com_Printf( "%s^7 is %s%s^7%s (", v->name, q, v->string, q );
+		Cvar_PrintTypeAndRange(v);
+		Com_Printf( " - default: %s%s^7%s)\n", q, v->resetString, q );
 		if ( v->latchedString ) {
-			Com_Printf( "latched: \"%s\"\n", v->latchedString );
+			Com_Printf( "latched: %s%s^7%s\n", q, v->latchedString, q );
 		}
 		return qtrue;
 	}

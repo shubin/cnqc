@@ -82,7 +82,7 @@ static void Cmd_Help_f()
 	}
 
 	if ( isCvar ) {
-		Cvar_PrintTypeAndRange( arg1 );
+		Cvar_PrintFirstHelpLine( arg1 );
 	}
 
 	Com_PrintModules( firstModule, moduleMask );

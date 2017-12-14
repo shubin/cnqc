@@ -523,7 +523,7 @@ void	Cvar_RegisterTable( const cvarTableItem_t* cvars, int count, module_t modul
 void	Cvar_SetModule( const char *var_name, module_t module );
 void	Cvar_GetModuleInfo( module_t *firstModule, int *moduleMask, const char *var_name );
 
-void	Cvar_PrintTypeAndRange( const char *var_name );
+void	Cvar_PrintFirstHelpLine( const char *var_name );
 
 void	Cvar_Register( vmCvar_t *vmCvar, const char *varName, const char *defaultValue, int flags );
 // basically a slightly modified Cvar_Get for the interpreted modules
