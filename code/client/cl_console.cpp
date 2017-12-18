@@ -554,7 +554,7 @@ static void Con_DrawSolidConsole( float frac )
 	Con_FillRect( 0, y, cls.glconfig.vidWidth, 2, fill );
 
 	i = sizeof( Q3_VERSION )/sizeof(char) - 1;
-	x = cls.glconfig.vidWidth;
+	x = cls.glconfig.vidWidth - SMALLCHAR_WIDTH;
 	while (--i >= 0) {
 		x -= SMALLCHAR_WIDTH;
 		SCR_DrawChar( x, scanlines - (SMALLCHAR_HEIGHT * 1.5), SMALLCHAR_WIDTH, SMALLCHAR_HEIGHT, Q3_VERSION[i] );
@@ -569,8 +569,9 @@ static void Con_DrawSolidConsole( float frac )
 	// draw the console text from the bottom up
 	if (con.display != con.current) {
 		// draw arrows to show the buffer is backscrolled
+		const int xEnd = ( cls.glconfig.vidWidth - con.xadjust ) / con.cw;
 		re.SetColor( colorBlack );
-		for (x = 0; x < con.linewidth; x += 4)
+		for (x = 0; x < xEnd; x += 4)
 			SCR_DrawChar( con.xadjust + x * con.cw, y, con.cw, con.ch, '^' );
 		y -= con.ch;
 		--rows;
