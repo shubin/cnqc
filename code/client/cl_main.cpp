@@ -1584,7 +1584,7 @@ static void CL_InitRenderer()
 	// load character sets
 	cls.charSetShader = re.RegisterShader( "gfx/2d/bigchars" );
 	cls.whiteShader = re.RegisterShader( "white" );
-	g_console_field_width = cls.glconfig.vidWidth / SMALLCHAR_WIDTH - 2;
+	g_console_field_width = CONSOLE_WIDTH;
 	g_consoleField.widthInChars = g_console_field_width;
 }
 

@@ -1,6 +1,10 @@
 
 DD Mmm 17 - 1.49
 
+fix: console/messagemode input buffers would sometimes display the cursor at the wrong position
+
+chg: console/messagemode input buffers now display the "^" character of color codes
+
 fix: taking screenshots with a render width (r_width) that wasn't a multiple of 4
   would either crash or produce bad screenshots
 

@@ -507,12 +507,12 @@ static void Con_DrawNotify()
 
 		if (chat_team)
 		{
-			SCR_DrawString( 8, y, cw, ch, "say_team:", qtrue );
+			SCR_DrawStringEx( 8, y, cw, ch, "say_team:", qtrue, qtrue );
 			skip = 10;
 		}
 		else
 		{
-			SCR_DrawString( 8, y, cw, ch, "say:", qtrue );
+			SCR_DrawStringEx( 8, y, cw, ch, "say:", qtrue, qtrue );
 			skip = 5;
 		}
 

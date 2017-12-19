@@ -222,8 +222,8 @@ void Field_Draw( field_t* edit, int x, int y, int cw, int ch )
 	char	str[MAX_STRING_CHARS];
 	int		i;
 
-	drawLen = edit->widthInChars;
-	len = strlen( edit->buffer ) + 1;
+	drawLen = edit->widthInChars + 1;
+	len = strlen( edit->buffer );
 
 	// guarantee that cursor will be visible
 	if ( len <= drawLen ) {
@@ -236,14 +236,6 @@ void Field_Draw( field_t* edit, int x, int y, int cw, int ch )
 			}
 		}
 		prestep = edit->scroll;
-
-/*
-		if ( edit->cursor < len - drawLen ) {
-			prestep = edit->cursor;	// cursor at start
-		} else {
-			prestep = len - drawLen;
-		}
-*/
 	}
 
 	if ( prestep + drawLen > len ) {
@@ -258,7 +250,7 @@ void Field_Draw( field_t* edit, int x, int y, int cw, int ch )
 	Com_Memcpy( str, edit->buffer + prestep, drawLen );
 	str[ drawLen ] = 0;
 
-	SCR_DrawString( x, y, cw, ch, str, qtrue );
+	SCR_DrawStringEx( x, y, cw, ch, str, qtrue, qtrue );
 
 	if ( (int)( cls.realtime >> 8 ) & 1 ) {
 		return;		// off blink
@@ -270,7 +262,7 @@ void Field_Draw( field_t* edit, int x, int y, int cw, int ch )
 		cursorChar = 10;
 	}
 
-	i = drawLen - ( Q_PrintStrlen( str ) + 1 );
+	i = drawLen - strlen( str );
 	SCR_DrawChar( x + ( edit->cursor - prestep - i ) * cw, y, cw, ch, cursorChar );
 }
 
@@ -388,50 +380,27 @@ static void Field_KeyDownEvent( field_t *edit, int key )
 	len = strlen( edit->buffer );
 
 	if ( key == K_DEL ) {
-		if ( edit->cursor < len ) {
-			memmove( edit->buffer + edit->cursor,
-				edit->buffer + edit->cursor + 1, len - edit->cursor );
-		}
-		return;
-	}
-
-	if ( key == K_RIGHTARROW )
-	{
-		if ( edit->cursor < len ) {
+		if ( edit->cursor < len )
+			memmove( edit->buffer + edit->cursor, edit->buffer + edit->cursor + 1, len - edit->cursor );
+	} else if ( key == K_RIGHTARROW ) {
+		if ( edit->cursor < len )
 			edit->cursor++;
-		}
-		if ( edit->cursor >= edit->scroll + edit->widthInChars && edit->cursor <= len )
-		{
-			edit->scroll++;
-		}
-		return;
-	}
-
-	if ( key == K_LEFTARROW )
-	{
-		if ( edit->cursor > 0 ) {
+	} else if ( key == K_LEFTARROW ) {
+		if ( edit->cursor > 0 )
 			edit->cursor--;
-		}
-		if ( edit->cursor < edit->scroll )
-		{
-			edit->scroll--;
-		}
-		return;
-	}
-
-	if ( key == K_HOME || ( tolower(key) == 'a' && keys[K_CTRL].down ) ) {
+	} else if ( key == K_HOME || ( tolower(key) == 'a' && keys[K_CTRL].down ) ) {
 		edit->cursor = 0;
-		return;
-	}
-
-	if ( key == K_END || ( tolower(key) == 'e' && keys[K_CTRL].down ) ) {
+	} else if ( key == K_END || ( tolower(key) == 'e' && keys[K_CTRL].down ) ) {
 		edit->cursor = len;
-		return;
+	} else if ( key == K_INS ) {
+		key_overstrikeMode = !key_overstrikeMode;
 	}
 
-	if ( key == K_INS ) {
-		key_overstrikeMode = !key_overstrikeMode;
-		return;
+	// fix up the scroll after we're done changing the cursor position
+	if ( edit->cursor < edit->scroll ) {
+		edit->scroll = edit->cursor;
+	} else if ( edit->cursor >= edit->scroll + edit->widthInChars && edit->cursor <= len ) {
+		edit->scroll = edit->cursor - edit->widthInChars + 1;
 	}
 }
 
