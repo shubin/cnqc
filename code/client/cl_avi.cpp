@@ -79,9 +79,9 @@ static int  bufIndex;
 SafeFS_Write
 ===============
 */
-static ID_INLINE void SafeFS_Write( const void *buffer, int len, fileHandle_t f )
+static ID_INLINE void SafeFS_Write( const void *buff, int len, fileHandle_t f )
 {
-  if( FS_Write( buffer, len, f ) < len )
+  if( FS_Write( buff, len, f ) < len )
     Com_Error( ERR_DROP, "Failed to write avi file\n" );
 }
 

@@ -156,7 +156,7 @@ static LONG WINAPI ConWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 				DeleteDC( hdcScaled );
 			}
 #endif
-			return ( long ) s_wcd.hbrEditBackground;
+			return ( INT_PTR ) s_wcd.hbrEditBackground;
 		}
 		else if ( ( HWND ) lParam == s_wcd.hwndErrorBox )
 		{
@@ -170,7 +170,7 @@ static LONG WINAPI ConWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 				SetBkColor( ( HDC ) wParam, RGB( 0x80, 0x80, 0x80 ) );
 				SetTextColor( ( HDC ) wParam, RGB( 0x00, 0x0, 0x00 ) );
 			}
-			return ( long ) s_wcd.hbrErrorBackground;
+			return ( INT_PTR ) s_wcd.hbrErrorBackground;
 		}
 		break;
 
@@ -402,7 +402,7 @@ void WIN_CreateConsole( void )
 
 	s_wcd.hWnd = CreateWindowEx( 0,
 							   DEDCLASS,
-							   " "CONSOLE_WINDOW_TITLE,
+							   " " CONSOLE_WINDOW_TITLE,
 							   DEDSTYLE,
 							   x, y,
 							   w, h,

@@ -495,9 +495,9 @@ static qbool ParseHeader( unsigned int* headerLength, mapDownload_t* dl )
 	for (;;) {
 		qbool httpHeader = qfalse;
 		int bytesRead = 0;
-		if (sscanf(s, "HTTP/1.1 %"WSPEC"[^\r]\r\n%n", httpHeaderValue, &bytesRead) == 1)
+		if (sscanf(s, "HTTP/1.1 %" WSPEC "[^\r]\r\n%n", httpHeaderValue, &bytesRead) == 1)
 			httpHeader = qtrue;
-		else if (sscanf(s, "%"WSPEC"[^:]: %"WSPEC"[^\r]\r\n%n", header, value, &bytesRead) != 2)
+		else if (sscanf(s, "%" WSPEC "[^:]: %" WSPEC "[^\r]\r\n%n", header, value, &bytesRead) != 2)
 			break;
 
 		s += bytesRead;
@@ -521,7 +521,7 @@ static qbool ParseHeader( unsigned int* headerLength, mapDownload_t* dl )
 				if (*valueFileName == '\"')
 					valueFileName++;
 
-				if (sscanf(valueFileName, "%"WSPEC"[^\";\r]", fileName) == 1)
+				if (sscanf(valueFileName, "%" WSPEC "[^\";\r]", fileName) == 1)
 					Q_strncpyz(dl->finalName, fileName, sizeof(dl->finalName));
 			}
 		} else if (Q_stricmp(header, "X-CNQ3-CRC32") == 0) {

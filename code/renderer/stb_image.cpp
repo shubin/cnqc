@@ -2,6 +2,7 @@
 
 #if defined(_MSC_VER)
 #	pragma warning(disable: 4505) // unreferenced local function
+#	pragma warning(disable: 4459) // declaration of 'ri' hides global declaration
 #endif
 
 static void*	q_malloc( size_t );

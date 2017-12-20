@@ -506,7 +506,7 @@ const char *VM_LoadInstructions( const vmHeader_t *header, instruction_t *buf )
 	for ( i = 0; i < header->instructionCount; i++, ci++, op1 = op0 ) {
 		op0 = *code_pos;
 		if ( op0 < 0 || op0 >= OP_MAX ) {
-			sprintf( errBuf, "bad opcode %02X at offset %ld", op0,  code_pos - code_start );
+			sprintf( errBuf, "bad opcode %02X at offset %lld", (unsigned int)op0, (long long)(code_pos - code_start) );
 			return errBuf;
 		}
 		n = ops[ op0 ].size;

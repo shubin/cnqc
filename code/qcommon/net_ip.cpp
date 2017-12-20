@@ -27,10 +27,18 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <winsock.h>
 
 typedef int socklen_t;
+#ifndef EAGAIN
 #define EAGAIN			WSAEWOULDBLOCK
+#endif
+#ifndef EADDRNOTAVAIL
 #define EADDRNOTAVAIL	WSAEADDRNOTAVAIL
+#endif
+#ifndef EAFNOSUPPORT
 #define EAFNOSUPPORT	WSAEAFNOSUPPORT
+#endif
+#ifndef ECONNRESET
 #define ECONNRESET		WSAECONNRESET
+#endif
 #define socketError		WSAGetLastError()
 
 static WSADATA	winsockdata;

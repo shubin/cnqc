@@ -601,17 +601,17 @@ static void Con_DrawSolidConsole( float frac )
 		const short* text = con.text + (row % con.totallines)*con.linewidth;
 
 		re.SetColor( colorBlack );
-		for (int i = 0; i < con.linewidth; ++i) {
-			SCR_DrawChar( 1 + con.xadjust + i * con.cw, 1 + y, con.cw, con.ch, (text[i] & 0xFF) );
+		for (int j = 0; j < con.linewidth; ++j) {
+			SCR_DrawChar( 1 + con.xadjust + j * con.cw, 1 + y, con.cw, con.ch, (text[j] & 0xFF) );
 		}
 
 		re.SetColor( colorWhite );
-		for (int i = 0; i < con.linewidth; ++i) {
-			if ((text[i] >> 8) != color) {
-				color = (text[i] >> 8);
+		for (int j = 0; j < con.linewidth; ++j) {
+			if ((text[j] >> 8) != color) {
+				color = (text[j] >> 8);
 				re.SetColor( ColorFromChar( color ) );
 			}
-			SCR_DrawChar( con.xadjust + i * con.cw, y, con.cw, con.ch, (text[i] & 0xFF) );
+			SCR_DrawChar( con.xadjust + j * con.cw, y, con.cw, con.ch, (text[j] & 0xFF) );
 		}
 	}
 

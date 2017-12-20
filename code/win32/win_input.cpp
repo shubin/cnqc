@@ -34,7 +34,7 @@ struct Mouse {
 	qbool IsActive() const { return active; }
 
 	virtual qbool Init() { return qfalse; }														// qtrue if successful
-	virtual qbool Activate( qbool active ) { return qfalse; }									// qtrue if successful
+	virtual qbool Activate( qbool _active ) { return qfalse; }									// qtrue if successful
 	virtual void Shutdown() {}
 	virtual qbool ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam ) { return qfalse; }	// qtrue if the event was handled
 
@@ -826,9 +826,9 @@ static void IN_StartupMIDI()
 	// open the MIDI IN port
 	//
 	if ( midiInOpen( &s_midiInfo.hMidiIn,
-					 in_mididevice->integer,
-					 ( unsigned long ) MidiInProc,
-					 ( unsigned long ) NULL,
+					 ( UINT ) in_mididevice->integer,
+					 ( DWORD_PTR ) MidiInProc,
+					 ( DWORD_PTR ) NULL,
 					 CALLBACK_FUNCTION ) != MMSYSERR_NOERROR )
 	{
 		Com_Printf( "WARNING: could not open MIDI device %d: '%s'\n", in_mididevice->integer , s_midiInfo.caps[( int ) in_mididevice->value] );

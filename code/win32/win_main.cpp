@@ -538,9 +538,6 @@ void Sys_Init()
 		Sys_Error( "%s requires Windows Vista or later", Q3_VERSION );
 
 	Cvar_Set( "arch", "winnt" );
-
-	// save out a couple things in rom cvars for the renderer to access
-	Cvar_Get( "win_hinstance", va("%i", (int)g_wv.hInstance), CVAR_ROM );
 }
 
 

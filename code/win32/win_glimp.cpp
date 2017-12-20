@@ -413,7 +413,7 @@ static qbool GLW_CreateWindow()
 		const int x = monRect.left + dx;
 		const int y = monRect.top + dy;
 
-		g_wv.hWnd = CreateWindowEx( exstyle, CLIENT_WINDOW_TITLE, " "CLIENT_WINDOW_TITLE, style,
+		g_wv.hWnd = CreateWindowEx( exstyle, CLIENT_WINDOW_TITLE, " " CLIENT_WINDOW_TITLE, style,
 				x, y, w, h, NULL, NULL, g_wv.hInstance, NULL );
 
 		if ( !g_wv.hWnd )
@@ -575,7 +575,6 @@ static qbool GLW_SetMode()
 			dm.dmBitsPerPel = 32;
 			dm.dmFields |= DM_BITSPERPEL;
 
-			const RECT& monRect = g_wv.monitorRects[g_wv.monitor];
 			dm.dmPosition.x = monRect.left;
 			dm.dmPosition.y = monRect.top;
 			dm.dmFields |= DM_POSITION;
@@ -632,10 +631,6 @@ void Sys_GL_EndFrame()
 void Sys_GL_Init()
 {
 	ri.Printf( PRINT_DEVELOPER, "Initializing OpenGL subsystem\n" );
-
-	// save off hInstance for the subsystems
-	const cvar_t* cv = ri.Cvar_Get( "win_hinstance", "", 0 );
-	sscanf( cv->string, "%i", (int *)&g_wv.hInstance );
 
 	// load appropriate DLL and initialize subsystem
 	if (!GLW_LoadOpenGL())

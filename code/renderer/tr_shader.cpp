@@ -1203,7 +1203,7 @@ static infoParm_t infoParms[] = {
 	{"lava",		1,	0,	CONTENTS_LAVA },		// very damaging
 	{"playerclip",	1,	0,	CONTENTS_PLAYERCLIP },
 	{"monsterclip",	1,	0,	CONTENTS_MONSTERCLIP },
-	{"nodrop",		1,	0,	CONTENTS_NODROP },		// don't drop items or leave bodies (death fog, lava, etc)
+	{"nodrop",		1,	0,	int(CONTENTS_NODROP) },	// don't drop items or leave bodies (death fog, lava, etc)
 	{"nonsolid",	1,	SURF_NONSOLID,	0},						// clears the solid flag
 
 	// utility relevant attributes
@@ -2106,7 +2106,7 @@ shader_t* R_FindShader( const char *name, int lightmapIndex, qbool mipRawImage )
 {
 	char		strippedName[MAX_QPATH];
 	char		fileName[MAX_QPATH];
-	int			i, hash;
+	int			hash;
 	shader_t	*sh;
 
 	if ( name[0] == 0 ) {
@@ -2156,7 +2156,7 @@ shader_t* R_FindShader( const char *name, int lightmapIndex, qbool mipRawImage )
 	Com_Memset( &stages, 0, sizeof( stages ) );
 	Q_strncpyz(shader.name, strippedName, sizeof(shader.name));
 	shader.lightmapIndex = lightmapIndex;
-	for ( i = 0 ; i < MAX_SHADER_STAGES ; i++ ) {
+	for ( int i = 0 ; i < MAX_SHADER_STAGES ; i++ ) {
 		stages[i].texMods = texMods[i];
 	}
 
@@ -2346,39 +2346,39 @@ void R_ShaderList_f( void )
 
 	int count = 0;
 	for ( i = 0 ; i < tr.numShaders ; i++ ) {
-		const shader_t* shader = (ri.Cmd_Argc() > 1) ? tr.sortedShaders[i] : tr.shaders[i];
+		const shader_t* sh = (ri.Cmd_Argc() > 1) ? tr.sortedShaders[i] : tr.shaders[i];
 
-		int passes = shader->numStages;
-		for ( int s = 0; s < shader->numStages; ++s )
-			passes -= shader->stages[s]->mtStages;
+		int passes = sh->numStages;
+		for ( int s = 0; s < sh->numStages; ++s )
+			passes -= sh->stages[s]->mtStages;
 
-		ri.Printf( PRINT_ALL, "%i %i ", shader->numStages, passes );
+		ri.Printf( PRINT_ALL, "%i %i ", sh->numStages, passes );
 
-		if (shader->lightmapIndex >= 0 ) {
+		if (sh->lightmapIndex >= 0 ) {
 			ri.Printf( PRINT_ALL, "L " );
-		//} else if (shader->lightmapIndex == LIGHTMAP_WHITE ) {
+		//} else if (sh->lightmapIndex == LIGHTMAP_WHITE ) {
 		//	ri.Printf( PRINT_ALL, "W " );
 		} else {
 			ri.Printf( PRINT_ALL, "  " );
 		}
-		if ( shader->explicitlyDefined ) {
+		if ( sh->explicitlyDefined ) {
 			ri.Printf( PRINT_ALL, "E " );
 		} else {
 			ri.Printf( PRINT_ALL, "  " );
 		}
 
-		if ( shader->siFunc == GL2_StageIterator ) {
+		if ( sh->siFunc == GL2_StageIterator ) {
 			ri.Printf( PRINT_ALL, "    " );
-		} else if ( shader->siFunc == RB_StageIteratorSky ) {
+		} else if ( sh->siFunc == RB_StageIteratorSky ) {
 			ri.Printf( PRINT_ALL, "sky " );
 		} else {
 			ri.Printf( PRINT_ALL, "??? " );
 		}
 
-		if ( shader->defaultShader ) {
-			ri.Printf( PRINT_ALL,  ": %s (DEFAULTED)\n", shader->name );
+		if ( sh->defaultShader ) {
+			ri.Printf( PRINT_ALL,  ": %s (DEFAULTED)\n", sh->name );
 		} else {
-			ri.Printf( PRINT_ALL,  ": %s\n", shader->name );
+			ri.Printf( PRINT_ALL,  ": %s\n", sh->name );
 		}
 		count++;
 	}

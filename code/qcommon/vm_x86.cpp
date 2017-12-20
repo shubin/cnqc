@@ -1373,49 +1373,49 @@ Search for known macro-op sequences
 static void VM_FindMOps(instruction_t *buf, int instructionCount)
 {
 	int i, v, op0;
-	instruction_t *ci;
+	instruction_t *lci;
 
-	ci = buf;
+	lci = buf;
 	i = 0;
 
 	while ( i < instructionCount )
 	{
-		op0 = ci->op;
+		op0 = lci->op;
 		if ( op0 == OP_LOCAL ) {
 			// OP_LOCAL + OP_LOCAL + OP_LOAD4 + OP_CONST + OP_XXX + OP_STORE4
-			if ( (ci+1)->op == OP_LOCAL && ci->value == (ci+1)->value && (ci+2)->op == OP_LOAD4 && (ci+3)->op == OP_CONST && (ci+4)->op != OP_UNDEF && (ci+5)->op == OP_STORE4 ) {
-				v = (ci+4)->op;
+			if ( (lci+1)->op == OP_LOCAL && lci->value == (lci+1)->value && (lci+2)->op == OP_LOAD4 && (lci+3)->op == OP_CONST && (lci+4)->op != OP_UNDEF && (lci+5)->op == OP_STORE4 ) {
+				v = (lci+4)->op;
 				if ( v == OP_ADD ) {
-					ci->op = MOP_ADD4;
-					ci += 6; i += 6;
+					lci->op = MOP_ADD4;
+					lci += 6; i += 6;
 					continue;
 				}
 				if ( v == OP_SUB ) {
-					ci->op = MOP_SUB4;
-					ci += 6; i += 6;
+					lci->op = MOP_SUB4;
+					lci += 6; i += 6;
 					continue;
 				}
 				if ( v == OP_BAND ) {
-					ci->op = MOP_BAND4;
-					ci += 6; i += 6;
+					lci->op = MOP_BAND4;
+					lci += 6; i += 6;
 					continue;
 				}
 				if ( v == OP_BOR ) {
-					ci->op = MOP_BOR4;
-					ci += 6; i += 6;
+					lci->op = MOP_BOR4;
+					lci += 6; i += 6;
 					continue;
 				}
 			}
 
 			// skip useless sequences
-			if ( (ci+1)->op == OP_LOCAL && (ci+0)->value == (ci+1)->value && (ci+2)->op == OP_LOAD4 && (ci+3)->op == OP_STORE4 ) {
-				ci->op = MOP_IGNORE4;
-				ci += 4; i += 4;
+			if ( (lci+1)->op == OP_LOCAL && (lci+0)->value == (lci+1)->value && (lci+2)->op == OP_LOAD4 && (lci+3)->op == OP_STORE4 ) {
+				lci->op = MOP_IGNORE4;
+				lci += 4; i += 4;
 				continue;
 			}
 		}
 
-		ci++;
+		lci++;
 		i++;
 	}
 }

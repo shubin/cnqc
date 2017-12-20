@@ -86,12 +86,12 @@ Netchan_Setup
 called to open a channel to a remote system
 ==============
 */
-void Netchan_Setup( netsrc_t sock, netchan_t *chan, netadr_t adr, int qport ) {
+void Netchan_Setup( netsrc_t sock, netchan_t *chan, netadr_t adr, int port ) {
 	Com_Memset (chan, 0, sizeof(*chan));
 
 	chan->sock = sock;
 	chan->remoteAddress = adr;
-	chan->qport = qport;
+	chan->qport = port;
 	chan->incomingSequence = 0;
 	chan->outgoingSequence = 1;
 }
@@ -218,7 +218,6 @@ copied out.
 qbool Netchan_Process( netchan_t *chan, msg_t *msg )
 {
 	int		sequence;
-	int		qport;
 	int		fragmentStart, fragmentLength;
 	qbool	fragmented;
 
@@ -234,9 +233,9 @@ qbool Netchan_Process( netchan_t *chan, msg_t *msg )
 		fragmented = qfalse;
 	}
 
-	// read the qport if we are a server
+	// read the port if we are a server
 	if ( chan->sock == NS_SERVER ) {
-		qport = MSG_ReadShort( msg );
+		MSG_ReadShort( msg );
 	}
 
 	// read the fragment information

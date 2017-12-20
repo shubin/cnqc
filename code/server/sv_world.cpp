@@ -251,10 +251,8 @@ void SV_LinkEntity( sharedEntity_t *gEnt ) {
 	// set the abs box
 	if ( gEnt->r.bmodel && (angles[0] || angles[1] || angles[2]) ) {
 		// expand for rotation
-		float		max;
-		int			i;
+		float max = RadiusFromBounds( gEnt->r.mins, gEnt->r.maxs );
 
-		max = RadiusFromBounds( gEnt->r.mins, gEnt->r.maxs );
 		for (i=0 ; i<3 ; i++) {
 			gEnt->r.absmin[i] = origin[i] - max;
 			gEnt->r.absmax[i] = origin[i] + max;

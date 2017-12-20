@@ -2272,7 +2272,7 @@ void Com_Init( char *commandLine )
 
 	Cmd_RegisterArray( com_cmds, MODULE_COMMON );
 
-	const char* s = Q3_VERSION" "PLATFORM_STRING" "__DATE__;
+	const char* s = Q3_VERSION " " PLATFORM_STRING " " __DATE__;
 	com_version = Cvar_Get( "version", s, CVAR_ROM | CVAR_SERVERINFO );
 
 	Cvar_Get( "sys_cpustring", "detect", 0 );
@@ -2729,9 +2729,9 @@ static void PrintCmdMatches( const char *s )
 	const char h = help != NULL ? 'h' : ' ';
 
 	if ( desc )
-		Com_sprintf( msg, sizeof(msg), " %c  "COLOR_CMD"%s - "COLOR_HELP"%s\n", h, s, desc );
+		Com_sprintf( msg, sizeof(msg), " %c  " COLOR_CMD "%s - " COLOR_HELP "%s\n", h, s, desc );
 	else
-		Com_sprintf( msg, sizeof(msg), " %c  "COLOR_CMD"%s\n", h, s );
+		Com_sprintf( msg, sizeof(msg), " %c  " COLOR_CMD "%s\n", h, s );
 
 	Com_TruncatePrintString( msg, sizeof(msg), CONSOLE_WIDTH );
 	Com_Printf( msg );
@@ -2751,9 +2751,9 @@ static void PrintCvarMatches( const char *s )
 	const char u = ( Cvar_Flags(s) & CVAR_USER_CREATED ) != 0 ? '?' : h;
 
 	if ( desc )
-		Com_sprintf( msg, sizeof(msg), " %c  "COLOR_CVAR"%s^7 = \""COLOR_VAL"%s^7\" - "COLOR_HELP"%s\n", u, s, Cvar_VariableString( s ), desc );
+		Com_sprintf( msg, sizeof(msg), " %c  " COLOR_CVAR "%s^7 = \"" COLOR_VAL "%s^7\" - " COLOR_HELP "%s\n", u, s, Cvar_VariableString( s ), desc );
 	else
-		Com_sprintf( msg, sizeof(msg), " %c  "COLOR_CVAR"%s^7 = \""COLOR_VAL"%s^7\"\n", u, s, Cvar_VariableString( s ) );
+		Com_sprintf( msg, sizeof(msg), " %c  " COLOR_CVAR "%s^7 = \"" COLOR_VAL "%s^7\"\n", u, s, Cvar_VariableString( s ) );
 
 	Com_TruncatePrintString( msg, sizeof(msg), CONSOLE_WIDTH );
 	Com_Printf( msg );

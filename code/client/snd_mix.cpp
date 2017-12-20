@@ -104,7 +104,6 @@ static void S_TransferPaintBuffer( int endtime )
 
 	if ( s_testsound->integer ) {
 		int		i;
-		int		count;
 
 		// write a fixed sine wave
 		count = (endtime - s_paintedtime);
