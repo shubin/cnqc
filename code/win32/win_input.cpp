@@ -192,9 +192,14 @@ static winmouse_t winmouse;
 
 void winmouse_t::UpdateWindowCenter()
 {
-	const RECT& rect = g_wv.monitorRects[g_wv.monitor];
-	window_center_x = (int)( rect.left + rect.right ) / 2;
-	window_center_y = (int)( rect.top + rect.bottom ) / 2;
+	RECT rect;
+	GetClientRect( g_wv.hWnd, &rect );
+	POINT center;
+	center.x = rect.right / 2;
+	center.y = rect.bottom / 2;
+	MapWindowPoints( g_wv.hWnd, HWND_DESKTOP, &center, 1 );
+	window_center_x = (int)center.x;
+	window_center_y = (int)center.y;
 }
 
 
@@ -391,10 +396,13 @@ static void IN_SetCursorSettings( qbool active )
 	if (active) {
 		while (ShowCursor(FALSE) >= 0)
 			;
-		RECT rc;
+		RECT rect;
 		SetCapture( g_wv.hWnd );
-		GetWindowRect( g_wv.hWnd, &rc );
-		ClipCursor( &rc );
+		GetClientRect( g_wv.hWnd, &rect );
+		POINT points[2] = { { rect.left, rect.top }, { rect.right, rect.bottom } };
+		MapWindowPoints( g_wv.hWnd, HWND_DESKTOP, points, 2 );
+		rect = { points[0].x, points[0].y, points[1].x, points[1].y };
+		ClipCursor( &rect );
 	} else {
 		while (ShowCursor(TRUE) < 0)
 			;
