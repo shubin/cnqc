@@ -805,7 +805,8 @@ void GL2_EndFrame()
 	// we disable depth test, depth write and blending
 	GL_State( GLS_DEPTHTEST_DISABLE );
 
-	qglScissor( 0, 0, glInfo.winWidth, glInfo.winHeight );
+	qglViewport( 0, 0, glConfig.vidWidth, glConfig.vidHeight );
+	qglScissor( 0, 0, glConfig.vidWidth, glConfig.vidHeight );
 
 	GL2_PostProcessGamma();
 	GL2_PostProcessGreyscale();
@@ -813,6 +814,9 @@ void GL2_EndFrame()
 	// needed for later calls to GL_Bind because
 	// the above functions use qglBindTexture directly
 	glState.texID[glState.currenttmu] = 0;
+
+	qglViewport (0, 0, glInfo.winWidth, glInfo.winHeight );
+	qglScissor( 0, 0, glInfo.winWidth, glInfo.winHeight );
 
 	GL2_FBO_BlitSSToBackBuffer();
 }
