@@ -87,7 +87,7 @@ void SCR_DrawChar( float x, float y, float cw, float ch, int c )
 
 // draws a string with a drop shadow, optionally with colorcodes
 
-void SCR_DrawStringEx( float x, float y, float cw, float ch, const char* string, qbool allowColor, qbool showColorCodes )
+void SCR_DrawStringEx( float x, float y, float cw, float ch, const char* string, qbool allowColor, qbool showColorCodes, const float* firstColor )
 {
 	float xx;
 	const char* s;
@@ -114,7 +114,7 @@ void SCR_DrawStringEx( float x, float y, float cw, float ch, const char* string,
 	// draw the text, possibly with colors
 	s = string;
 	xx = x;
-	re.SetColor( colorWhite );
+	re.SetColor( firstColor ? firstColor : colorWhite );
 	while ( *s ) {
 		if ( allowColor && Q_IsColorString( s ) ) {
 			re.SetColor( ColorFromChar( s[1] ) );
@@ -136,7 +136,7 @@ void SCR_DrawStringEx( float x, float y, float cw, float ch, const char* string,
 
 void SCR_DrawString( float x, float y, float cw, float ch, const char* string, qbool allowColor )
 {
-	SCR_DrawStringEx( x, y, cw, ch, string, allowColor, qfalse );
+	SCR_DrawStringEx( x, y, cw, ch, string, allowColor, qfalse, NULL );
 }
 
 

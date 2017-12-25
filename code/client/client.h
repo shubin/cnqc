@@ -446,7 +446,7 @@ void SCR_AdjustFrom640( float *x, float *y, float *w, float *h );
 
 void SCR_DrawChar( float x, float y, float cw, float ch, int c );
 void SCR_DrawString( float x, float y, float cw, float ch, const char* s, qbool allowColor );
-void SCR_DrawStringEx( float x, float y, float cw, float ch, const char* s, qbool allowColor, qbool showColorCodes );
+void SCR_DrawStringEx( float x, float y, float cw, float ch, const char* s, qbool allowColor, qbool showColorCodes, const float* firstColor );
 
 void SCR_DebugGraph( float value, int color );
 

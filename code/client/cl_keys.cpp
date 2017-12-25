@@ -221,6 +221,7 @@ void Field_Draw( field_t* edit, int x, int y, int cw, int ch )
 	int		cursorChar;
 	char	str[MAX_STRING_CHARS];
 	int		i;
+	int		colorCode;
 
 	drawLen = edit->widthInChars + 1;
 	len = strlen( edit->buffer );
@@ -247,10 +248,18 @@ void Field_Draw( field_t* edit, int x, int y, int cw, int ch )
 		Com_Error( ERR_DROP, "drawLen >= MAX_STRING_CHARS" );
 	}
 
+	colorCode = COLOR_WHITE;
+	for ( i = prestep - 1; i >= 0; --i ) {
+		if ( Q_IsColorString( &edit->buffer[i] ) ) {
+			colorCode = edit->buffer[i + 1];
+			break;
+		}
+	}
+
 	Com_Memcpy( str, edit->buffer + prestep, drawLen );
 	str[ drawLen ] = 0;
 
-	SCR_DrawStringEx( x, y, cw, ch, str, qtrue, qtrue );
+	SCR_DrawStringEx( x, y, cw, ch, str, qtrue, qtrue, ColorFromChar( colorCode ) );
 
 	if ( (int)( cls.realtime >> 8 ) & 1 ) {
 		return;		// off blink
