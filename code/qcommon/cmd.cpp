@@ -66,46 +66,18 @@ static void Cmd_Help_f()
 		return;
 	}
 
-	qbool isCvar = qfalse;
-	const char *desc;
-	const char *help;
-	module_t firstModule;
-	int moduleMask;
-	if ( Cvar_GetHelp( &desc, &help, arg1 ) ) {
-		isCvar = qtrue;
-		Cvar_GetModuleInfo( &firstModule, &moduleMask, arg1 );
-	} else if ( Cmd_GetHelp( &desc, &help, arg1 ) ) {
-		Cmd_GetModuleInfo( &firstModule, &moduleMask, arg1 );
-	} else {
-		Com_Printf( "found no cvar/command with the name '%s'\n", arg1 );
-		return;
-	}
-
-	if ( isCvar ) {
-		Cvar_PrintFirstHelpLine( arg1 );
-	}
-
-	Com_PrintModules( firstModule, moduleMask );
-
-	if ( !desc ) {
-		Com_Printf( "no help text found for %s '%s'\n", isCvar ? "cvar" : "command", arg1 );
-		return;
-	}
-
-	const char firstLetter = toupper( *desc );
-	Com_Printf( COLOR_HELP"%c%s.\n", firstLetter, desc + 1 );
-	if ( help )
-		Com_Printf( COLOR_HELP"%s\n", help );
+	Com_PrintHelp( arg1, &Com_Printf, qtrue, qtrue, qtrue );
 }
 
 
-static void Cmd_PrintSearchResult( const char *name, const char *desc, const char *help, const char *pattern )
+static void Cmd_PrintSearchResult( const char *name, const char *desc, const char *help, const char *pattern, qbool cvar )
 {
+	const char* const color = cvar ? S_COLOR_CVAR : S_COLOR_CMD;
 	if ( Q_stristr(name, pattern) || (desc && Q_stristr(desc, pattern)) || (help && Q_stristr(help, pattern)) ) {
 		if ( desc )
-			Com_Printf( "    %s - %s\n", name, desc );
+			Com_Printf( "    %s%s ^7- " S_COLOR_HELP "%s\n", color, name, desc );
 		else
-			Com_Printf( "    %s\n", name );
+			Com_Printf( "    %s%s\n", color, name );
 	}
 }
 
@@ -687,7 +659,7 @@ void Cmd_EnumHelp( search_callback_t callback, const char* pattern )
 
 	cmd_function_t* cmd;
 	for ( cmd = cmd_functions; cmd; cmd = cmd->next) {
-		callback( cmd->name, cmd->desc, cmd->help, pattern );
+		callback( cmd->name, cmd->desc, cmd->help, pattern, qfalse );
 	}
 }
 

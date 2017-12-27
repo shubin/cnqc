@@ -238,11 +238,14 @@ static qbool SV_G_GetValue( char* value, int valueSize, const char* key )
 {
 	struct syscall_t { const char* name; int number; };
 	static const syscall_t syscalls[] = {
+		// syscalls
 		{ "trap_LocateInteropData", G_EXT_LOCATEINTEROPDATA },
 		{ "trap_Cvar_SetRange", G_EXT_CVAR_SETRANGE },
 		{ "trap_Cvar_SetHelp", G_EXT_CVAR_SETHELP },
 		{ "trap_Cmd_SetHelp", G_EXT_CMD_SETHELP },
-		{ "trap_Error2", G_EXT_ERROR2 }
+		{ "trap_Error2", G_EXT_ERROR2 },
+		// capabilities
+		{ "cap_ExtraColorCodes", 1 }
 	};
 
 	for ( int i = 0; i < ARRAY_LEN( syscalls ); ++i ) {

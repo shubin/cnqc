@@ -407,7 +407,7 @@ void Cmd_AutoCompleteArgument( const char* cmd_name, int startArg, int compArg )
 // callback with each valid string
 void Cmd_CommandCompletion( void(*callback)(const char* s) );
 
-typedef void (*search_callback_t)( const char* name, const char* desc, const char* help, const char* pattern );
+typedef void (*search_callback_t)( const char* name, const char* desc, const char* help, const char* pattern, qbool cvar );
 void Cmd_EnumHelp( search_callback_t callback, const char* pattern );
 
 // the functions that execute commands get their parameters with these
@@ -505,6 +505,7 @@ typedef struct cvarTableItem_s {
 	const char*		help;
 } cvarTableItem_t;
 
+typedef void ( QDECL *printf_t )( const char* fmt, ... );
 
 cvar_t *Cvar_Get( const char *var_name, const char *value, int flags );
 // creates the variable if it doesn't exist, or returns the existing one
@@ -523,7 +524,9 @@ void	Cvar_RegisterTable( const cvarTableItem_t* cvars, int count, module_t modul
 void	Cvar_SetModule( const char *var_name, module_t module );
 void	Cvar_GetModuleInfo( module_t *firstModule, int *moduleMask, const char *var_name );
 
-void	Cvar_PrintFirstHelpLine( const char *var_name );
+void	Cvar_PrintTypeAndRange( const char *var_name, printf_t print );
+void	Cvar_PrintFirstHelpLine( const char *var_name, printf_t print );
+void	Cvar_PrintFlags( const char *var_name, printf_t print );
 
 void	Cvar_Register( vmCvar_t *vmCvar, const char *varName, const char *defaultValue, int flags );
 // basically a slightly modified Cvar_Get for the interpreted modules
@@ -547,6 +550,8 @@ void	Cvar_VariableStringBuffer( const char *var_name, char *buffer, int bufsize 
 
 int Cvar_Flags( const char *var_name );
 // returns CVAR_NONEXISTENT if cvar doesn't exist or the flags of that particular CVAR.
+
+cvarType_t Cvar_Type( const char *var_name );
 
 void	Cvar_CommandCompletion( void(*callback)(const char *s) );
 // callback with each valid string
@@ -1142,18 +1147,18 @@ const char* Q_itohex( uint64_t number, qbool uppercase, qbool prefix );
 void Help_AllocSplitText( char** desc, char** help, const char* combined );
 
 
-#define COLOR_HELP	"^7"
-#define COLOR_CMD	"^7"
-#define COLOR_CVAR	"^7"
-#define COLOR_VAL	"^7"
-
-
 #define CONSOLE_WIDTH	78
 
 
 void Com_TruncatePrintString( char* buffer, int size, int maxLength );
 
-void Com_PrintModules( module_t firstModule, int moduleMask );
+typedef enum {
+	PHR_NOTFOUND,
+	PHR_NOHELP,
+	PHR_HADHELP
+} printHelpResult_t;
+
+printHelpResult_t Com_PrintHelp( const char* name, printf_t print, qbool printNotFound, qbool printModules, qbool printFlags );
 
 
 #endif // _QCOMMON_H_

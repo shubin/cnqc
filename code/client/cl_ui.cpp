@@ -765,7 +765,9 @@ static qbool CL_UI_GetValue( char* value, int valueSize, const char* key )
 		{ "trap_EnableErrorCallback", UI_EXT_ENABLEERRORCALLBACK },
 		// commands
 		{ "screenshotnc", 1 },
-		{ "screenshotncJPEG", 1 }
+		{ "screenshotncJPEG", 1 },
+		// capabilities
+		{ "cap_ExtraColorCodes", 1 }
 	};
 
 	for ( int i = 0; i < ARRAY_LEN( syscalls ); ++i ) {

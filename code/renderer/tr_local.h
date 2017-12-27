@@ -1411,6 +1411,17 @@ typedef struct {
 
 typedef struct {
 	int		commandId;
+	const shader_t* shader;
+	float	x0, y0;
+	float	x1, y1;
+	float	x2, y2;
+	float	s0, t0;
+	float	s1, t1;
+	float	s2, t2;
+} triangleCommand_t;
+
+typedef struct {
+	int		commandId;
 	trRefdef_t	refdef;
 	viewParms_t	viewParms;
 	int numDrawSurfs;
@@ -1444,6 +1455,7 @@ typedef enum {
 	RC_END_OF_LIST,
 	RC_SET_COLOR,
 	RC_STRETCH_PIC,
+	RC_TRIANGLE,
 	RC_DRAW_SURFS,
 	RC_BEGIN_FRAME,
 	RC_SWAP_BUFFERS,
@@ -1485,6 +1497,8 @@ void RE_EndFrame( int* pcFE, int* pc2D, int* pc3D );
 void RE_SetColor( const float* rgba );
 void RE_StretchPic( float x, float y, float w, float h,
 		float s1, float t1, float s2, float t2, qhandle_t hShader );
+void RE_DrawTriangle( float x0, float y0, float x1, float y1, float x2, float y2,
+		float s0, float t0, float s1, float t1, float s2, float t2, qhandle_t hShader );
 
 int SaveJPGToBuffer( byte* out, int quality, int image_width, int image_height, byte* image_buffer );
 void RE_TakeVideoFrame( int width, int height,

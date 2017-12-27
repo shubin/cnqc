@@ -2002,11 +2002,11 @@ static const cvarTableItem_t cl_cvars[] =
 	{ &cl_shownet, "cl_shownet", "0", CVAR_TEMP, CVART_INTEGER, "-2", "4", help_cl_shownet },
 	{ &cl_showSend, "cl_showSend", "0", CVAR_TEMP, CVART_BOOL, NULL, NULL, help_cl_showSend },
 	{ &cl_showTimeDelta, "cl_showTimeDelta", "0", CVAR_TEMP, CVART_BOOL, NULL, NULL, "prints delta adjustment values and events" },
-	{ &rconPassword, "rconPassword", "", CVAR_TEMP, CVART_STRING, NULL, NULL, "server password, used by /rcon" },
+	{ &rconPassword, "rconPassword", "", CVAR_TEMP, CVART_STRING, NULL, NULL, help_rconPassword },
 	{ &cl_timedemo, "timedemo", "0", 0, CVART_BOOL, NULL, NULL, "demo benchmarking mode" },
-	{ &cl_aviFrameRate, "cl_aviFrameRate", "25", CVAR_ARCHIVE, CVART_INTEGER, "1", "250", "frame-rate for /video" },
-	{ &cl_aviMotionJpeg, "cl_aviMotionJpeg", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "/video stores frames as JPEGs" },
-	{ &rconAddress, "rconAddress", "", 0, CVART_STRING, NULL, NULL, "IP address of the server to /rcon to" },
+	{ &cl_aviFrameRate, "cl_aviFrameRate", "25", CVAR_ARCHIVE, CVART_INTEGER, "1", "250", help_cl_aviFrameRate },
+	{ &cl_aviMotionJpeg, "cl_aviMotionJpeg", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_cl_aviMotionJpeg },
+	{ &rconAddress, "rconAddress", "", 0, CVART_STRING, NULL, NULL, help_rconAddress },
 	{ &cl_maxpackets, "cl_maxpackets", "125", CVAR_ARCHIVE, CVART_INTEGER, "15", "125", "max. packet upload rate" },
 	{ &cl_packetdup, "cl_packetdup", "1", CVAR_ARCHIVE, CVART_INTEGER, "0", "5", "number of extra transmissions per packet" },
 	{ &cl_allowDownload, "cl_allowDownload", "1", CVAR_ARCHIVE, CVART_INTEGER, "-1", "1", help_cl_allowDownload },
@@ -2016,7 +2016,7 @@ static const cvarTableItem_t cl_cvars[] =
 	{ NULL, "name", "UnnamedPlayer", CVAR_USERINFO | CVAR_ARCHIVE, CVART_STRING, NULL, NULL, "your name" },
 	{ NULL, "rate", "25000", CVAR_USERINFO | CVAR_ARCHIVE, CVART_INTEGER, "4000", "99999", "network transfer rate" },
 	{ NULL, "snaps", "30", CVAR_USERINFO | CVAR_ARCHIVE, CVART_INTEGER }, // documented by the mod
-	{ NULL, "password", "", CVAR_USERINFO, CVART_STRING, NULL, NULL, "used by /connect" },
+	{ NULL, "password", "", CVAR_USERINFO, CVART_STRING, NULL, NULL, "used by /" S_COLOR_CMD "connect" },
 	{ &cl_matchAlerts, "cl_matchAlerts", "7", CVAR_ARCHIVE, CVART_BITMASK, "0", XSTRING(MAF_MAX), help_cl_matchAlerts }
 };
 

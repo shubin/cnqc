@@ -131,6 +131,26 @@ void RE_StretchPic( float x, float y, float w, float h, float s1, float t1, floa
 }
 
 
+void RE_DrawTriangle( float x0, float y0, float x1, float y1, float x2, float y2, float s0, float t0, float s1, float t1, float s2, float t2, qhandle_t hShader )
+{
+	R_CMD( triangleCommand_t, RC_TRIANGLE );
+
+	cmd->shader = R_GetShaderByHandle( hShader );
+	cmd->x0 = x0;
+	cmd->y0 = y0;
+	cmd->x1 = x1;
+	cmd->y1 = y1;
+	cmd->x2 = x2;
+	cmd->y2 = y2;
+	cmd->s0 = s0;
+	cmd->t0 = t0;
+	cmd->s1 = s1;
+	cmd->t1 = t1;
+	cmd->s2 = s2;
+	cmd->t2 = t2;
+}
+
+
 // if running in stereo, RE_BeginFrame will be called twice for each RE_EndFrame
 
 void RE_BeginFrame( stereoFrame_t stereoFrame )

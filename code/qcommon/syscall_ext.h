@@ -53,3 +53,5 @@ extern dllSyscall_t syscall;
 			cpma_ext.Name = qtrue; \
 		} \
 	} while (0)
+
+#define GET_CAP(Name) GET_CMD(Name)

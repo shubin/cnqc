@@ -301,6 +301,12 @@ const /* vec4_t */ float* ColorFromChar( char ccode );
 #define COLOR_CYAN		'5'
 #define COLOR_MAGENTA	'6'
 #define COLOR_WHITE		'7'
+#define COLOR_CVAR		'\x20'
+#define COLOR_CMD		'\x21'
+#define COLOR_VAL		'\x22'
+#define COLOR_HELP		'\x23'
+#define COLOR_WAR		'\x24'
+#define COLOR_ERR		'\x25'
 
 #define S_COLOR_BLACK	"^0"
 #define S_COLOR_RED		"^1"
@@ -310,6 +316,12 @@ const /* vec4_t */ float* ColorFromChar( char ccode );
 #define S_COLOR_CYAN	"^5"
 #define S_COLOR_MAGENTA	"^6"
 #define S_COLOR_WHITE	"^7"
+#define S_COLOR_CVAR	"^\x20"
+#define S_COLOR_CMD		"^\x21"
+#define S_COLOR_VAL		"^\x22"
+#define S_COLOR_HELP	"^\x23"
+#define S_COLOR_WAR		"^\x24"
+#define S_COLOR_ERR		"^\x25"
 
 #define MAKERGB( v, r, g, b ) { v[0]=r;v[1]=g;v[2]=b; }
 #define MAKERGBA( v, r, g, b, a ) { v[0]=r;v[1]=g;v[2]=b;v[3]=a; }

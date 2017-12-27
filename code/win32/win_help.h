@@ -1,9 +1,9 @@
 #define help_in_mouse \
 "mouse input mode\n" \
-"    0 = disabled\n" \
-"    1 = raw input\n" \
-"    2 = win32 input"
+S_COLOR_VAL "    0 " S_COLOR_HELP "= Disabled\n" \
+S_COLOR_VAL "    1 " S_COLOR_HELP "= Raw input\n" \
+S_COLOR_VAL "    2 " S_COLOR_HELP "= Win32 input"
 
 #define help_in_minimize \
 "hotkey to minimize/restore the window\n" \
-"Use /minimizekeynames to print the list of usable key names."
+"Use " S_COLOR_CMD "minimizekeynames " S_COLOR_HELP "to print the list of usable key names."

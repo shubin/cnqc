@@ -30,11 +30,36 @@ static cvar_t* con_notifytime;
 static cvar_t* con_scale;
 static cvar_t* con_scaleMode; // 0 = without res, 1 = with res, 2 = 8x12
 static cvar_t* con_speed;
+static cvar_t* con_drawHelp;
 
+#define COLOR_LIST(X) \
+	X(BG,		"101013F6",	qtrue,	"RGBA color of the background") \
+	X(Border,	"4778B2FF",	qtrue,	"RGBA color of the border") \
+	X(Arrow,	"4778B2FF",	qtrue,	"RGBA color of backscroll arrows") \
+	X(Shadow,	"000000FF",	qtrue,	"RGBA color of text shadows") \
+	X(Text,		"E2E2E2",	qfalse,	"RGB color of text") \
+	X(CVar,		"4778B2",	qfalse,	"RGB color of variable names") \
+	X(Cmd,		"4FA7BD",	qfalse,	"RGB color of command names") \
+	X(Value,	"E5BC39",	qfalse,	"RGB color of variable values") \
+	X(Help,		"ABC1C6",	qfalse,	"RGB color of help text") \
+	X(HL,		"303033FF",	qtrue,	help_con_colHL)
+
+#define COLOR_LIST_ITEM( Name, Default, HasAlpha, Help ) \
+	static cvar_t* con_col##Name; \
+	static vec4_t col##Name;
+COLOR_LIST( COLOR_LIST_ITEM )
+#undef COLOR_LIST_ITEM
 
 #define CON_NOTIFYLINES	4
 
 #define CON_TEXTSIZE	(256*1024)
+
+// con_drawHelp flags
+#define DRAWHELP_ENABLE_BIT		1
+#define DRAWHELP_NOTFOUND_BIT	2
+#define DRAWHELP_MODULES_BIT	4
+#define DRAWHELP_ATTRIBS_BIT	8
+#define DRAWHELP_MAX			15
 
 struct console_t {
 	qbool	initialized;
@@ -60,6 +85,14 @@ struct console_t {
 								// for transparent notify lines
 
 	qbool	wasActive;		// was active before Con_PushConsoleInvisible was called?
+
+	char			helpText[MAXPRINTMSG];
+	int				helpX;		// char index
+	float			helpY;		// top coordinate
+	int				helpWidth;	// char count of the longest line
+	int				helpLines;	// line count
+	qbool			helpDraw;
+	float			helpXAdjust;
 };
 
 static console_t con;
@@ -70,6 +103,74 @@ static console_t con;
 
 int g_console_field_width = CONSOLE_WIDTH;
 
+
+static qbool IsValidHexChar( char c )
+{
+	return
+		( c >= '0' && c <= '9' ) ||
+		( c >= 'a' && c <= 'f' ) ||
+		( c >= 'A' && c <= 'F' );
+}
+
+static qbool IsValidHexColor( const char* s, qbool hasAlpha )
+{
+	const int chars = hasAlpha ? 8 : 6;
+	for ( int i = 0; i < chars; ++i ) {
+		if ( *s == '\0' || !IsValidHexChar(*s) )
+			return qfalse;
+		s++;
+	}
+
+	return *s == '\0';
+}
+
+static void GetFloatColor( float* c, cvar_t* cvar, qbool hasAlpha )
+{
+	c[0] = 1.0f;
+	c[1] = 1.0f;
+	c[2] = 1.0f;
+	c[3] = 1.0f;
+
+	const char* s = cvar->string;
+	if ( !IsValidHexColor(s, hasAlpha) ) {
+		s = cvar->resetString;
+		if ( !IsValidHexColor(s, hasAlpha) )
+			return;
+	}
+
+	unsigned int uc[4];
+	if ( hasAlpha ) {
+		if ( sscanf(s, "%02X%02X%02X%02X", &uc[0], &uc[1], &uc[2], &uc[3]) != 4 )
+			return;
+		c[0] = uc[0] / 255.0f;
+		c[1] = uc[1] / 255.0f;
+		c[2] = uc[2] / 255.0f;
+		c[3] = uc[3] / 255.0f;
+	} else {
+		if ( sscanf(s, "%02X%02X%02X", &uc[0], &uc[1], &uc[2]) != 3 )
+			return;
+		c[0] = uc[0] / 255.0f;
+		c[1] = uc[1] / 255.0f;
+		c[2] = uc[2] / 255.0f;
+		c[3] = 1.0f;
+	}
+}
+
+const float* ConsoleColorFromChar( char ccode )
+{
+	if ( ccode == COLOR_WHITE )
+		return colText;
+	if ( ccode == COLOR_CVAR )
+		return colCVar;
+	if ( ccode == COLOR_CMD )
+		return colCmd;
+	if ( ccode == COLOR_VAL )
+		return colValue;
+	if ( ccode == COLOR_HELP )
+		return colHelp;
+
+	return ColorFromChar( ccode );
+}
 
 float Con_SetConsoleVisibility( float fraction )
 {
@@ -287,6 +388,9 @@ static void Con_ResizeFont()
 
 static const cvarTableItem_t con_cvars[] =
 {
+#define COLOR_LIST_ITEM( Name, Default, HasAlpha, Help ) { &con_col##Name, "con_col" #Name, Default, CVAR_ARCHIVE, CVART_STRING, NULL, NULL, Help },
+	COLOR_LIST( COLOR_LIST_ITEM )
+#undef COLOR_LIST_ITEM
 	// con_scale:
 	// bugs in the renderer's overflow handling will cause crashes
 	// if the console has too many polys/verts because of too small a font
@@ -294,7 +398,8 @@ static const cvarTableItem_t con_cvars[] =
 	{ &con_notifytime, "con_notifytime", "3", CVAR_ARCHIVE, CVART_FLOAT, "-1", "30", help_con_notifytime },
 	{ &con_scale, "con_scale", "1.2", CVAR_ARCHIVE, CVART_FLOAT, "0.25", "10", "console text scaling factor" },
 	{ &con_scaleMode, "con_scaleMode", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "2", help_con_scaleMode },
-	{ &con_speed, "con_speed", "1000", CVAR_ARCHIVE, CVART_FLOAT, "0.1", "1000", "console opening/closing speed" }
+	{ &con_speed, "con_speed", "1000", CVAR_ARCHIVE, CVART_FLOAT, "0.1", "1000", "console opening/closing speed" },
+	{ &con_drawHelp, "con_drawHelp", "1", CVAR_ARCHIVE, CVART_BITMASK, "0", XSTRING(DRAWHELP_MAX), help_con_drawHelp }
 };
 
 
@@ -437,19 +542,18 @@ static void Con_DrawInput()
 		const int length = g_consoleField.acLength;
 		if ( length > 0 ) {
 			// note that Field_Draw takes integers as arguments so we need to truncate our coordinates and font sizes to match
-			const vec4_t highlightColor = { 0.5f, 0.5f, 0.2f, 0.45f };
 			const int offset = g_consoleField.acOffset;
-			re.SetColor( highlightColor );
+			re.SetColor( colHL );
 			re.DrawStretchPic( con.xadjust + (offset + 1) * (int)con.cw, y, length * (int)con.cw, (int)con.ch, 0, 0, 0, 0, cls.whiteShader );
 		}
 	}
 
-	re.SetColor( colorBlack );
+	re.SetColor( colShadow );
 	SCR_DrawChar( con.xadjust + 1, y + 1, con.cw, con.ch, ']' );
-	re.SetColor( colorWhite );
+	re.SetColor( colText );
 	SCR_DrawChar( con.xadjust, y, con.cw, con.ch, ']' );
 
-	Field_Draw( &g_consoleField, con.xadjust + con.cw, y, con.cw, con.ch );
+	Field_Draw( &g_consoleField, con.xadjust + con.cw, y, con.cw, con.ch, qtrue );
 }
 
 
@@ -507,16 +611,16 @@ static void Con_DrawNotify()
 
 		if (chat_team)
 		{
-			SCR_DrawStringEx( 8, y, cw, ch, "say_team:", qtrue, qtrue, NULL );
+			SCR_DrawString( 8, y, cw, ch, "say_team:", qfalse );
 			skip = 10;
 		}
 		else
 		{
-			SCR_DrawStringEx( 8, y, cw, ch, "say:", qtrue, qtrue, NULL );
+			SCR_DrawString( 8, y, cw, ch, "say:", qfalse );
 			skip = 5;
 		}
 
-		Field_Draw( &chatField, skip * cw, y, cw, ch );
+		Field_Draw( &chatField, skip * cw, y, cw, ch, qfalse );
 		y += ch;
 	}
 
@@ -534,12 +638,110 @@ static void Con_FillRect( float x, float y, float w, float h, const vec4_t color
 }
 
 
+static void QDECL Con_HelpPrintf( const char* fmt, ... )
+{
+	va_list argptr;
+	va_start( argptr, fmt );
+	Q_vsnprintf( con.helpText, sizeof(con.helpText), fmt, argptr );
+	va_end( argptr );
+
+	const float* color = colText;
+	const char* c = con.helpText;
+	while ( *c != '\0' ) {
+		// measure the length of the current word
+		int wl = 0;
+		while ( c[wl] != '\0' && c[wl] > ' ' )
+			wl++;
+
+		const qbool wordBreak = (wl > 0) && (con.helpX + wl >= CONSOLE_WIDTH) && (wl < CONSOLE_WIDTH);
+		const qbool forcedBreak = con.helpX >= CONSOLE_WIDTH;
+		if ( *c == '\n' || forcedBreak || wordBreak ) {
+			if ( !forcedBreak && !wordBreak )
+				c++;
+			con.helpWidth = max( con.helpWidth, con.helpX );
+			con.helpX = 0;
+			con.helpY += con.ch;
+			con.helpLines++;
+			continue;
+		}
+
+		if ( Q_IsColorString(c) ) {
+			color = ConsoleColorFromChar( c[1] );
+			c += 2;
+			continue;
+		}
+
+		if ( con.helpDraw ) {
+			re.SetColor( colShadow );
+			SCR_DrawChar( con.helpXAdjust + con.helpX * con.cw + 1, con.helpY + 1, con.cw, con.ch, *c );
+			re.SetColor( color );
+			SCR_DrawChar( con.helpXAdjust + con.helpX * con.cw, con.helpY, con.cw, con.ch, *c );
+		}
+		c++;
+		con.helpX++;
+	}
+}
+
+
+static void Con_DrawHelp()
+{
+	if( !(con_drawHelp->integer & DRAWHELP_ENABLE_BIT) )
+		return;
+
+	if ( *g_consoleField.buffer == '\0' )
+		return;
+
+	if ( con.displayFrac == 0.0f || con.displayFrac < con.finalFrac )
+		return;
+
+	Cmd_TokenizeString( g_consoleField.buffer );
+	if ( Cmd_Argc() < 1 )
+		return;
+
+	const char* name = Cmd_Argv(0);
+	if ( *name == '/' || *name == '\\' )
+		name++;
+
+	if ( *name == '\0' )
+		return;
+
+	const qbool printAlways = (con_drawHelp->integer & DRAWHELP_NOTFOUND_BIT) != 0;
+	const qbool printModules = (con_drawHelp->integer & DRAWHELP_MODULES_BIT) != 0;
+	const qbool printAttribs = (con_drawHelp->integer & DRAWHELP_ATTRIBS_BIT) != 0;
+	con.helpDraw = qfalse;
+	con.helpX = 0;
+	con.helpWidth = 0;
+	con.helpLines = 0;
+	con.helpXAdjust = con.xadjust + 2 * con.cw;
+	const printHelpResult_t result = Com_PrintHelp( name, &Con_HelpPrintf, qfalse, printModules, printAttribs );
+	if ( result == PHR_NOTFOUND || ( result == PHR_NOHELP && !printAlways ) )
+		return;
+
+	const float d = (int)con.ch;
+	const float x = (int)(con.helpXAdjust - con.cw);
+	const float y = (int)(cls.glconfig.vidHeight * con.displayFrac);
+	const float w = (int)((con.helpWidth + 2) * con.cw);
+	const float h = (int)((con.helpLines + 1) * con.ch);
+	con.helpDraw = qtrue;
+	con.helpX = 0;
+	con.helpY = y + 1.5f * con.ch;
+	const float yh = (int)(con.helpY - con.ch / 2.0f);
+	re.SetColor( colBG );
+	re.DrawTriangle( x, y, x + d, y + d, x, y + d, 0, 0, 0, 0, 0, 0, cls.whiteShader );
+	Con_FillRect( x, yh, w, h, colBG );
+	Con_FillRect( x + 1, yh + h + 0, w - 1, 1, colBorder );
+	Con_FillRect( x + 2, yh + h + 1, w - 2, 1, colBorder );
+	Con_FillRect( x + w + 0, yh + 1, 1, h + 1, colBorder );
+	Con_FillRect( x + w + 1, yh + 2, 1, h + 0, colBorder );
+	Com_PrintHelp( name, &Con_HelpPrintf, qfalse, printModules, printAttribs );
+}
+
+
 static void Con_DrawSolidConsole( float frac )
 {
 	int		i, x, y;
 	int		rows;
 	int		row;
-	vec4_t	fill;
 
 	int scanlines = Com_Clamp( 0, cls.glconfig.vidHeight, cls.glconfig.vidHeight * frac );
 	if (scanlines <= 0)
@@ -547,12 +749,10 @@ static void Con_DrawSolidConsole( float frac )
 
 	// draw the background
 	y = scanlines - 2;
-	MAKERGBA( fill, 0.33f, 0.33f, 0.33f, 1.0 );
-	Con_FillRect( 0, 0, cls.glconfig.vidWidth, y, fill );
+	Con_FillRect( 0, 0, cls.glconfig.vidWidth, y, colBG );
+	Con_FillRect( 0, y, cls.glconfig.vidWidth, 2, colBorder );
 
-	MAKERGBA( fill, 0.25f, 0.25f, 0.25f, 1.0 );
-	Con_FillRect( 0, y, cls.glconfig.vidWidth, 2, fill );
-
+	re.SetColor( colText );
 	i = sizeof( Q3_VERSION )/sizeof(char) - 1;
 	x = cls.glconfig.vidWidth - SMALLCHAR_WIDTH;
 	while (--i >= 0) {
@@ -570,7 +770,7 @@ static void Con_DrawSolidConsole( float frac )
 	if (con.display != con.current) {
 		// draw arrows to show the buffer is backscrolled
 		const int xEnd = ( cls.glconfig.vidWidth - con.xadjust ) / con.cw;
-		re.SetColor( colorBlack );
+		re.SetColor( colArrow );
 		for (x = 0; x < xEnd; x += 4)
 			SCR_DrawChar( con.xadjust + x * con.cw, y, con.cw, con.ch, '^' );
 		y -= con.ch;
@@ -583,7 +783,7 @@ static void Con_DrawSolidConsole( float frac )
 	}
 
 	char color = COLOR_WHITE;
-	re.SetColor( ColorFromChar( color ) );
+	re.SetColor( ConsoleColorFromChar( color ) );
 
 	con.rowsVisible = 0;
 	for (i = 0; i < rows; ++i, --row, y -= con.ch )
@@ -600,16 +800,16 @@ static void Con_DrawSolidConsole( float frac )
 
 		const short* text = con.text + (row % con.totallines)*con.linewidth;
 
-		re.SetColor( colorBlack );
-		for (int j = 0; j < con.linewidth; ++j) {
-			SCR_DrawChar( 1 + con.xadjust + j * con.cw, 1 + y, con.cw, con.ch, (text[j] & 0xFF) );
+		re.SetColor( colShadow );
+		for (int i = 0; i < con.linewidth; ++i) {
+			SCR_DrawChar( 1 + con.xadjust + i * con.cw, 1 + y, con.cw, con.ch, (text[i] & 0xFF) );
 		}
 
-		re.SetColor( colorWhite );
+		re.SetColor( colText );
 		for (int j = 0; j < con.linewidth; ++j) {
 			if ((text[j] >> 8) != color) {
 				color = (text[j] >> 8);
-				re.SetColor( ColorFromChar( color ) );
+				re.SetColor( ConsoleColorFromChar( color ) );
 			}
 			SCR_DrawChar( con.xadjust + j * con.cw, y, con.cw, con.ch, (text[j] & 0xFF) );
 		}
@@ -617,6 +817,7 @@ static void Con_DrawSolidConsole( float frac )
 
 	Con_DrawInput();
 	CL_MapDownload_DrawConsole( con.cw, con.ch );
+	Con_DrawHelp();
 
 	re.SetColor( NULL );
 }
@@ -675,6 +876,10 @@ void Con_RunConsole()
 		if (con.finalFrac < con.displayFrac)
 			con.displayFrac = con.finalFrac;
 	}
+
+#define COLOR_LIST_ITEM( Name, Default, HasAlpha, Help ) GetFloatColor( col##Name, con_col##Name, HasAlpha );
+	COLOR_LIST( COLOR_LIST_ITEM )
+#undef COLOR_LIST_ITEM
 }
 
 

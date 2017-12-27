@@ -87,7 +87,7 @@ void SCR_DrawChar( float x, float y, float cw, float ch, int c )
 
 // draws a string with a drop shadow, optionally with colorcodes
 
-void SCR_DrawStringEx( float x, float y, float cw, float ch, const char* string, qbool allowColor, qbool showColorCodes, const float* firstColor )
+void SCR_DrawStringEx( float x, float y, float cw, float ch, const char* string, drawStringColors_t colors, qbool showColorCodes, const float* firstColor )
 {
 	float xx;
 	const char* s;
@@ -114,10 +114,15 @@ void SCR_DrawStringEx( float x, float y, float cw, float ch, const char* string,
 	// draw the text, possibly with colors
 	s = string;
 	xx = x;
-	re.SetColor( firstColor ? firstColor : colorWhite );
+	if ( firstColor == NULL )
+		firstColor = colors == DSC_CONSOLE ? ConsoleColorFromChar( COLOR_WHITE ) : colorWhite;
+	re.SetColor( firstColor );
 	while ( *s ) {
-		if ( allowColor && Q_IsColorString( s ) ) {
-			re.SetColor( ColorFromChar( s[1] ) );
+		if ( Q_IsColorString( s ) ) {
+			if ( colors == DSC_NORMAL )
+				re.SetColor( ColorFromChar( s[1] ) );
+			else if ( colors == DSC_CONSOLE )
+				re.SetColor( ConsoleColorFromChar( s[1] ) );
 			if ( !showColorCodes ) {
 				s += 2;
 				continue;
@@ -134,9 +139,9 @@ void SCR_DrawStringEx( float x, float y, float cw, float ch, const char* string,
 
 // draws a string with a drop shadow, optionally with colorcodes
 
-void SCR_DrawString( float x, float y, float cw, float ch, const char* string, qbool allowColor )
+void SCR_DrawString(float x, float y, float cw, float ch, const char* s, qbool allowColor)
 {
-	SCR_DrawStringEx( x, y, cw, ch, string, allowColor, qfalse, NULL );
+	SCR_DrawStringEx( x, y, cw, ch, s, allowColor ? DSC_NORMAL : DSC_NONE, qfalse, NULL );
 }
 
 

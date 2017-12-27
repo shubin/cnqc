@@ -1,17 +1,17 @@
 #define help_cl_timeNudge \
 "id's crippled timenudge\n" \
-"This still exists in CPMA, but should always be 0.\n" \
+"This still exists in CPMA, but should always be " S_COLOR_VAL "0 " S_COLOR_HELP ".\n" \
 "All it really does now is mess up the automatic adaptive nudges."
 
 #define help_cl_shownet \
 "prints network info\n" \
-"   -2 = commandTime\n" \
-"   -1 = entity removed/changed events\n" \
-"    0 = disabled\n" \
-"    1 = message lengths\n" \
-"    2 = message types, commandTime, etc\n" \
-"    3 = 2 + entity parsing details\n" \
-"    4 = 2 + player state details"
+S_COLOR_VAL "   -2 " S_COLOR_HELP "= Command time\n" \
+S_COLOR_VAL "   -1 " S_COLOR_HELP "= Entity removed/changed events\n" \
+S_COLOR_VAL "    0 " S_COLOR_HELP "= Disabled\n" \
+S_COLOR_VAL "    1 " S_COLOR_HELP "= Message lengths\n" \
+S_COLOR_VAL "    2 " S_COLOR_HELP "= Message types, command time, etc\n" \
+S_COLOR_VAL "    3 " S_COLOR_HELP "= " S_COLOR_VAL "2 " S_COLOR_HELP "+ entity parsing details\n" \
+S_COLOR_VAL "    4 " S_COLOR_HELP "= " S_COLOR_VAL "2 " S_COLOR_HELP "+ player state details"
 
 #define help_cl_showSend \
 "prints client to server packet info\n" \
@@ -20,29 +20,29 @@
 
 #define help_cl_allowDownload \
 "selects the download system\n" \
-"   -1 = id's old download system\n" \
-"    0 = downloads disabled\n" \
-"    1 = CNQ3's new download system"
+S_COLOR_VAL "   -1 " S_COLOR_HELP "= Id's old download system\n" \
+S_COLOR_VAL "    0 " S_COLOR_HELP "= Downloads disabled\n" \
+S_COLOR_VAL "    1 " S_COLOR_HELP "= CNQ3's new download system"
 
 #define help_con_scaleMode \
 "console text scaling mode\n" \
-"    0 = text size scales with con_scale but not the resolution\n" \
-"    1 = text size scales with con_scale and the resolution\n" \
-"    2 = text size is always 8x12"
+S_COLOR_VAL "    0 " S_COLOR_HELP "= Text size scales with con_scale but not the resolution\n" \
+S_COLOR_VAL "    1 " S_COLOR_HELP "= Text size scales with con_scale and the resolution\n" \
+S_COLOR_VAL "    2 " S_COLOR_HELP "= Text size is always 8x12"
 
 #define help_plus_minus \
 "\nAbout commands starting with '+' or '-':\n" \
-"- If '+cmdname' is called from a bind, the command is executed every frame until the bind key is released.\n" \
-"- If '+cmdname' is not called from a bind, the command is executed every frame until '-cmdname' is called."
+"- If '" S_COLOR_CMD "+cmdname" S_COLOR_HELP "' is called from a bind, the command is executed every frame until the bind key is released.\n" \
+"- If '" S_COLOR_CMD "+cmdname" S_COLOR_HELP "' is not called from a bind, the command is executed every frame until '" S_COLOR_CMD "-cmdname" S_COLOR_HELP "' is called."
 
 #define help_cl_debugMove \
 "prints a graph of view angle deltas\n" \
-"    0 = disabled\n" \
-"    1 = horizontal axis\n" \
-"    2 = vertical axis"
+S_COLOR_VAL "    0 " S_COLOR_HELP "= Disabled\n" \
+S_COLOR_VAL "    1 " S_COLOR_HELP "= Horizontal axis\n" \
+S_COLOR_VAL "    2 " S_COLOR_HELP "= Vertical axis"
 
 #define help_bind_extra \
-"Use /bindkeylist to print the list of key names."
+"Use " S_COLOR_CMD "bindkeylist " S_COLOR_HELP "to print the list of key names."
 
 #define help_bind \
 "binds a command to a key\n" \
@@ -54,17 +54,72 @@ help_bind_extra
 
 #define help_cl_matchAlerts \
 "lets you know when a match is starting\n" \
-"    1 = when unfocused (otherwise only when minimized)\n" \
-"    2 = flash the task bar (Windows only)\n" \
-"    4 = beep once (Windows only)\n" \
-"    8 = unmute"
+S_COLOR_VAL "    1 " S_COLOR_HELP "= When unfocused (otherwise only when minimized)\n" \
+S_COLOR_VAL "    2 " S_COLOR_HELP "= Flash the task bar (Windows only)\n" \
+S_COLOR_VAL "    4 " S_COLOR_HELP "= Beep once (Windows only)\n" \
+S_COLOR_VAL "    8 " S_COLOR_HELP "= Unmute"
 
 #define help_s_autoMute \
 "selects when the audio output should be disabled\n" \
-"    0 = never\n" \
-"    1 = window is not focused\n" \
-"    2 = window is minimized"
+S_COLOR_VAL "    0 " S_COLOR_HELP "= Never\n" \
+S_COLOR_VAL "    1 " S_COLOR_HELP "= Window is not focused\n" \
+S_COLOR_VAL "    2 " S_COLOR_HELP "= Window is minimized"
 
 #define help_con_notifytime \
 "seconds messages stay visible in the notify area\n" \
-"If -1, CPMA will draw the notify area with the 'Console' SuperHUD element."
+"If " S_COLOR_VAL "-1" S_COLOR_HELP ", CPMA will draw the notify area with the 'Console' SuperHUD element."
+
+#define help_m_accelStyle \
+S_COLOR_VAL "0" S_COLOR_HELP "=original, " S_COLOR_VAL "1" S_COLOR_HELP "=new"
+
+#define help_m_accelOffset \
+"offset for the power function\n" \
+"For " S_COLOR_CVAR "m_accelStyle " S_COLOR_VAL "1 " S_COLOR_HELP "only."
+
+#define help_m_limit \
+"mouse speed cap (" S_COLOR_VAL "0" S_COLOR_HELP "=disabled)\n" \
+"For " S_COLOR_CVAR "m_accelStyle " S_COLOR_VAL "0 " S_COLOR_HELP "only."
+
+#define help_m_forward \
+"forward/backwards mouse sensitivity (" S_COLOR_CMD "+strafe" S_COLOR_HELP ")"
+
+#define help_m_side \
+"left/right mouse sensitivity (" S_COLOR_CMD "+strafe" S_COLOR_HELP ")"
+
+#define help_cl_pitchspeed \
+S_COLOR_CMD "+lookup +lookdown " S_COLOR_HELP "speed"
+
+#define help_cl_yawspeed \
+S_COLOR_CMD "+right +left " S_COLOR_HELP "speed"
+
+#define help_cl_run \
+"running enabled (" S_COLOR_VAL "0" S_COLOR_HELP "=walk)"
+
+#define help_cl_freelook \
+S_COLOR_VAL "0 " S_COLOR_HELP "means you can't look up/down"
+
+#define help_cl_showMouseRate \
+"prints info when " S_COLOR_CVAR "m_accel " S_COLOR_HELP "!= " S_COLOR_VAL "0"
+
+#define help_rconPassword \
+"server password, used by /" S_COLOR_CMD "rcon"
+
+#define help_cl_aviFrameRate \
+"frame-rate for /" S_COLOR_CMD "video"
+
+#define help_cl_aviMotionJpeg \
+"/" S_COLOR_CMD "video " S_COLOR_HELP "stores frames as JPEGs"
+
+#define help_rconAddress \
+"IP address of the server to /" S_COLOR_CMD "rcon " S_COLOR_HELP "to"
+
+#define help_con_colHL \
+"RGBA color of auto-completion highlights\n" \
+"This requires " S_COLOR_CVAR "con_completionStyle " S_COLOR_VAL "1" S_COLOR_HELP "."
+
+#define help_con_drawHelp \
+"draws help text below the console\n" \
+S_COLOR_VAL "    1 " S_COLOR_HELP "= Enables the help panel below the console\n" \
+S_COLOR_VAL "    2 " S_COLOR_HELP "= Draws the help panel even if the cvar/cmd has no help text\n" \
+S_COLOR_VAL "    4 " S_COLOR_HELP "= Draws the list of modules\n" \
+S_COLOR_VAL "    8 " S_COLOR_HELP "= Draws the list of attributes (cvars only)"

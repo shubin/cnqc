@@ -874,6 +874,62 @@ static const void* RB_StretchPic( const void* data )
 }
 
 
+static const void* RB_Triangle( const void* data )
+{
+	const triangleCommand_t* cmd = (const triangleCommand_t*)data;
+
+	if ( !backEnd.projection2D )
+		RB_SetGL2D();
+
+	const shader_t* shader = cmd->shader;
+	if ( shader != tess.shader ) {
+		if ( tess.numIndexes ) {
+			RB_EndSurface();
+		}
+		backEnd.currentEntity = &backEnd.entity2D;
+		RB_BeginSurface( shader, 0 );
+	}
+
+	RB_CHECKOVERFLOW( 3, 3 );
+	int numVerts = tess.numVertexes;
+	int numIndexes = tess.numIndexes;
+
+	tess.numVertexes += 3;
+	tess.numIndexes += 3;
+
+	tess.indexes[ numIndexes + 0 ] = numVerts + 0;
+	tess.indexes[ numIndexes + 1 ] = numVerts + 1;
+	tess.indexes[ numIndexes + 2 ] = numVerts + 2;
+
+	*(int *)tess.vertexColors[ numVerts ] =
+		*(int *)tess.vertexColors[ numVerts + 1 ] =
+		*(int *)tess.vertexColors[ numVerts + 2 ] = *(int *)backEnd.color2D;
+
+	tess.xyz[ numVerts ][0] = cmd->x0;
+	tess.xyz[ numVerts ][1] = cmd->y0;
+	tess.xyz[ numVerts ][2] = 0;
+
+	tess.texCoords[ numVerts ][0][0] = cmd->s0;
+	tess.texCoords[ numVerts ][0][1] = cmd->t0;
+
+	tess.xyz[ numVerts + 1 ][0] = cmd->x1;
+	tess.xyz[ numVerts + 1 ][1] = cmd->y1;
+	tess.xyz[ numVerts + 1 ][2] = 0;
+
+	tess.texCoords[ numVerts + 1 ][0][0] = cmd->s1;
+	tess.texCoords[ numVerts + 1 ][0][1] = cmd->t1;
+
+	tess.xyz[ numVerts + 2 ][0] = cmd->x2;
+	tess.xyz[ numVerts + 2 ][1] = cmd->y2;
+	tess.xyz[ numVerts + 2 ][2] = 0;
+
+	tess.texCoords[ numVerts + 2 ][0][0] = cmd->s2;
+	tess.texCoords[ numVerts + 2 ][0][1] = cmd->t2;
+
+	return (const void*)(cmd + 1);
+}
+
+
 static const void* RB_DrawSurfs( const void* data )
 {
 	const drawSurfsCommand_t* cmd = (const drawSurfsCommand_t*)data;
@@ -1061,6 +1117,9 @@ void RB_ExecuteRenderCommands( const void *data )
 			break;
 		case RC_STRETCH_PIC:
 			data = RB_StretchPic( data );
+			break;
+		case RC_TRIANGLE:
+			data = RB_Triangle( data );
 			break;
 		case RC_DRAW_SURFS:
 			data = RB_DrawSurfs( data );

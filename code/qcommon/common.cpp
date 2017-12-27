@@ -2729,9 +2729,9 @@ static void PrintCmdMatches( const char *s )
 	const char h = help != NULL ? 'h' : ' ';
 
 	if ( desc )
-		Com_sprintf( msg, sizeof(msg), " %c  " COLOR_CMD "%s - " COLOR_HELP "%s\n", h, s, desc );
+		Com_sprintf( msg, sizeof(msg), " %c  " S_COLOR_CMD "%s ^7- " S_COLOR_HELP "%s\n", h, s, desc );
 	else
-		Com_sprintf( msg, sizeof(msg), " %c  " COLOR_CMD "%s\n", h, s );
+		Com_sprintf( msg, sizeof(msg), " %c  " S_COLOR_CMD "%s\n", h, s );
 
 	Com_TruncatePrintString( msg, sizeof(msg), CONSOLE_WIDTH );
 	Com_Printf( msg );
@@ -2749,11 +2749,12 @@ static void PrintCvarMatches( const char *s )
 	Cvar_GetHelp( &desc, &help, s );
 	const char h = help != NULL ? 'h' : ' ';
 	const char u = ( Cvar_Flags(s) & CVAR_USER_CREATED ) != 0 ? '?' : h;
+	const char* const q = Cvar_Type(s) == CVART_STRING ? "\"" : "";
 
 	if ( desc )
-		Com_sprintf( msg, sizeof(msg), " %c  " COLOR_CVAR "%s^7 = \"" COLOR_VAL "%s^7\" - " COLOR_HELP "%s\n", u, s, Cvar_VariableString( s ), desc );
+		Com_sprintf( msg, sizeof(msg), " %c  " S_COLOR_CVAR "%s^7 = %s" S_COLOR_VAL "%s^7%s - " S_COLOR_HELP "%s\n", u, s, q, Cvar_VariableString( s ), q, desc );
 	else
-		Com_sprintf( msg, sizeof(msg), " %c  " COLOR_CVAR "%s^7 = \"" COLOR_VAL "%s^7\"\n", u, s, Cvar_VariableString( s ) );
+		Com_sprintf( msg, sizeof(msg), " %c  " S_COLOR_CVAR "%s^7 = %s" S_COLOR_VAL "%s^7%s\n", u, s, q, Cvar_VariableString( s ), q );
 
 	Com_TruncatePrintString( msg, sizeof(msg), CONSOLE_WIDTH );
 	Com_Printf( msg );
@@ -3322,7 +3323,7 @@ void Com_TruncatePrintString( char* buffer, int size, int maxLength )
 }
 
 
-void Com_PrintModules( module_t firstModule, int moduleMask )
+static void Com_PrintModules( module_t firstModule, int moduleMask, printf_t print )
 {
 #define MODULE_ITEM(Enum, Desc) Desc, 
 	static const char* ModuleNames[MODULE_COUNT + 1] =
@@ -3332,21 +3333,68 @@ void Com_PrintModules( module_t firstModule, int moduleMask )
 	};
 #undef MODULE_ITEM
 
-	if ( firstModule == MODULE_NONE || moduleMask == 0 )
+	if ( firstModule == MODULE_NONE || moduleMask == 0 ) {
+		print( "Module: Unknown\n" );
 		return;
+	}
 
 	const int otherModules = moduleMask & (~(1 << firstModule));
 
 	if ( otherModules )
-		Com_Printf( "Modules: " );
+		print( "Modules: " );
 	else
-		Com_Printf( "Module: " );
-	Com_Printf( "%s", ModuleNames[firstModule] );
+		print( "Module: " );
+	print( "%s", ModuleNames[firstModule] );
 	
 	for ( int i = 0; i < 32; ++i ) {
 		if ( (otherModules >> i) & 1 )
-			Com_Printf( ", %s", ModuleNames[i] );
+			print( ", %s", ModuleNames[i] );
 	}
 
-	Com_Printf("\n");
+	print( "\n" );
+}
+
+
+printHelpResult_t Com_PrintHelp( const char* name, printf_t print, qbool printNotFound, qbool printModules, qbool printFlags )
+{
+	qbool isCvar = qfalse;
+	const char *desc;
+	const char *help;
+	module_t firstModule;
+	int moduleMask;
+	if ( Cvar_GetHelp( &desc, &help, name ) ) {
+		isCvar = qtrue;
+		Cvar_GetModuleInfo( &firstModule, &moduleMask, name );
+	} else if ( Cmd_GetHelp( &desc, &help, name ) ) {
+		Cmd_GetModuleInfo( &firstModule, &moduleMask, name );
+	} else {
+		if ( printNotFound )
+			print( "found no cvar/command with the name '%s'\n", name );
+		return PHR_NOTFOUND;
+	}
+
+	if ( isCvar )
+		Cvar_PrintFirstHelpLine( name, print );
+	else
+		print( S_COLOR_CMD "%s\n", name );
+
+	if ( printModules )
+		Com_PrintModules( firstModule, moduleMask, print );
+
+	if ( isCvar && printFlags )
+		Cvar_PrintFlags( name, print );
+
+	if ( !desc ) {
+		if ( printNotFound )
+			print(	"no help text found for %s %s%s\n",
+			isCvar ? "cvar" : "command", isCvar ? S_COLOR_CVAR : S_COLOR_CMD, name );
+		return PHR_NOHELP;
+	}
+
+	const char firstLetter = toupper( *desc );
+	print( S_COLOR_HELP "%c%s" S_COLOR_HELP ".\n", firstLetter, desc + 1 );
+	if ( help )
+		print( S_COLOR_HELP "%s\n", help );
+
+	return PHR_HADHELP;
 }

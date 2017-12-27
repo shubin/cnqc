@@ -213,7 +213,7 @@ EDIT FIELDS
 // handles horizontal scrolling and cursor blinking
 // position and char sizes are in pixels
 
-void Field_Draw( field_t* edit, int x, int y, int cw, int ch )
+void Field_Draw( field_t* edit, int x, int y, int cw, int ch, qbool extColors )
 {
 	int		len;
 	int		drawLen;
@@ -222,6 +222,7 @@ void Field_Draw( field_t* edit, int x, int y, int cw, int ch )
 	char	str[MAX_STRING_CHARS];
 	int		i;
 	int		colorCode;
+	const float* firstColor;
 
 	drawLen = edit->widthInChars + 1;
 	len = strlen( edit->buffer );
@@ -259,7 +260,8 @@ void Field_Draw( field_t* edit, int x, int y, int cw, int ch )
 	Com_Memcpy( str, edit->buffer + prestep, drawLen );
 	str[ drawLen ] = 0;
 
-	SCR_DrawStringEx( x, y, cw, ch, str, qtrue, qtrue, ColorFromChar( colorCode ) );
+	firstColor = extColors ? ConsoleColorFromChar( colorCode ) : ColorFromChar( colorCode );
+	SCR_DrawStringEx( x, y, cw, ch, str, extColors ? DSC_CONSOLE : DSC_NORMAL, qtrue, firstColor );
 
 	if ( (int)( cls.realtime >> 8 ) & 1 ) {
 		return;		// off blink
@@ -272,7 +274,10 @@ void Field_Draw( field_t* edit, int x, int y, int cw, int ch )
 	}
 
 	i = drawLen - strlen( str );
+	firstColor = extColors ? ConsoleColorFromChar( COLOR_WHITE ) : ColorFromChar( COLOR_WHITE );
+	re.SetColor( firstColor );
 	SCR_DrawChar( x + ( edit->cursor - prestep - i ) * cw, y, cw, ch, cursorChar );
+	re.SetColor( NULL );
 }
 
 

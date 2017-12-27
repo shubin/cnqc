@@ -122,7 +122,7 @@ void Cvar_VariableStringBuffer( const char *var_name, char *buffer, int bufsize 
 }
 
 
-int Cvar_Flags(const char *var_name)
+int Cvar_Flags( const char *var_name )
 {
 	const cvar_t* var;
 
@@ -130,6 +130,17 @@ int Cvar_Flags(const char *var_name)
 		return CVAR_NONEXISTENT;
 
 	return var->flags;
+}
+
+
+cvarType_t Cvar_Type( const char *var_name )
+{
+	const cvar_t* var;
+
+	if (!(var = Cvar_FindVar(var_name)))
+		return CVART_STRING;
+
+	return var->type;
 }
 
 
@@ -151,7 +162,7 @@ void Cvar_EnumHelp( search_callback_t callback, const char* pattern )
 	cvar_t* cvar;
 	for ( cvar = cvar_vars; cvar; cvar = cvar->next ) {
 		if( cvar->name && !(cvar->flags & CVAR_USER_CREATED) )
-			callback( cvar->name, cvar->desc, cvar->help, pattern );
+			callback( cvar->name, cvar->desc, cvar->help, pattern, qtrue );
 	}
 }
 
@@ -274,7 +285,7 @@ static cvar_t* Cvar_Set2( const char *var_name, const char *value, qbool force )
 					return var;
 			}
 
-			Com_Printf( "%s will be changed upon restarting.\n", var_name );
+			Com_Printf( S_COLOR_CVAR "%s ^7will be changed upon restarting.\n", var_name );
 			var->latchedString = CopyString(value);
 			var->modified = qtrue;
 			var->modificationCount++;
@@ -566,56 +577,109 @@ static const char* Cvar_FormatRangeFloat( float vf )
 }
 
 
-static void Cvar_PrintTypeAndRange( const cvar_t *var )
+void Cvar_PrintTypeAndRange( const char *var_name, printf_t print )
 {
+	cvar_t* var = Cvar_FindVar( var_name );
+	if ( !var )
+		return;
+
 	if ( var->type == CVART_BOOL ) {
-		Com_Printf( "0|1" );
+		print( S_COLOR_VAL "0^7|" S_COLOR_VAL "1" );
 	} else if ( var->type == CVART_BITMASK ) {
-		Com_Printf( "bitmask" );
+		print( "bitmask" );
 	} else if ( var->type == CVART_FLOAT ) {
 		const float minV = var->validator.f.min;
 		const float maxV = var->validator.f.max;
 		if ( minV == -FLT_MAX && maxV == FLT_MAX ) {
-			Com_Printf( "float_value" );
+			print( "float_value" );
 		} else {
 			const char* min = minV == -FLT_MAX ? "-inf" : Cvar_FormatRangeFloat( minV );
 			const char* max = maxV == +FLT_MAX ? "+inf" : Cvar_FormatRangeFloat( maxV );
-			Com_Printf( "%s to %s", min, max );
+			print( S_COLOR_VAL "%s ^7to " S_COLOR_VAL "%s", min, max );
 		}
 	} else if ( var->type == CVART_INTEGER ) {
 		const int minV = var->validator.i.min;
 		const int maxV = var->validator.i.max;
 		const int diff = maxV - minV;
 		if( minV == INT_MIN && maxV == INT_MAX ) {
-			Com_Printf( "integer_value" );
+			print( "integer_value" );
 		} else if ( diff == 0 ) {
-			Com_Printf( "%d", minV );
+			print( S_COLOR_VAL "%d", minV );
 		} else if ( diff == 1 ) {
-			Com_Printf( "%d|%d", minV, minV + 1 );
+			print( S_COLOR_VAL "%d^7|" S_COLOR_VAL "%d", minV, minV + 1 );
 		} else if ( diff == 2 ) {
-			Com_Printf( "%d|%d|%d", minV, minV + 1, minV + 2 );
+			print( S_COLOR_VAL "%d^7|" S_COLOR_VAL "%d^7|" S_COLOR_VAL "%d", minV, minV + 1, minV + 2 );
 		} else if ( diff == 3 ) {
-			Com_Printf( "%d|%d|%d|%d", minV, minV + 1, minV + 2, minV + 3 );
+			print( S_COLOR_VAL "%d^7|" S_COLOR_VAL "%d^7|" S_COLOR_VAL "%d^7|" S_COLOR_VAL "%d", minV, minV + 1, minV + 2, minV + 3 );
 		} else {
 			const char* min = minV == INT_MIN ? "-inf" : va( "%d", minV );
 			const char* max = maxV == INT_MAX ? "+inf" : va( "%d", maxV );
-			Com_Printf( "%s to %s", min, max );
+			print( S_COLOR_VAL "%s ^7to " S_COLOR_VAL "%s", min, max );
 		}
 	} else {
-		Com_Printf( "string" );
+		print( "string" );
 	}
 }
 
 
-void Cvar_PrintFirstHelpLine( const char *var_name )
+void Cvar_PrintFirstHelpLine( const char *var_name, printf_t print )
 {
 	cvar_t* var = Cvar_FindVar( var_name );
 	if ( !var )
 		return;
 
-	Com_Printf( "%s <", var_name );
-	Cvar_PrintTypeAndRange( var );
-	Com_Printf( "> (default: %s)\n", var->resetString );
+	const char* const q = var->type == CVART_STRING ? "\"" : "";
+	print( S_COLOR_CVAR "%s ^7<", var_name );
+	Cvar_PrintTypeAndRange( var_name, print );
+	print( "> (default: %s" S_COLOR_VAL "%s^7%s)\n", q, var->resetString, q );
+}
+
+
+void Cvar_PrintFlags( const char *var_name, printf_t print )
+{
+	cvar_t* var = Cvar_FindVar( var_name );
+	if ( !var )
+		return;
+
+	static const char* names[] = {
+		"Archived",
+		"User Info",
+		"Server Info",
+		"System Info",
+		"Init",
+		"Latched",
+		"Read-only",
+		"User-created",
+		"Temporary",
+		"Cheat-protected",
+		"No Reset",
+		"Server-created"
+	};
+
+	const int flags = var->flags;
+	int count = 0;
+	for ( int i = 0; i < ARRAY_LEN(names); ++i ) {
+		if ( (flags >> i) & 1 )
+			++count;
+	}
+
+	print( count != 1 ? "Attributes: " : "Attribute: " );
+
+	int printed = 0;
+	for ( int i = 0; i < ARRAY_LEN(names); ++i ) {
+		if ( !((flags >> i) & 1) )
+			continue;
+
+		if ( printed )
+			print( ", " );
+		print( names[i] );
+		++printed;
+	}
+
+	if ( count )
+		print( "\n" );
+	else
+		print( "None\n" );
 }
 
 
@@ -671,12 +735,12 @@ qbool Cvar_Command()
 
 	// perform a variable print or set
 	if ( Cmd_Argc() == 1 ) {
-		const char* q = v->type == CVART_STRING ? "\"" : "";
-		Com_Printf( "%s^7 is %s%s^7%s (", v->name, q, v->string, q );
-		Cvar_PrintTypeAndRange(v);
-		Com_Printf( " - default: %s%s^7%s)\n", q, v->resetString, q );
+		const char* const q = v->type == CVART_STRING ? "\"" : "";
+		Com_Printf( S_COLOR_CVAR "%s^7 is %s" S_COLOR_VAL "%s^7%s (", v->name, q, v->string, q );
+		Cvar_PrintTypeAndRange( v->name, &Com_Printf );
+		Com_Printf( "^7, default: %s" S_COLOR_VAL "%s^7%s)\n", q, v->resetString, q );
 		if ( v->latchedString ) {
-			Com_Printf( "latched: %s%s^7%s\n", q, v->latchedString, q );
+			Com_Printf( "latched: %s" S_COLOR_VAL "%s^7%s\n", q, v->latchedString, q );
 		}
 		return qtrue;
 	}

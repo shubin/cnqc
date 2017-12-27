@@ -22,7 +22,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "keycodes.h"
 
 
-void Field_Draw( field_t* edit, int x, int y, int cw, int ch );
+void Field_Draw( field_t* edit, int x, int y, int cw, int ch, qbool extColors );
 
 extern	history_t	g_history;
 extern	field_t		g_consoleField;

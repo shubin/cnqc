@@ -7,7 +7,7 @@
 
 #define help_toggle \
 "toggles the boolean value of a variable\n" \
-"non-0 becomes 0 and 0 becomes 1"
+"Non-" S_COLOR_VAL "0 " S_COLOR_HELP "becomes " S_COLOR_VAL "0 " S_COLOR_HELP "and " S_COLOR_VAL "0 " S_COLOR_HELP "becomes " S_COLOR_VAL "1" S_COLOR_HELP "."
 
 #define help_cvarlist \
 "lists and filters all cvars\n" \
@@ -27,20 +27,20 @@ help_pattern_matching \
 
 #define help_com_logfile \
 "console logging to qconsole.log\n" \
-"    0 = disabled\n" \
-"    1 = enabled\n" \
-"    2 = enabled and flushes the file after every write"
+S_COLOR_VAL "    0 " S_COLOR_HELP "= Disabled\n" \
+S_COLOR_VAL "    1 " S_COLOR_HELP "= Enabled\n" \
+S_COLOR_VAL "    2 " S_COLOR_HELP "= Enabled and flushes the file after every write"
 
 #define help_com_viewlog \
 "early console window visibility\n" \
-"    0 = hidden\n" \
-"    1 = visible\n" \
-"    2 = minimized"
+S_COLOR_VAL "    0 " S_COLOR_HELP "= Hidden\n" \
+S_COLOR_VAL "    1 " S_COLOR_HELP "= Visible\n" \
+S_COLOR_VAL "    2 " S_COLOR_HELP "= Minimized"
 
 #define help_con_completionStyle \
 "auto-completion style\n" \
-"    0 = legacy: always prints all results\n" \
-"    1 = ET-style: prints once then cycles reults"
+S_COLOR_VAL "    0 " S_COLOR_HELP "= Legacy, always print all results\n" \
+S_COLOR_VAL "    1 " S_COLOR_HELP "= ET-style, print once then cycle"
 
 #define help_qport \
 "internal network port\n" \
@@ -48,12 +48,11 @@ help_pattern_matching \
 
 #define help_vm_load \
 "\n" \
-"    0 = shared library (native code)\n" \
-"    1 = interpreted QVM\n" \
-"    2 = JIT-compiled QVM"
+S_COLOR_VAL "    0 " S_COLOR_HELP "= Shared library (native code)\n" \
+S_COLOR_VAL "    1 " S_COLOR_HELP "= Interpreted QVM\n" \
+S_COLOR_VAL "    2 " S_COLOR_HELP "= JIT-compiled QVM"
 
 #define help_com_maxfps \
 "max. allowed framerate\n" \
-"It's highly recommended to only use 125 or 250 with V-Sync disabled." \
-"If you get the 'connection interruped' message with 250,\n" \
-"set it back to 125."
+"It's highly recommended to only use " S_COLOR_VAL "125 " S_COLOR_HELP "or " S_COLOR_VAL "250 " S_COLOR_HELP "with V-Sync disabled.\n" \
+"If you see 'connection interruped' with " S_COLOR_VAL "250" S_COLOR_HELP ", set it back to " S_COLOR_VAL "125" S_COLOR_HELP "."

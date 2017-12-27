@@ -538,10 +538,10 @@ static const cvarTableItem_t sv_cvars[] =
 	{ &sv_privateClients, "sv_privateClients", "0", CVAR_SERVERINFO, CVART_INTEGER, "0", XSTRING(MAX_CLIENTS), "number of password-reserved player slots" },
 	{ &sv_hostname, "sv_hostname", "noname", CVAR_SERVERINFO | CVAR_ARCHIVE, CVART_STRING, NULL, NULL, "server name" },
 	{ &sv_maxclients, "sv_maxclients", "8", CVAR_SERVERINFO | CVAR_LATCH, CVART_INTEGER, "0", XSTRING(MAX_CLIENTS), "max. player count" },
-	{ &sv_minRate, "sv_minRate", "0", CVAR_ARCHIVE | CVAR_SERVERINFO, CVART_INTEGER, "0", NULL, "min. rate allowed, 0 means no limit" },
-	{ &sv_maxRate, "sv_maxRate", "0", CVAR_ARCHIVE | CVAR_SERVERINFO, CVART_INTEGER, "0", NULL, "max. rate allowed, 0 means no limit" },
-	{ &sv_minPing, "sv_minPing", "0", CVAR_ARCHIVE | CVAR_SERVERINFO, CVART_INTEGER, "0", NULL, "min. ping allowed, 0 means no limit" },
-	{ &sv_maxPing, "sv_maxPing", "0", CVAR_ARCHIVE | CVAR_SERVERINFO, CVART_INTEGER, "0", NULL, "max. ping allowed, 0 means no limit" },
+	{ &sv_minRate, "sv_minRate", "0", CVAR_ARCHIVE | CVAR_SERVERINFO, CVART_INTEGER, "0", NULL, "min. rate allowed, " S_COLOR_VAL "0 " S_COLOR_HELP "means no limit" },
+	{ &sv_maxRate, "sv_maxRate", "0", CVAR_ARCHIVE | CVAR_SERVERINFO, CVART_INTEGER, "0", NULL, "max. rate allowed, " S_COLOR_VAL "0 " S_COLOR_HELP "means no limit" },
+	{ &sv_minPing, "sv_minPing", "0", CVAR_ARCHIVE | CVAR_SERVERINFO, CVART_INTEGER, "0", NULL, "min. ping allowed, " S_COLOR_VAL "0 " S_COLOR_HELP "means no limit" },
+	{ &sv_maxPing, "sv_maxPing", "0", CVAR_ARCHIVE | CVAR_SERVERINFO, CVART_INTEGER, "0", NULL, "max. ping allowed, " S_COLOR_VAL "0 " S_COLOR_HELP "means no limit" },
 	{ &sv_floodProtect, "sv_floodProtect", "1", CVAR_ARCHIVE | CVAR_SERVERINFO, CVART_BOOL, NULL, NULL, "prevents malicious users from lagging the entire server" },
 	// systeminfo vars
 	{ NULL, "sv_cheats", "0", CVAR_SYSTEMINFO | CVAR_ROM, CVART_BOOL, NULL, NULL, "enables cheat commands and changing cheat cvars" },
@@ -552,8 +552,8 @@ static const cvarTableItem_t sv_cvars[] =
 	{ NULL, "sv_referencedPaks", "", CVAR_SYSTEMINFO | CVAR_ROM, CVART_STRING, NULL, NULL, "checksums of the paks you might need to download" },
 	{ NULL, "sv_referencedPakNames", "", CVAR_SYSTEMINFO | CVAR_ROM, CVART_STRING, NULL, NULL, "name of the paks you might need to download" },
 	// server vars
-	{ &sv_rconPassword, "rconPassword", "", CVAR_TEMP, CVART_STRING, NULL, NULL, "password for /rcon access" },
-	{ &sv_privatePassword, "sv_privatePassword", "", CVAR_TEMP, CVART_STRING, NULL, NULL, "password for the sv_privateClients slots" },
+	{ &sv_rconPassword, "rconPassword", "", CVAR_TEMP, CVART_STRING, NULL, NULL, "password for /" S_COLOR_CMD "rcon " S_COLOR_HELP "access" },
+	{ &sv_privatePassword, "sv_privatePassword", "", CVAR_TEMP, CVART_STRING, NULL, NULL, "password for the " S_COLOR_CVAR "sv_privateClients " S_COLOR_HELP "slots" },
 	{ &sv_fps, "sv_fps", "30", CVAR_TEMP, CVART_INTEGER, "10", "40", "snapshot generation frequency" },
 	{ &sv_timeout, "sv_timeout", "200", CVAR_TEMP, CVART_INTEGER, "0", NULL, "max. seconds allowed without any messages" },
 	{ &sv_zombietime, "sv_zombietime", "2", CVAR_TEMP, CVART_INTEGER, "0", NULL, "seconds to sink messages after disconnect" },
@@ -561,9 +561,9 @@ static const cvarTableItem_t sv_cvars[] =
 	{ &sv_allowDownload, "sv_allowDownload", "0", CVAR_SERVERINFO, CVART_BOOL, NULL, NULL, "enables slow pk3 downloads directly from the server" },
 	{ &sv_reconnectlimit, "sv_reconnectlimit", "3", 0, CVART_INTEGER, "0", NULL, "min. seconds between connection attempts" },
 	{ &sv_padPackets, "sv_padPackets", "0", 0, CVART_BOOL, NULL, NULL, "add nop bytes to messages" },
-	{ &sv_killserver, "sv_killserver", "0", 0, CVART_BOOL, NULL, NULL, "menu system can set to 1 to shut server down" },
+	{ &sv_killserver, "sv_killserver", "0", 0, CVART_BOOL, NULL, NULL, "menu system can set to " S_COLOR_VAL "1 " S_COLOR_HELP "to shut server down" },
 	{ NULL, "sv_mapChecksum", "", CVAR_ROM, CVART_INTEGER, NULL, NULL, ".bsp file checksum" },
-	{ &sv_lanForceRate, "sv_lanForceRate", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "1 means uncapped rate on LAN" },
+	{ &sv_lanForceRate, "sv_lanForceRate", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, S_COLOR_VAL "1 " S_COLOR_HELP "means uncapped rate on LAN" },
 	{ &sv_strictAuth, "sv_strictAuth", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "requires CD key authentication" },
 	{ &sv_minRestartDelay, "sv_minRestartDelay", "2", 0, CVART_INTEGER, "1", "48", "min. hours to wait before restarting the server" }
 };

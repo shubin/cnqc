@@ -534,7 +534,7 @@ static const cvarTableItem_t r_cvars[] =
 	// latched and archived variables
 	//
 	{ &r_ext_max_anisotropy, "r_ext_max_anisotropy", "16", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "16", help_r_ext_max_anisotropy },
-	{ &r_msaa, "r_msaa", "4", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "16", "anti-aliasing sample count, 0=off" },
+	{ &r_msaa, "r_msaa", "4", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "16", "anti-aliasing sample count, " S_COLOR_VAL "0" S_COLOR_HELP "=off" },
 	{ &r_picmip, "r_picmip", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "16", help_r_picmip },
 	{ &r_roundImagesDown, "r_roundImagesDown", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_roundImagesDown },
 	{ &r_colorMipLevels, "r_colorMipLevels", "0", CVAR_LATCH, CVART_BOOL, NULL, NULL, "colorizes textures based on their mip level" },
@@ -547,9 +547,9 @@ static const cvarTableItem_t r_cvars[] =
 	// should be called r_textureBrightness
 	{ &r_intensity, "r_intensity", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "1", NULL, "brightness of non-lightmap map textures" },
 	{ &r_fullscreen, "r_fullscreen", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, "full-screen mode" },
-	{ &r_width, "r_width", "1280", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "320", "65535", "custom window/render width" help_r_mode01 },
-	{ &r_height, "r_height", "720", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "240", "65535", "custom window/render height" help_r_mode01 },
-	{ &r_customaspect, "r_customaspect", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0.1", "10", "custom pixel aspect ratio" help_r_mode01 },
+	{ &r_width, "r_width", "1280", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "320", "65535", "custom window/render width" },
+	{ &r_height, "r_height", "720", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "240", "65535", "custom window/render height" },
+	{ &r_customaspect, "r_customaspect", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0.1", "10", "custom pixel aspect ratio" },
 	{ &r_vertexLight, "r_vertexLight", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, "disables lightmap texture blending" },
 	// note that r_subdivisions > 64 will create rendering artefacts because you'll see the other side of a curved surface when against it
 	{ &r_subdivisions, "r_subdivisions", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "1", "64", help_r_subdivisions },
@@ -557,7 +557,7 @@ static const cvarTableItem_t r_cvars[] =
 	//
 	// latched variables that can only change over a restart
 	//
-	{ &r_displayRefresh, "r_displayRefresh", "0", CVAR_LATCH, CVART_INTEGER, "0", "480", "0 lets the driver decide" },
+	{ &r_displayRefresh, "r_displayRefresh", "0", CVAR_LATCH, CVART_INTEGER, "0", "480", S_COLOR_VAL "0 " S_COLOR_HELP "lets the driver decide" },
 	{ &r_singleShader, "r_singleShader", "0", CVAR_CHEAT | CVAR_LATCH },
 
 	//
@@ -565,7 +565,7 @@ static const cvarTableItem_t r_cvars[] =
 	//
 	{ &r_lodbias, "r_lodbias", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "16", help_r_lodbias },
 	{ &r_flares, "r_flares", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "enables light flares" },
-	{ &r_ignoreGLErrors, "r_ignoreGLErrors", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "if 0, OpenGL errors are fatal" },
+	{ &r_ignoreGLErrors, "r_ignoreGLErrors", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "if " S_COLOR_VAL "0" S_COLOR_HELP ", OpenGL errors are fatal" },
 	{ &r_fastsky, "r_fastsky", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_fastsky },
 	{ &r_noportals, "r_noportals", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_noportals },
 	{ &r_dynamiclight, "r_dynamiclight", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "enables dynamic lights" },
@@ -781,6 +781,7 @@ const refexport_t* GetRefAPI( const refimport_t* rimp )
 
 	re.SetColor = RE_SetColor;
 	re.DrawStretchPic = RE_StretchPic;
+	re.DrawTriangle = RE_DrawTriangle;
 	re.DrawStretchRaw = RE_StretchRaw;
 	re.UploadCinematic = RE_UploadCinematic;
 

@@ -311,7 +311,9 @@ static qbool CL_CG_GetValue( char* value, int valueSize, const char* key )
 		{ "trap_Error2", CG_EXT_ERROR2 },
 		// commands
 		{ "screenshotnc", 1 },
-		{ "screenshotncJPEG", 1 }
+		{ "screenshotncJPEG", 1 },
+		// capabilities
+		{ "cap_ExtraColorCodes", 1 }
 	};
 
 	for ( int i = 0; i < ARRAY_LEN( syscalls ); ++i ) {

@@ -1,6 +1,24 @@
 
 DD Mmm 17 - 1.49
 
+add: console color customization cvars
+  con_colBG     <RGBA> (default: "101013F6") - console and help panel background
+  con_colBorder <RGBA> (default: "4778B2FF") - the console and help panel borders
+  con_colArrow  <RGBA> (default: "4778B2FF") - console backscroll arrows
+  con_colShadow <RGBA> (default: "000000FF") - text shadows
+  con_colHL     <RGBA> (default: "303033FF") - auto-completion highlight (see con_completionStyle 1)
+  con_colText   <RGB>  (default: "E2E2E2")   - normal text
+  con_colCVar   <RGB>  (default: "4778B2")   - cvar names
+  con_colCmd    <RGB>  (default: "4FA7BD")   - command names
+  con_colValue  <RGB>  (default: "E5BC39")   - cvar values
+  con_colHelp   <RGB>  (default: "ABC1C6")   - help text
+
+add: con_drawHelp <bitmask> (default: 1) controls the help panel displayed below the console
+  1 = enables the help panel
+  2 = draws the help panel even if the current cvar/cmd has no help text
+  4 = draws the list of modules the current cvar/cmd belongs to
+  8 = draws the list of attributes of the current cvar
+
 fix: console/messagemode input buffers would ignore the last off-screen color modifier when scrolled
 
 fix: console/messagemode input buffers would sometimes display the cursor at the wrong position

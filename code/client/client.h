@@ -433,11 +433,18 @@ void Con_ScrollPages( int pages ); // positive means down
 void Con_Top();
 void Con_Bottom();
 void Con_Close();
+const float* ConsoleColorFromChar( char ccode );
 
 
 //
 // cl_scrn.c
 //
+typedef enum {
+	DSC_NONE,
+	DSC_NORMAL,
+	DSC_CONSOLE	// extended mode
+} drawStringColors_t;
+
 void SCR_Init();
 void SCR_UpdateScreen();
 
@@ -446,7 +453,7 @@ void SCR_AdjustFrom640( float *x, float *y, float *w, float *h );
 
 void SCR_DrawChar( float x, float y, float cw, float ch, int c );
 void SCR_DrawString( float x, float y, float cw, float ch, const char* s, qbool allowColor );
-void SCR_DrawStringEx( float x, float y, float cw, float ch, const char* s, qbool allowColor, qbool showColorCodes, const float* firstColor );
+void SCR_DrawStringEx( float x, float y, float cw, float ch, const char* s, drawStringColors_t colors, qbool showColorCodes, const float* firstColor );
 
 void SCR_DebugGraph( float value, int color );
 
