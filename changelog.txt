@@ -3,7 +3,7 @@ DD Mmm 17 - 1.49
 
 chg: reduced CPU usage in the client
 
-add: console color customization cvars
+add: color cvars for console customization
   con_colBG     <RGBA> (default: "101013F6") - console and help panel background
   con_colBorder <RGBA> (default: "4778B2FF") - the console and help panel borders
   con_colArrow  <RGBA> (default: "4778B2FF") - console backscroll arrows
@@ -16,10 +16,10 @@ add: console color customization cvars
   con_colHelp   <RGB>  (default: "ABC1C6")   - help text
 
 add: con_drawHelp <bitmask> (default: 1) controls the help panel displayed below the console
-  1 = enables the help panel
-  2 = draws the help panel even if the current cvar/cmd has no help text
-  4 = draws the list of modules the current cvar/cmd belongs to
-  8 = draws the list of attributes of the current cvar
+  1 - enables the help panel
+  2 - draws the help panel even if the current cvar/cmd has no help text
+  4 - draws the list of modules the current cvar/cmd belongs to
+  8 - draws the list of attributes of the current cvar
 
 fix: console/messagemode input buffers would ignore the last off-screen color modifier when scrolled
 
