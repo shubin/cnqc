@@ -235,7 +235,7 @@ static void S_Music_f( void )
 
 static const cvarTableItem_t cl_cvars[] =
 {
-	{ &s_volume, "s_volume", "0.8", CVAR_ARCHIVE, CVART_FLOAT, "0", "1", "global sound volume" },
+	{ &s_volume, "s_volume", "0.2", CVAR_ARCHIVE, CVART_FLOAT, "0", "1", "global sound volume" },
 	{ &s_musicVolume, "s_musicvolume", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", "16", "music volume" },
 	{ &s_initsound, "s_initsound", "1", 0, CVART_BOOL, NULL, NULL, "enables the audio system" },
 	{ &s_autoMute, "s_autoMute", "1", CVAR_ARCHIVE, CVART_INTEGER, "0", "2", help_s_autoMute }

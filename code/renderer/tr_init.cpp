@@ -534,7 +534,7 @@ static const cvarTableItem_t r_cvars[] =
 	// latched and archived variables
 	//
 	{ &r_ext_max_anisotropy, "r_ext_max_anisotropy", "16", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "16", help_r_ext_max_anisotropy },
-	{ &r_msaa, "r_msaa", "4", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "16", "anti-aliasing sample count, " S_COLOR_VAL "0" S_COLOR_HELP "=off" },
+	{ &r_msaa, "r_msaa", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "16", "anti-aliasing sample count, " S_COLOR_VAL "0" S_COLOR_HELP "=off" },
 	{ &r_picmip, "r_picmip", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "16", help_r_picmip },
 	{ &r_roundImagesDown, "r_roundImagesDown", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_roundImagesDown },
 	{ &r_colorMipLevels, "r_colorMipLevels", "0", CVAR_LATCH, CVART_BOOL, NULL, NULL, "colorizes textures based on their mip level" },
@@ -572,7 +572,7 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_finish, "r_finish", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "enables glFinish calls" },
 	{ &r_textureMode, "r_textureMode", "GL_LINEAR_MIPMAP_LINEAR", CVAR_ARCHIVE, CVART_STRING, NULL, NULL, help_r_textureMode },
 	{ &r_swapInterval, "r_swapInterval", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "8", help_r_swapInterval },
-	{ &r_gamma, "r_gamma", "1", CVAR_ARCHIVE, CVART_FLOAT, "0.5", "3", help_r_gamma },
+	{ &r_gamma, "r_gamma", "1.2", CVAR_ARCHIVE, CVART_FLOAT, "0.5", "3", help_r_gamma },
 	{ &r_greyscale, "r_greyscale", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", "1", "controls how monochrome the final image looks" },
 	{ &r_lightmap, "r_lightmap", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_lightmap },
 	{ &r_fullbright, "r_fullbright", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_fullbright },

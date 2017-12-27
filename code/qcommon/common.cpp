@@ -50,8 +50,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #define MIN_COMHUNKMEGS_DED		 8	// for the dedicated server
 #define MIN_COMHUNKMEGS			56
-#define DEF_COMHUNKMEGS			64
 #define DEF_COMZONEMEGS			32
+#ifdef DEDICATED
+#define DEF_COMHUNKMEGS			64
+#else
+#define DEF_COMHUNKMEGS			128
+#endif
 
 
 static jmp_buf abortframe;		// an ERR_DROP occured, exit the entire frame

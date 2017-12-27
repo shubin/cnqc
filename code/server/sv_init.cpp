@@ -528,6 +528,12 @@ void SV_SpawnServer( const char* mapname )
 }
 
 
+#ifdef DEDICATED
+#	define SV_PURE_DEFAULT	"1"
+#else
+#	define SV_PURE_DEFAULT	"0"
+#endif
+
 static const cvarTableItem_t sv_cvars[] =
 {
 	// serverinfo vars
@@ -546,7 +552,7 @@ static const cvarTableItem_t sv_cvars[] =
 	// systeminfo vars
 	{ NULL, "sv_cheats", "0", CVAR_SYSTEMINFO | CVAR_ROM, CVART_BOOL, NULL, NULL, "enables cheat commands and changing cheat cvars" },
 	{ &sv_serverid, "sv_serverid", "0", CVAR_SYSTEMINFO | CVAR_ROM, CVART_INTEGER, NULL, NULL, "server session identifier" },
-	{ &sv_pure, "sv_pure", "1", CVAR_SYSTEMINFO | CVAR_ROM, CVART_BOOL, NULL, NULL, "disables native code and forces client pk3s to match the server's" },
+	{ &sv_pure, "sv_pure", SV_PURE_DEFAULT, CVAR_SYSTEMINFO | CVAR_ROM, CVART_BOOL, NULL, NULL, "disables native code and forces client pk3s to match the server's" },
 	{ NULL, "sv_paks", "", CVAR_SYSTEMINFO | CVAR_ROM, CVART_STRING, NULL, NULL, "checksums of the paks you're allowed to load data from" },
 	{ NULL, "sv_pakNames", "", CVAR_SYSTEMINFO | CVAR_ROM, CVART_STRING, NULL, NULL, "names of the paks you're allowed to load data from" },
 	{ NULL, "sv_referencedPaks", "", CVAR_SYSTEMINFO | CVAR_ROM, CVART_STRING, NULL, NULL, "checksums of the paks you might need to download" },
@@ -567,6 +573,8 @@ static const cvarTableItem_t sv_cvars[] =
 	{ &sv_strictAuth, "sv_strictAuth", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "requires CD key authentication" },
 	{ &sv_minRestartDelay, "sv_minRestartDelay", "2", 0, CVART_INTEGER, "1", "48", "min. hours to wait before restarting the server" }
 };
+
+#undef SV_PURE_DEFAULT
 
 
 /*
