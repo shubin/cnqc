@@ -26,6 +26,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "common_help.h"
 #include <setjmp.h>
 
+#ifndef INT64_MIN
+#	define INT64_MIN 0x8000000000000000LL
+#endif
+
 #if (_MSC_VER >= 1400) // Visual C++ 2005 or later
 #define MSVC_CPUID 1
 #include <intrin.h>
@@ -2445,19 +2449,52 @@ void Com_Frame()
 		minMsec = 1000 / com_maxfps->integer;
 
 #ifndef DEDICATED
+	qbool preciseCap = qtrue;
 	// let's not limit the download speed by sleeping too much
 	qbool CL_MapDownload_Active(); // in client.h
 	if ( CL_MapDownload_Active() )
-		minMsec = 1;
+		minMsec = 4;
+	else if ( Sys_IsMinimized() ) {
+		minMsec = 20;
+		preciseCap = qfalse;
+	}
+#else
+	const qbool preciseCap = qfalse;
 #endif
 
+	// decide when we should stop sleeping
+	static int64_t targetTimeUS = INT64_MIN;
+	const int64_t frameDurationUS = 1000000 / com_maxfps->integer;
+	if ( Sys_Microseconds() > targetTimeUS + 3 * frameDurationUS )
+		targetTimeUS = Sys_Microseconds() + frameDurationUS;
+	else
+		targetTimeUS += frameDurationUS;
+
+	// sleep if needed
+	int runEventLoop = 0;
+	if ( preciseCap ) {
+		for ( ;; ) {
+			runEventLoop ^= 1;
+			const int64_t remainingUS = targetTimeUS - Sys_Microseconds();
+			if ( remainingUS > 3000 && runEventLoop )
+				Com_EventLoop();
+			else if ( remainingUS > 1000 )
+				Sys_Sleep( 1 );
+			else if ( remainingUS > 50 )
+				Sys_MicroSleep( 50 );
+			else
+				break;
+		}
+	} else {
+		while ( targetTimeUS - Sys_Microseconds() > 1000 ) {
+			Sys_Sleep(1);
+		}
+	}
+
 	static int lastTime = 0;
-	int msec;
-	do {
-		com_frameTime = Com_EventLoop();
-		msec = com_frameTime - lastTime;
-	} while ( msec < minMsec );
 	lastTime = com_frameTime;
+	com_frameTime = Com_EventLoop();
+	int msec = com_frameTime - lastTime;
 
 	Cbuf_Execute();
 

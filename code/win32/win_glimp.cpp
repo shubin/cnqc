@@ -697,6 +697,12 @@ void Sys_GL_Shutdown()
 }
 
 
+qbool Sys_IsMinimized()
+{
+	return ( g_wv.hWnd != NULL ) && !!IsIconic( g_wv.hWnd );
+}
+
+
 void WIN_UpdateResolution( int width, int height )
 {
 	glInfo.winWidth = width;

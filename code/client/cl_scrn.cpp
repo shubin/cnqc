@@ -394,9 +394,15 @@ static void SCR_PerformanceCounters()
 void SCR_UpdateScreen()
 {
 	static int recursive = 0;
+	static int lastRenderTime = 0;
 
 	if ( !scr_initialized )
 		return;
+
+#ifndef DEDICATED
+	if ( !CL_VideoRecording() && Sys_IsMinimized() && Sys_Milliseconds() - lastRenderTime < 1000 )
+		return;
+#endif
 
 	// there are several cases where this IS called twice in one frame
 	// easiest example is: conn to a server, kill the server
@@ -427,5 +433,6 @@ void SCR_UpdateScreen()
 	}
 
 	recursive = 0;
+	lastRenderTime = Sys_Milliseconds();
 }
 

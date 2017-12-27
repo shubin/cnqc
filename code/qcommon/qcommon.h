@@ -1122,6 +1122,14 @@ int		Sys_GetUptimeSeconds( qbool parent );	// negative if not available
 void	Sys_LoadHistory();
 void	Sys_SaveHistory();
 
+void	Sys_Sleep( int ms );
+void	Sys_MicroSleep( int us );
+int64_t	Sys_Microseconds();
+
+#ifndef DEDICATED
+qbool	Sys_IsMinimized();
+#endif
+
 // huffman.cpp - id's original code
 // used for out-of-band (OOB) datagrams with dynamically created trees
 void	DynHuff_Compress( msg_t* buf, int offset );

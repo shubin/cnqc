@@ -595,3 +595,9 @@ void Sys_MatchAlert( sysMatchAlertEvent_t event )
 	else if (event == SMAE_MATCH_END)
 		Lin_MatchEndAlert();
 }
+
+
+qbool Sys_IsMinimized()
+{
+	return (glimp.window != NULL) && (SDL_GetWindowFlags(glimp.window) & SDL_WINDOW_MINIMIZED) != 0;
+}

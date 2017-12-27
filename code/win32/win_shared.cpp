@@ -36,6 +36,50 @@ int Sys_Milliseconds()
 }
 
 
+void Sys_Sleep( int ms )
+{
+	if (ms >= 1)
+		Sleep(ms);
+}
+
+void Sys_MicroSleep( int us )
+{
+	if (us <= 0)
+		return;
+
+	LARGE_INTEGER frequency;
+	LARGE_INTEGER endTime;
+	QueryPerformanceCounter(&endTime);
+	QueryPerformanceFrequency(&frequency);
+	endTime.QuadPart += ((LONGLONG)us * frequency.QuadPart) / 1000000LL;
+
+	LARGE_INTEGER currentTime;
+	do {
+		SwitchToThread();
+		QueryPerformanceCounter(&currentTime);
+	} while (currentTime.QuadPart < endTime.QuadPart);
+}
+
+
+int64_t Sys_Microseconds()
+{
+	static qbool initialized = qfalse;
+	static LARGE_INTEGER start;
+	static LARGE_INTEGER freq;
+
+	if (!initialized) {
+		initialized = qtrue;
+		QueryPerformanceFrequency(&freq);
+		QueryPerformanceCounter(&start);
+	}
+
+	LARGE_INTEGER now;
+	QueryPerformanceCounter(&now);
+
+	return ((now.QuadPart - start.QuadPart) * 1000000LL) / freq.QuadPart;
+}
+
+
 const char* Sys_DefaultHomePath()
 {
 	return NULL;

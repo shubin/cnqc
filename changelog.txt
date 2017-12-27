@@ -1,6 +1,8 @@
 
 DD Mmm 17 - 1.49
 
+chg: reduced CPU usage in the client
+
 add: console color customization cvars
   con_colBG     <RGBA> (default: "101013F6") - console and help panel background
   con_colBorder <RGBA> (default: "4778B2FF") - the console and help panel borders

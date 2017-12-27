@@ -40,6 +40,39 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #define MEM_THRESHOLD 96*1024*1024
 
+
+static void LIN_MicroSleep( int us )
+{
+	timespec req, rem;
+	req.tv_sec = us / 1000000;
+	req.tv_nsec = (us % 1000000) * 1000;
+	while (clock_nanosleep(CLOCK_REALTIME, 0, &req, &rem) == EINTR) {
+		req = rem;
+	}
+}
+
+
+void Sys_Sleep( int ms )
+{
+	LIN_MicroSleep(ms * 1000);
+}
+
+
+void Sys_MicroSleep( int us )
+{
+	LIN_MicroSleep(us);
+}
+
+
+int64_t Sys_Microseconds()
+{
+	timespec ts;
+	clock_gettime(CLOCK_REALTIME, &ts);
+
+	return (int64_t)ts.tv_sec * 1000000 + (int64_t)ts.tv_nsec / 1000;
+}
+
+
 qboolean Sys_LowPhysicalMemory()
 {
 	return qfalse; // FIXME
