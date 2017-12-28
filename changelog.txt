@@ -1,6 +1,8 @@
 
 DD Mmm 17 - 1.49
 
+rem: r_maplight* cvars
+
 chg: reduced CPU usage in the client
 
 add: color cvars for console customization
@@ -201,6 +203,8 @@ chg: remove the byzantine r_mode usage added in 1.47
 
 
 Windows:
+
+rem: DirectInput mouse input mode
 
 fix: disabled DPI scaling on the client
 
