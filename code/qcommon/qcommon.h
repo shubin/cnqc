@@ -637,7 +637,8 @@ char	**FS_ListFiles( const char *directory, const char *extension, int *numfiles
 
 void	FS_FreeFileList( char **list );
 
-qbool FS_FileExists( const char *file );
+qbool FS_FileExists( const char *file );						// checks in current game dir
+qbool FS_FileExistsEx( const char *file, qbool curGameDir );	// if curGameDir is qfalse, checks in "baseq3"
 
 char* FS_BuildOSPath( const char *base, const char *game, const char *qpath );
 

@@ -1156,6 +1156,13 @@ void CL_NextDownload(void) {
 }
 
 
+// qtrue if found in either "$(fs_gamedir)" or in "baseq3"
+static qbool MapDL_FileExists( const char* path )
+{
+	return FS_FileExistsEx( path, qtrue ) || FS_FileExistsEx( path, qfalse );
+}
+
+
 // returns qtrue if a download started
 static qbool CL_StartDownloads()
 {
@@ -1163,6 +1170,10 @@ static qbool CL_StartDownloads()
 	if (mode < -1 || mode > 1) {
 		mode = 1;
 	}
+
+	// never launch a download when starting a listen server...
+	if (com_sv_running->integer)
+		return qfalse;
 
 	// downloads disabled
 	if (mode == 0) {
@@ -1202,7 +1213,7 @@ static qbool CL_StartDownloads()
 	const char* const serverInfo = cl.gameState.stringData + cl.gameState.stringOffsets[CS_SERVERINFO];
 	const char* const mapName = Info_ValueForKey(serverInfo, "mapname");
 	const char* const mapPath = va("maps/%s.bsp", mapName);
-	if ((!exactMatch && FS_FileExists(mapPath)) || FS_FileIsInPAK(mapPath, NULL, NULL))
+	if ((!exactMatch && MapDL_FileExists(mapPath)) || FS_FileIsInPAK(mapPath, NULL, NULL))
 		return qfalse;
 
 	// generate a checksum list of all the pure paks we're missing
@@ -1967,7 +1978,7 @@ static void CL_DownloadMap( qbool forceDL )
 	const char* const mapName = Cmd_Argv(1);
 	if ( !forceDL ) {
 		const char* const mapPath = va( "maps/%s.bsp", mapName );
-		if ( FS_FileExists(mapPath) || FS_FileIsInPAK(mapPath, NULL, NULL) ) {
+		if ( MapDL_FileExists(mapPath) || FS_FileIsInPAK(mapPath, NULL, NULL) ) {
 			Com_Printf( "Map already exists! To force the download, use /%sf\n", Cmd_Argv(0) );
 			return;
 		}

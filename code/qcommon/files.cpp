@@ -474,7 +474,12 @@ NOTE TTimo: this goes with FS_FOpenFileWrite for opening the file afterwards
 */
 qbool FS_FileExists( const char* file )
 {
-	const char* testpath = FS_BuildOSPath( fs_homepath->string, fs_gamedir, file );
+	return FS_FileExistsEx( file, qtrue );
+}
+
+qbool FS_FileExistsEx( const char* file, qbool curGameDir )
+{
+	const char* testpath = FS_BuildOSPath( fs_homepath->string, curGameDir ? fs_gamedir : "baseq3", file );
 	FILE* f = fopen( testpath, "rb" );
 	if (f) {
 		fclose( f );
@@ -490,7 +495,7 @@ FS_SV_FileExists
 Tests if the file exists 
 ================
 */
-qbool FS_SV_FileExists( const char *file )
+static qbool FS_SV_FileExists( const char *file )
 {
 	FILE *f;
 	char *testpath;
