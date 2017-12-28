@@ -776,8 +776,8 @@ static void NET_GetLocalAddress()
 static void NET_OpenIP()
 {
 	const cvar_t* ip = Cvar_Get( "net_ip", "localhost", CVAR_LATCH );
-	Cvar_SetRange( "net_ip", CVART_INTEGER, "0", "65535" );
 	int port = Cvar_Get( "net_port", va( "%i", PORT_SERVER ), CVAR_LATCH )->integer;
+	Cvar_SetRange( "net_port", CVART_INTEGER, "0", "65535" );
 
 	// automatically scan for a valid port, so multiple
 	// dedicated servers can be started without requiring

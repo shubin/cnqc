@@ -2178,7 +2178,7 @@ static const cvarTableItem_t com_cvars[] =
 	{ &com_developer, "developer", "0", CVAR_TEMP, CVART_BOOL, NULL, NULL, "enables detailed logging" },
 	{ &com_logfile, "logfile", "0", CVAR_TEMP, CVART_INTEGER, "0", "2", help_com_logfile },
 	{ &com_timescale, "timescale", "1", CVAR_CHEAT | CVAR_SYSTEMINFO, CVART_FLOAT, "0", "100", "game time to real time ratio" },
-	{ &com_fixedtime, "fixedtime", "0", CVAR_CHEAT, CVART_INTEGER, "1", "64", "fixed number of ms per simulation tick" },
+	{ &com_fixedtime, "fixedtime", "0", CVAR_CHEAT, CVART_INTEGER, "0", "64", "fixed number of ms per simulation tick, " S_COLOR_VAL "0" S_COLOR_HELP "=off" },
 	{ &com_showtrace, "com_showtrace", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "prints trace optimization info" },
 	{ &com_viewlog, "viewlog", "0", CVAR_CHEAT, CVART_INTEGER, "0", "2", help_com_viewlog },
 	{ &com_speeds, "com_speeds", "0", 0, CVART_BOOL, NULL, NULL, "prints timing info" },
