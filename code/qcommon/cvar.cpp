@@ -167,7 +167,7 @@ void Cvar_EnumHelp( search_callback_t callback, const char* pattern )
 }
 
 
-static qbool Cvar_IsValidGet( cvar_t *var, const char *value )
+static qbool Cvar_IsValidValuePrintNothing( cvar_t *var, const char *value )
 {
 	if ( var->type == CVART_STRING )
 		return qtrue;
@@ -191,7 +191,7 @@ static qbool Cvar_IsValidGet( cvar_t *var, const char *value )
 }
 
 
-static qbool Cvar_IsValidSet( cvar_t *var, const char *value )
+static qbool Cvar_IsValidValuePrintWarnings( cvar_t *var, const char *value )
 {
 #define WARNING( Message )	{ Com_Printf( "^3%s: " Message "\n", var->name ); return qfalse; }
 
@@ -222,6 +222,14 @@ static qbool Cvar_IsValidSet( cvar_t *var, const char *value )
 }
 
 
+static qbool Cvar_IsValidValue( cvar_t *var, const char *value, qbool printWarnings )
+{
+	return printWarnings ?
+		Cvar_IsValidValuePrintWarnings( var, value ) :
+		Cvar_IsValidValuePrintNothing( var, value );
+}
+
+
 static cvar_t* Cvar_Set2( const char *var_name, const char *value, qbool force )
 {
 //	Com_DPrintf( "Cvar_Set2: %s %s\n", var_name, value );
@@ -243,9 +251,14 @@ static cvar_t* Cvar_Set2( const char *var_name, const char *value, qbool force )
 		value = var->resetString;
 	}
 
-	if (!strcmp(value, var->string) ||
-		!Cvar_IsValidSet(var, value)) {
+	const qbool okValue = Cvar_IsValidValue(var, value, qtrue);
+	if (okValue && !strcmp(value, var->string))
 		return var;
+
+	if (!okValue) {
+		if (!Cvar_IsValidValue(var, var->resetString, qfalse))
+			return var; // the default value is invalid too!
+		value = var->resetString;
 	}
 
 	// note what types of cvars have been modified (userinfo, archive, serverinfo, systeminfo)
@@ -339,7 +352,7 @@ cvar_t* Cvar_Get( const char *var_name, const char *var_value, int flags )
 
 	cvar_t* var = Cvar_FindVar( var_name );
 	if ( var ) {
-		var_value = Cvar_IsValidGet( var, var_value ) ? var_value : var->resetString;
+		var_value = Cvar_IsValidValue( var, var_value, qfalse ) ? var_value : var->resetString;
 
 		// if the C code is now specifying a variable that the user already
 		// set a value for, take the new value as the reset value
