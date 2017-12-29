@@ -973,11 +973,11 @@ static const void* RB_BeginFrame( const void* data )
 
 	GL2_BeginFrame();
 
-	// clear screen for debugging
-	if ( r_clear->integer ) {
-		qglClearColor( 1, 0, 0.5, 1 );
-		qglClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-	}
+	if ( r_clear->integer )
+		qglClearColor( 1.0f, 0.0f, 0.5f, 1.0f );
+	else
+		qglClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
+	qglClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
 	return (const void*)(cmd + 1);
 }
