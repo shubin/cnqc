@@ -563,7 +563,7 @@ static const cvarTableItem_t r_cvars[] =
 	//
 	// archived variables that can change at any time
 	//
-	{ &r_lodbias, "r_lodbias", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "16", help_r_lodbias },
+	{ &r_lodbias, "r_lodbias", "-2", CVAR_ARCHIVE, CVART_INTEGER, "-16", "16", help_r_lodbias },
 	{ &r_flares, "r_flares", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "enables light flares" },
 	{ &r_ignoreGLErrors, "r_ignoreGLErrors", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "if " S_COLOR_VAL "0" S_COLOR_HELP ", OpenGL errors are fatal" },
 	{ &r_fastsky, "r_fastsky", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_fastsky },
