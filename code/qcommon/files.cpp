@@ -1013,6 +1013,16 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qbool uniqueFILE
 		} else if ( search->dir ) {
 			// check a file in the directory tree
 
+			// For mods, we ignore baseq3/q3config.cfg and baseq3/autoexec.cfg
+			// to avoid config pollution.
+			// Mod authors should package a proper default.cfg (pretty much binds only)
+			// in their .pk3 so that it overrides baseq3/default.cfg (it's in pak0.pk3).
+			if (	Q_stricmp( search->dir->gamedir, fs_gamedir ) &&
+					(	!Q_stricmp( filename, "q3config.cfg" ) ||
+						!Q_stricmp( filename, "autoexec.cfg" ) ) ) {
+				continue;
+			}
+
 			// if we are running restricted, the only files we
 			// will allow to come from the directory are .cfg files
 			l = strlen( filename );
