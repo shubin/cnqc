@@ -242,12 +242,39 @@ void RE_BeginFrame( stereoFrame_t stereoFrame )
 }
 
 
-void RE_EndFrame( int* pcFE, int* pc2D, int* pc3D )
+void RE_EndFrame( int* pcFE, int* pc2D, int* pc3D, qbool render )
 {
 	if (!tr.registered)
 		return;
 
-	R_CMD( swapBuffersCommand_t, RC_SWAP_BUFFERS );
+	qbool delayScreenshot = qfalse;
+	if ( !render && r_delayedScreenshotPending )
+		render = qtrue;
+
+	if ( !render ) {
+		screenshotCommand_t* ssCmd = (screenshotCommand_t*)RB_FindRenderCommand( RC_SCREENSHOT );
+
+		if ( ssCmd )
+			render = qtrue;
+
+		if ( ssCmd && !ssCmd->delayed ) {
+			// save and remove the command so we can push it back after the frame's done
+			r_delayedScreenshot = *ssCmd;
+			r_delayedScreenshot.delayed = qtrue;
+			RB_RemoveRenderCommand( ssCmd, sizeof(screenshotCommand_t) );
+			delayScreenshot = qtrue;
+		}
+	}
+
+	if ( render ) {
+		R_CMD( swapBuffersCommand_t, RC_SWAP_BUFFERS );
+		if ( delayScreenshot ) {
+			R_CMD( screenshotCommand_t, RC_SCREENSHOT );
+			*cmd = r_delayedScreenshot;
+		}
+	} else {
+		R_ClearFrame();
+	}
 
 	R_IssueRenderCommands();
 

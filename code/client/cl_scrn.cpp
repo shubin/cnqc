@@ -394,16 +394,10 @@ static void SCR_PerformanceCounters()
 void SCR_UpdateScreen()
 {
 	static int recursive = 0;
-	static int lastRenderTime = 0;
 
 	if ( !scr_initialized )
 		return;
-
-#ifndef DEDICATED
-	if ( !CL_VideoRecording() && Sys_IsMinimized() && Sys_Milliseconds() - lastRenderTime < 1000 )
-		return;
-#endif
-
+	
 	// there are several cases where this IS called twice in one frame
 	// easiest example is: conn to a server, kill the server
 	if ( ++recursive > 2 ) {
@@ -417,22 +411,22 @@ void SCR_UpdateScreen()
 	// function (or any function for that matter) is not always reached.
 	recursive = 1;
 
+	const qbool drawFrame = CL_VideoRecording() || !Sys_IsMinimized();
 	SCR_DrawScreenField( STEREO_CENTER );
 
 	if ( com_speeds->integer ) {
-		re.EndFrame( pcFE, pc2D, pc3D );
+		re.EndFrame( pcFE, pc2D, pc3D, drawFrame );
 		time_frontend = pcFE[RF_MSEC];
 		time_backend = pc3D[RB_MSEC];
 	} else if ( Cvar_VariableIntegerValue("r_speeds") ) {
 		// counters are actually the previous frame's, because EndFrame will clear them
 		// and we need to submit the calls to show them before that
 		SCR_PerformanceCounters();
-		re.EndFrame( pcFE, pc2D, pc3D );
+		re.EndFrame( pcFE, pc2D, pc3D, drawFrame );
 	} else {
-		re.EndFrame( NULL, NULL, NULL );
+		re.EndFrame( NULL, NULL, NULL, drawFrame );
 	}
 
 	recursive = 0;
-	lastRenderTime = Sys_Milliseconds();
 }
 

@@ -1147,3 +1147,64 @@ void RB_ExecuteRenderCommands( const void *data )
 	}
 
 }
+
+
+void* RB_FindRenderCommand( renderCommand_t type )
+{
+	renderCommandList_t* cmdList = &backEndData->commands;
+	void* data = cmdList->cmds;
+	void* end = cmdList->cmds + cmdList->used;
+
+	while ( 1 ) {
+		data = PADP(data, sizeof(void *));
+
+		if( *(int *)data == type )
+			return data;
+
+		if ( data >= end )
+			return NULL;
+
+		switch ( *(const int *)data ) {
+		case RC_SET_COLOR:
+			data = (char*)data + sizeof(setColorCommand_t);
+			break;
+		case RC_STRETCH_PIC:
+			data = (char*)data + sizeof(stretchPicCommand_t);
+			break;
+		case RC_TRIANGLE:
+			data = (char*)data + sizeof(triangleCommand_t);
+			break;
+		case RC_DRAW_SURFS:
+			data = (char*)data + sizeof(drawSurfsCommand_t);
+			break;
+		case RC_BEGIN_FRAME:
+			data = (char*)data + sizeof(beginFrameCommand_t);
+			break;
+		case RC_SWAP_BUFFERS:
+			data = (char*)data + sizeof(swapBuffersCommand_t);
+			break;
+		case RC_SCREENSHOT:
+			data = (char*)data + sizeof(screenshotCommand_t);
+			break;
+		case RC_VIDEOFRAME:
+			data = (char*)data + sizeof(videoFrameCommand_t);
+			break;
+
+		case RC_END_OF_LIST:
+		default:
+			return NULL;
+		}
+	}
+}
+
+
+void RB_RemoveRenderCommand( void* cmd, int cmdSize )
+{
+	renderCommandList_t* cmdList = &backEndData->commands;
+	const int endOffset = ((char*)cmd + cmdSize) - (char*)cmdList->cmds;
+	const int endBytes = cmdList->used - endOffset;
+	assert( cmd >= cmdList->cmds && ((char*)cmd + cmdSize) <= ((char*)cmdList->cmds + cmdList->used) );
+
+	memmove( cmd, (char*)cmd + cmdSize, endBytes );
+	cmdList->used -= cmdSize;
+}

@@ -366,9 +366,11 @@ const void* RB_TakeScreenshotCmd( const screenshotCommand_t* cmd )
 	switch (cmd->type) {
 		case screenshotCommand_t::SS_JPG:
 			RB_TakeScreenshotJPG( cmd->x, cmd->y, cmd->width, cmd->height, cmd->fileName );
+			ri.Printf( PRINT_ALL, "Wrote %s\n", cmd->fileName );
 			break;
 		case screenshotCommand_t::SS_TGA:
 			RB_TakeScreenshotTGA( cmd->x, cmd->y, cmd->width, cmd->height, cmd->fileName );
+			ri.Printf( PRINT_ALL, "Wrote %s\n", cmd->fileName );
 			break;
 	}
 
@@ -387,7 +389,7 @@ const void* RB_TakeScreenshotCmd( const screenshotCommand_t* cmd )
 
 static void R_TakeScreenshot( const char* ext, screenshotCommand_t::ss_type type, qbool hideConsole )
 {
-	static char s[MAX_OSPATH]; // bad things may happen if we somehow manage to take 2 ss in 1 frame
+	static char s[MAX_OSPATH];
 
 	const float conVis = hideConsole ? ri.SetConsoleVisibility( 0.0f ) : 0.0f;
 	screenshotCommand_t* cmd;
@@ -395,10 +397,14 @@ static void R_TakeScreenshot( const char* ext, screenshotCommand_t::ss_type type
 		cmd = &r_delayedScreenshot;
 		r_delayedScreenshotPending = qtrue;
 		r_delayedScreenshotFrame = 0;
+		cmd->delayed = qtrue;
 	} else {
+		if ( RB_FindRenderCommand( RC_SCREENSHOT ) )
+			return;
 		cmd = (screenshotCommand_t*)R_GetCommandBuffer( sizeof(screenshotCommand_t) );
 		if ( !cmd )
 			return;
+		cmd->delayed = qfalse;
 	}
 
 	if (ri.Cmd_Argc() == 2) {
@@ -410,7 +416,6 @@ static void R_TakeScreenshot( const char* ext, screenshotCommand_t::ss_type type
 		Com_sprintf( s, sizeof(s), "screenshots/%d_%02d_%02d-%02d_%02d_%02d-%03d.%s",
 			1900+t.tm_year, 1+t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec, ms, ext );
 	}
-	ri.Printf( PRINT_ALL, "Wrote %s\n", s );
 
 	cmd->commandId = RC_SCREENSHOT;
 	cmd->x = 0;

@@ -146,7 +146,7 @@ typedef struct {
 	void	(*BeginFrame)( stereoFrame_t stereoFrame );
 
 	// if the pointers are not NULL, they will be filled with stats tables
-	void	(*EndFrame)( int* pcFE, int* pc2D, int* pc3D );
+	void	(*EndFrame)( int* pcFE, int* pc2D, int* pc3D, qbool render );
 
 	int		(*MarkFragments)( int numPoints, const vec3_t *points, const vec3_t projection,
 					int maxPoints, vec3_t pointBuffer, int maxFragments, markFragment_t *fragmentBuffer );

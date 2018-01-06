@@ -1438,6 +1438,7 @@ typedef struct {
 	enum ss_type { SS_TGA, SS_JPG } type;
 	float conVis;	// if > 0, this is a delayed screenshot and we need to 
 					// restore the console visibility to that value
+	qbool delayed;
 } screenshotCommand_t;
 
 const void* RB_TakeScreenshotCmd( const screenshotCommand_t* cmd );
@@ -1487,13 +1488,15 @@ extern	backEndData_t	*backEndData;
 
 void *R_GetCommandBuffer( int bytes );
 void RB_ExecuteRenderCommands( const void *data );
+void* RB_FindRenderCommand( renderCommand_t type );
+void RB_RemoveRenderCommand( void* cmd, int cmdSize );
 
 void R_SyncRenderThread( void );
 
 void R_AddDrawSurfCmd( drawSurf_t* drawSurfs, int numDrawSurfs );
 
 void RE_BeginFrame( stereoFrame_t stereoFrame );
-void RE_EndFrame( int* pcFE, int* pc2D, int* pc3D );
+void RE_EndFrame( int* pcFE, int* pc2D, int* pc3D, qbool render );
 void RE_SetColor( const float* rgba );
 void RE_StretchPic( float x, float y, float w, float h,
 		float s1, float t1, float s2, float t2, qhandle_t hShader );
