@@ -1,6 +1,8 @@
 
 DD Mmm 17 - 1.49
 
+chg: now ignoring q3config.cfg and autoexec.cfg outside fs_game to avoid config poisoning
+
 rem: r_maplight* cvars
 
 chg: reduced CPU usage in the client
