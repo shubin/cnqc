@@ -273,7 +273,8 @@ LRESULT CALLBACK MainWndProc (
 		break;
 
 	case WM_SIZE:
-		WIN_UpdateResolution( (int)LOWORD(lParam), (int)HIWORD(lParam) );
+		if ( wParam != SIZE_MINIMIZED )
+			WIN_UpdateResolution( (int)LOWORD(lParam), (int)HIWORD(lParam) );
 		break;
 
 	case WM_SYSCOMMAND:
