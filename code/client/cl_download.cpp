@@ -36,6 +36,9 @@ typedef int				SOCKET;
 #endif
 
 
+#define MAX_TIMEOUT_MS	2000
+
+
 struct mapDownload_t {
 	char recBuffer[1 << 20];		// for both download data and checksumming
 	char tempMessage[MAXPRINTMSG];	// for PrintError
@@ -481,9 +484,7 @@ static qbool ParseHeader( unsigned int* headerLength, mapDownload_t* dl )
 
 // note: sscanf %s with the width specifier will null terminate in overflow cases too
 #define		MAXSTRLEN	512
-#define		STR(X)		#X
-#define		XSTR(X)		STR(X)
-#define		WSPEC		XSTR(MAXSTRLEN)
+#define		WSPEC		XSTRING(MAXSTRLEN)
 
 	static char httpHeaderValue[MAXSTRLEN];
 	static char header[MAXSTRLEN];
@@ -570,8 +571,6 @@ static qbool ParseHeader( unsigned int* headerLength, mapDownload_t* dl )
 	return qtrue;
 
 #undef	WSPEC
-#undef	XSTR
-#undef	STR
 #undef	MAXSTRLEN
 }
 
@@ -589,8 +588,8 @@ int Download_Continue( mapDownload_t* dl )
 			const int now = Sys_Milliseconds();
 			if (!dl->lastErrorTimeOut)
 				dl->timeOutStartTimeMS = now;
-			if (now - dl->timeOutStartTimeMS >= 1000) {
-				PrintError(dl, "Timed out for more than a full second");
+			if (now - dl->timeOutStartTimeMS >= MAX_TIMEOUT_MS) {
+				PrintError(dl, "Timed out for more than " XSTRING(MAX_TIMEOUT_MS) "ms");
 				Download_CleanUp(dl, qfalse);
 				return MDLS_ERROR;
 			}
