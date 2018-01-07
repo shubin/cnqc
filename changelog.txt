@@ -1,11 +1,5 @@
 
-DD Mmm 17 - 1.49
-
-chg: now ignoring q3config.cfg and autoexec.cfg outside fs_game to avoid config poisoning
-
-rem: r_maplight* cvars
-
-chg: reduced CPU usage in the client
+07 Jan 17 - 1.49
 
 add: color cvars for console customization
   con_colBG     <RGBA> (default: "101013F6") - console and help panel background
@@ -24,36 +18,6 @@ add: con_drawHelp <bitmask> (default: 1) controls the help panel displayed below
   2 - draws the help panel even if the current cvar/cmd has no help text
   4 - draws the list of modules the current cvar/cmd belongs to
   8 - draws the list of attributes of the current cvar
-
-fix: console/messagemode input buffers would ignore the last off-screen color modifier when scrolled
-
-fix: console/messagemode input buffers would sometimes display the cursor at the wrong position
-
-chg: console/messagemode input buffers now display the "^" character of color codes
-
-fix: taking screenshots with a render width (r_width) that wasn't a multiple of 4
-  would either crash or produce bad screenshots
-
-fix: false positives of the "SCR_UpdateScreen: recursively called" fatal error
-  repro: connect, get kicked, connect, get kicked
-
-fix: crash when the number of shader stages was wrong (would happen with the "brandon" player model)
-
-fix: the release of a key bound to "+vstr a b" would execute "b" even though the key press didn't execute "a"
-
-chg: r_brightness    <0.25 to 32.0> (default: 2) replaces r_overBrightBits
-     r_mapBrightness <0.25 to 32.0> (default: 2) replaces r_mapOverBrightBits
-  the new cvars use floating-point values (more control) and a linear scale (more intuitive)
-  to convert the old engine values to the new values:
-  r_brightness    = pow(2, r_overBrightBits)
-  r_mapBrightness = pow(2, max(r_mapOverBrightBits - r_overBrightBits, 0))
-
-chg: r_mode <0|1|2> (default: 0) selects the video mode
-  r_mode 0 = no screen mode change, desktop resolution
-  r_mode 1 = no screen mode change, custom resolution, custom upscale mode
-  r_mode 2 = screen mode change, custom resolution (for the CRT users)
-  Custom resolution means using r_width and r_height.
-  Custom upscale mode means using r_blitMode.
 
 add: r_blitMode <0|1|2> (default: 0) selects the upscale mode used by r_mode 1
   r_blitMode 0 = aspect-ratio preserving (black bars if necessary)
@@ -78,7 +42,7 @@ add: cl_matchAlerts <bitmask> (default: 7) lets you know when a match is startin
 add: new commands to take screenshots with the console hidden
   screenshotnc for TARGA (.tga) images
   screenshotncJPEG for JPEG (.jpg) images
-  they will be used for end-game screenshots by CPMA 1.50+ with compatible engines
+  they will be used for end-game screenshots by compatible mods like CPMA 1.50
 
 add: in_noGrab <0|1> (default: 0) disables input grabbing
 
@@ -94,8 +58,6 @@ add: new help commands for commands and cvars of the engine and compatible mods 
   help|man   <cvar|cmd> to display the help of a cvar or command
   searchhelp <pattern>  to list all cvars and commands whose help or name matches the pattern
 
-fix: /bind was treating single-character key names in a case sensitive manner
-
 add: new CNQ3 download system that uses checksums to get the right pak files
   the CNQ3 download system will use the WorldSpawn map server for inexact queries
   (when loading demos or using /dlmap) when the CNQ3 map server doesn't have the file
@@ -105,20 +67,11 @@ add: new CNQ3 download system that uses checksums to get the right pak files
   CNQ3   | fast  | pure servers, demos | map server(s) | not guaranteed    | none
   id     | slow  | pure servers only   | the Q3 server | guaranteed        | sv_allowDownload 1
 
-chg: cl_allowDownload <-1|0|1> (default: 1) can be used to select the download system
-  cl_allowDownload -1 = id's original download system
-  cl_allowDownload  0 = downloads disabled
-  cl_allowDownload  1 = CNQ3 download system
-
 add: new commands for manually initiating and canceling fast downloads:
   dlpak  <checksum> to download a pak by its checksum if the pak doesn't exist locally
   dlmap  <map_name> to download a map by name if no map with such a name exists locally
   dlmapf <map_name> to force download a map by name
   dlstop            to cancel the download in progress, if any
-
-fix: r_fullbright is no longer latched and actually does its job
-
-fix: r_lightmap is now archived and actually does its job
 
 add: r_greyscale <0.0 to 1.0> (default: 0) to control how monochromatic the final image looks
   r_greyscale 0 = full color (nothing done)
@@ -127,16 +80,6 @@ add: r_greyscale <0.0 to 1.0> (default: 0) to control how monochromatic the fina
 add: con_completionStyle <0|1> (default: 0) to select the auto-completion style
   con_completionStyle 0 = always print all results
   con_completionStyle 1 = print once, then cycle results like Enemy Territory's console
-
-chg: cvars and commands are alphabetically sorted
-
-fix: commands registered by cgame no longer auto-complete after the cgame qvm has shut down
-
-chg: removed r_stencilbits, r_depthbits, r_colorbits, r_texturebits and r_ext_compressed_textures
-
-chg: using stb_image to load png and tga images
-
-fix: libjpeg errors no longer shut down the engine
 
 add: m_accelStyle <0|1> (default: 0) to control the mouse accel style
   m_accelStyle 0 = legacy CNQ3 accel style
@@ -148,25 +91,60 @@ add: sv_minRestartDelay <2 to 48> (default: 2)
 	the min. amount of hours to wait for before restarting the server
 	a scheduled restart won't happen until there are no more human players connected
 
-fix: broken rendering when the 2nd stage of a collapsed shader stage pair had non-white colors
-
-fix: shader stages using "wave" were not animated when the server time was too large
-
 add: con_scaleMode <0|1|2> (default: 0) specifies the console text scaling mode
   con_scaleMode 0 = text size scales with con_scale but not the resolution
   con_scaleMode 1 = text size scales with con_scale and the resolution
   con_scaleMode 2 = text size is always 8x12
 
+add: command history saving with con_history (default: 1)
+
+add: r_monitor <0 to monitor count> (default: 0) to select the monitor to display the game on
+  r_monitor is the 1-based index of the monitor to use
+  r_monitor 0 = use the primary monitor
+  r_monitor N = use monitor number N
+
+add: crash handlers with crash report generation
+
+add: improved auto-completion with support for map names, bind key names, etc
+
+add: 64-bit support
+
+chg: new system requirements: OpenGL 2, SDL 2 on the Linux client, Windows Vista or later
+
+chg: now ignoring q3config.cfg and autoexec.cfg outside fs_game to avoid config poisoning
+
+chg: removed the r_maplight* cvars
+
+chg: reduced CPU usage in the client
+
+chg: console/messagemode input buffers now display the "^" character of color codes
+
+chg: r_brightness    <0.25 to 32.0> (default: 2) replaces r_overBrightBits
+     r_mapBrightness <0.25 to 32.0> (default: 2) replaces r_mapOverBrightBits
+  the new cvars use floating-point values (more control) and a linear scale (more intuitive)
+  to convert the old engine values to the new values:
+  r_brightness    = pow(2, r_overBrightBits)
+  r_mapBrightness = pow(2, max(r_mapOverBrightBits - r_overBrightBits, 0))
+
+chg: r_mode <0|1|2> (default: 0) selects the video mode
+  r_mode 0 = no screen mode change, desktop resolution
+  r_mode 1 = no screen mode change, custom resolution, custom upscale mode
+  r_mode 2 = screen mode change, custom resolution (for the CRT users)
+  Custom resolution means using r_width and r_height.
+  Custom upscale mode means using r_blitMode.
+
+chg: cl_allowDownload <-1|0|1> (default: 1) can be used to select the download system
+  cl_allowDownload -1 = id's original download system
+  cl_allowDownload  0 = downloads disabled
+  cl_allowDownload  1 = CNQ3 download system
+
+chg: cvars and commands are alphabetically sorted
+
+chg: removed r_stencilbits, r_depthbits, r_colorbits, r_texturebits and r_ext_compressed_textures
+
+chg: using stb_image to load png and tga images
+
 chg: con_scale <0.25 to 10.0> (default: 1.2) specifies the console text scaling factor and nothing else
-
-fix: the pukka3tourney2 slime wasn't green with r_vertexLight 1
-
-fix: the ct3ctf1 grate near quad was getting picmipped when it wasn't supposed to be
-
-fix: improved the player name look-up behavior for these commands: kick, banUser, dumpuser
-  if 2 players had the same name, it would just pick the first one (lowest client number)
-
-fix: multi-view mouse input sensitivity is now the same as in the UI for CPMA 1.50
 
 chg: replaced monitor gamma by a post-process gamma shader and removed r_ignorehwgamma
 
@@ -176,39 +154,59 @@ chg: anti-aliasing sample count is set with r_msaa on all platforms (on Windows,
 
 chg: file system start-up will now verify the presence and integrity of baseq3/pak0-8.pk3 instead of only pak0
 
-add: command history saving with con_history (default: 1)
-
 chg: replaced id's Huffman codec code with something both simpler and much faster
-
-add: r_monitor <0 to monitor count> (default: 0) to select the monitor to display the game on
-  r_monitor is the 1-based index of the monitor to use
-  r_monitor 0 = use the primary monitor
-  r_monitor N = use monitor number N
-
-fix: fixed the start-up console window staying visible when starting in full-screen
-
-add: crash handlers with crash report generation
 
 chg: tweaked console scrolling speeds, fixed backtip insertion on Windows
 
 chg: improved level load times
 
-add: improved auto-completion with support for map names, bind key names, etc
-
 chg: sound fall-off is linear instead of using a power function
-
-add: 64-bit support
 
 chg: switch from libjpeg 6 to libjpeg-turbo
 
-chg: remove the byzantine r_mode usage added in 1.47
+chg: removed the byzantine r_mode usage added in 1.47
+
+fix: console/messagemode input buffers would ignore the last off-screen color modifier when scrolled
+
+fix: console/messagemode input buffers would sometimes display the cursor at the wrong position
+
+fix: taking screenshots with a render width (r_width) that wasn't a multiple of 4
+  would either crash or produce bad screenshots
+
+fix: false positives of the "SCR_UpdateScreen: recursively called" fatal error
+  repro: connect, get kicked, connect, get kicked
+
+fix: crash when the number of shader stages was wrong (would happen with the "brandon" player model)
+
+fix: the release of a key bound to "+vstr a b" would execute "b" even though the key press didn't execute "a"
+
+fix: /bind was treating single-character key names in a case sensitive manner
+
+fix: r_fullbright is no longer latched and actually does its job
+
+fix: r_lightmap is now archived and actually does its job
+
+fix: commands registered by cgame no longer auto-complete after the cgame qvm has shut down
+
+fix: libjpeg errors no longer shut down the engine
+
+fix: broken rendering when the 2nd stage of a collapsed shader stage pair had non-white colors
+
+fix: shader stages using "wave" were not animated when the server time was too large
+
+fix: the pukka3tourney2 slime wasn't green with r_vertexLight 1
+
+fix: the ct3ctf1 grate near quad was getting picmipped when it wasn't supposed to be
+
+fix: improved the player name look-up behavior for these commands: kick, banUser, dumpuser
+  if 2 players had the same name, it would just pick the first one (lowest client number)
+
+fix: multi-view mouse input sensitivity is now the same as in the UI for compatible mods like CPMA 1.50
+
+fix: fixed the start-up console window staying visible when starting in full-screen
 
 
 Windows:
-
-rem: DirectInput mouse input mode
-
-fix: disabled DPI scaling on the client
 
 add: in_minimize registers a hotkey to minimize/restore the client
   key names must be separated by white space and there can be at most 2 modifier keys
@@ -217,22 +215,23 @@ add: auto-completion and command history in the dedicated server console window
 
 add: new bindable key: BACKSLASH (the key to the right of the left shift button)
 
-fix: the crash handler will reset the system timer resolution
-
-fix: if requesting a resolution too high for the display, the image would be offset vertically
+chg: removed DirectInput mouse input mode
 
 chg: updated mouse input for better grab (de-)activation and fixed window dragging not working
 
 chg: reduced raw mouse input latency and added cl_drawMouseLag
+
+fix: disabled DPI scaling on the client
+
+fix: the crash handler will reset the system timer resolution
+
+fix: if requesting a resolution too high for the display, the image would be offset vertically
 
 fix: in raw mouse input mode, keeping any button pressed while focusing the window would keep
   the cursor visible even after releasing all buttons
 
 
 Linux:
-
-chg: the client requires SDL 2 - the following things are handled by it:
-  window, GL context, video modes, audio, kb and mouse input, monitor list, clipboard
 
 add: m_relative <0|1> (default: 1) enables SDL's relative mouse mode
   you might want to set it to 0 if you have a messed up input driver
@@ -246,6 +245,11 @@ add: automatic dedicated server process restarts for crashes and timed reboots (
   this behavior can be disabled by passing "nohardreboot" as a command-line argument
   the new command sv_restartProcess can be used to shut down the child process and start a new one
 
+chg: the client requires SDL 2 - the following things are handled by it:
+  window, GL context, video modes, audio, kb and mouse input, monitor list, clipboard
+
+chg: tty input behavior matches in-game behavior when cgame is running and fixed the truncated tty input
+
 fix: color codes (e.g. "^1") don't get printed to the terminal anymore
 
 fix: tty handling of the leading "]" character
@@ -253,8 +257,6 @@ fix: tty handling of the leading "]" character
 fix: dedicated servers no longer insert a leading backslash when running auto-completion
 
 fix: the crash handler will reset tty input mode correctly
-
-chg: tty input behavior matches in-game behavior when cgame is running and fixed the truncated tty input
 
 
 17 Sep 11 - 1.47
