@@ -834,6 +834,26 @@ qbool FS_FilenameCompare( const char *s1, const char *s2 ) {
 }
 
 
+// returns qtrue if we allow opening the file on the real file system
+
+static qbool FS_IsPureException( const char* filename )
+{
+	const int l = strlen( filename );
+	if ( l < 5 )
+		return qfalse;
+
+	const char* const s4 = filename + l - 4;
+	const char* const s5 = filename + l - 5;
+	return	!Q_stricmp( s4, ".cfg" ) ||
+			!Q_stricmp( s4, ".ttf" ) ||
+			!Q_stricmp( s4, ".dat" ) ||
+			!Q_stricmp( s4, ".jpg" ) ||
+			!Q_stricmp( s4, ".tga" ) ||
+			!Q_stricmp( s4, ".png" ) ||
+			!Q_stricmp( s5, ".jpeg" );
+}
+
+
 /*
 ===========
 FS_FOpenFileRead
@@ -856,7 +876,8 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qbool uniqueFILE
 	unz_s			*zfi;
 	FILE			*temp;
 	int				l;
-	char demoExt[16];
+	char			demoExt[16];
+	qbool			pureException;
 
 	hash = 0;
 
@@ -1025,18 +1046,15 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qbool uniqueFILE
 
 			// if we are running restricted, the only files we
 			// will allow to come from the directory are .cfg files
-			l = strlen( filename );
+
       // FIXME TTimo I'm not sure about the fs_numServerPaks test
       // if you are using FS_ReadFile to find out if a file exists,
       //   this test can make the search fail although the file is in the directory
       // I had the problem on https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=8
       // turned out I used FS_FileExists instead
-			if ( fs_numServerPaks ) {
-				if (   Q_stricmp( filename + l - 4, ".cfg" )
-					&& Q_stricmp( filename + l - 4, ".ttf" )
-					&& Q_stricmp( filename + l - 4, ".dat" ) ) {	// for journal files
-					continue;
-				}
+			pureException = FS_IsPureException( filename );
+			if ( fs_numServerPaks && !pureException ) {
+				continue;
 			}
 
 			dir = search->dir;
@@ -1047,9 +1065,7 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qbool uniqueFILE
 				continue;
 			}
 
-			if (   Q_stricmp( filename + l - 4, ".cfg" )
-				&& Q_stricmp( filename + l - 4, ".ttf" )
-				&& Q_stricmp( filename + l - 4, ".dat" ) ) {	// for journal files
+			if ( !pureException ) {
 				fs_fakeChkSum = 0;
 			}
 

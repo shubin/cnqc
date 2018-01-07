@@ -111,6 +111,8 @@ add: 64-bit support
 
 chg: new system requirements: OpenGL 2, SDL 2 on the Linux client, Windows Vista or later
 
+chg: sv_pure 1 now allows new image files (no overrides) to be read from directories
+
 chg: now ignoring q3config.cfg and autoexec.cfg outside fs_game to avoid config poisoning
 
 chg: removed the r_maplight* cvars
