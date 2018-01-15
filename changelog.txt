@@ -1,6 +1,9 @@
 
 DD Mmm 18 - 1.50
 
+chg: com_hunkMegs doesn't have a maximum value anymore
+  a value too high would reset it and the engine might fail to load with the default value
+
 fix: jitter due to snapshots piling up with the same server timestamp for loopback and LAN clients
 
 fix: the Windows crash handler would incorrectly consider certain exceptions as fatal
