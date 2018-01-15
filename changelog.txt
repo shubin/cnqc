@@ -1,5 +1,10 @@
 
-07 Jan 17 - 1.49
+DD Mmm 18 - 1.50
+
+fix: jitter due to snapshots piling up with the same server timestamp for loopback and LAN clients
+
+
+07 Jan 18 - 1.49
 
 add: color cvars for console customization
   con_colBG     <RGBA> (default: "101013F6") - console and help panel background

@@ -538,7 +538,9 @@ void SV_SendMessageToClient( msg_t *msg, client_t *client ) {
 	// TTimo - https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=491
 	// added sv_lanForceRate check
 	if ( client->netchan.remoteAddress.type == NA_LOOPBACK || (sv_lanForceRate->integer && Sys_IsLANAddress(client->netchan.remoteAddress)) ) {
-		client->nextSnapshotTime = svs.time - 1;
+		// we do NOT currently have snapshots every frame because of SV_Frame's NET_Sleep call
+		// but we can avoid piling up snapshots in the same milli-second before sleeping roughly 1000/sv_fps milli-seconds...
+		client->nextSnapshotTime = svs.time + 1;
 		return;
 	}
 
