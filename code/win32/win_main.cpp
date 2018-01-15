@@ -710,13 +710,15 @@ void WIN_UpdateMonitorIndexFromMainWindow()
 ///////////////////////////////////////////////////////////////
 
 
-int WINAPI WinMainImpl( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow )
+int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow )
 {
 	// should never get a previous instance in Win32
 	if ( hPrevInstance )
 		return 0;
 
 	g_wv.hInstance = hInstance;
+
+	WIN_InstallExceptionHandlers();
 
 	WIN_InitMonitorList();
 
@@ -729,6 +731,7 @@ int WINAPI WinMainImpl( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCm
 	char sys_cmdline[MAX_STRING_CHARS];
 	Q_strncpyz( sys_cmdline, lpCmdLine, sizeof( sys_cmdline ) );
 	Com_Init( sys_cmdline );
+	WIN_RegisterExceptionCommands();
 
 	NET_Init();
 
@@ -772,24 +775,4 @@ int WINAPI WinMainImpl( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCm
 	}
 
 	// never gets here
-}
-
-
-int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow )
-{
-	// Register the exception handler for all threads present and future in this process.
-	// 1 means we're inserting the handler at the front of the queue.
-	// The debugger does still get first-chance access though.
-	// The handler is always called in the context of the thread raising the exception.
-	AddVectoredExceptionHandler( 1, WIN_HandleException );
-
-	// Make sure we reset system settings even when someone calls exit.
-	atexit( WIN_HandleExit );
-
-	// SetErrorMode(0) gets the current flags
-	// SEM_FAILCRITICALERRORS -> no abort/retry/fail errors
-	// SEM_NOGPFAULTERRORBOX  -> the Windows Error Reporting dialog will not be shown
-	SetErrorMode( SetErrorMode(0) | SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX );
-
-	return WinMainImpl( hInstance, hPrevInstance, lpCmdLine, nCmdShow );
 }

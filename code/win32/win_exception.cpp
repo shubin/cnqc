@@ -269,6 +269,7 @@ static void WIN_WriteTextData( const char* filePath, debug_help_t* debugHelp, EX
 	
 	WIN_DumpStackTrace(debugHelp);
 	JSONW_HexValue("exception_code", pExceptionRecord->ExceptionCode);
+	JSONW_HexValue("exception_flags", pExceptionRecord->ExceptionFlags);
 	JSONW_StringValue("exception_description", WIN_GetExceptionCodeString(pExceptionRecord->ExceptionCode));
 
 	if (pExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION && 
@@ -378,13 +379,10 @@ static int WINAPI WIN_WriteExceptionFiles( EXCEPTION_POINTERS* pExceptionPointer
 	return EXCEPTION_EXECUTE_HANDLER;
 }
 
-static qbool WIN_ShouldContinueSearch( DWORD exceptionCode )
+// Returns qtrue when execution should stop immediately and a crash report should be written.
+// Obviously, this piece of code must be *very* careful with what exception codes are considered fatal.
+static qbool WIN_IsCrashCode( DWORD exceptionCode )
 {
-	// Obviously, this piece of code must be *very* careful with what exception codes are handled.
-	// Invoking our handler on a non-crash will shut down the application when it shouldn't.
-	// Not invoking our handler on a crash means the app shuts down immediately with no crash report.
-	// As you can see, neither scenario is desirable...
-
 	switch (exceptionCode) {
 		// The following should always invoke our handler.
 		case EXCEPTION_ACCESS_VIOLATION:
@@ -399,11 +397,13 @@ static qbool WIN_ShouldContinueSearch( DWORD exceptionCode )
 		case EXCEPTION_NONCONTINUABLE_EXCEPTION:
 		case EXCEPTION_PRIV_INSTRUCTION:
 		case EXCEPTION_STACK_OVERFLOW:
+		case STATUS_HEAP_CORRUPTION:
+		case STATUS_STACK_BUFFER_OVERRUN:
 		// The debugger has first-chance access.
 		// Therefore, if we get these, we should stop too.
 		case EXCEPTION_BREAKPOINT:
 		case EXCEPTION_SINGLE_STEP:
-			return qfalse;
+			return qtrue;
 
 		// We don't handle the rest.
 		// Please leave the commented lines so we know what's being allowed.
@@ -418,14 +418,14 @@ static qbool WIN_ShouldContinueSearch( DWORD exceptionCode )
 		//case EXCEPTION_GUARD_PAGE:			// we hit the stack guard page (used for growing the stack)
 		//case EXCEPTION_INVALID_HANDLE:		// invalid kernel object (may have been closed)
 		default:
-			return qtrue;
+			return qfalse;
 	}
 }
 
 // Debugging a full-screen app with a single screen is a horrendous experience.
 // With our custom handler, we can handle crashes by restoring the desktop settings
 // and hiding the main window before letting the debugger take over.
-// This will only help for crashes though, breakpoints will still be fucked up.
+// This will only help for "crash" exceptions though, other exceptions and breakpoints will still be fucked up.
 // Work-around for breakpoints: use __debugbreak(); and don't launch the app through the debugger.
 static qbool WIN_WouldDebuggingBeOkay()
 {
@@ -440,8 +440,11 @@ static qbool WIN_WouldDebuggingBeOkay()
 }
 
 //
-// The exception handler's job is to reset system settings that won't get reset
-// as part of the normal process clean-up by the OS.
+// WIN_HandleCrash' tasks are to:
+// - reset system settings that won't get reset
+//   as part of the normal process clean-up by the OS
+// - write a crash report if it was called because of a crash
+//
 // It can't do any memory allocation or use any synchronization objects.
 // Ideally, we want it to be called before every abrupt application exit
 // and right after any legitimate crash.
@@ -461,19 +464,17 @@ static qbool WIN_WouldDebuggingBeOkay()
 
 static qbool exc_exitCalled = qfalse;
 
-LONG CALLBACK WIN_HandleException( EXCEPTION_POINTERS* ep )
+static LONG WIN_HandleCrash( EXCEPTION_POINTERS* ep )
 {
-	if (ep != NULL && ep->ExceptionRecord != NULL) {
-		qbool contSearch = WIN_ShouldContinueSearch(ep->ExceptionRecord->ExceptionCode);
-		if (contSearch && (ep->ExceptionRecord->ExceptionFlags & EXCEPTION_NONCONTINUABLE) != 0)
-			contSearch = qfalse;
-		if (contSearch)
-			return EXCEPTION_CONTINUE_SEARCH;
-	}
-
 	__try {
 		WIN_EndTimePeriod(); // system timer resolution
 	} __except (EXCEPTION_EXECUTE_HANDLER) {}
+
+#ifndef DEDICATED
+	__try {
+		CL_MapDownload_CrashCleanUp();
+	} __except(EXCEPTION_EXECUTE_HANDLER) {}
+#endif
 
 	if (IsDebuggerPresent() && WIN_WouldDebuggingBeOkay())
 		return EXCEPTION_CONTINUE_SEARCH;
@@ -496,12 +497,6 @@ LONG CALLBACK WIN_HandleException( EXCEPTION_POINTERS* ep )
 	}
 #endif
 
-#ifndef DEDICATED
-	__try {
-		CL_MapDownload_CrashCleanUp();
-	} __except(EXCEPTION_EXECUTE_HANDLER) {}
-#endif
-
 	if (exc_exitCalled || IsDebuggerPresent())
 		return EXCEPTION_CONTINUE_SEARCH;
 
@@ -521,8 +516,95 @@ LONG CALLBACK WIN_HandleException( EXCEPTION_POINTERS* ep )
 	ExitProcess(666);
 }
 
-void WIN_HandleExit( void )
+// Always called.
+static LONG CALLBACK WIN_FirstExceptionHandler( EXCEPTION_POINTERS* ep )
+{
+#if defined(DEBUG) || defined(CNQ3_DEV)
+	MessageBeep(MB_OK);
+	Sleep(1000);
+#endif
+
+	if (ep != NULL && ep->ExceptionRecord != NULL) {
+		if (WIN_IsCrashCode(ep->ExceptionRecord->ExceptionCode))
+			return WIN_HandleCrash(ep);
+	}
+
+	return EXCEPTION_CONTINUE_SEARCH;
+}
+
+// Only called when no other handler processed the exception.
+// This is never called when a debugger is attached.
+// If a non-fatal exception happens while debugging,
+// we won't get the chance to minimize the window etc. :-(
+static LONG CALLBACK WIN_LastExceptionHandler( EXCEPTION_POINTERS* ep )
+{
+#if defined(DEBUG) || defined(CNQ3_DEV)
+	MessageBeep(MB_ICONERROR);
+	Sleep(1000);
+#endif
+
+	return WIN_HandleCrash(ep);
+}
+
+static void WIN_ExitHandler( void )
 {
 	exc_exitCalled = qtrue;
-	WIN_HandleException(NULL);
+	WIN_HandleCrash(NULL);
 }
+
+void WIN_InstallExceptionHandlers()
+{
+	// Register the vectored exception handler for all threads present and future in this process.
+	// The handler is always called in the context of the thread raising the exception.
+	// 1 means we're inserting the handler at the front of the queue.
+	// The debugger does still get first-chance access though.
+	AddVectoredExceptionHandler(1, &WIN_FirstExceptionHandler);
+
+	// Register the top-level exception handler for all threads present and future in this process.
+	// The handler is always called in the context of the thread raising the exception.
+	// The handler will never get called when a debugger is attached.
+	// We're giving others the chance to handle exceptions we don't recognize as fatal.
+	// If they don't get handled, we'll shut down.
+	SetUnhandledExceptionFilter(&WIN_LastExceptionHandler);
+
+	// Make sure we reset system settings even when someone calls exit.
+	atexit(&WIN_ExitHandler);
+
+	// SetErrorMode(0) gets the current flags
+	// SEM_FAILCRITICALERRORS -> no abort/retry/fail errors
+	// SEM_NOGPFAULTERRORBOX  -> the Windows Error Reporting dialog will not be shown
+	SetErrorMode(SetErrorMode(0) | SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
+}
+
+#if defined(DEBUG) || defined(CNQ3_DEV)
+
+static void WIN_RaiseException_f()
+{
+	const int argc = Cmd_Argc();
+	unsigned int exception;
+	if ((argc != 2 && argc != 3) ||
+		sscanf(Cmd_Argv(1), "%X", &exception) != 1) {
+		Com_Printf("Usage: %s <code_hex> [flags_hex]\n", Cmd_Argv(0));
+		return;
+	}
+
+	unsigned int flags = 0;
+	if (argc == 3)
+		sscanf(Cmd_Argv(2), "%X", &flags);
+
+	RaiseException((DWORD)exception, (DWORD)flags, 0, NULL);
+}
+
+void WIN_RegisterExceptionCommands()
+{
+	Cmd_AddCommand("raise", &WIN_RaiseException_f);
+	Cmd_SetHelp("raise", "calls the WinAPI function RaiseException");
+}
+
+#else
+
+void WIN_RegisterExceptionCommands()
+{
+}
+
+#endif

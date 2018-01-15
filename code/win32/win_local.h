@@ -52,9 +52,9 @@ void WIN_S_Mute( qbool mute );
 LRESULT CALLBACK MainWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam );
 
 // crash handling
-LONG CALLBACK	WIN_HandleException( EXCEPTION_POINTERS* ep );
-void			WIN_HandleExit();
-void			WIN_EndTimePeriod();
+void WIN_InstallExceptionHandlers();
+void WIN_RegisterExceptionCommands();
+void WIN_EndTimePeriod();
 
 // opening OpenGL and loading core functions
 extern "C" {

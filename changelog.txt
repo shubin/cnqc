@@ -3,6 +3,8 @@ DD Mmm 18 - 1.50
 
 fix: jitter due to snapshots piling up with the same server timestamp for loopback and LAN clients
 
+fix: the Windows crash handler would incorrectly consider certain exceptions as fatal
+
 
 07 Jan 18 - 1.49
 
