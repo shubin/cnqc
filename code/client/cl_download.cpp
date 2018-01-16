@@ -304,7 +304,9 @@ static qbool Download_Rename( mapDownload_t* dl )
 	}
 
 	// try with the desired name
-	Com_sprintf(dl->finalPath, sizeof(dl->finalPath), "%s%s.pk3", dir, name);
+	const char* const fs_basepath = Cvar_VariableString("fs_basepath");
+	const char* finalPath = FS_BuildOSPath(fs_basepath, "baseq3", va("%s.pk3", name));
+	Q_strncpyz(dl->finalPath, finalPath, sizeof(dl->finalPath));
 	if (RenameFile(dl->tempPath, dl->finalPath))
 		return qtrue;
 
@@ -314,7 +316,8 @@ static qbool Download_Rename( mapDownload_t* dl )
 		const unsigned int suffix0 = (unsigned int)rand() % (1 << 12);
 		const unsigned int suffix1 = (unsigned int)rand() % (1 << 12);
 		const unsigned int suffix = suffix0 | (suffix1 << 12);
-		Com_sprintf(dl->finalPath, sizeof(dl->finalPath), "%s%s_%06x.pk3", dir, name, suffix);
+		finalPath = FS_BuildOSPath(fs_basepath, "baseq3", va("%s_%06x.pk3", name, suffix));
+		Q_strncpyz(dl->finalPath, finalPath, sizeof(dl->finalPath));
 		if (RenameFile(dl->tempPath, dl->finalPath))
 			return qtrue;
 	}
@@ -427,14 +430,15 @@ static qbool Download_Begin( mapDownload_t* dl, int port, const char* server, co
 		return qfalse;
 	}
 
+	const char* const tempPathBase = FS_BuildOSPath(Cvar_VariableString("fs_basepath"), "baseq3", "");
 #if defined(_WIN32)
-	if (GetTempFileNameA("baseq3", "", 0, dl->tempPath) == 0) {
+	if (GetTempFileNameA(tempPathBase, "", 0, dl->tempPath) == 0) {
 		PrintError(dl, "Couldn't create a file name");
 		return qfalse;
 	}
 	dl->file = fopen(dl->tempPath, "wb");
 #else
-	Q_strncpyz(dl->tempPath, "baseq3/XXXXXX.tmp", sizeof(dl->tempPath));
+	Com_sprintf(dl->tempPath, sizeof(dl->tempPath), "%s/XXXXXX.tmp", tempPathBase);
 	const int fd = mkstemps(dl->tempPath, 4);
 	dl->file = fd != -1 ? fdopen(fd, "wb") : NULL;
 #endif
