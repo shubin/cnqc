@@ -298,7 +298,7 @@ static void Sig_HandleCrash(int sig)
 
 	Sig_Unwind_GetContext();
 
-	const int fd = open(Sig_BackTraceFilePath(), O_CREAT | O_TRUNC | O_WRONLY);
+	const int fd = open(Sig_BackTraceFilePath(), O_CREAT | O_TRUNC | O_WRONLY, 0644);
 	if (fd != -1)
 	{
 		Sig_PrintAttempt("write safe libunwind stack trace");
