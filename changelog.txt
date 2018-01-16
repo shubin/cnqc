@@ -1,6 +1,8 @@
 
 DD Mmm 18 - 1.50
 
+chg: on Windows, a fatal error will move the early console window to the foreground
+
 chg: com_hunkMegs doesn't have a maximum value anymore
   a value too high would reset it and the engine might fail to load with the default value
 

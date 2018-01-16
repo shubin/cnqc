@@ -86,7 +86,7 @@ void QDECL Sys_Error( const char *error, ... )
 	WIN_AppendConsoleText( "\n" );
 
 	Sys_SetErrorText( text );
-	Sys_ShowConsole( 1, qtrue );
+	Sys_ShowConsole( 3, qtrue );
 
 	WIN_EndTimePeriod();
 

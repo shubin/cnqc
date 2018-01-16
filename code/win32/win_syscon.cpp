@@ -539,6 +539,11 @@ void Sys_ShowConsole( int visLevel, qbool quitOnClose )
 	case 2:
 		ShowWindow( s_wcd.hWnd, SW_MINIMIZE );
 		break;
+	case 3:
+		ShowWindow( s_wcd.hWnd, SW_SHOWNORMAL );
+		SendMessage( s_wcd.hwndBuffer, EM_LINESCROLL, 0, 0xffff );
+		SetForegroundWindow( s_wcd.hWnd );
+		break;
 	default:
 		Sys_Error( "Invalid visLevel %d sent to Sys_ShowConsole\n", visLevel );
 		break;
