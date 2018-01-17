@@ -386,7 +386,7 @@ static qbool Download_Begin( mapDownload_t* dl, int port, const char* server, co
 			continue;
 		}
 
-		if (connect(dl->socket, address->ai_addr, address->ai_addrlen) == SOCKET_ERROR) {
+		if (connect(dl->socket, a->ai_addr, a->ai_addrlen) == SOCKET_ERROR) {
 			PrintSocketError(dl, "connect");
 			if (dl->socket != INVALID_SOCKET) {
 				Q_closesocket(dl->socket);
