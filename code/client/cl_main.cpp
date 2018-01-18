@@ -1472,7 +1472,7 @@ static void CL_CheckTimeout()
 		return;
 	}
 
-	if ( ( !cl_paused->integer || !sv_paused->integer )
+	if ( ( !CL_Paused() || !sv_paused->integer )
 		&& cls.state >= CA_CONNECTED && cls.state != CA_CINEMATIC
 		&& cls.realtime - clc.lastPacketTime > cl_timeout->value*1000) {
 		if (++cl.timeoutcount > 5) {	// timeoutcount saves debugger
@@ -1493,7 +1493,7 @@ static void CL_CheckUserinfo()
 		return;
 	}
 	// don't overflow the reliable command buffer when paused
-	if ( cl_paused->integer ) {
+	if ( CL_Paused() ) {
 		return;
 	}
 	// send a reliable userinfo update if needed
@@ -1584,6 +1584,22 @@ void CL_Frame( int msec )
 int CL_ScaledMilliseconds()
 {
 	return Sys_Milliseconds()*com_timescale->value;
+}
+
+
+qbool CL_Paused()
+{
+	// Summary: We keep the client pause active until we get a new server time through a snapshot.
+	//
+	// Without this fix, after the client pause ends and before we get a new server snapshot,
+	// CL_AdjustTimeDelta will update cl.serverTime to a higher value
+	// and that value is sent in the ucmd_t data to the server (CL_FinishMove).
+	// Since the timestamp is "from the future", anything that follows needs to be
+	// at least as high, which won't happen for a while because cl.serverTime will get reset to
+	// something correct (i.e. lower) upon reception of the next snapshot from the server.
+	// In other words: After a client pause of X seconds, the server ignores the client's input
+	// for X seconds and the client is basically timing out. Oops.
+	return cl_paused->integer || cl_paused->modified;
 }
 
 

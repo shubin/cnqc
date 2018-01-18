@@ -814,7 +814,7 @@ void CL_SetCGameTime()
 	}
 
 	// allow pause in single player
-	if ( sv_paused->integer && cl_paused->integer && com_sv_running->integer ) {
+	if ( sv_paused->integer && CL_Paused() && com_sv_running->integer ) {
 		return;
 	}
 

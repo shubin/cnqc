@@ -209,6 +209,11 @@ static void CL_ParseSnapshot( msg_t *msg )
 
 	newSnap.serverTime = MSG_ReadLong( msg );
 
+	// now that we have a server time update,
+	// we can consider the client pause (if active) truly over
+	// see CL_Paused for the details
+	cl_paused->modified = qfalse;
+
 	newSnap.messageNum = clc.serverMessageSequence;
 
 	deltaNum = MSG_ReadByte( msg );

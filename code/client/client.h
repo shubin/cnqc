@@ -376,6 +376,8 @@ int CL_ServerStatus( char *serverAddress, char *serverStatusString, int maxLen )
 void CL_DownloadsComplete();
 void CL_DemoCompleted();
 
+qbool CL_Paused();
+
 
 // cl_browser
 
