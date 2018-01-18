@@ -69,8 +69,8 @@ static int QuakeKeyFromSDLKey( SDL_Keysym key )
 	const SDL_Keycode sym = key.sym;
 
 	// these ranges map directly to ASCII chars
-	if ((sym >= SDLK_a && sym < SDLK_z) ||
-		(sym >= SDLK_0 && sym < SDLK_9))
+	if ((sym >= SDLK_a && sym <= SDLK_z) ||
+		(sym >= SDLK_0 && sym <= SDLK_9))
 		return (int)sym;
 
 	// F1 to F24
