@@ -746,21 +746,12 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	}
 
 #ifndef DEDICATED
-	if (!com_dedicated->integer)
+	if ( !com_dedicated->integer )
 		Sys_InitInput();
 #endif
 
-	int totalMsec = 0, countMsec = 0;
-
 	// main game loop
-	while (qtrue) {
-		// if running as a client but not focused, sleep a bit
-		// (servers have their own sleep path)
-		if ( !g_wv.activeApp && com_dedicated && !com_dedicated->integer )
-			Sleep( 5 );
-
-		int startTime = Sys_Milliseconds();
-
+	for (;;) {
 #ifndef DEDICATED
 		// make sure mouse and joystick are only called once a frame
 		IN_Frame();
@@ -769,9 +760,6 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 
 		// run the game
 		Com_Frame();
-
-		totalMsec += Sys_Milliseconds() - startTime;
-		countMsec++;
 	}
 
 	// never gets here
