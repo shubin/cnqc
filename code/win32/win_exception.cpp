@@ -180,13 +180,20 @@ static char exc_reportFolderPath[MAX_PATH];
 
 static void WIN_CreateDumpFilePath( char* buffer, const char* fileName, SYSTEMTIME* time )
 {
-	char* const temp = getenv("TEMP");
-	if (temp == NULL || !WIN_CreateDirectoryIfNeeded(va("%s\\cnq3_crash", temp)))
-		return;
+	// First try to create "%temp%/cnq3_crash", then ".cnq3_crash".
+	// If both fail, just use the current directory.
+	char* const tempPath = getenv("TEMP");
+	const char* reportPath = va("%s\\cnq3_crash", tempPath);
+	if (tempPath == NULL || !WIN_CreateDirectoryIfNeeded(reportPath)) {
+		reportPath = ".cnq3_crash";
+		if (!WIN_CreateDirectoryIfNeeded(reportPath)) {
+			reportPath = ".";
+		}
+	}
 
-	Q_strncpyz(exc_reportFolderPath, va("%s\\cnq3_crash\\", temp), sizeof(exc_reportFolderPath));
+	Q_strncpyz(exc_reportFolderPath, reportPath, sizeof(exc_reportFolderPath));
 	StringCchPrintfA(
-		buffer, MAX_PATH, "%s%s_%04d.%02d.%02d_%02d.%02d.%02d",
+		buffer, MAX_PATH, "%s\\%s_%04d.%02d.%02d_%02d.%02d.%02d",
 		exc_reportFolderPath, fileName, time->wYear, time->wMonth, time->wDay,
 		time->wHour, time->wMinute, time->wSecond);
 }
@@ -259,11 +266,11 @@ static qbool wasDevModeValid = qfalse;
 static qbool wasMinimized = qfalse;
 #endif
 
-static void WIN_WriteTextData( const char* filePath, debug_help_t* debugHelp, EXCEPTION_RECORD* pExceptionRecord )
+static qbool WIN_WriteTextData( const char* filePath, debug_help_t* debugHelp, EXCEPTION_RECORD* pExceptionRecord )
 {
 	FILE* const file = fopen(filePath, "w");
 	if (file == NULL)
-		return;
+		return qfalse;
 
 	JSONW_BeginFile(file);
 	
@@ -294,16 +301,18 @@ static void WIN_WriteTextData( const char* filePath, debug_help_t* debugHelp, EX
 	JSONW_EndFile();
 
 	fclose(file);
+
+	return qtrue;
 }
 
-static void WIN_WriteMiniDump( const char* filePath, debug_help_t* debugHelp, EXCEPTION_POINTERS* pExceptionPointers )
+static qbool WIN_WriteMiniDump( const char* filePath, debug_help_t* debugHelp, EXCEPTION_POINTERS* pExceptionPointers )
 {
 	const HANDLE dumpFile = CreateFileA(
 		filePath, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_WRITE | FILE_SHARE_READ,
 		0, CREATE_ALWAYS, 0, 0);
 
 	if (dumpFile == INVALID_HANDLE_VALUE)
-		return;
+		return qfalse;
 
 	MINIDUMP_EXCEPTION_INFORMATION exceptionInfo;
 	ZeroMemory(&exceptionInfo, sizeof(exceptionInfo));
@@ -322,6 +331,8 @@ static void WIN_WriteMiniDump( const char* filePath, debug_help_t* debugHelp, EX
 		&exceptionInfo, NULL, &callbackInfo);
 
 	CloseHandle(dumpFile);
+
+	return qtrue;
 }
 
 static const char* WIN_GetFileName( const char* path )
@@ -337,6 +348,7 @@ static const char* WIN_GetFileName( const char* path )
 	return path;
 }
 
+// We consider the report written if at least 1 file was successfully written to.
 static qbool exc_reportWritten = qfalse;
 
 static void WIN_WriteExceptionFilesImpl( EXCEPTION_POINTERS* pExceptionPointers )
@@ -354,9 +366,8 @@ static void WIN_WriteExceptionFilesImpl( EXCEPTION_POINTERS* pExceptionPointers 
 	char dumpFilePath[MAX_PATH];
 	WIN_CreateDumpFilePath(dumpFilePath, WIN_GetFileName(modulePath), &time);
 
-	WIN_WriteTextData(va("%s.json", dumpFilePath), &debugHelp, pExceptionPointers->ExceptionRecord);
-	WIN_WriteMiniDump(va("%s.dmp", dumpFilePath), &debugHelp, pExceptionPointers);
-	exc_reportWritten = qtrue;
+	exc_reportWritten |= WIN_WriteTextData(va("%s.json", dumpFilePath), &debugHelp, pExceptionPointers->ExceptionRecord);
+	exc_reportWritten |= WIN_WriteMiniDump(va("%s.dmp", dumpFilePath), &debugHelp, pExceptionPointers);
 
 	WIN_CloseDebugHelp(&debugHelp);
 }
