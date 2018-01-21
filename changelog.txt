@@ -10,6 +10,9 @@ chg: on Windows, a fatal error will move the early console window to the foregro
 chg: com_hunkMegs doesn't have a maximum value anymore
   a value too high would reset it and the engine might fail to load with the default value
 
+fix: strcpy calls with overlapping buffers (undefined behavior), which were responsible for the
+  "chars.h not found" / "couldn't load any skills" issue preventing bots from being added
+
 fix: on Linux, the 'Z' and '9' keys could not be bound
 
 fix: cl_allowDownload 1 failing on "connect" (error 10047 on Windows)
