@@ -441,11 +441,14 @@ static qbool sdl_IsInputActive()
 	if (in_noGrab->integer)
 		return qfalse;
 
+	const qbool isConsoleDown = (cls.keyCatchers & KEYCATCH_CONSOLE) != 0;
+	if (isConsoleDown && glimp.monitorCount >= 2)
+		return qfalse;
+
 	const qbool hasFocus = (SDL_GetWindowFlags(glimp.window) & SDL_WINDOW_INPUT_FOCUS) != 0;
 	if (!hasFocus)
 		return qfalse;
 
-	const qbool isConsoleDown = (cls.keyCatchers & KEYCATCH_CONSOLE) != 0;
 	const qbool isFullScreen = Cvar_VariableIntegerValue("r_fullscreen");
 	if (isConsoleDown && !isFullScreen)
 		return qfalse;

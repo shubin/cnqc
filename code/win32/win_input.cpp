@@ -432,7 +432,11 @@ static qbool IN_ShouldBeActive()
 	if ( in_noGrab && in_noGrab->integer )
 		return qfalse;
 
-	return g_wv.activeApp && (!(cls.keyCatchers & KEYCATCH_CONSOLE) || Cvar_VariableIntegerValue("r_fullscreen"));
+	const qbool isConsoleDown = (cls.keyCatchers & KEYCATCH_CONSOLE) != 0;
+	if ( g_wv.monitorCount >= 2 && isConsoleDown )
+		return qfalse;
+
+	return g_wv.activeApp && (!isConsoleDown || Cvar_VariableIntegerValue("r_fullscreen"));
 }
 
 
