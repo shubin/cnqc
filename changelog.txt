@@ -1,6 +1,8 @@
 
 DD Mmm 18 - 1.50
 
+chg: mouse motion is no longer forwarded to the mod when the console is down
+
 chg: with 2+ monitors, having the console down will always disable input grabbing
 
 chg: on Windows, a fatal error will move the early console window to the foreground
