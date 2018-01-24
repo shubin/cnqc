@@ -246,10 +246,6 @@ void QDECL Com_ErrorExt( int code, int module, qbool realError, const char *fmt,
 	static int	lastErrorTime;
 	static int	errorCount;
 
-#ifndef DEDICATED
-	void CL_ForwardUIError( int level, int module, const char* error ); // client.h
-#endif
-
 	// make sure we can get at our local stuff
 	FS_PureServerSetLoadedPaks( "" );
 
@@ -302,7 +298,10 @@ void QDECL Com_ErrorExt( int code, int module, qbool realError, const char *fmt,
 			Com_Printf( "ERROR: %s\n", com_errorMessage );
 		SV_Shutdown( va("Server crashed: %s",  com_errorMessage) );
 #ifndef DEDICATED
+		const qbool demo = CL_DemoPlaying();
 		CL_Disconnect( qtrue );
+		if ( demo )
+			CL_NextDemo();
 		CL_FlushMemory(); // shuts down the VMs and starts them back up
 		if ( realError )
 			CL_ForwardUIError( code == ERR_DROP ? EXT_ERRLEV_DROP : EXT_ERRLEV_DISC, module, com_errorMessage );

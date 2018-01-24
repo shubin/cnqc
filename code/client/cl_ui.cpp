@@ -1212,3 +1212,9 @@ qbool UI_GameCommand()
 	return (uivm && VM_Call( uivm, UI_CONSOLE_COMMAND, cls.realtime ));
 }
 
+
+qbool CL_DemoPlaying()
+{
+	return clc.demoplaying;
+}
+

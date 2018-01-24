@@ -1004,6 +1004,15 @@ void CL_FlushMemory();
 void CL_StartHunkUsers( void );
 // start all the client stuff using the hunk
 
+void CL_ForwardUIError( int level, int module, const char* error );
+// error forwarding extension
+
+qbool CL_DemoPlaying();
+// qtrue if demo playback is in progress
+
+void CL_NextDemo();
+// invoke the "nextdemo" cvar as a command, if not empty
+
 void Key_KeyNameCompletion( void (*callback)(const char *s) );
 // for /bind and /unbind auto-completion
 
