@@ -3089,7 +3089,7 @@ restart if necessary
 void FS_ConditionalRestart( int checksumFeed ) {
 	if( fs_gamedirvar->modified || checksumFeed != fs_checksumFeed ) {
 		FS_Restart( checksumFeed );
-	} else if ( fs_numServerPaks && !fs_reordered ) {
+	} else if ( fs_numServerPaks ) {
 		FS_ReorderPurePaks();
 	}
 }
