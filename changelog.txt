@@ -1,6 +1,9 @@
 
 DD Mmm 18 - 1.50
 
+add: on Windows, "/crashreport:yes" and "/crashreport:no" command-line arguments
+  they enable the the crash handler's quiet mode (no dialog window will be shown)
+
 add: the fs_restart command to manually restart the file system
 
 chg: even lower CPU usage when minimized

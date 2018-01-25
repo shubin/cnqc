@@ -474,6 +474,8 @@ static qbool WIN_WouldDebuggingBeOkay()
 //
 
 static qbool exc_exitCalled = qfalse;
+static qbool exc_quietMode = qfalse;
+static int exc_quietModeDlgRes = IDYES;
 
 static LONG WIN_HandleCrash( EXCEPTION_POINTERS* ep )
 {
@@ -513,13 +515,15 @@ static LONG WIN_HandleCrash( EXCEPTION_POINTERS* ep )
 
 	static const char* mbTitle = "CNQ3 Crash";
 	static const char* mbMsg = "CNQ3 crashed!\n\nYes to generate a crash report\nNo to continue after attaching a debugger\nCancel to quit";
-	const int result = MessageBoxA(NULL, mbMsg, mbTitle, MB_YESNOCANCEL | MB_ICONERROR | MB_TOPMOST);
+	const int result = exc_quietMode ? exc_quietModeDlgRes : MessageBoxA(NULL, mbMsg, mbTitle, MB_YESNOCANCEL | MB_ICONERROR | MB_TOPMOST);
 	if (result == IDYES) {
 		WIN_WriteExceptionFiles(ep);
-		if (exc_reportWritten)
-			ShellExecute(NULL, "open", exc_reportFolderPath, NULL, NULL, SW_SHOW);
-		else
-			MessageBoxA(NULL, "CNQ3's crash report generation failed!\nExiting now", mbTitle, MB_OK | MB_ICONERROR);
+		if (!exc_quietMode) {
+			if (exc_reportWritten)
+				ShellExecute(NULL, "open", exc_reportFolderPath, NULL, NULL, SW_SHOW);
+			else
+				MessageBoxA(NULL, "CNQ3's crash report generation failed!\nExiting now", mbTitle, MB_OK | MB_ICONERROR);
+		}		
 	} else if (result == IDNO && IsDebuggerPresent()) {
 		return EXCEPTION_CONTINUE_SEARCH;
 	}
@@ -530,7 +534,7 @@ static LONG WIN_HandleCrash( EXCEPTION_POINTERS* ep )
 // Always called.
 static LONG CALLBACK WIN_FirstExceptionHandler( EXCEPTION_POINTERS* ep )
 {
-#if defined(DEBUG) || defined(CNQ3_DEV)
+#if defined(CNQ3_DEV)
 	MessageBeep(MB_OK);
 	Sleep(1000);
 #endif
@@ -549,7 +553,7 @@ static LONG CALLBACK WIN_FirstExceptionHandler( EXCEPTION_POINTERS* ep )
 // we won't get the chance to minimize the window etc. :-(
 static LONG CALLBACK WIN_LastExceptionHandler( EXCEPTION_POINTERS* ep )
 {
-#if defined(DEBUG) || defined(CNQ3_DEV)
+#if defined(CNQ3_DEV)
 	MessageBeep(MB_ICONERROR);
 	Sleep(1000);
 #endif
@@ -585,9 +589,21 @@ void WIN_InstallExceptionHandlers()
 	// SEM_FAILCRITICALERRORS -> no abort/retry/fail errors
 	// SEM_NOGPFAULTERRORBOX  -> the Windows Error Reporting dialog will not be shown
 	SetErrorMode(SetErrorMode(0) | SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
+
+	for (int i = 1; i < __argc; ++i) {
+		if (!Q_stricmp(__argv[i], "/crashreport:yes")) {
+			exc_quietMode = qtrue;
+			exc_quietModeDlgRes = IDYES;
+			break;
+		} else if (!Q_stricmp(__argv[i], "/crashreport:no")) {
+			exc_quietMode = qtrue;
+			exc_quietModeDlgRes = IDCANCEL;
+			break;
+		}	
+	}
 }
 
-#if defined(DEBUG) || defined(CNQ3_DEV)
+#if defined(CNQ3_DEV)
 
 static void WIN_RaiseException_f()
 {
