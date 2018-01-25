@@ -218,7 +218,6 @@ static int fs_loadCount;	// total files read
 static int fs_loadStack;	// total files in memory
 static int fs_packFiles;	// total number of files in packs
 
-static int fs_fakeChkSum;
 static int fs_checksumFeed;
 
 typedef union {
@@ -248,7 +247,7 @@ static fileHandleData_t fsh[MAX_FILE_HANDLES];
 static qbool fs_reordered;
 
 // never load anything from pk3 files that are not present at the server when pure
-static int		fs_numServerPaks;
+static int		fs_numServerPaks;								// only non-zero when *connected to* a pure server
 static int		fs_serverPaks[MAX_SEARCH_PATHS];				// checksums
 
 // only used for autodownload, to make sure the client has at least
@@ -1063,10 +1062,6 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qbool uniqueFILE
 			fsh[*file].handleFiles.file.o = fopen (netpath, "rb");
 			if ( !fsh[*file].handleFiles.file.o ) {
 				continue;
-			}
-
-			if ( !pureException ) {
-				fs_fakeChkSum = 0;
 			}
 
 			Q_strncpyz( fsh[*file].name, filename, sizeof( fsh[*file].name ) );
@@ -2861,10 +2856,6 @@ const char* FS_ReferencedPakPureChecksums()
 				checksum ^= search->pack->pure_checksum;
 				numPaks++;
 			}
-		}
-		if (fs_fakeChkSum != 0) {
-			// only added if a non-pure file is referenced
-			Q_strcat( info, sizeof( info ), va("%i ", fs_fakeChkSum ) );
 		}
 	}
 
