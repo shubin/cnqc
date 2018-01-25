@@ -3081,12 +3081,12 @@ FS_ConditionalRestart
 restart if necessary
 =================
 */
-qbool FS_ConditionalRestart( int checksumFeed ) {
+void FS_ConditionalRestart( int checksumFeed ) {
 	if( fs_gamedirvar->modified || checksumFeed != fs_checksumFeed ) {
 		FS_Restart( checksumFeed );
-		return qtrue;
+	} else if ( fs_numServerPaks && !fs_reordered ) {
+		FS_ReorderPurePaks();
 	}
-	return qfalse;
 }
 
 /*
