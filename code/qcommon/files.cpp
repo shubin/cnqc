@@ -835,7 +835,7 @@ qbool FS_FilenameCompare( const char *s1, const char *s2 ) {
 
 // returns qtrue if we allow opening the file on the real file system
 
-static qbool FS_IsPureException( const char* filename )
+static qbool FS_IsPureClientReadException( const char* filename )
 {
 	const int l = strlen( filename );
 	if ( l < 5 )
@@ -876,7 +876,6 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qbool uniqueFILE
 	FILE			*temp;
 	int				l;
 	char			demoExt[16];
-	qbool			pureException;
 
 	hash = 0;
 
@@ -1051,8 +1050,7 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qbool uniqueFILE
       //   this test can make the search fail although the file is in the directory
       // I had the problem on https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=8
       // turned out I used FS_FileExists instead
-			pureException = FS_IsPureException( filename );
-			if ( fs_numServerPaks && !pureException ) {
+			if ( fs_numServerPaks && !FS_IsPureClientReadException( filename ) ) {
 				continue;
 			}
 
@@ -1691,7 +1689,7 @@ static int FS_AddFileToList( const char *name, char *list[MAX_FOUND_FILES], int 
 Returns a uniqued list of files that match the given criteria
 from all search paths
 */
-static char** FS_ListFilteredFilesEx( const char *path, const char *extension, const char* filter, int *numfiles, int filters, qbool respectPurity )
+static char** FS_ListFilteredFiles( const char *path, const char *extension, const char* filter, int *numfiles, int filters )
 {
 	int				nfiles;
 	char			*list[MAX_FOUND_FILES];
@@ -1786,10 +1784,6 @@ static char** FS_ListFilteredFilesEx( const char *path, const char *extension, c
 			char	**sysFiles;
 			char	*name;
 
-			// don't scan directories for files if we are pure
-			if ( respectPurity && fs_numServerPaks )
-				continue;
-
 			netpath = FS_BuildOSPath( search->dir->path, search->dir->gamedir, path );
 			sysFiles = Sys_ListFiles( netpath, extension, filter, &numSysFiles, qfalse );
 			for ( i = 0 ; i < numSysFiles ; i++ ) {
@@ -1815,16 +1809,6 @@ static char** FS_ListFilteredFilesEx( const char *path, const char *extension, c
 	listCopy[i] = NULL;
 
 	return listCopy;
-}
-
-static char** FS_ListFilteredFiles( const char *path, const char *extension, const char* filter, int *numfiles, int filters )
-{
-	return FS_ListFilteredFilesEx( path, extension, filter, numfiles, filters, qtrue );
-}
-
-static char** FS_ListFilteredFilesIgnorePurity( const char *path, const char *extension, const char* filter, int *numfiles, int filters )
-{
-	return FS_ListFilteredFilesEx( path, extension, filter, numfiles, filters, qfalse );
 }
 
 /*
@@ -3182,7 +3166,7 @@ void FS_FilenameCompletion( const char *dir, const char *ext, qbool stripExt,
 	int		i;
 	char	filename[ MAX_STRING_CHARS ];
 
-	filenames = FS_ListFilteredFilesIgnorePurity( dir, ext, NULL, &nfiles, filters );
+	filenames = FS_ListFilteredFiles( dir, ext, NULL, &nfiles, filters );
 
 	FS_SortFileList( filenames, nfiles );
 
