@@ -3,6 +3,8 @@ DD Mmm 18 - 1.50
 
 add: the fs_restart command to manually restart the file system
 
+chg: even lower CPU usage when minimized
+
 chg: during id downloads (cl_allowDownload -1), the time-out is 5 seconds instead of cl_timeout
 
 chg: the "nextdemo" cvar is now also used when playback stops before reaching the demo's end
@@ -15,6 +17,10 @@ chg: on Windows, a fatal error will move the early console window to the foregro
 
 chg: com_hunkMegs doesn't have a maximum value anymore
   a value too high would reset it and the engine might fail to load with the default value
+
+fix: "timedemo" playback runs at full speed again
+
+fix: on Windows, when unfocused, the client would always sleep 5+ ms regardless of com_maxFPS
 
 fix: conditional FS restarts will always re-order the pak list when connected to a pure server
 

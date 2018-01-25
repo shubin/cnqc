@@ -759,7 +759,11 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 #endif
 
 		// run the game
-		Com_Frame();
+#ifdef DEDICATED
+		Com_Frame( qfalse );
+#else
+		Com_Frame( clc.demoplaying );
+#endif
 	}
 
 	// never gets here

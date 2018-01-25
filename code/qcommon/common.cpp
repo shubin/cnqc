@@ -2417,7 +2417,66 @@ static int Com_ModifyMsec( int msec )
 }
 
 
-void Com_Frame()
+static void Com_FrameSleep( qbool demoPlayback )
+{
+	// "timedemo" playback means we run at full speed
+	if ( demoPlayback && com_timedemo->integer )
+		return;
+
+	// decide how much sleep we need
+	qbool preciseCap = qfalse;
+	int64_t sleepUS = 0;
+	if ( com_dedicated->integer ) {
+		sleepUS = 1000 * SV_FrameSleepMS();
+	} else {
+		preciseCap = qtrue;
+		sleepUS = 1000000 / com_maxfps->integer;
+#ifndef DEDICATED
+		if ( Sys_IsMinimized() ) {
+			sleepUS = 20 * 1000;
+			preciseCap = qfalse;
+		}
+#endif
+	}
+
+	// decide when we should stop sleeping
+	static int64_t targetTimeUS = INT64_MIN;
+	if ( Sys_Microseconds() > targetTimeUS + 3 * sleepUS )
+		targetTimeUS = Sys_Microseconds() + sleepUS;
+	else
+		targetTimeUS += sleepUS;
+
+	// sleep if needed
+	if ( com_dedicated->integer ) {
+		while ( targetTimeUS - Sys_Microseconds() > 1000 ) {
+			NET_Sleep( 1 );
+			Com_EventLoop();
+		}
+	} else {
+		int runEventLoop = 0;
+		if ( preciseCap ) {
+			for ( ;; ) {
+				runEventLoop ^= 1;
+				const int64_t remainingUS = targetTimeUS - Sys_Microseconds();
+				if ( remainingUS > 3000 && runEventLoop )
+					Com_EventLoop();
+				else if ( remainingUS > 1000 )
+					Sys_Sleep( 1 );
+				else if ( remainingUS > 50 )
+					Sys_MicroSleep( 50 );
+				else
+					break;
+			}
+		} else {
+			while ( targetTimeUS - Sys_Microseconds() > 1000 ) {
+				Sys_Sleep( 1 );
+			}
+		}
+	}
+}
+
+
+void Com_Frame( qbool demoPlayback )
 {
 	if ( setjmp(abortframe) ) {
 		return;			// an ERR_DROP was thrown
@@ -2446,53 +2505,7 @@ void Com_Frame()
 		timeBeforeFirstEvents = Sys_Milliseconds();
 	}
 
-	// we may want to spin here if things are going too fast
-	int minMsec = 1;
-	if ( !com_dedicated->integer && com_maxfps->integer > 0 && !com_timedemo->integer )
-		minMsec = 1000 / com_maxfps->integer;
-
-#ifndef DEDICATED
-	qbool preciseCap = qtrue;
-	// let's not limit the download speed by sleeping too much
-	qbool CL_MapDownload_Active(); // in client.h
-	if ( CL_MapDownload_Active() )
-		minMsec = 4;
-	else if ( Sys_IsMinimized() ) {
-		minMsec = 20;
-		preciseCap = qfalse;
-	}
-#else
-	const qbool preciseCap = qfalse;
-#endif
-
-	// decide when we should stop sleeping
-	static int64_t targetTimeUS = INT64_MIN;
-	const int64_t frameDurationUS = 1000000 / com_maxfps->integer;
-	if ( Sys_Microseconds() > targetTimeUS + 3 * frameDurationUS )
-		targetTimeUS = Sys_Microseconds() + frameDurationUS;
-	else
-		targetTimeUS += frameDurationUS;
-
-	// sleep if needed
-	int runEventLoop = 0;
-	if ( preciseCap ) {
-		for ( ;; ) {
-			runEventLoop ^= 1;
-			const int64_t remainingUS = targetTimeUS - Sys_Microseconds();
-			if ( remainingUS > 3000 && runEventLoop )
-				Com_EventLoop();
-			else if ( remainingUS > 1000 )
-				Sys_Sleep( 1 );
-			else if ( remainingUS > 50 )
-				Sys_MicroSleep( 50 );
-			else
-				break;
-		}
-	} else {
-		while ( targetTimeUS - Sys_Microseconds() > 1000 ) {
-			Sys_Sleep(1);
-		}
-	}
+	Com_FrameSleep( demoPlayback );
 
 	static int lastTime = 0;
 	lastTime = com_frameTime;

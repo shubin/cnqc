@@ -768,13 +768,6 @@ void SV_Frame( int msec ) {
 	if (!com_dedicated->integer)
 		SV_BotFrame( svs.time + sv.timeResidual );
 
-	if ( com_dedicated->integer && sv.timeResidual < frameMsec ) {
-		// NET_Sleep will give the OS time slices until either get a packet
-		// or time enough for a server frame has gone by
-		NET_Sleep( frameMsec - sv.timeResidual );
-		return;
-	}
-
     qbool hasHuman = qfalse;
     for (int i=0; i < sv_maxclients->integer ; ++i) {
         client_t *cl = &svs.clients[i];
@@ -860,5 +853,15 @@ void SV_Frame( int msec ) {
 	SV_MasterHeartbeat();
 }
 
-//============================================================================
 
+int SV_FrameSleepMS()
+{
+	if ( !sv_fps )
+		return 1;
+
+	const int sleepMS = 1000 / sv_fps->value;
+	if ( sleepMS < sv.timeResidual )
+		return 0;
+
+	return sleepMS - sv.timeResidual;
+}

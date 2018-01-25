@@ -945,7 +945,7 @@ void Com_TouchMemory();
 
 // commandLine should not include the executable name (argv[0])
 void Com_Init( char *commandLine );
-void Com_Frame();
+void Com_Frame( qbool demoPlayback );
 void Com_Shutdown();
 
 
@@ -1030,6 +1030,7 @@ void S_ClearSoundBuffer( void );
 void SV_Init();
 void SV_Shutdown( const char* finalmsg );
 void SV_Frame( int msec );
+int SV_FrameSleepMS();	// the number of milli-seconds Com_Frame should sleep
 void SV_PacketEvent( const netadr_t& from, msg_t* msg );
 qbool SV_GameCommand();
 

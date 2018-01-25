@@ -29,14 +29,14 @@ int main( int argc, char** argv )
 	*cmdline = 0;
 	for (i = 1; i < argc; ++i) {
 		if (i > 1)
-			strcat( cmdline, " " );
-		strcat( cmdline, argv[i] );
+			strcat(cmdline, " ");
+		strcat(cmdline, argv[i]);
 	}
-	Com_Init( cmdline );
+	Com_Init(cmdline);
 
 	NET_Init();
 
-	Com_Printf( "Working directory: %s\n", Sys_Cwd() );
+	Com_Printf("Working directory: %s\n", Sys_Cwd());
 
 	Lin_ConsoleInputInit();
 	Lin_TrackParentProcess();
@@ -47,10 +47,16 @@ int main( int argc, char** argv )
 
 	for (;;) {
 		SIG_Frame();
+
 #ifndef DEDICATED
 		sdl_Frame();
 #endif
-		Com_Frame();
+
+#ifdef DEDICATED
+		Com_Frame(qfalse);
+#else
+		Com_Frame(clc.demoplaying);
+#endif
 	}
 
 	return 0;
