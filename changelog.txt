@@ -1,6 +1,8 @@
 
 DD Mmm 18 - 1.50
 
+chg: during id downloads (cl_allowDownload -1), the time-out is 5 seconds instead of cl_timeout
+
 chg: the "nextdemo" cvar is now also used when playback stops before reaching the demo's end
 
 chg: mouse motion is no longer forwarded to the mod when the console is down

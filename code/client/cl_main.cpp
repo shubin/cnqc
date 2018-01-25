@@ -1472,12 +1472,12 @@ static void CL_CheckTimeout()
 		return;
 	}
 
+	const int timeout = clc.download ? 5000 : (cl_timeout->integer * 1000);
 	if ( ( !CL_Paused() || !sv_paused->integer )
 		&& cls.state >= CA_CONNECTED && cls.state != CA_CINEMATIC
-		&& cls.realtime - clc.lastPacketTime > cl_timeout->value*1000) {
+		&& cls.realtime - clc.lastPacketTime > timeout) {
 		if (++cl.timeoutcount > 5) {	// timeoutcount saves debugger
-			Com_Printf ("\nServer connection timed out.\n");
-			CL_Disconnect( qtrue );
+			Com_Error( ERR_DROP, "Server connection timed out" );
 			return;
 		}
 	} else {
