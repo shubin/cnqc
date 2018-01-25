@@ -2478,6 +2478,21 @@ qbool FS_PakExists( unsigned int checksum )
 }
 
 
+static void FS_Restart_f()
+{
+	FS_Restart(fs_checksumFeed);
+}
+
+
+static const cmdTableItem_t fs_cmds[] =
+{
+	{ "path", FS_Path_f, NULL, "prints info about the current search path" },
+	{ "dir", FS_Dir_f, NULL, "prints an extension-filtered file list" },
+	{ "fdir", FS_NewDir_f, NULL, "prints a pattern-filtered file list" },
+	{ "fs_restart", FS_Restart_f, NULL, "restarts the file system" }
+};
+
+
 /*
 ================
 FS_Shutdown
@@ -2513,9 +2528,7 @@ void FS_Shutdown( qbool closemfp ) {
 	// any FS_ calls will now be an error until reinitialized
 	fs_searchpaths = NULL;
 
-	Cmd_RemoveCommand( "path" );
-	Cmd_RemoveCommand( "dir" );
-	Cmd_RemoveCommand( "fdir" );
+	Cmd_UnregisterArray( fs_cmds );
 
 #ifdef FS_MISSING
 	if (closemfp) {
@@ -2563,14 +2576,6 @@ static void FS_ReorderPurePaks()
 		}
 	}
 }
-
-
-static const cmdTableItem_t fs_cmds[] =
-{
-	{ "path", FS_Path_f, NULL, "prints info about the current search path" },
-	{ "dir", FS_Dir_f, NULL, "prints an extension-filtered file list" },
-	{ "fdir", FS_NewDir_f, NULL, "prints a pattern-filtered file list" }
-};
 
 
 static void FS_Startup( const char *gameName )

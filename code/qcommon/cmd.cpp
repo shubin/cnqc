@@ -773,6 +773,14 @@ void Cmd_RegisterTable( const cmdTableItem_t* cmds, int count, module_t module )
 }
 
 
+void Cmd_UnregisterTable( const cmdTableItem_t* cmds, int count )
+{
+	for ( int i = 0; i < count; ++i ) {
+		Cmd_RemoveCommand( cmds[i].name );
+	}
+}
+
+
 void Cmd_SetModule( const char* cmd_name, module_t module )
 {
 	cmd_function_t* cmd;

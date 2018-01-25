@@ -390,7 +390,8 @@ qbool Cmd_GetHelp( const char** desc, const char** help, const char* cmd_name );
 
 void Cmd_RegisterTable( const cmdTableItem_t* cmds, int count, module_t module );
 void Cmd_UnregisterTable( const cmdTableItem_t* cmds, int count );
-#define Cmd_RegisterArray(a, m)	Cmd_RegisterTable( a, ARRAY_LEN(a), m )
+#define Cmd_RegisterArray( a, m )	Cmd_RegisterTable( a, ARRAY_LEN(a), m )
+#define Cmd_UnregisterArray( a )	Cmd_UnregisterTable( a, ARRAY_LEN(a) )
 
 void Cmd_SetModule( const char* cmd_name, module_t module );
 
