@@ -12,6 +12,8 @@ chg: on Windows, a fatal error will move the early console window to the foregro
 chg: com_hunkMegs doesn't have a maximum value anymore
   a value too high would reset it and the engine might fail to load with the default value
 
+fix: getting stuck on "Awaiting snapshot..." when the server shuts down during client connection
+
 fix: demo playback would crash when delta entities/players had an invalid field count
 
 fix: strcpy calls with overlapping buffers (undefined behavior), which were responsible for the

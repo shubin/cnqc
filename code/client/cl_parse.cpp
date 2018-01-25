@@ -576,6 +576,21 @@ static void CL_ParseCommandString( msg_t* msg )
 
 	int index = seq & (MAX_RELIABLE_COMMANDS-1);
 	Q_strncpyz( clc.serverCommands[ index ], s, sizeof( clc.serverCommands[ index ] ) );
+
+	// We normally don't process commands before being CA_ACTIVE,
+	// but it's possible we receive a "disconnect" command while
+	// still being CA_PRIMED.
+	// Therefore, we have to make an exception for "disconnect" right here
+	// to avoid waiting for a snapshot forever.
+	if ( cls.state == CA_PRIMED ) {
+		Cmd_TokenizeString(s);
+		if ( !Q_stricmp( Cmd_Argv(0), "disconnect" ) ) {
+			if ( Cmd_Argc() >= 2 )
+				Com_Error( ERR_DROP, "Server disconnected: %s", Cmd_Argv(1) );
+			else
+				Com_Error( ERR_DROP, "Server disconnected" );
+		}
+	}
 }
 
 
