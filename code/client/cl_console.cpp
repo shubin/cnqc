@@ -286,7 +286,7 @@ void Con_Dump_f( void )
 		return;
 	}
 
-	Q_strncpyz( buffer, Cmd_Argv(1), MAX_QPATH - 4 );
+	Q_strncpyz( buffer, Cmd_Argv(1), sizeof(buffer) );
 	COM_DefaultExtension( buffer, sizeof(buffer), ".txt" );
 
 	fileHandle_t f = FS_FOpenFileWrite( buffer );
