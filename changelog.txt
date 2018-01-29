@@ -2,7 +2,7 @@
 DD Mmm 18 - 1.50
 
 add: on Windows, "/crashreport:yes" and "/crashreport:no" command-line arguments
-  they enable the the crash handler's quiet mode (no dialog window will be shown)
+  they enable the crash handler's quiet mode (no dialog window will be shown)
 
 add: the fs_restart command to manually restart the file system
 
@@ -20,6 +20,9 @@ chg: on Windows, a fatal error will move the early console window to the foregro
 
 chg: com_hunkMegs doesn't have a maximum value anymore
   a value too high would reset it and the engine might fail to load with the default value
+
+fix: no longer making local copies of all the system info cvars of the current server
+  this avoids undesired local changes to cvars such as sv_pure
 
 fix: now updating the FS (connected to pure server, pak references) on client disconnects
 

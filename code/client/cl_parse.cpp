@@ -322,6 +322,18 @@ int cl_connectedToPureServer;
 
 void CL_SystemInfoChanged()
 {
+	// these are cvars the client doesn't need nor want to set locally
+	// no need to reject "sv_cheats" since it gets cleared by /map and set by /devmap
+	static const char* rejectedCVars[] = {
+		"sv_pure",
+		"sv_paks",
+		"sv_pakNames",
+		"sv_referencedPaks",
+		"sv_referencedPakNames",
+		"sv_currentPak",
+		"sv_serverid"
+	};
+
 	const char *s, *t;
 
 	// don't set any vars when playing a demo
@@ -359,6 +371,17 @@ void CL_SystemInfoChanged()
 		if ( !key[0] ) {
 			break;
 		}
+
+		// reject unwanted cvars
+		qbool rejected = qfalse;
+		for ( int i = 0; i < ARRAY_LEN(rejectedCVars); ++i ) {
+			if ( !Q_stricmp(key, rejectedCVars[i]) ) {
+				rejected = qtrue;
+				break;
+			}
+		}
+		if ( rejected )
+			continue;
 
 		// ehw!
 		if (!Q_stricmp(key, "fs_game"))
