@@ -21,6 +21,8 @@ chg: on Windows, a fatal error will move the early console window to the foregro
 chg: com_hunkMegs doesn't have a maximum value anymore
   a value too high would reset it and the engine might fail to load with the default value
 
+fix: now updating the FS (connected to pure server, pak references) on client disconnects
+
 fix: the condump command was truncating its file path argument to 64 characters
 
 fix: "timedemo" playback runs at full speed again

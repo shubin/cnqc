@@ -2892,9 +2892,6 @@ FS_ClearPakReferences
 void FS_ClearPakReferences( int flags ) {
 	searchpath_t *search;
 
-	if ( !flags ) {
-		flags = -1;
-	}
 	for ( search = fs_searchpaths; search; search = search->next ) {
 		// is the element a pak file and has it been referenced?
 		if ( search->pack ) {
@@ -3039,8 +3036,8 @@ void FS_Restart( int checksumFeed ) {
 	// set the checksum feed
 	fs_checksumFeed = checksumFeed;
 
-	// clear pak references
-	FS_ClearPakReferences(0);
+	// clear all pak references
+	FS_ClearPakReferences(-1);
 
 	// try to start up normally
 	FS_Startup( BASEGAME );

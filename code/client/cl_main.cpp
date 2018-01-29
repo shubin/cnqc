@@ -783,6 +783,12 @@ void CL_Disconnect( qbool showMainMenu ) {
 	// not connected to a pure server anymore
 	cl_connectedToPureServer = qfalse;
 
+	// let the FS know we're not connected to a pure server
+	// and clear all pak references except to the game QVM
+	FS_PureServerSetLoadedPaks( "" );
+	FS_PureServerSetReferencedPaks( "", "" );
+	FS_ClearPakReferences( FS_CGAME_REF | FS_UI_REF | FS_GENERAL_REF );
+
 	// Stop recording any video
 	if( CL_VideoRecording( ) ) {
 		CL_CloseAVI( );

@@ -355,8 +355,8 @@ void SV_SpawnServer( const char* mapname )
 		}
 	}
 
-	// clear pak references
-	FS_ClearPakReferences(0);
+	// clear all pak references
+	FS_ClearPakReferences(-1);
 
 	// allocate the snapshot entities on the hunk
 	svs.snapshotEntities = (entityState_t*)Hunk_Alloc( sizeof(entityState_t)*svs.numSnapshotEntities, h_high );
