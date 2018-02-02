@@ -21,6 +21,8 @@ chg: on Windows, a fatal error will move the early console window to the foregro
 chg: com_hunkMegs doesn't have a maximum value anymore
   a value too high would reset it and the engine might fail to load with the default value
 
+fix: using /demo when running a listen server would load the map and then abort playback
+
 fix: no longer making local copies of all the system info cvars of the current server
   this avoids undesired local changes to cvars such as sv_pure
 

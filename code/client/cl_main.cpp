@@ -341,86 +341,61 @@ void CL_ReadDemoMessage( void ) {
 }
 
 
-static const int demo_protocols[] = { 68, 67, 66, 0 };
-
-static void CL_WalkDemoExt( const char* arg, char* name, fileHandle_t* fh )
+static void CL_WalkDemoExt( const char* path, fileHandle_t* fh )
 {
+	const int protocols[] = { 68, 67, 66 };
+	char fullPath[MAX_OSPATH];
+
 	*fh = 0;
 
-	for (int i = 0; demo_protocols[i]; ++i)
-	{
-		Com_sprintf( name, MAX_OSPATH, "demos/%s.dm_%d", arg, demo_protocols[i] );
-		FS_FOpenFileRead( name, fh, qtrue );
-		if (*fh)
-		{
-			Com_Printf("Demo file: %s\n", name);
+	for (int i = 0; i < ARRAY_LEN(protocols); ++i) {
+		Com_sprintf( fullPath, sizeof( fullPath ), "demos/%s.dm_%d", path, protocols[i] );
+		FS_FOpenFileRead( fullPath, fh, qtrue );
+		if (*fh) {
+			Com_Printf( "Demo file: %s\n", fullPath );
 			return;
 		}
 	}
 
-	Com_Printf( "No match: demos/%s.dm_*\n", arg );
+	Com_Printf( "No match: demos/%s.dm_*\n", path );
 }
 
 
 void CL_PlayDemo_f()
 {
-
 	if (Cmd_Argc() != 2) {
-		Com_Printf ("demo <demoname>\n");
+		Com_Printf( "demo <demoname>\n" );
+		return;
+	}
+	
+	const char* const demoPath = Cmd_Argv(1);
+	fileHandle_t fh;
+	CL_WalkDemoExt( demoPath, &fh );
+	if ( fh == 0 ) {
+		Com_Printf( "Couldn't open demo %s\n", demoPath );
 		return;
 	}
 
-	// make sure a local server is killed
-	Cvar_Set( "sv_killserver", "1" );
+	// CL_Disconnect uses the tokenizer, so we save the demo path now
+	char shortPath[MAX_OSPATH];
+	Q_strncpyz( shortPath, demoPath, sizeof( shortPath ) );
 
-	CL_Disconnect( qtrue );
-    char	name[MAX_OSPATH];
+	// CL_Disconnect closes clc.demofile, so we set it after the call
+	SV_Shutdown( "closing for demo playback" );
+	CL_Disconnect( qfalse );
+	clc.demofile = fh;
 
-	// open the demo file
-	const char* arg = Cmd_Argv(1);
-
-	// check for an extension .dm_?? (?? is protocol)
-	const char* ext = arg + strlen(arg) - 6;
-	if ((strlen(arg) > 6) && (ext[0] == '.') && ((ext[1] == 'd') || (ext[1] == 'D')) && ((ext[2] == 'm') || (ext[2] == 'M')) && (ext[3] == '_'))
-	{
-		int protocol = atoi(ext + 4), i = 0;
-		while (demo_protocols[i]) {
-			if (demo_protocols[i] == protocol)
-				break;
-			++i;
-		}
-		if (demo_protocols[i])
-		{
-			Com_sprintf( name, sizeof(name), "demos/%s", arg );
-			FS_FOpenFileRead( name, &clc.demofile, qtrue );
-		} else {
-            char	retry[MAX_OSPATH];
-
-			Com_Printf("Protocol %d not supported for demos\n", protocol);
-			Q_strncpyz(retry, arg, sizeof(retry));
-			retry[strlen(retry)-6] = 0;
-			CL_WalkDemoExt( retry, name, &clc.demofile );
-		}
-	} else {
-		CL_WalkDemoExt( arg, name, &clc.demofile );
-	}
-
-	if (!clc.demofile) {
-		Com_Error( ERR_DROP, "couldn't open %s", name);
-		return;
-	}
-	Q_strncpyz( clc.demoName, Cmd_Argv(1), sizeof( clc.demoName ) );
-
+	Q_strncpyz( clc.demoName, shortPath, sizeof( clc.demoName ) );
 	Con_Close();
-
 	cls.state = CA_CONNECTED;
 	clc.demoplaying = qtrue;
-	Q_strncpyz( cls.servername, Cmd_Argv(1), sizeof( cls.servername ) );
+	Q_strncpyz( cls.servername, shortPath, sizeof( cls.servername ) );
 
 	// read demo messages until connected
-	while (cls.state >= CA_CONNECTED && cls.state < CA_PRIMED && !CL_MapDownload_Active()) {
+	while ( cls.state >= CA_CONNECTED && cls.state < CA_PRIMED && !CL_MapDownload_Active() ) {
 		CL_ReadDemoMessage();
 	}
+
 	// don't get the first snapshot this frame, to prevent the long
 	// time from the gamestate load from messing causing a time skip
 	clc.firstDemoFrameSkipped = qfalse;
