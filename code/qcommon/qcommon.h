@@ -585,6 +585,7 @@ extern	int			cvar_modifiedFlags;
 // a single check can determine if any CVAR_USERINFO, CVAR_SERVERINFO,
 // etc, variables have been modified since the last check.  The bit
 // can then be cleared to allow another change detection.
+// when a bind is modified, the CVAR_ARCHIVE bit is set
 
 
 ///////////////////////////////////////////////////////////////

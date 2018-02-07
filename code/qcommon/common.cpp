@@ -103,6 +103,7 @@ qbool	com_fullyInitialized;
 
 static char com_errorMessage[MAXPRINTMSG];
 
+static void Com_WriteConfigToFile( const char* filename );
 static void Com_WriteConfig_f();
 static void Com_CompleteWriteConfig_f( int startArg, int compArg );
 extern void CIN_CloseAllVideos( void );
@@ -336,6 +337,11 @@ void QDECL Com_ErrorExt( int code, int module, qbool realError, const char *fmt,
 
 void Com_Quit( int status )
 {
+#ifndef DEDICATED
+	// note that cvar_modifiedFlags's CVAR_ARCHIVE bit is set when a bind is modified
+	if ( com_frameNumber > 0 && (cvar_modifiedFlags & CVAR_ARCHIVE) != 0 )
+		Com_WriteConfigToFile( "q3config.cfg" );
+#endif
 	Sys_SaveHistory();
 
 	// don't try to shutdown if we are in a recursive error
@@ -2262,10 +2268,6 @@ void Com_Init( char *commandLine )
 	// allocate the stack based hunk allocator
 	Com_InitHunkMemory();
 
-	// if any archived cvars are modified after this, we will trigger a writing
-	// of the config file
-	cvar_modifiedFlags &= ~CVAR_ARCHIVE;
-
 	//
 	// init commands and vars
 	//
@@ -2609,6 +2611,12 @@ void Com_Frame( qbool demoPlayback )
 	}
 
 	com_frameNumber++;
+
+	// this is here because the platform layer can do more initialization
+	// work after the Com_Init call and create more archived CVars,
+	// meaning the config would always be written to on exit
+	if ( com_frameNumber == 1 )
+		cvar_modifiedFlags &= ~CVAR_ARCHIVE;
 }
 
 
