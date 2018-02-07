@@ -400,6 +400,8 @@ void Cmd_UnregisterModule( module_t module );
 
 void Cmd_GetModuleInfo( module_t* firstModule, int* moduleMask, const char* cmd_name );
 
+const char* Cmd_GetRegisteredName( const char* cmd_name );
+
 // auto-completion of command arguments
 void Cmd_SetAutoCompletion( const char* cmd_name, xcommandCompletion_t complete );
 void Cmd_AutoCompleteArgument( const char* cmd_name, int startArg, int compArg );
@@ -526,6 +528,8 @@ void	Cvar_RegisterTable( const cvarTableItem_t* cvars, int count, module_t modul
 
 void	Cvar_SetModule( const char *var_name, module_t module );
 void	Cvar_GetModuleInfo( module_t *firstModule, int *moduleMask, const char *var_name );
+
+const char* Cvar_GetRegisteredName( const char *var_name );
 
 void	Cvar_PrintTypeAndRange( const char *var_name, printf_t print );
 void	Cvar_PrintFirstHelpLine( const char *var_name, printf_t print );

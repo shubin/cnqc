@@ -633,6 +633,16 @@ void Cvar_GetModuleInfo( module_t *firstModule, int *moduleMask, const char *var
 }
 
 
+const char* Cvar_GetRegisteredName( const char *var_name )
+{
+	cvar_t* var = Cvar_FindVar( var_name );
+	if ( !var )
+		return NULL;
+
+	return var->name;
+}
+
+
 static const char* Cvar_FormatRangeFloat( float vf )
 {
 	const int vi = (int)vf;

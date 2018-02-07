@@ -589,57 +589,55 @@ void Cmd_RemoveCommand( const char* cmd_name )
 }
 
 
-void Cmd_SetHelp( const char* cmd_name, const char* cmd_help )
+static cmd_function_t* Cmd_FindCommand( const char* cmd_name )
 {
 	cmd_function_t* cmd;
 	for ( cmd = cmd_functions; cmd; cmd = cmd->next ) {
 		if ( !Q_stricmp( cmd_name, cmd->name ) ) {
-			Help_AllocSplitText( &cmd->desc, &cmd->help, cmd_help );
-			return;
+			return cmd;
 		}
 	}
+
+	return NULL;
+}
+
+
+void Cmd_SetHelp( const char* cmd_name, const char* cmd_help )
+{
+	cmd_function_t* cmd = Cmd_FindCommand( cmd_name );
+	if ( cmd )
+		Help_AllocSplitText( &cmd->desc, &cmd->help, cmd_help );
 }
 
 
 qbool Cmd_GetHelp( const char** desc, const char** help, const char* cmd_name )
 {
-	cmd_function_t* cmd;
-	for ( cmd = cmd_functions; cmd; cmd = cmd->next ) {
-		if ( !Q_stricmp( cmd_name, cmd->name ) ) {
-			*desc = cmd->desc;
-			*help = cmd->help;
-			return qtrue;
-		}
+	cmd_function_t* cmd = Cmd_FindCommand( cmd_name );
+	if ( !cmd ) {
+		*desc = NULL;
+		*help = NULL;
+		return qfalse;
 	}
 
-	*desc = NULL;
-	*help = NULL;
-	return qfalse;
+	*desc = cmd->desc;
+	*help = cmd->help;
+	return qtrue;
 }
 
 
 void Cmd_SetAutoCompletion( const char* cmd_name, xcommandCompletion_t completion )
 {
-	cmd_function_t* cmd;
-	for ( cmd = cmd_functions; cmd; cmd = cmd->next ) {
-		if ( !Q_stricmp( cmd_name, cmd->name ) ) {
-			cmd->completion = completion;
-			return;
-		}
-	}
+	cmd_function_t* cmd = Cmd_FindCommand( cmd_name );
+	if ( cmd )
+		cmd->completion = completion;
 }
 
 
 void Cmd_AutoCompleteArgument( const char* cmd_name, int startArg, int compArg )
 {
-	const cmd_function_t* cmd;
-	for ( cmd = cmd_functions; cmd; cmd = cmd->next ) {
-		if ( !Q_stricmp( cmd_name, cmd->name ) ) {
-			if ( cmd->completion )
-				cmd->completion( startArg, compArg );
-			return;
-		}
-	}
+	cmd_function_t* cmd = Cmd_FindCommand( cmd_name );
+	if ( cmd && cmd->completion )
+		cmd->completion( startArg, compArg );
 }
 
 
@@ -783,15 +781,13 @@ void Cmd_UnregisterTable( const cmdTableItem_t* cmds, int count )
 
 void Cmd_SetModule( const char* cmd_name, module_t module )
 {
-	cmd_function_t* cmd;
-	for ( cmd = cmd_functions; cmd; cmd = cmd->next ) {
-		if ( !Q_stricmp( cmd_name, cmd->name ) ) {
-			cmd->moduleMask |= 1 << (int)module;
-			if ( cmd->firstModule == MODULE_NONE )
-				cmd->firstModule = module;
-			return;
-		}
-	}
+	cmd_function_t* cmd = Cmd_FindCommand( cmd_name );
+	if ( !cmd )
+		return;
+
+	cmd->moduleMask |= 1 << (int)module;
+	if ( cmd->firstModule == MODULE_NONE )
+		cmd->firstModule = module;
 }
 
 
@@ -816,13 +812,20 @@ void Cmd_UnregisterModule( module_t module )
 
 void Cmd_GetModuleInfo( module_t* firstModule, int* moduleMask, const char* cmd_name )
 {
-	cmd_function_t* cmd;
-	for ( cmd = cmd_functions; cmd; cmd = cmd->next ) {
-		if ( !Q_stricmp( cmd_name, cmd->name ) ) {
-			*firstModule = cmd->firstModule;
-			*moduleMask = cmd->moduleMask;
-			return;
-		}
-	}
+	cmd_function_t* cmd = Cmd_FindCommand( cmd_name );
+	if ( !cmd )
+		return;
+
+	*firstModule = cmd->firstModule;
+	*moduleMask = cmd->moduleMask;
 }
 
+
+const char* Cmd_GetRegisteredName( const char* cmd_name )
+{
+	cmd_function_t* cmd = Cmd_FindCommand( cmd_name );
+	if ( !cmd )
+		return NULL;
+
+	return cmd->name;
+}

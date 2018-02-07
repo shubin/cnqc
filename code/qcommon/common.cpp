@@ -3423,18 +3423,24 @@ printHelpResult_t Com_PrintHelp( const char* name, printf_t print, qbool printNo
 	qbool isCvar = qfalse;
 	const char *desc;
 	const char *help;
+	const char* registeredName;
 	module_t firstModule;
 	int moduleMask;
 	if ( Cvar_GetHelp( &desc, &help, name ) ) {
 		isCvar = qtrue;
 		Cvar_GetModuleInfo( &firstModule, &moduleMask, name );
+		registeredName = Cvar_GetRegisteredName( name );
 	} else if ( Cmd_GetHelp( &desc, &help, name ) ) {
 		Cmd_GetModuleInfo( &firstModule, &moduleMask, name );
+		registeredName = Cmd_GetRegisteredName( name );
 	} else {
 		if ( printNotFound )
 			print( "found no cvar/command with the name '%s'\n", name );
 		return PHR_NOTFOUND;
 	}
+
+	if ( registeredName )
+		name = registeredName;
 
 	if ( isCvar )
 		Cvar_PrintFirstHelpLine( name, print );
