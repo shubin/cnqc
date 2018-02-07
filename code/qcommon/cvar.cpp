@@ -28,6 +28,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "common_help.h"
 #include <float.h>
 
+struct depCvar_t {
+	const char* name;
+	const char* newName;
+	qbool warned;
+};
+
 static cvar_t* cvar_vars;
 static cvar_t* cvar_cheats;
 int cvar_modifiedFlags;
@@ -38,6 +44,16 @@ static int cvar_numIndexes;
 
 #define CVAR_HASH_SIZE 256
 static cvar_t* hashTable[CVAR_HASH_SIZE];
+
+static qbool cvar_canPrintWarnings;
+
+static depCvar_t cvar_depVars[] = {
+	{ "sensitivity", "m_speed" },
+	{ "r_customwidth", "r_width" },
+	{ "r_customheight", "r_height" },
+	{ "r_overBrightBits", "r_brightness" },
+	{ "r_mapOverBrightBits", "r_mapBrightness" }
+};
 
 
 static long Cvar_Hash( const char* s )
@@ -209,7 +225,7 @@ static qbool Cvar_IsValidValuePrintWarnings( cvar_t *var, const char *value )
 	} else {
 		int i;
 		if ( sscanf(value, "%d", &i) != 1 )
-			WARNING("not a whole number (integer)")
+			WARNING( "not a whole number (integer)" )
 		if( i < var->validator.i.min )
 			WARNING( "integer value too low" )
 		if( i > var->validator.i.max )
@@ -230,6 +246,40 @@ static qbool Cvar_IsValidValue( cvar_t *var, const char *value, qbool printWarni
 }
 
 
+static void Cvar_PrintDeprecationWarning( int i )
+{
+	Com_Printf( "^3WARNING: " S_COLOR_CVAR "%s^7 was replaced by " S_COLOR_CVAR "%s\n",
+			   cvar_depVars[i].name, cvar_depVars[i].newName );
+}
+
+
+static qbool Cvar_IsCreationAllowed( const char *var_name )
+{
+	for ( int i = 0; i < ARRAY_LEN(cvar_depVars); ++i ) {
+		if ( Q_stricmp(var_name, cvar_depVars[i].name) )
+			continue;
+
+		cvar_depVars[i].warned = qtrue;
+		if ( cvar_canPrintWarnings )
+			Cvar_PrintDeprecationWarning( i );
+		return qfalse;
+	}
+
+	return qtrue;
+}
+
+
+void Cvar_PrintDeprecationWarnings()
+{
+	cvar_canPrintWarnings = qtrue;
+
+	for ( int i = 0; i < ARRAY_LEN(cvar_depVars); ++i ) {
+		if ( cvar_depVars[i].warned )
+			Cvar_PrintDeprecationWarning( i );
+	}
+}
+
+
 static cvar_t* Cvar_Set2( const char *var_name, const char *value, qbool force )
 {
 //	Com_DPrintf( "Cvar_Set2: %s %s\n", var_name, value );
@@ -242,6 +292,8 @@ static cvar_t* Cvar_Set2( const char *var_name, const char *value, qbool force )
 	cvar_t* var = Cvar_FindVar(var_name);
 	if (!var) {
 		if ( !value )
+			return NULL;
+		if( !Cvar_IsCreationAllowed(var_name) )
 			return NULL;
 		// create it
 		return Cvar_Get( var_name, value, force ? 0 : CVAR_USER_CREATED );

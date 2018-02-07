@@ -514,6 +514,8 @@ cvar_t *Cvar_Get( const char *var_name, const char *value, int flags );
 // that allows variables to be unarchived without needing bitflags
 // if value is "", the value will not override a previously set value.
 
+void	Cvar_PrintDeprecationWarnings();
+
 void	Cvar_SetHelp( const char *var_name, const char *help );
 qbool	Cvar_GetHelp( const char **desc, const char **help, const char* var_name );	// qtrue if the cvar was found
 

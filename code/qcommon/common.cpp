@@ -2325,6 +2325,8 @@ void Com_Init( char *commandLine )
 	// make sure single player is off by default
 	Cvar_Set( "sv_singlePlayer", "0" );
 
+	Cvar_PrintDeprecationWarnings();
+
 	com_fullyInitialized = qtrue;
 
 	Com_Printf ("--- Common Initialization Complete ---\n");
