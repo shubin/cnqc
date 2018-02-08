@@ -1526,6 +1526,17 @@ ZIP FILE LOADING
 ==========================================================================
 */
 
+static const char* FS_GetFileName( const char* filePath )
+{
+	for ( int i = strlen(filePath) - 1; i >= 0; i-- ) {
+		if ( filePath[i] == '/' || filePath[i] == '\\' ) {
+			return filePath + i + 1;
+		}
+	}
+
+	return filePath;
+}
+
 /*
 =================
 FS_LoadZipFile
@@ -1534,7 +1545,7 @@ Creates a new pak_t in the search chain for the contents
 of a zip file.
 =================
 */
-static pack_t *FS_LoadZipFile( char *zipfile, const char *basename )
+static pack_t *FS_LoadZipFile( const char *zipfile, const char *basename )
 {
 	unzFile			uf;
 	int				err;
@@ -1544,6 +1555,8 @@ static pack_t *FS_LoadZipFile( char *zipfile, const char *basename )
 	int				i, len;
 	long			hash;
 	int				fs_numHeaderLongs;
+	int				fileCount;
+	char*			filename_lastchar = &filename_inzip[sizeof(filename_inzip) - 1];
 
 	fs_numHeaderLongs = 0;
 
@@ -1553,29 +1566,42 @@ static pack_t *FS_LoadZipFile( char *zipfile, const char *basename )
 	if (err != UNZ_OK)
 		return NULL;
 
-	fs_packFiles += gi.number_entry;
-
 	len = 0;
 	unzGoToFirstFile(uf);
+	fileCount = 0;
+
 	for (i = 0; i < gi.number_entry; i++)
 	{
+		*filename_lastchar = '\0';
 		err = unzGetCurrentFileInfo(uf, &file_info, filename_inzip, sizeof(filename_inzip), NULL, 0, NULL, 0);
 		if (err != UNZ_OK) {
+			Com_Printf("^3FS_LoadZipFile: ^7Can't read past entry %d in '%s'\n", i, FS_GetFileName(zipfile));
 			break;
+		}
+		if (*filename_lastchar != '\0') {
+			Com_Printf("^3FS_LoadZipFile: ^7Entry %d's name is too long in '%s'\n", i, FS_GetFileName(zipfile));
+			unzGoToNextFile(uf);
+			continue;
 		}
 		len += strlen(filename_inzip) + 1;
 		unzGoToNextFile(uf);
+		fileCount++;
 	}
 
-	fileInPack_t* buildBuffer = (fileInPack_t*)Z_Malloc( (gi.number_entry * sizeof( fileInPack_t )) + len );
-	char* namePtr = ((char*)buildBuffer) + gi.number_entry * sizeof( fileInPack_t );
-	int* fs_headerLongs = (int*)Z_Malloc( ( gi.number_entry + 1 ) * sizeof(int) );
+	if ( !fileCount ) {
+		unzClose(uf);
+		return NULL;
+	}
+
+	fileInPack_t* buildBuffer = (fileInPack_t*)Z_Malloc( (fileCount * sizeof( fileInPack_t )) + len );
+	char* namePtr = ((char*)buildBuffer) + fileCount * sizeof( fileInPack_t );
+	int* fs_headerLongs = (int*)Z_Malloc( ( fileCount + 1 ) * sizeof(int) );
 	fs_headerLongs[ fs_numHeaderLongs++ ] = LittleLong( fs_checksumFeed );
 
 	// get the hash table size from the number of files in the zip
 	// because lots of custom pk3 files have less than 32 or 64 files
 	for (i = 1; i <= MAX_FILEHASH_SIZE; i <<= 1) {
-		if (i > gi.number_entry) {
+		if (i > fileCount) {
 			break;
 		}
 	}
@@ -1596,39 +1622,48 @@ static pack_t *FS_LoadZipFile( char *zipfile, const char *basename )
 	}
 
 	pack->handle = uf;
-	pack->numfiles = gi.number_entry;
+	pack->numfiles = fileCount;
 	unzGoToFirstFile(uf);
+	fileCount = 0;
 
 	for (i = 0; i < gi.number_entry; i++)
 	{
+		*filename_lastchar = '\0';
 		err = unzGetCurrentFileInfo(uf, &file_info, filename_inzip, sizeof(filename_inzip), NULL, 0, NULL, 0);
 		if (err != UNZ_OK) {
 			break;
+		}
+		if (*filename_lastchar != '\0') {
+			unzGoToNextFile(uf);
+			continue;
 		}
 		if (file_info.uncompressed_size > 0) {
 			fs_headerLongs[fs_numHeaderLongs++] = LittleLong(file_info.crc);
 		}
 		Q_strlwr( filename_inzip );
 		hash = Q_FileHash( filename_inzip, pack->hashSize );
-		buildBuffer[i].name = namePtr;
-		strcpy( buildBuffer[i].name, filename_inzip );
+		buildBuffer[fileCount].name = namePtr;
+		strcpy( buildBuffer[fileCount].name, filename_inzip );
 		namePtr += strlen(filename_inzip) + 1;
 		// store the file position in the zip
-		unzGetCurrentFileInfoPosition(uf, &buildBuffer[i].pos);
-		//
-		buildBuffer[i].next = pack->hashTable[hash];
-		pack->hashTable[hash] = &buildBuffer[i];
+		unzGetCurrentFileInfoPosition(uf, &buildBuffer[fileCount].pos);
+
+		buildBuffer[fileCount].next = pack->hashTable[hash];
+		pack->hashTable[hash] = &buildBuffer[fileCount];
 		unzGoToNextFile(uf);
+		fileCount++;
 	}
 
 	pack->checksum = Com_BlockChecksum( &fs_headerLongs[ 1 ], 4 * ( fs_numHeaderLongs - 1 ) );
 	pack->pure_checksum = Com_BlockChecksum( fs_headerLongs, 4 * fs_numHeaderLongs );
 	pack->checksum = LittleLong( pack->checksum );
 	pack->pure_checksum = LittleLong( pack->pure_checksum );
+	pack->buildBuffer = buildBuffer;
 
 	Z_Free(fs_headerLongs);
 
-	pack->buildBuffer = buildBuffer;
+	fs_packFiles += fileCount;
+
 	return pack;
 }
 
