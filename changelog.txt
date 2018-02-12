@@ -1,5 +1,5 @@
 
-DD Mmm 18 - 1.50
+12 Feb 18 - 1.50
 
 add: on Windows, "/crashreport:yes" and "/crashreport:no" command-line arguments
   they enable the crash handler's quiet mode (no dialog window will be shown)
