@@ -7,7 +7,13 @@
 
 #define help_toggle \
 "toggles the boolean value of a variable\n" \
-"Non-" S_COLOR_VAL "0 " S_COLOR_HELP "becomes " S_COLOR_VAL "0 " S_COLOR_HELP "and " S_COLOR_VAL "0 " S_COLOR_HELP "becomes " S_COLOR_VAL "1" S_COLOR_HELP "."
+"Example: " S_COLOR_CMD "toggle " S_COLOR_CVAR "v\n" S_COLOR_HELP \
+"         non-" S_COLOR_VAL "0 " S_COLOR_HELP "=> " S_COLOR_VAL "0 \n" \
+"         0 " S_COLOR_HELP "=> " S_COLOR_VAL "1\n" S_COLOR_HELP \
+"Example: " S_COLOR_CMD "toggle " S_COLOR_CVAR "v " S_COLOR_VAL "a b c\n" S_COLOR_HELP \
+"         non-" S_COLOR_VAL "abc " S_COLOR_HELP "=> " S_COLOR_VAL "a\n" \
+"         a " S_COLOR_HELP "=> " S_COLOR_VAL "b " S_COLOR_HELP "| " S_COLOR_VAL "b " S_COLOR_HELP "=> " S_COLOR_VAL "c " \
+	S_COLOR_HELP "| " S_COLOR_VAL "c " S_COLOR_HELP "=> " S_COLOR_VAL "a"
 
 #define help_cvarlist \
 "lists and filters all cvars\n" \

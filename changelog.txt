@@ -1,4 +1,16 @@
 
+DD Mmm 18 - 1.51
+
+add: /unset <cvar> to remove a user-created cvar
+
+add: /setempty <cvar> to set a string cvar to an empty string
+
+add: /toggle can now accept a value sequence (2 or more entries) to loop through
+  syntax: /toggle <cvar> [<value1> <value2> [value3]..]
+  if the cvar's current value is in the sequence and not in the last spot, the next one is used
+  otherwise, the first value in the sequence is used
+
+
 12 Feb 18 - 1.50
 
 add: on Windows, "/crashreport:yes" and "/crashreport:no" command-line arguments

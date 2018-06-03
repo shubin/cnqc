@@ -837,13 +837,111 @@ static void Cvar_CompleteName( int startArg, int compArg )
 
 static void Cvar_Toggle_f( void )
 {
-	if ( Cmd_Argc() != 2 ) {
-		Com_Printf ("usage: toggle <variable>\n");
+	const int argc = Cmd_Argc();
+	if ( argc != 2 && argc < 4 ) {
+		Com_Printf( "usage: toggle <variable> [<value1> <value2> [value3]..]\n" );
 		return;
 	}
 
-	int v = !Cvar_VariableValue( Cmd_Argv( 1 ) );
-	Cvar_Set2( Cmd_Argv(1), va("%i", v), qfalse );
+	const char* const name = Cmd_Argv(1);
+	const cvar_t* const cvar = Cvar_FindVar( name );
+	if ( !cvar )
+		return;
+
+	if ( argc == 2 ) {
+		const int v = !Cvar_VariableIntegerValue( name );
+		Cvar_Set2( name, va("%i", v), qfalse );
+		return;
+	}
+
+	// set the next value - if none found, set the first value
+	int index = -1;
+	const int valueOffset = 2;
+	const int valueCount = argc - valueOffset;
+	for ( int i = 0; i < valueCount; ++i )
+	{
+		if ( !Q_stricmp(Cmd_Argv(i + valueOffset), cvar->string) ) {
+			index = (i + 1) % valueCount;
+			break;
+		}
+	}
+	if ( index < 0 )
+		index = 0;
+
+	Cvar_Set2( name, Cmd_Argv(index + valueOffset), qfalse );
+}
+
+
+// frees resources associated to a cvar, then clears it
+
+static void Cvar_Nuke( cvar_t* var )
+{
+	if ( var->name )
+		Z_Free( var->name );
+
+	if ( var->string )
+		Z_Free( var->string );
+
+	if ( var->latchedString )
+		Z_Free( var->latchedString );
+
+	if ( var->resetString )
+		Z_Free( var->resetString );
+
+	if ( var->desc )
+		Z_Free( var->desc );
+
+	if ( var->help )
+		Z_Free( var->help );
+
+	// clear the var completely, since we
+	// can't remove the index from the list
+	Com_Memset( var, 0, sizeof( var ) );
+}
+
+
+// removes a user-created cvar
+
+static void Cvar_Unset_f( void )
+{
+	if ( Cmd_Argc() != 2 ) {
+		Com_Printf( "usage: unset <variable>\n" );
+		return;
+	}
+
+	const char* const name = Cmd_Argv(1);
+	cvar_t** prev = &cvar_vars;
+	while ( 1 ) {
+		cvar_t* const var = *prev;
+		if ( !var )
+			break;
+
+		if ( (var->flags & CVAR_USER_CREATED) != 0 && !Q_stricmp(var->name, name) ) {
+			*prev = var->next;
+			Cvar_Nuke( var );
+			break;
+		}
+
+		prev = &var->next;
+	}
+}
+
+
+// sets a cvar to an empty string
+
+static void Cvar_SetEmpty_f( void )
+{
+	if ( Cmd_Argc() != 2 ) {
+		Com_Printf( "usage: setempty <string_variable>\n" );
+		return;
+	}
+
+	const char* const name = Cmd_Argv(1);
+	const cvar_t* const cvar = Cvar_FindVar( name );
+	if ( !cvar || cvar->type != CVART_STRING )
+		return;
+
+	Cvar_Set( Cmd_Argv(1), "" );
 }
 
 
@@ -985,27 +1083,7 @@ static void Cvar_Restart( qbool reset )
 		// throw out any variables the user created
 		if ( var->flags & CVAR_USER_CREATED ) {
 			*prev = var->next;
-			if ( var->name ) {
-				Z_Free( var->name );
-			}
-			if ( var->string ) {
-				Z_Free( var->string );
-			}
-			if ( var->latchedString ) {
-				Z_Free( var->latchedString );
-			}
-			if ( var->resetString ) {
-				Z_Free( var->resetString );
-			}
-			if ( var->desc ) {
-				Z_Free( var->desc );
-			}
-			if ( var->help ) {
-				Z_Free( var->help );
-			}
-			// clear the var completely, since we
-			// can't remove the index from the list
-			Com_Memset( var, 0, sizeof( var ) );
+			Cvar_Nuke( var );
 			continue;
 		}
 
@@ -1154,6 +1232,8 @@ static const cmdTableItem_t cl_cmds[] =
 	{ "setu", Cvar_SetU_f, Cvar_CompleteName, "like /set with the user info flag" },
 	{ "seta", Cvar_SetA_f, Cvar_CompleteName, "like /set with the archive flag" },
 	{ "reset", Cvar_Reset_f, Cvar_CompleteName, "sets a cvar back to its default value" },
+	{ "unset", Cvar_Unset_f, Cvar_CompleteName, "removes a user-created cvar" },
+	{ "setempty", Cvar_SetEmpty_f, Cvar_CompleteName, "sets a cvar to an empty string" },
 	{ "cvarlist", Cvar_List_f, NULL, help_cvarlist },
 	{ "cvar_restart", Cvar_Restart_f, NULL, "restarts the cvar system" },
 	{ "cvar_trim", Cvar_Trim_f, NULL, "removes user-created cvars" }
