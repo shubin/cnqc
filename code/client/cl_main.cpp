@@ -1908,19 +1908,6 @@ qbool CL_CDKeyValidate( const char *key, const char *checksum )
 }
 
 
-static void CL_CallVote_f()
-{
-	CL_ForwardCommandToServer( Cmd_Cmd() );
-}
-
-
-static void CL_CompleteCallVote_f( int startArg, int compArg )
-{
-	if ( compArg == startArg + 2 && !Q_stricmp( Cmd_Argv( startArg + 1 ), "map" ) )
-		Field_AutoCompleteCustom( startArg, compArg, &Field_AutoCompleteMapName );
-}
-
-
 static void CL_PrintDownloadPakUsage()
 {
 	Com_Printf( "Usage: %s checksum (signed decimal, '0x' or '0X' prefix for hex)\n", Cmd_Argv(0) );
@@ -2056,10 +2043,6 @@ static const cmdTableItem_t cl_cmds[] =
 	{ "dlmap", CL_DownloadMap_f, NULL, "starts a pk3 download by map name if not existing" },
 	{ "dlmapf", CL_ForceDownloadMap_f, NULL, "start a pk3 download by map name" },
 	{ "dlstop", CL_CancelDownload_f, NULL, "stops the current pk3 download" },
-
-	// we use these until we get proper handling on the mod side
-	{ "cv", CL_CallVote_f, CL_CompleteCallVote_f, "calls a vote" },
-	{ "callvote", CL_CallVote_f, CL_CompleteCallVote_f, "calls a vote" }
 };
 
 

@@ -32,6 +32,27 @@ static byte*		interopBufferOut;
 static int			interopBufferOutSize;
 
 
+static void CL_CallVote_f()
+{
+	CL_ForwardCommandToServer( Cmd_Cmd() );
+}
+
+
+static void CL_CompleteCallVote_f( int startArg, int compArg )
+{
+	if ( compArg == startArg + 2 && !Q_stricmp( Cmd_Argv( startArg + 1 ), "map" ) )
+		Field_AutoCompleteCustom( startArg, compArg, &Field_AutoCompleteMapName );
+}
+
+
+static const cmdTableItem_t cl_cmds[] =
+{
+	// we use these until we get proper handling on the mod side
+	{ "cv", CL_CallVote_f, CL_CompleteCallVote_f, "calls a vote" },
+	{ "callvote", CL_CallVote_f, CL_CompleteCallVote_f, "calls a vote" }
+};
+
+
 static void CL_GetGameState( gameState_t* gs )
 {
 	*gs = cl.gameState;
@@ -285,6 +306,7 @@ void CL_ShutdownCGame()
 	cls.cgameStarted = qfalse;
 	cls.cgameForwardInput = 0;
 	CL_MapDownload_Cancel();
+	Cmd_UnregisterArray( cl_cmds );
 	if ( !cgvm ) {
 		return;
 	}
@@ -651,6 +673,8 @@ void CL_InitCGame()
 		Com_Error( ERR_DROP, "VM_Create on cgame failed" );
 	}
 	cls.state = CA_LOADING;
+
+	Cmd_RegisterArray( cl_cmds, MODULE_CLIENT );
 
 	// init for this gamestate
 	// use the lastExecutedServerCommand instead of the serverCommandSequence
