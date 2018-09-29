@@ -460,28 +460,20 @@ const void *RB_TakeVideoFrameCmd( const void *data )
 	int frameSize;
 	const videoFrameCommand_t* cmd = (const videoFrameCommand_t*)data;
 
-	qglReadPixels( 0, 0, cmd->width, cmd->height, GL_RGBA,
-			GL_UNSIGNED_BYTE, cmd->captureBuffer );
-
 	if( cmd->motionJpeg )
 	{
-		frameSize = SaveJPGToBuffer( cmd->encodeBuffer, 95,
-				cmd->width, cmd->height, cmd->captureBuffer );
+		qglReadPixels( 0, 0, cmd->width, cmd->height, GL_RGBA, GL_UNSIGNED_BYTE, cmd->captureBuffer );
+		frameSize = SaveJPGToBuffer( cmd->encodeBuffer, 95, cmd->width, cmd->height, cmd->captureBuffer );
+		ri.CL_WriteAVIVideoFrame( cmd->encodeBuffer, frameSize );
 	}
 	else
 	{
-		frameSize = cmd->width * cmd->height * 4;
-
-		// Vertically flip the image
-		for(int i = 0; i < cmd->height; i++ )
-		{
-			Com_Memcpy( &cmd->encodeBuffer[ i * ( cmd->width * 4 ) ],
-					&cmd->captureBuffer[ ( cmd->height - i - 1 ) * ( cmd->width * 4 ) ],
-					cmd->width * 4 );
-		}
+		qglPixelStorei( GL_PACK_ALIGNMENT, 4 );
+		qglReadPixels( 0, 0, cmd->width, cmd->height, GL_BGR, GL_UNSIGNED_BYTE, cmd->captureBuffer );
+		qglPixelStorei( GL_PACK_ALIGNMENT, 1 );
+		frameSize = PAD( cmd->width, 4 ) * cmd->height * 3;
+		ri.CL_WriteAVIVideoFrame( cmd->captureBuffer, frameSize );
 	}
-
-	ri.CL_WriteAVIVideoFrame( cmd->encodeBuffer, frameSize );
 
 	return (const void *)(cmd + 1);
 }

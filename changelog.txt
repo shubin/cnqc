@@ -10,6 +10,14 @@ add: /toggle can now accept a value sequence (2 or more entries) to loop through
   if the cvar's current value is in the sequence and not in the last spot, the next one is used
   otherwise, the first value in the sequence is used
 
+fix: /video and /stopvideo fixes
+  chg: /video can only be used during demo playback
+  fix: broken audio in the output files
+  fix: properly named file sequences
+  fix: using a better supported video codec (FourCC 0x00000000) for raw BGR output
+  fix: broken raw video output when r_width wasn't a multiple of 4
+  fix: /stopvideo no longer leaves sound output broken for a while after stopping
+
 fix: /cv and /callvote auto-completion were disabled after cgame was shut down at least once
 
 

@@ -1815,20 +1815,25 @@ static void CL_Video_f()
 {
 	char s[ MAX_OSPATH ];
 
+	if( !clc.demoplaying )
+	{
+		Com_Printf( "ERROR: ^7/video is only enabled during demo playback\n" );
+		return;
+	}
+
 	if( Cmd_Argc( ) == 2 )
 	{
-		Com_sprintf( s, MAX_OSPATH, "videos/%s.avi", Cmd_Argv( 1 ) );
+		Com_sprintf( s, MAX_OSPATH, "videos/%s", Cmd_Argv( 1 ) );
 	}
 	else
 	{
 		qtime_t t;
 		Com_RealTime( &t );
-		Com_sprintf( s, sizeof(s), "videos/%d_%02d_%02d-%02d_%02d_%02d.avi",
+		Com_sprintf( s, sizeof(s), "videos/%d_%02d_%02d-%02d_%02d_%02d",
 				1900+t.tm_year, 1+t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec );
 	}
 
-	Com_Printf( "recording to %s\n", s );
-	CL_OpenAVIForWriting( s );
+	CL_OpenAVIForWriting( s, qfalse );
 }
 
 
@@ -1999,7 +2004,7 @@ static const cvarTableItem_t cl_cvars[] =
 	{ &cl_showTimeDelta, "cl_showTimeDelta", "0", CVAR_TEMP, CVART_BOOL, NULL, NULL, "prints delta adjustment values and events" },
 	{ &rconPassword, "rconPassword", "", CVAR_TEMP, CVART_STRING, NULL, NULL, help_rconPassword },
 	{ &cl_timedemo, "timedemo", "0", 0, CVART_BOOL, NULL, NULL, "demo benchmarking mode" },
-	{ &cl_aviFrameRate, "cl_aviFrameRate", "25", CVAR_ARCHIVE, CVART_INTEGER, "1", "250", help_cl_aviFrameRate },
+	{ &cl_aviFrameRate, "cl_aviFrameRate", "50", CVAR_ARCHIVE, CVART_INTEGER, "24", "250", help_cl_aviFrameRate },
 	{ &cl_aviMotionJpeg, "cl_aviMotionJpeg", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_cl_aviMotionJpeg },
 	{ &rconAddress, "rconAddress", "", 0, CVART_STRING, NULL, NULL, help_rconAddress },
 	{ &cl_maxpackets, "cl_maxpackets", "125", CVAR_ARCHIVE, CVART_INTEGER, "15", "125", "max. packet upload rate" },

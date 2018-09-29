@@ -40,7 +40,7 @@ typedef struct audioFormat_s
 
 typedef struct aviFileData_s
 {
-  qbool      fileOpen;
+  qbool         fileOpen;
   fileHandle_t  f;
   char          fileName[ MAX_QPATH ];
   int           fileSize;
@@ -55,16 +55,16 @@ typedef struct aviFileData_s
   int           width, height;
   int           numVideoFrames;
   int           maxRecordSize;
-  qbool      motionJpeg;
+  qbool         motionJpeg;
 
-  qbool      audio;
+  qbool         audio;
   audioFormat_t a;
   int           numAudioFrames;
 
   int           chunkStack[ MAX_RIFF_CHUNKS ];
   int           chunkStackTop;
 
-  byte          *cBuffer, *eBuffer;
+  byte          *cBuffer, *eBuffer; // capture and encoding buffers
 } aviFileData_t;
 
 static aviFileData_t afd;
@@ -218,12 +218,12 @@ void CL_WriteAVIHeader( void )
           WRITE_STRING( "strl" );
           WRITE_STRING( "strh" );
           WRITE_4BYTES( 56 );                   //"strh" "chunk" size
-          WRITE_STRING( "vids" );
+          WRITE_STRING( "vids" );               //fccType
 
-          if( afd.motionJpeg )
+          if( afd.motionJpeg )                  //fccHandler
             WRITE_STRING( "MJPG" );
           else
-            WRITE_STRING( " BGR" );
+			WRITE_4BYTES( 0 );                  //raw BGR
 
           WRITE_4BYTES( 0 );                    //dwFlags
           WRITE_4BYTES( 0 );                    //dwPriority
@@ -250,13 +250,20 @@ void CL_WriteAVIHeader( void )
           WRITE_2BYTES( 1 );                    //biPlanes
           WRITE_2BYTES( 24 );                   //biBitCount
 
-          if( afd.motionJpeg )                        //biCompression
+          if( afd.motionJpeg )                  //biCompression and biSizeImage
+          {
+            // we specify the pixel count
             WRITE_STRING( "MJPG" );
+            WRITE_4BYTES( afd.width * afd.height );
+          }
           else
-            WRITE_STRING( " BGR" );
+		  {
+            // must either specify 0 or the total byte count per image
+            // but there is no reason to trust most software...
+			WRITE_4BYTES( 0 ); // raw BGR
+            WRITE_4BYTES( afd.width * afd.height * 3 );
+          }
 
-          WRITE_4BYTES( afd.width *
-              afd.height );                     //biSizeImage
           WRITE_4BYTES( 0 );                    //biXPelsPetMeter
           WRITE_4BYTES( 0 );                    //biYPelsPetMeter
           WRITE_4BYTES( 0 );                    //biClrUsed
@@ -321,8 +328,14 @@ void CL_WriteAVIHeader( void )
 
 // creates an AVI file and gets it into a state where writing the actual data can begin
 
-qbool CL_OpenAVIForWriting( const char* fileName )
+qbool CL_OpenAVIForWriting( const char* fileNameNoExt, qbool reOpen )
 {
+	static char avi_fileNameNoExt[MAX_QPATH];
+	static int  avi_fileNameIndex;
+
+	if ( reOpen )
+		CL_CloseAVI();
+
 	if ( afd.fileOpen )
 		return qfalse;
 
@@ -334,15 +347,21 @@ qbool CL_OpenAVIForWriting( const char* fileName )
 		return qfalse;
 	}
 
-	if ( ( afd.f = FS_FOpenFileWrite( fileName ) ) <= 0 )
+	if ( reOpen ) {
+		avi_fileNameIndex++;
+	} else {
+		Q_strncpyz( avi_fileNameNoExt, fileNameNoExt, sizeof( avi_fileNameNoExt ) );
+		avi_fileNameIndex = 0;
+	}
+	Com_sprintf( afd.fileName, sizeof( afd.fileName ), "%s_%03d.avi", avi_fileNameNoExt, avi_fileNameIndex );
+
+	if ( ( afd.f = FS_FOpenFileWrite( afd.fileName ) ) <= 0 )
 		return qfalse;
 
-	if ( ( afd.idxF = FS_FOpenFileWrite( va( "%s" INDEX_FILE_EXTENSION, fileName ) ) ) <= 0 ) {
+	if ( ( afd.idxF = FS_FOpenFileWrite( va( "%s" INDEX_FILE_EXTENSION, afd.fileName ) ) ) <= 0 ) {
 		FS_FCloseFile( afd.f );
 		return qfalse;
 	}
-
-	Q_strncpyz( afd.fileName, fileName, MAX_QPATH );
 
 	afd.frameRate = cl_aviFrameRate->integer;
 	afd.framePeriod = (int)( 1000000.0f / afd.frameRate );
@@ -351,8 +370,9 @@ qbool CL_OpenAVIForWriting( const char* fileName )
 
 	afd.motionJpeg = (cl_aviMotionJpeg->integer != 0);
 
-	afd.cBuffer = (byte*)Z_Malloc( afd.width * afd.height * 4 );
-	afd.eBuffer = (byte*)Z_Malloc( afd.width * afd.height * 4 );
+	const int maxByteCount = PAD( afd.width, 4 ) * afd.height * 4;
+	afd.cBuffer = (byte*)Z_Malloc( maxByteCount );
+	afd.eBuffer = (byte*)Z_Malloc( maxByteCount );
 
 	afd.a.rate = dma.speed;
 	afd.a.format = WAV_FORMAT_PCM;
@@ -391,6 +411,8 @@ qbool CL_OpenAVIForWriting( const char* fileName )
 	afd.moviSize = 4; // for the "movi" header signature
 	afd.fileOpen = qtrue;
 
+	Com_Printf( "Recording to %s\n", afd.fileName );
+
 	return qtrue;
 }
 
@@ -414,12 +436,7 @@ static qbool CL_CheckFileSize( int bytesToAdd )
   // we target can handle a 2Gb file
   if( newFileSize > INT_MAX )
   {
-    // Close the current file...
-    CL_CloseAVI( );
-
-    // ...And open a new one
-    CL_OpenAVIForWriting( va( "%s_", afd.fileName ) );
-
+    CL_OpenAVIForWriting( NULL, qtrue );
     return qtrue;
   }
 
@@ -517,7 +534,7 @@ void CL_WriteAVIAudioFrame( const byte *pcmBuffer, int size )
     WRITE_4BYTES( bytesInBuffer );
 
     SafeFS_Write( buffer, 8, afd.f );
-    SafeFS_Write( pcmBuffer, bytesInBuffer, afd.f );
+    SafeFS_Write( pcmCaptureBuffer, bytesInBuffer, afd.f );
     SafeFS_Write( padding, paddingSize, afd.f );
     afd.fileSize += ( chunkSize + paddingSize );
 
@@ -624,6 +641,8 @@ qbool CL_CloseAVI( void )
   FS_FCloseFile( afd.f );
 
   Com_Printf( "Wrote %d:%d frames to %s\n", afd.numVideoFrames, afd.numAudioFrames, afd.fileName );
+
+  S_StopAllSounds();
 
   return qtrue;
 }
