@@ -505,12 +505,12 @@ static qbool GL2_FBO_CreateMS( FrameBuffer& fb )
 
 	GL(qglGenRenderbuffers( 1, &fb.color ));
 	GL(qglBindRenderbuffer( GL_RENDERBUFFER, fb.color ));
-	GL(qglRenderbufferStorageMultisample( GL_RENDERBUFFER, 4, GL_RGBA8, glConfig.vidWidth, glConfig.vidHeight ));
+	GL(qglRenderbufferStorageMultisample( GL_RENDERBUFFER, r_msaa->integer, GL_RGBA8, glConfig.vidWidth, glConfig.vidHeight ));
 	GL(qglFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, fb.color ));
 
 	GL(qglGenRenderbuffers( 1, &fb.depthStencil ));
 	GL(qglBindRenderbuffer( GL_RENDERBUFFER, fb.depthStencil ));
-	GL(qglRenderbufferStorageMultisample( GL_RENDERBUFFER, 4, GL_DEPTH24_STENCIL8, glConfig.vidWidth, glConfig.vidHeight ));
+	GL(qglRenderbufferStorageMultisample( GL_RENDERBUFFER, r_msaa->integer, GL_DEPTH24_STENCIL8, glConfig.vidWidth, glConfig.vidHeight ));
 
 	GL(qglFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, fb.color ));
 	GL(qglFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, fb.depthStencil ));

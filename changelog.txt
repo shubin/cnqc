@@ -14,6 +14,8 @@ add: /toggle can now accept a value sequence (2 or more entries) to loop through
   if the cvar's current value is in the sequence and not in the last spot, the next one is used
   otherwise, the first value in the sequence is used
 
+fix: when r_msaa was in the range [2, 16], the requested sample count was always 4
+
 fix: /video and /stopvideo fixes
   chg: /video can only be used during demo playback
   fix: broken audio in the output files
