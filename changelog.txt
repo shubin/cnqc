@@ -1,6 +1,10 @@
 
 DD Mmm 18 - 1.51
 
+add: /cvar_add <cvar> <number> to add a number to a cvar
+
+add: /cvar_mul <cvar> <number> to multiply a cvar by a number
+
 add: /unset <cvar> to remove a user-created cvar
 
 add: /setempty <cvar> to set a string cvar to an empty string

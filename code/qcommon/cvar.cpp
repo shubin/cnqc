@@ -945,6 +945,68 @@ static void Cvar_SetEmpty_f( void )
 }
 
 
+static void Cvar_ExecuteOp( qbool multiply )
+{
+	if ( Cmd_Argc() != 3 ) {
+		Com_Printf( "usage: %s <cvar> <number>\n", Cmd_Argv(0) );
+		return;
+	}
+
+	const cvar_t* const cvar = Cvar_FindVar( Cmd_Argv(1) );
+	if ( !cvar ) {
+		Com_Printf( "%s: variable '%s' not found\n", Cmd_Argv(0), Cmd_Argv(1) );
+		return;
+	}
+
+	if ( cvar->type != CVART_INTEGER && cvar->type != CVART_FLOAT ) {
+		Com_Printf( "%s: variable " S_COLOR_CVAR "%s ^7isn't an integer or float variable\n", Cmd_Argv(0), Cmd_Argv(1) );
+		if ( cvar->type == CVART_BOOL )
+			Com_Printf( "%s: you can use '/" S_COLOR_CMD "toggle " S_COLOR_CVAR "%s^7' to toggle between 0 and 1\n", Cmd_Argv(0), Cmd_Argv(1) );
+		return;
+	}
+
+	if ( cvar->type == CVART_INTEGER ) {
+		int iTemp;
+		if ( sscanf( Cmd_Argv(2), "%d", &iTemp ) != 1 ) {
+			Com_Printf( "%s: '%s' isn't an integer (whole number)\n", Cmd_Argv(0), Cmd_Argv(2) );
+			return;
+		}
+
+		if ( (multiply && iTemp == 1) || (!multiply && iTemp == 0) )
+			return;
+
+		const int iValU = multiply ? ( cvar->integer * iTemp ) : ( cvar->integer + iTemp );
+		const int iValC = Com_ClampInt( cvar->validator.i.min, cvar->validator.i.max, iValU );
+		Cvar_Set( Cmd_Argv(1), va("%d", iValC) );
+	} else {
+		float fTemp;
+		if ( sscanf( Cmd_Argv(2), "%f", &fTemp ) != 1 || !isfinite( fTemp ) ) {
+			Com_Printf( "%s: '%s' isn't a finite floating-point number\n", Cmd_Argv(0), Cmd_Argv(2) );
+			return;
+		}
+
+		if ( (multiply && fTemp == 1.0f) || (!multiply && fTemp == 0.0f) )
+			return;
+
+		const float fValU = multiply ? ( cvar->value * fTemp ) : ( cvar->value + fTemp );
+		const float fValC = Com_Clamp( cvar->validator.f.min, cvar->validator.f.max, fValU );
+		Cvar_Set( Cmd_Argv(1), va("%f", fValC) );
+	}
+}
+
+
+static void Cvar_Add_f( void )
+{
+	Cvar_ExecuteOp( qfalse );
+}
+
+
+static void Cvar_Multiply_f( void )
+{
+	Cvar_ExecuteOp( qtrue );
+}
+
+
 // Allows setting and defining of arbitrary cvars from console
 // even if they weren't declared in C code
 
@@ -1234,6 +1296,8 @@ static const cmdTableItem_t cl_cmds[] =
 	{ "reset", Cvar_Reset_f, Cvar_CompleteName, "sets a cvar back to its default value" },
 	{ "unset", Cvar_Unset_f, Cvar_CompleteName, "removes a user-created cvar" },
 	{ "setempty", Cvar_SetEmpty_f, Cvar_CompleteName, "sets a cvar to an empty string" },
+	{ "cvar_add", Cvar_Add_f, Cvar_CompleteName, "adds a number to a cvar" },
+	{ "cvar_mul", Cvar_Multiply_f, Cvar_CompleteName, "multiplies a cvar by a number" },
 	{ "cvarlist", Cvar_List_f, NULL, help_cvarlist },
 	{ "cvar_restart", Cvar_Restart_f, NULL, "restarts the cvar system" },
 	{ "cvar_trim", Cvar_Trim_f, NULL, "removes user-created cvars" }
