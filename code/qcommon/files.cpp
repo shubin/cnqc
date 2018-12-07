@@ -3042,6 +3042,13 @@ void FS_InitFilesystem()
 	Com_StartupVariable( "fs_homepath" );
 	Com_StartupVariable( "fs_game" );
 
+#if defined( _WIN32 )
+	// MSDN: "The limit of 512 open files at the stdio level can be increased to a maximum of 2,048 by means of the _setmaxstdio function."
+	// MSDN: "the maximum of 2,048 is a hard upper limit for the number of simultaneously open files accessed through the C run-time library"
+	// increase the upper limit of open stdio file handles from 512 to 2048
+	_setmaxstdio( 2048 );
+#endif
+
 	// try to start up normally
 	FS_Startup( BASEGAME );
 

@@ -14,6 +14,8 @@ add: /toggle can now accept a value sequence (2 or more entries) to loop through
   if the cvar's current value is in the sequence and not in the last spot, the next one is used
   otherwise, the first value in the sequence is used
 
+chg: on Windows, the upper limit of open stdio file handles was raised from 512 to 2048
+
 fix: on Windows, could sometimes click outside the engine's window in raw mouse input mode
 
 fix: when r_msaa was in the range [2, 16], the requested sample count was always 4
