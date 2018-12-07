@@ -336,86 +336,67 @@ int MSG_ReadLong( msg_t *msg )
 	return c;
 }
 
+//
+// Notes about the MSG_Read*String* functions
+//
+// If N is the string buffer size, then:
+// - the max. string length is N-1 because
+//   the NULL-terminator is part of the buffer
+// - the loop can call MSG_ReadByte at most N times
+// - the loop can write at most N-1 chars
+//   to leave space for the NULL terminator
+//
+// The "q3msgboom" bug was happening because a string
+// of length >= N-1 was invoking MSG_ReadByte N-1 times
+// instead of N times, leaving the bit stream in an
+// invalid state and later leading to the
+// "Illegible server message" drop error.
+//
+
 char *MSG_ReadString( msg_t *msg ) {
 	static char	string[MAX_STRING_CHARS];
-	int		l,c;
 
-	l = 0;
-	do {
-		c = MSG_ReadByte(msg);		// use ReadByte so -1 is out of bounds
-		if ( c == -1 || c == 0 ) {
+	int l = 0;
+	for (;;) {
+		const int c = MSG_ReadByte(msg);
+		if (c <= 0 || l >= sizeof(string) - 1)
 			break;
-		}
-		// translate all fmt spec to avoid crash bugs
-		if ( c == '%' ) {
-			c = '.';
-		}
-		// don't allow higher ascii values
-		if ( c > 127 ) {
-			c = '.';
-		}
 
-		string[l] = c;
-		l++;
-	} while (l < sizeof(string)-1);
-
-	string[l] = 0;
+		string[l++] = c == '%' || c > 127 ? '.' : c;
+	}
+	string[l] = '\0';
 
 	return string;
 }
 
 char *MSG_ReadBigString( msg_t *msg ) {
 	static char	string[BIG_INFO_STRING];
-	int		l,c;
 
-	l = 0;
-	do {
-		c = MSG_ReadByte(msg);		// use ReadByte so -1 is out of bounds
-		if ( c == -1 || c == 0 ) {
+	int l = 0;
+	for (;;) {
+		const int c = MSG_ReadByte(msg);
+		if (c <= 0 || l >= sizeof(string) - 1)
 			break;
-		}
-		// translate all fmt spec to avoid crash bugs
-		if ( c == '%' ) {
-			c = '.';
-		}
-		// don't allow higher ascii values
-		if ( c > 127 ) {
-			c = '.';
-		}
 
-		string[l] = c;
-		l++;
-	} while (l < sizeof(string)-1);
-
-	string[l] = 0;
+		string[l++] = c == '%' || c > 127 ? '.' : c;
+	}
+	string[l] = '\0';
 
 	return string;
 }
 
 char *MSG_ReadStringLine( msg_t *msg ) {
 	static char	string[MAX_STRING_CHARS];
-	int		l,c;
 
-	l = 0;
-	do {
-		c = MSG_ReadByte(msg);		// use ReadByte so -1 is out of bounds
-		if (c == -1 || c == 0 || c == '\n') {
+	int l = 0;
+	for (;;) {
+		const int c = MSG_ReadByte(msg);
+		if (c <= 0 || c == '\n' || l >= sizeof(string) - 1)
 			break;
-		}
-		// translate all fmt spec to avoid crash bugs
-		if ( c == '%' ) {
-			c = '.';
-		}
-		// don't allow higher ascii values
-		if ( c > 127 ) {
-			c = '.';
-		}
 
-		string[l] = c;
-		l++;
-	} while (l < sizeof(string)-1);
-	
-	string[l] = 0;
+		string[l++] = c == '%' || c > 127 ? '.' : c;
+	}
+	string[l] = '\0';
 	
 	return string;
 }
