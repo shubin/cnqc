@@ -1,6 +1,8 @@
 
 DD Mmm 18 - 1.51
 
+add: demo recording status query extension for CPMA 1.52+
+
 add: /cvar_add <cvar> <number> to add a number to a cvar
 
 add: /cvar_mul <cvar> <number> to multiply a cvar by a number

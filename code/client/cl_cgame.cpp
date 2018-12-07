@@ -335,6 +335,7 @@ static qbool CL_CG_GetValue( char* value, int valueSize, const char* key )
 		{ "trap_Cmd_SetHelp", CG_EXT_CMD_SETHELP },
 		{ "trap_MatchAlertEvent", CG_EXT_MATCHALERTEVENT },
 		{ "trap_Error2", CG_EXT_ERROR2 },
+		{ "trap_IsRecordingDemo", CG_EXT_ISRECORDINGDEMO },
 		// commands
 		{ "screenshotnc", 1 },
 		{ "screenshotncJPEG", 1 },
@@ -647,6 +648,9 @@ static intptr_t CL_CgameSystemCalls( intptr_t *args )
 	case CG_EXT_ERROR2:
 		Com_ErrorExt( ERR_DROP, EXT_ERRMOD_CGAME, (qbool)args[2], "%s", (const char*)VMA(1) );
 		return 0;
+
+	case CG_EXT_ISRECORDINGDEMO:
+		return clc.demorecording;
 
 	default:
 		Com_Error( ERR_DROP, "Bad cgame system trap: %i", args[0] );
