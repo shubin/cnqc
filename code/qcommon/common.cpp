@@ -273,9 +273,8 @@ void QDECL Com_ErrorExt( int code, int module, qbool realError, const char *fmt,
 
 #if defined(_WIN32) && defined(_DEBUG)
 	if ( code != ERR_DISCONNECT && code != ERR_NEED_CD ) {
-		if ((!com_noErrorInterrupt || !com_noErrorInterrupt->integer) && IsDebuggerPresent()) {
+		if ( realError && (!com_noErrorInterrupt || !com_noErrorInterrupt->integer) && IsDebuggerPresent() )
 			__debugbreak();
-		}
 	}
 #endif
 
@@ -293,7 +292,7 @@ void QDECL Com_ErrorExt( int code, int module, qbool realError, const char *fmt,
 		com_errorEntered = qfalse;
 		longjmp (abortframe, -1);
 	} else if ( code == ERR_DROP || code == ERR_DISCONNECT ) {
-		if (realError)
+		if ( realError )
 			Com_Printf( "********************\nERROR: %s\n********************\n", com_errorMessage );
 		else
 			Com_Printf( "ERROR: %s\n", com_errorMessage );
@@ -301,11 +300,11 @@ void QDECL Com_ErrorExt( int code, int module, qbool realError, const char *fmt,
 #ifndef DEDICATED
 		const qbool demo = CL_DemoPlaying();
 		CL_Disconnect( qtrue );
-		if ( demo )
-			CL_NextDemo();
 		CL_FlushMemory(); // shuts down the VMs and starts them back up
 		if ( realError )
 			CL_ForwardUIError( code == ERR_DROP ? EXT_ERRLEV_DROP : EXT_ERRLEV_DISC, module, com_errorMessage );
+		else if ( demo )
+			CL_NextDemo();
 #endif
 		com_errorEntered = qfalse;
 		longjmp (abortframe, -1);

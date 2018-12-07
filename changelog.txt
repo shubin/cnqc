@@ -16,6 +16,8 @@ add: /toggle can now accept a value sequence (2 or more entries) to loop through
 
 chg: on Windows, the upper limit of open stdio file handles was raised from 512 to 2048
 
+fix: aborting demo playback would crash when the "nextdemo" cvar was set to play a demo
+
 fix: no longer feeding cs commands that came from a previous gamestate to cgame
 	example: "/map cpm22" -> "/cv map cpm25" -> elevator sound was broken
 
