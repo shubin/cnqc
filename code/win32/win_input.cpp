@@ -30,6 +30,7 @@ static cvar_t* in_noGrab;
 
 struct Mouse {
 	Mouse() : active(qfalse) {}
+	virtual ~Mouse() {}
 
 	qbool IsActive() const { return active; }
 
@@ -37,6 +38,7 @@ struct Mouse {
 	virtual qbool Activate( qbool _active ) { return qfalse; }									// qtrue if successful
 	virtual void Shutdown() {}
 	virtual qbool ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam ) { return qfalse; }	// qtrue if the event was handled
+	virtual void GetClipRect( RECT* clip, const RECT* client ) = 0;
 
 protected:
 	void UpdateWheel( int delta );	// queues mouse wheel events if needed
@@ -74,6 +76,7 @@ struct rawmouse_t : public Mouse {
 	virtual qbool Activate( qbool active );
 	virtual void Shutdown();
 	virtual qbool ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam );
+	virtual void GetClipRect( RECT* clip, const RECT* client );
 };
 
 static rawmouse_t rawmouse;
@@ -173,6 +176,16 @@ qbool rawmouse_t::ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam )
 }
 
 
+void rawmouse_t::GetClipRect( RECT* clip, const RECT* client )
+{
+	// when passing the window's client area in desktop coordinates to ClipCursor,
+	// it is *still* possible to click outside the window (on Windows 7 at least)
+	POINT center = { ( client->left + client->right ) / 2, ( client->top + client->bottom ) / 2 };
+	MapWindowPoints( g_wv.hWnd, HWND_DESKTOP, &center, 1 );
+	*clip = { center.x - 1, center.y - 1, center.x + 1, center.y + 1 };
+}
+
+
 ///////////////////////////////////////////////////////////////
 
 
@@ -180,6 +193,7 @@ struct winmouse_t : public Mouse {
 	virtual qbool Init() { return qtrue; }
 	virtual qbool Activate( qbool active );
 	virtual qbool ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam );
+	virtual void GetClipRect( RECT* clip, const RECT* client );
 
 private:
 	void UpdateWindowCenter();
@@ -229,7 +243,7 @@ qbool winmouse_t::ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam )
 	UpdateWindowCenter();
 
 #define QUEUE_WM_BUTTON( qbutton, mask ) \
-	WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, qbutton, (wParam & mask), 0, NULL );
+	WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, qbutton, (wParam & mask), 0, NULL )
 
 	POINT p;
 	GetCursorPos( &p );
@@ -271,6 +285,15 @@ qbool winmouse_t::ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam )
 	}
 
 	return qtrue;
+}
+
+
+void winmouse_t::GetClipRect( RECT* clip, const RECT* client )
+{
+	const int border = 16; // a little safety nest since Windows doesn't handle cursor clip rectangles perfectly right
+	POINT endPoints[2] = { { client->left, client->top }, { client->right, client->bottom } };
+	MapWindowPoints( g_wv.hWnd, HWND_DESKTOP, endPoints, 2 );
+	*clip = { endPoints[0].x + border, endPoints[0].y + border, endPoints[1].x - 2 * border, endPoints[1].y - 2 * border };
 }
 
 
@@ -394,18 +417,15 @@ void Sys_ShutdownInput()
 static void IN_SetCursorSettings( qbool active )
 {
 	if (active) {
-		while (ShowCursor(FALSE) >= 0)
-			;
-		RECT rect;
+		while (ShowCursor(FALSE) >= 0) {}
 		SetCapture( g_wv.hWnd );
-		GetClientRect( g_wv.hWnd, &rect );
-		POINT points[2] = { { rect.left, rect.top }, { rect.right, rect.bottom } };
-		MapWindowPoints( g_wv.hWnd, HWND_DESKTOP, points, 2 );
-		rect = { points[0].x, points[0].y, points[1].x, points[1].y };
-		ClipCursor( &rect );
+		RECT clientRect;
+		GetClientRect( g_wv.hWnd, &clientRect );
+		RECT clipRect;
+		mouse->GetClipRect( &clipRect, &clientRect );
+		ClipCursor( &clipRect );
 	} else {
-		while (ShowCursor(TRUE) < 0)
-			;
+		while (ShowCursor(TRUE) < 0) {}
 		ClipCursor( NULL );
 		ReleaseCapture();
 	}
@@ -434,6 +454,9 @@ static qbool IN_ShouldBeActive()
 
 	const qbool isConsoleDown = (cls.keyCatchers & KEYCATCH_CONSOLE) != 0;
 	if ( g_wv.monitorCount >= 2 && isConsoleDown )
+		return qfalse;
+
+	if ( GetFocus() != g_wv.hWnd )
 		return qfalse;
 
 	return g_wv.activeApp && (!isConsoleDown || Cvar_VariableIntegerValue("r_fullscreen"));
