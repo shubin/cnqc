@@ -226,14 +226,18 @@ static qbool CL_GetServerCommand( int serverCommandNumber )
 		return qfalse;
 	}
 
-	const char* s = clc.serverCommands[ serverCommandNumber & ( MAX_RELIABLE_COMMANDS - 1 ) ];
+	const int index = serverCommandNumber & (MAX_RELIABLE_COMMANDS - 1);
+	if ( clc.serverCommandsBad[ index ] )
+		return qfalse;
+
+	const char* s = clc.serverCommands[ index ];
 	clc.lastExecutedServerCommand = serverCommandNumber;
 	Com_DPrintf( "serverCommand: %i : %s\n", serverCommandNumber, s );
 
 rescan:
 	Cmd_TokenizeString( s );
-	int argc = Cmd_Argc();
-	const char* cmd = Cmd_Argv(0);
+	const int argc = Cmd_Argc();
+	const char* const cmd = Cmd_Argv(0);
 
 	if ( !strcmp( cmd, "disconnect" ) ) {
 		// https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=552

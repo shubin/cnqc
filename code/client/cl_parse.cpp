@@ -429,6 +429,17 @@ static void CL_ParseGamestate( msg_t *msg )
 	// wipe local client state
 	CL_ClearState();
 
+	// all previous config string commands need to be marked as invalid
+	for ( i = 0; i < MAX_RELIABLE_COMMANDS; ++i ) {
+		const char* const cmd = clc.serverCommands[i];
+
+		if ( !strncmp(cmd, "cs "  , 3) ||
+			 !strncmp(cmd, "bcs0 ", 5) ||
+			 !strncmp(cmd, "bcs1 ", 5) ||
+			 !strncmp(cmd, "bcs2 ", 5) )
+			 clc.serverCommandsBad[i] = qtrue;
+	}
+
 	// a gamestate always marks a server command sequence
 	clc.serverCommandSequence = MSG_ReadLong( msg );
 
@@ -588,8 +599,8 @@ when it transitions a snapshot
 */
 static void CL_ParseCommandString( msg_t* msg )
 {
-	int seq = MSG_ReadLong( msg );
-	const char* s = MSG_ReadString( msg );
+	const int seq = MSG_ReadLong( msg );
+	const char* const s = MSG_ReadString( msg );
 
 	// see if we have already stored it off
 	if ( clc.serverCommandSequence >= seq ) {
@@ -597,8 +608,9 @@ static void CL_ParseCommandString( msg_t* msg )
 	}
 	clc.serverCommandSequence = seq;
 
-	int index = seq & (MAX_RELIABLE_COMMANDS-1);
+	const int index = seq & (MAX_RELIABLE_COMMANDS - 1);
 	Q_strncpyz( clc.serverCommands[ index ], s, sizeof( clc.serverCommands[ index ] ) );
+	clc.serverCommandsBad[ index ] = qfalse;
 
 	// We normally don't process commands before being CA_ACTIVE,
 	// but it's possible we receive a "disconnect" command while

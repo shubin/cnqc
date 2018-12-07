@@ -176,6 +176,7 @@ typedef struct {
 	int			serverCommandSequence;
 	int			lastExecutedServerCommand;		// last server command grabbed or executed with CL_GetServerCommand
 	char		serverCommands[MAX_RELIABLE_COMMANDS][MAX_STRING_CHARS];
+	qbool		serverCommandsBad[MAX_RELIABLE_COMMANDS];	// non-zero means the command shouldn't be fed to cgame
 
 	// file transfer from server
 	fileHandle_t download;
