@@ -115,6 +115,9 @@ static void WIN_DumpStackTrace( debug_help_t* debugHelp )
 	stackFrame.AddrStack.Mode = AddrModeFlat;
 #endif
 
+	const HANDLE processHandle = GetCurrentProcess();
+	const HANDLE threadHandle = GetCurrentThread();
+
 	JSONW_BeginNamedArray("stack_trace");
 	
 	unsigned char buffer[sizeof(IMAGEHLP_SYMBOL64) + BUFFER_SIZE];
@@ -123,7 +126,7 @@ static void WIN_DumpStackTrace( debug_help_t* debugHelp )
 	int level = 1;
 	while (level++ < (MAX_LEVELS + 1)) {
 		BOOL result = debugHelp->StackWalk64(
-			machineType, GetCurrentProcess(), GetCurrentThread(), &stackFrame, &context, 
+			machineType, processHandle, threadHandle, &stackFrame, &context,
 			NULL, debugHelp->SymFunctionTableAccess64, debugHelp->SymGetModuleBase64, NULL);
 		if (!result || stackFrame.AddrPC.Offset == 0)
 			break;
@@ -139,9 +142,14 @@ static void WIN_DumpStackTrace( debug_help_t* debugHelp )
 		JSONW_HexValue("return_address", stackFrame.AddrReturn.Offset);
 
 		DWORD64 displacement;
-		result = debugHelp->SymGetSymFromAddr64(GetCurrentProcess(), stackFrame.AddrPC.Offset, &displacement, symbol);
+		result = debugHelp->SymGetSymFromAddr64(processHandle, stackFrame.AddrPC.Offset, &displacement, symbol);
 		if (result)
 			JSONW_StringValue("name", symbol->Name);
+
+		const DWORD64 moduleBase = debugHelp->SymGetModuleBase64(processHandle, stackFrame.AddrPC.Offset);
+		char moduleName[MAX_PATH];
+		if (moduleBase && GetModuleFileNameA((HMODULE)moduleBase, moduleName, sizeof(moduleName)))
+			JSONW_StringValue("module_name", moduleName);
 
 		JSONW_EndObject();
 	}
