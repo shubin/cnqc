@@ -1107,8 +1107,11 @@ void	R_ConfigureVideoMode( int desktopWidth, int desktopHeight );	// writes to g
 #define IMG_NOPICMIP 0x0001  // images that must never be downsampled
 #define IMG_NOMIPMAP 0x0002  // 2D elements that will never be "distant" - implies IMG_NOPICMIP
 #define IMG_NOIMANIP 0x0004  // used for math by shaders (normal maps etc) so don't imageprocess them
+#define IMG_LMATLAS  0x0008  // lightmap atlas => RGBA, no initial data, no mip-mapping, no anisotropic, upload with R_UploadLightmapTile
+
 const image_t* R_FindImageFile( const char* name, int flags, int glWrapClampMode );
 image_t* R_CreateImage( const char* name, byte* pic, int width, int height, GLenum format, int flags, int wrapClampMode );
+void	R_UploadLightmapTile( image_t* image, byte* pic, int x, int y, int width, int height );
 
 void	R_SetColorMappings();
 

@@ -30,8 +30,16 @@ A single entry point: void RE_LoadWorldMap( const char* name );
 static world_t s_worldData;
 static byte* fileBase;
 
+static const int LMVirtPageSize	= 128;
+static const int LMBorderSize	= 1;	// bilinear filtering on, mip-mapping and anisotropic filtering off
+static const int LMPhysPageSize	= 128 + LMBorderSize * 2;
 
-static void R_ColorShiftLightingBytes( const byte in[4], byte out[4] )
+static vec2_t lightmapBiases[MAX_LIGHTMAPS];
+static float lightmapScale[2];
+static int lightmapsPerAtlas;
+
+
+static void R_ColorShiftLightingBytesRGB( const byte* in, byte* out )
 {
 	const int scale16 = (int)( r_mapBrightness->value * 65536.0f );
 
@@ -53,23 +61,97 @@ static void R_ColorShiftLightingBytes( const byte in[4], byte out[4] )
 	out[0] = r;
 	out[1] = g;
 	out[2] = b;
+}
+
+
+static void R_ColorShiftLightingBytes( const byte in[4], byte out[4] )
+{
+	R_ColorShiftLightingBytesRGB( in, out );
 	out[3] = in[3];
+}
+
+
+static void R_ComputeAtlasSize( int* sizeX, int* sizeY, int tileSize, int tileCount, int maxTextureSize )
+{
+	int h = 128;
+
+	while ( h <= maxTextureSize ) {
+		int w = 128;
+
+		while ( w <= maxTextureSize ) {
+			const int countX = w / tileSize;
+			const int countY = h / tileSize;
+			const int count = countX * countY;
+
+			if ( count >= tileCount ) {
+				*sizeX = w;
+				*sizeY = h;
+				return;
+			}
+
+			w *= 2;
+		}
+
+		h *= 2;
+	}
+
+	*sizeX = maxTextureSize;
+	*sizeY = maxTextureSize;
+}
+
+
+static void R_LerpPixels( byte* dst, const byte* src1, const byte* src2 )
+{
+	dst[0] = (byte)(((uint16_t)src1[0] + (uint16_t)src2[0]) / 2);
+	dst[1] = (byte)(((uint16_t)src1[1] + (uint16_t)src2[1]) / 2);
+	dst[2] = (byte)(((uint16_t)src1[2] + (uint16_t)src2[2]) / 2);
+	dst[3] = (byte)(((uint16_t)src1[3] + (uint16_t)src2[3]) / 2);
+}
+
+
+static void R_FillBorderTexels( byte* image )
+{
+	const int stride = LMPhysPageSize * 4;
+
+	const byte* const topSrc = image + 4 + stride;
+	byte* const topDst = image + 4;
+	memcpy( topDst, topSrc, LMVirtPageSize * 4 );
+
+	const byte* const bottomSrc = image + 4 + (LMPhysPageSize - 2) * stride;
+	byte* const bottomDst = image + 4 + (LMPhysPageSize - 1) * stride;
+	memcpy( bottomDst, bottomSrc, LMVirtPageSize * 4 );
+
+	const uint32_t* leftSrc = (const uint32_t*)(image + 4 + stride);
+	uint32_t* leftDst = (uint32_t*)(image + stride);
+	const uint32_t* rightSrc = (const uint32_t*)(image + 2 * stride - 8);
+	uint32_t* rightDst = (uint32_t*)(image + 2 * stride - 4);
+	for ( int i = 0; i < LMVirtPageSize; ++i ) {
+		*leftDst = *leftSrc;
+		*rightDst = *rightSrc;
+		leftSrc += LMPhysPageSize;
+		leftDst += LMPhysPageSize;
+		rightSrc += LMPhysPageSize;
+		rightDst += LMPhysPageSize;
+	}
+
+	R_LerpPixels( image, image + 4, image + stride );
+	R_LerpPixels( image + stride - 4, image + stride - 8, image + 2 * stride - 4 );
+	R_LerpPixels( image + (LMPhysPageSize - 1) * stride, image + (LMPhysPageSize - 2) * stride, image + (LMPhysPageSize - 1) * stride + 4 );
+	R_LerpPixels( image + LMPhysPageSize * stride - 4, image + LMPhysPageSize * stride - 8, image + (LMPhysPageSize - 1) * stride - 4 );
 }
 
 
 static void R_LoadLightmaps( const lump_t* l )
 {
-	const int LIGHTMAP_SIZE = 128;
-
-	int i, j, k;
-	byte image[LIGHTMAP_SIZE * LIGHTMAP_SIZE * 4];
+	// set this now as the default to avoid divisions by 0
+	lightmapsPerAtlas = 1;
 
 	// if we are in r_vertexLight mode, we don't need the lightmaps at all
-	if (r_vertexLight->integer)
+	if ( r_vertexLight->integer )
 		return;
 
-	int len = l->filelen;
-	if (!len)
+	const int fileBytes = l->filelen;
+	if ( !fileBytes )
 		return;
 
 	byte* p = fileBase + l->fileofs;
@@ -77,29 +159,77 @@ static void R_LoadLightmaps( const lump_t* l )
 	// we are about to upload textures
 	R_SyncRenderThread();
 
-	// create all the lightmaps
-	tr.numLightmaps = len / (LIGHTMAP_SIZE * LIGHTMAP_SIZE * 3);
-	if ( tr.numLightmaps >= MAX_LIGHTMAPS ) {
+	int numFileLightmaps = fileBytes / (LMVirtPageSize * LMVirtPageSize * 3);
+	if ( numFileLightmaps >= MAX_LIGHTMAPS ) {
 		ri.Printf( PRINT_WARNING, "WARNING: number of lightmaps > MAX_LIGHTMAPS\n" );
-		tr.numLightmaps = MAX_LIGHTMAPS;
+		numFileLightmaps = MAX_LIGHTMAPS;
 	}
 
-	for ( i = 0; i < tr.numLightmaps; ++i ) {
-		// expand the 24 bit on-disk to 32 bit
-		for ( j = 0; j < LIGHTMAP_SIZE * LIGHTMAP_SIZE; ++j ) {
-			R_ColorShiftLightingBytes( &p[j * 3], &image[j * 4] );
+	int sizeX;
+	int sizeY;
+	R_ComputeAtlasSize( &sizeX, &sizeY, LMPhysPageSize, numFileLightmaps, glInfo.maxTextureSize );
 
-			for ( k = 0; k < 3; ++k ) {
-				const float c1 = (float)image[j * 4 + k] / 255.0f;
-				const float c2 = Com_Clamp( 0.0f, 1.0f, c1 );
-				image[j * 4 + k] = (byte)(c2 * 255.0f);
+	static byte image[LMPhysPageSize * LMPhysPageSize * 4];
+	const float scaleX = (float)LMVirtPageSize / (float)sizeX;
+	const float scaleY = (float)LMVirtPageSize / (float)sizeY;
+	const int numTilesPerAtlas = (sizeX / LMPhysPageSize) * (sizeY / LMPhysPageSize);
+	const int numAtlases = (numFileLightmaps + numTilesPerAtlas - 1) / numTilesPerAtlas;
+	const int countX = sizeX / LMPhysPageSize;
+
+	int i = 0; // lightmapNum
+	for ( int a = 0; a < numAtlases; ++a ) {
+		tr.lightmaps[a] = R_CreateImage( va("*lightmapatlas%i", a), NULL, sizeX, sizeY, GL_RGBA, IMG_LMATLAS, GL_CLAMP );
+
+		for ( int t = 0; t < numTilesPerAtlas && i < numFileLightmaps; ++t ) {
+			for ( int y = 0; y < LMVirtPageSize; ++y ) {
+				const byte* s = p + y * LMVirtPageSize * 3;
+				byte* d = image + (LMBorderSize + LMPhysPageSize * (LMBorderSize + y)) * 4;
+
+				for ( int x = 0; x < LMVirtPageSize; ++x ) {
+					R_ColorShiftLightingBytesRGB(s, d);
+					d[3] = 255;
+					d += 4;
+					s += 3;
+				}
 			}
-			image[j * 4 + 3] = 255;
+
+			R_FillBorderTexels( image );
+
+			const int offX = (t % countX) * LMPhysPageSize;
+			const int offY = (t / countX) * LMPhysPageSize;
+			R_UploadLightmapTile( tr.lightmaps[a], image, offX, offY, LMPhysPageSize, LMPhysPageSize );
+
+			lightmapBiases[i][0] = (float)(offX + LMBorderSize) / (float)sizeX;
+			lightmapBiases[i][1] = (float)(offY + LMBorderSize) / (float)sizeY;
+
+			p += LMVirtPageSize * LMVirtPageSize * 3;
+			++i;
 		}
-		tr.lightmaps[i] = R_CreateImage( va("*lightmap%d",i), image,
-				LIGHTMAP_SIZE, LIGHTMAP_SIZE, GL_RGB, IMG_NOMIPMAP | IMG_NOPICMIP, GL_CLAMP );
-		p += LIGHTMAP_SIZE * LIGHTMAP_SIZE * 3;
 	}
+
+	tr.numLightmaps = numAtlases;
+	lightmapsPerAtlas = numTilesPerAtlas;
+	lightmapScale[0] = scaleX;
+	lightmapScale[1] = scaleY;
+}
+
+
+static void R_GetLightmapTransform( int* number, vec2_t scale, vec2_t bias )
+{
+	const int i = *number;
+
+	if ( i >= 0 ) {
+		scale[0] = lightmapScale[0];
+		scale[1] = lightmapScale[1];
+		bias[0] = lightmapBiases[i][0];
+		bias[1] = lightmapBiases[i][1];
+		*number /= lightmapsPerAtlas;
+	} else {
+		scale[0] = 1.0f;
+		scale[1] = 1.0f;
+		bias[0] = 0.0f;
+		bias[1] = 0.0f;
+	}	
 }
 
 
@@ -179,10 +309,11 @@ template <class T> T* AllocSurface( int numVerts, int numIndexes )
 
 static void ParseFace( const dsurface_t* ds, const drawVert_t* verts, msurface_t* surf, const int* indexes )
 {
-	int i, j;
-
 	surf->fogIndex = LittleLong( ds->fogNum ) + 1;
-	surf->shader = ShaderForShaderNum( ds->shaderNum, LittleLong( ds->lightmapNum ) );
+	int lightmapNum = LittleLong( ds->lightmapNum );
+	vec2_t lmScale, lmBias;
+	R_GetLightmapTransform( &lightmapNum, lmScale, lmBias );
+	surf->shader = ShaderForShaderNum( ds->shaderNum, lightmapNum );
 
 	int numVerts = LittleLong( ds->numVerts );
 	if (numVerts > MAX_FACE_POINTS) {
@@ -191,7 +322,7 @@ static void ParseFace( const dsurface_t* ds, const drawVert_t* verts, msurface_t
 		surf->shader = tr.defaultShader;
 	}
 
-	int numIndexes = LittleLong( ds->numIndexes );
+	const int numIndexes = LittleLong( ds->numIndexes );
 
 	srfSurfaceFace_t* cv = AllocSurface<srfSurfaceFace_t>( numVerts, numIndexes );
 	cv->surfaceType = SF_FACE;
@@ -199,24 +330,24 @@ static void ParseFace( const dsurface_t* ds, const drawVert_t* verts, msurface_t
 	surf->data = (surfaceType_t*)cv;
 
 	verts += LittleLong( ds->firstVert );
-	for ( i = 0 ; i < numVerts ; i++ ) {
-		for ( j = 0 ; j < 3 ; j++ ) {
+	for ( int i = 0 ; i < numVerts ; i++ ) {
+		for ( int j = 0 ; j < 3 ; j++ ) {
 			cv->verts[i].xyz[j] = LittleFloat( verts[i].xyz[j] );
 		}
-		for ( j = 0 ; j < 2 ; j++ ) {
+		for ( int j = 0 ; j < 2 ; j++ ) {
 			cv->verts[i].st[j] = LittleFloat( verts[i].st[j] );
-			cv->verts[i].st2[j] = LittleFloat( verts[i].lightmap[j] );
+			cv->verts[i].st2[j] = lmBias[j] + lmScale[j] * LittleFloat( verts[i].lightmap[j] );
 		}
 		R_ColorShiftLightingBytes( verts[i].color, cv->verts[i].rgba );
 	}
 
 	indexes += LittleLong( ds->firstIndex );
-	for ( i = 0 ; i < numIndexes ; i++ ) {
+	for ( int i = 0 ; i < numIndexes ; i++ ) {
 		cv->indexes[i] = LittleLong( indexes[i] );
 	}
 
 	// take the plane information from the lightmap vector
-	for ( i = 0 ; i < 3 ; i++ ) {
+	for ( int i = 0 ; i < 3 ; i++ ) {
 		cv->plane.normal[i] = LittleFloat( ds->lightmapVecs[2][i] );
 	}
 	cv->plane.dist = DotProduct( cv->verts[0].xyz, cv->plane.normal );
@@ -231,7 +362,10 @@ static void ParseMesh( const dsurface_t* ds, const drawVert_t* verts, msurface_t
 	drawVert_t points[MAX_PATCH_SIZE*MAX_PATCH_SIZE];
 
 	surf->fogIndex = LittleLong( ds->fogNum ) + 1;
-	surf->shader = ShaderForShaderNum( ds->shaderNum, LittleLong( ds->lightmapNum ) );
+	int lightmapNum = LittleLong(ds->lightmapNum);
+	vec2_t lmScale, lmBias;
+	R_GetLightmapTransform( &lightmapNum, lmScale, lmBias );
+	surf->shader = ShaderForShaderNum( ds->shaderNum, lightmapNum );
 
 	// we may have a nodraw surface, because they might still need to
 	// be around for movement clipping
@@ -252,9 +386,9 @@ static void ParseMesh( const dsurface_t* ds, const drawVert_t* verts, msurface_t
 			points[i].normal[j] = LittleFloat( verts[i].normal[j] );
 		}
 		points[i].st[0] = LittleFloat( verts[i].st[0] );
-		points[i].lightmap[0] = LittleFloat( verts[i].lightmap[0] );
+		points[i].lightmap[0] = lmBias[0] + lmScale[0] * LittleFloat( verts[i].lightmap[0] );
 		points[i].st[1] = LittleFloat( verts[i].st[1] );
-		points[i].lightmap[1] = LittleFloat( verts[i].lightmap[1] );
+		points[i].lightmap[1] = lmBias[1] + lmScale[1] * LittleFloat( verts[i].lightmap[1] );
 		R_ColorShiftLightingBytes( verts[i].color, points[i].color );
 	}
 

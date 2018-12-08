@@ -36,7 +36,7 @@ static image_t* hashTable[IMAGE_HASH_SIZE];
 static byte s_intensitytable[256];
 
 
-static int gl_filter_min = GL_LINEAR_MIPMAP_NEAREST;
+static int gl_filter_min = GL_LINEAR_MIPMAP_LINEAR;
 static int gl_filter_max = GL_LINEAR;
 
 typedef struct {
@@ -422,6 +422,18 @@ done:
 }
 
 
+void R_UploadLightmapTile( image_t* image, byte* pic, int x, int y, int width, int height )
+{
+	if ( !(image->flags & IMG_LMATLAS) )
+		ri.Error( ERR_DROP, "R_UploadLightmapTile: IMG_LMATLAS flag not defined\n" );
+
+	GL_Bind( image );
+	qglTexSubImage2D( GL_TEXTURE_2D, 0, x, y, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pic );
+
+	GL_CheckErrors();
+}
+
+
 // this is the only way any image_t are created
 // !!! i'm pretty sure this DOESN'T work correctly for non-POT images
 
@@ -447,10 +459,19 @@ image_t* R_CreateImage( const char* name, byte* pic, int width, int height, GLen
 	image->wrapClampMode = glWrapClampMode;
 
 	GL_Bind( image );
-	Upload32( image, (unsigned int*)pic );
 
-	qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, glWrapClampMode );
-	qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, glWrapClampMode );
+	if ( flags & IMG_LMATLAS ) {
+		image->format = GL_RGBA8;
+		qglTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL );
+		qglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+		qglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+		qglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+		qglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+	} else {
+		Upload32( image, (unsigned int*)pic );
+		qglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, glWrapClampMode );
+		qglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, glWrapClampMode );
+	}
 
 	// KHB  there are times we have no interest in naming an image at all (notably, font glyphs)
 	// but atm the rest of the system is too dependent on everything being named
