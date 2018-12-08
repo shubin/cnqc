@@ -687,7 +687,9 @@ void CL_InitCGame()
 	// init for this gamestate
 	// use the lastExecutedServerCommand instead of the serverCommandSequence
 	// otherwise server commands sent just before a gamestate are dropped
+	re.SetMaxFPS( 10 );
 	VM_Call( cgvm, CG_INIT, clc.serverMessageSequence, clc.lastExecutedServerCommand, clc.clientNum );
+	re.SetMaxFPS( 0 );
 
 	// send a usercmd this frame, which will cause the server to send us the first snapshot
 	cls.state = CA_PRIMED;

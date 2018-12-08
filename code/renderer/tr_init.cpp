@@ -741,6 +741,23 @@ static int RE_GetCameraMatrixTime()
 }
 
 
+static void RE_SetMaxFPS( int maxFPS )
+{
+	if (maxFPS > 0 && tr.maxFPS == 0) {
+		tr.maxFPS = maxFPS;
+		tr.nextFrameTimeMS = Sys_Milliseconds() + 1000 / maxFPS;
+		tr.oldSwapInterval = r_swapInterval->integer;
+		ri.Cvar_Set(r_swapInterval->name, "0");
+	} else if (maxFPS == 0 && tr.maxFPS > 0) {
+		tr.maxFPS = 0;
+		ri.Cvar_Set(r_swapInterval->name, va("%i", tr.oldSwapInterval));
+	} else if (maxFPS > 0 && tr.maxFPS > 0) {
+		tr.maxFPS = maxFPS;
+		tr.nextFrameTimeMS = Sys_Milliseconds() + 1000 / maxFPS;
+	}
+}
+
+
 const refexport_t* GetRefAPI( const refimport_t* rimp )
 {
 	static refexport_t re;
@@ -789,6 +806,8 @@ const refexport_t* GetRefAPI( const refimport_t* rimp )
 	re.TakeVideoFrame = RE_TakeVideoFrame;
 
 	re.GetCameraMatrixTime = RE_GetCameraMatrixTime;
+
+	re.SetMaxFPS = RE_SetMaxFPS;
 
 	return &re;
 }

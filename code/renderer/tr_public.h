@@ -163,6 +163,11 @@ typedef struct {
 
 	// when the final model-view matrix is computed, for cl_drawMouseLag
 	int		(*GetCameraMatrixTime)();
+
+	// used for setting low frame-rates temporarily only (e.g. map loads)
+	// maxFPS > 0 -> throttles frame-rate, disables v-sync
+	// maxFPS = 0 -> no throttling       , restores v-sync to whatever it was
+	void	(*SetMaxFPS)( int maxFPS );
 } refexport_t;
 
 //

@@ -247,6 +247,12 @@ void RE_EndFrame( int* pcFE, int* pc2D, int* pc3D, qbool render )
 	if (!tr.registered)
 		return;
 
+	if (tr.maxFPS > 0) {
+		if (Sys_Milliseconds() < tr.nextFrameTimeMS)
+			return;
+		tr.nextFrameTimeMS += 1000 / tr.maxFPS;
+	}
+
 	qbool delayScreenshot = qfalse;
 	if ( !render && r_delayedScreenshotPending )
 		render = qtrue;

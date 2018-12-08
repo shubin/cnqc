@@ -912,6 +912,11 @@ typedef struct {
 	float		sawToothTable[FUNCTABLE_SIZE];
 	float		inverseSawToothTable[FUNCTABLE_SIZE];
 	float		fogTable[FOG_TABLE_SIZE];
+
+	// back-end frame-rate limiting, useful for scenarios like CGAME_INIT
+	int			maxFPS;				// only active if > 0
+	int			nextFrameTimeMS;
+	int			oldSwapInterval;
 } trGlobals_t;
 
 extern backEndState_t	backEnd;
