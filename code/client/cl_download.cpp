@@ -16,7 +16,10 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/stat.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <netdb.h>
 #include <string.h>
 #endif
@@ -39,18 +42,25 @@ typedef int				SOCKET;
 #define MAX_TIMEOUT_MS	2000
 
 
+static const char sockaddr_in_large_enough[sizeof(sockaddr_in) >= sizeof(sockaddr) ? 1 : -1] = { 0 };
+
+
 struct mapDownload_t {
 	char recBuffer[1 << 20];		// for both download data and checksumming
 	char tempMessage[MAXPRINTMSG];	// for PrintError
 	char tempMessage2[MAXPRINTMSG];	// for PrintSocketError
 	char errorMessage[MAXPRINTMSG];
+	char query[512];			// HTTP GET query - e.g. "map?n=akumacpm1a" for the CNQ3 map server
 	char mapName[MAX_PATH];		// only used if the server doesn't give us a .pk3 name
 	char tempPath[MAX_PATH];	// full path of the temp file being written to
 	char finalName[MAX_PATH];	// file name with extension suggested by the server
 	char finalPath[MAX_PATH];	// full path of the new .pk3 file
+	sockaddr_in addresses[16];	// addresses to try to connect to
 	char httpHeaderValue[128];	// only set when BadResponse is qtrue
 	SOCKET socket;
 	FILE* file;
+	int addressIndex;
+	int addressCount;
 	int startTimeMS;
 	unsigned int bytesHeader;		// header only
 	unsigned int bytesContent;		// file content only
@@ -60,12 +70,13 @@ struct mapDownload_t {
 	qbool fromCommand;		// qtrue if started by a console command
 	qbool headerParsed;		// qtrue if we're done parsing the header
 	qbool badResponse;		// qtrue if we need to read more packets for the custom error message
-	int timeOutStartTimeMS;	// when the recv timeout started
+	int timeOutStartTimeMS;	// when the connect/recv timeout started
 	qbool lastErrorTimeOut;	// qtrue if the last recv error was a timeout
 	int sourceIndex;		// index into the cl_mapDLSources array
 	qbool exactMatch;		// qtrue if an exact match is required
 	qbool cleared;			// qtrue if Download_Clear was called at least once
 	qbool realMapName;		// qtrue if the name of a .bsp - otherwise, might be invalid or auto-generated
+	qbool connecting;		// qtrue if the work started by connect is still in progress
 };
 
 
@@ -84,7 +95,8 @@ typedef void (*mapdlQueryFormatter_t)( char* query, int querySize, const char* m
 // map download source for queries by map name only
 struct mapDownloadSource_t {
 	const char* name;
-	const char* hostName; // don't put in the scheme (e.g. "http://")
+	const char* hostName;			// don't put in the scheme (e.g. "http://")
+	const char* numericHostName;	// used as a fallback
 	int port;
 	mapdlQueryFormatter_t formatQuery;
 };
@@ -98,8 +110,8 @@ static void FormatQueryWS( char* query, int querySize, const char* mapName );
 
 
 static const mapDownloadSource_t cl_mapDLSources[2] = {
-	{ "CNQ3",		"maps.playmorepromode.org",	8000,	&FormatQueryCNQ3 },
-	{ "WorldSpawn",	"ws.q3df.org",				80,		&FormatQueryWS }
+	{ "CNQ3",       "maps.playmorepromode.org", "82.196.10.31", 8000, &FormatQueryCNQ3 },
+	{ "WorldSpawn", "ws.q3df.org",              "176.9.111.74",   80, &FormatQueryWS   }
 };
 
 
@@ -178,24 +190,107 @@ static void PrintSocketError( mapDownload_t* dl, const char* functionName, int e
 #endif
 
 
-static void PrintSocketError( mapDownload_t* dl, const char* functionName )
+static int GetSocketError()
 {
 #if defined(_WIN32)
-	PrintSocketError(dl, functionName, WSAGetLastError());
+	return WSAGetLastError();
 #else
-	PrintSocketError(dl, functionName, errno);
+	return errno;
 #endif
+}
+
+
+static void PrintSocketError( mapDownload_t* dl, const char* functionName )
+{
+	PrintSocketError(dl, functionName, GetSocketError());
 }
 
 
 static qbool IsSocketTimeoutError()
 {
+	const int ec = GetSocketError();
 #if defined(_WIN32)
-	const int ec = WSAGetLastError();
 	return ec == WSAEWOULDBLOCK || ec == WSAETIMEDOUT;
 #else
-	const int ec = errno;
 	return ec == EAGAIN || ec == EWOULDBLOCK;
+#endif
+}
+
+
+static qbool IsConnectionInProgressError()
+{
+	const int ec = GetSocketError();
+#if defined(_WIN32)
+	// WSAEWOULDBLOCK "A non-blocking socket operation could not be completed immediately."
+	// WSAEINPROGRESS "A blocking operation is currently executing."
+	return ec == WSAEWOULDBLOCK;
+#else
+	// EINPROGRESS "The socket is nonblocking and the connection cannot be completed immediately."
+	return ec == EINPROGRESS;
+#endif
+}
+
+
+static qbool SetSocketBlocking( SOCKET socket, qbool blocking )
+{
+#if defined(_WIN32)
+	u_long option = blocking ? 0 : 1;
+	return ioctlsocket(socket, FIONBIO, &option) != SOCKET_ERROR;
+#else
+	const int flags = fcntl(socket, F_GETFL, 0);
+	if (flags == -1)
+		return qfalse;
+	const int newFlags = blocking ? (flags & ~O_NONBLOCK) : (flags | O_NONBLOCK);
+	return fcntl(socket, F_SETFL, newFlags) != SOCKET_ERROR;
+#endif
+}
+
+
+static qbool SetSocketOption( mapDownload_t* dl, int option, const void* data, size_t dataLength )
+{
+#if defined _WIN32
+	if (setsockopt(dl->socket, SOL_SOCKET, option, (const char*)data, (int)dataLength) == SOCKET_ERROR) {
+#else
+	if (setsockopt(dl->socket, SOL_SOCKET, option, data, (socklen_t)dataLength) == SOCKET_ERROR) {
+#endif
+		PrintSocketError(dl, va("setsockopt %d", option));
+		return qfalse;
+	}
+
+	return qtrue;
+}
+
+
+static qbool GetSocketOption( mapDownload_t* dl, int option, void* data, size_t* dataLength )
+{
+#if defined _WIN32
+	int optionLength = (int)*dataLength;
+	if (getsockopt(dl->socket, SOL_SOCKET, option, (char*)data, &optionLength) == SOCKET_ERROR) {
+#else
+	socklen_t optionLength = (socklen_t)*dataLength;
+	if (getsockopt(dl->socket, SOL_SOCKET, option, data, &optionLength) == SOCKET_ERROR) {
+#endif
+		PrintSocketError(dl, "getsockopt");
+		return qfalse;
+	}
+
+	*dataLength = (size_t)optionLength;
+	return qtrue;
+}
+
+
+static bool EnsureDirectoryExists( const char* path )
+{
+#if defined(_WIN32)
+	return CreateDirectoryA(path, NULL) != 0 || GetLastError() == ERROR_ALREADY_EXISTS;
+#else
+	struct stat st = { 0 };
+	if (stat(path, &st) == 0 && S_ISDIR(st.st_mode))
+		return qtrue;
+	// 0755 -> user RWX group/others RX
+	if (mkdir(path, 0755) == 0)
+		return qtrue;
+	return qfalse;
 #endif
 }
 
@@ -208,6 +303,8 @@ static void Download_Clear( mapDownload_t* dl )
 	*dl->errorMessage = '\0';
 	dl->socket = INVALID_SOCKET;
 	dl->file = NULL;
+	dl->addressIndex = 0;
+	dl->addressCount = 0;
 	dl->startTimeMS = INT_MIN;
 	dl->crc32 = 0;
 	dl->bytesHeader = 0;
@@ -220,6 +317,7 @@ static void Download_Clear( mapDownload_t* dl )
 	dl->sourceIndex = 0;
 	dl->exactMatch = qfalse;
 	dl->cleared = qtrue;
+	dl->connecting = qfalse;
 }
 
 
@@ -304,8 +402,8 @@ static qbool Download_Rename( mapDownload_t* dl )
 	}
 
 	// try with the desired name
-	const char* const fs_basepath = Cvar_VariableString("fs_basepath");
-	const char* finalPath = FS_BuildOSPath(fs_basepath, "baseq3", va("%s.pk3", name));
+	const char* const fs_homepath = Cvar_VariableString("fs_homepath");
+	const char* finalPath = FS_BuildOSPath(fs_homepath, "baseq3", va("%s.pk3", name));
 	Q_strncpyz(dl->finalPath, finalPath, sizeof(dl->finalPath));
 	if (RenameFile(dl->tempPath, dl->finalPath))
 		return qtrue;
@@ -316,13 +414,14 @@ static qbool Download_Rename( mapDownload_t* dl )
 		const unsigned int suffix0 = (unsigned int)rand() % (1 << 12);
 		const unsigned int suffix1 = (unsigned int)rand() % (1 << 12);
 		const unsigned int suffix = suffix0 | (suffix1 << 12);
-		finalPath = FS_BuildOSPath(fs_basepath, "baseq3", va("%s_%06x.pk3", name, suffix));
+		finalPath = FS_BuildOSPath(fs_homepath, "baseq3", va("%s_%06x.pk3", name, suffix));
 		Q_strncpyz(dl->finalPath, finalPath, sizeof(dl->finalPath));
 		if (RenameFile(dl->tempPath, dl->finalPath))
 			return qtrue;
 	}
 
-	PrintError(dl, "Failed to rename '%s' to '%s' or a similar name", dl->tempPath, name);
+	finalPath = FS_BuildOSPath(fs_homepath, "baseq3", va("%s.pk3", name));
+	PrintError(dl, "Failed to rename '%s' to '%s' or a similar name", dl->tempPath, finalPath);
 
 	return qfalse;
 }
@@ -362,75 +461,27 @@ static qbool Download_CleanUp( mapDownload_t* dl, qbool rename )
 }
 
 
-static qbool Download_Begin( mapDownload_t* dl, int port, const char* server, const char* file )
+static qbool Download_SendFileRequest( mapDownload_t* dl )
 {
-	Download_CleanUp(dl, qfalse);
-	Download_Clear(dl);
-
-	char portString[16];
-	Com_sprintf(portString, sizeof(portString), "%d", port);
-
-	addrInfo_t* address;
-	const int ec = getaddrinfo(server, portString, NULL, &address);
-	if (ec != 0) {
-		// EAI* errors map to WSA* errors, so it's ok to call this
-		PrintSocketError(dl, "getaddrinfo", ec);
-		return qfalse;
-	}
-
-	qbool connected = qfalse;
-	for (addrInfo_t* a = address; a != NULL; a = a->ai_next) {
-		dl->socket = socket(a->ai_family, a->ai_socktype, a->ai_protocol);
-		if (dl->socket == INVALID_SOCKET) {
-			PrintSocketError(dl, "socket");
-			continue;
-		}
-
-		if (connect(dl->socket, a->ai_addr, a->ai_addrlen) == SOCKET_ERROR) {
-			PrintSocketError(dl, "connect");
-			if (dl->socket != INVALID_SOCKET) {
-				Q_closesocket(dl->socket);
-				dl->socket = INVALID_SOCKET;
-			}
-			continue;
-		}
-
-		connected = qtrue;
-		break;
-	}
-
-	freeaddrinfo(address);
-
-	if (!connected) {
-		PrintError(dl, "Failed to connect to the host");
-		return qfalse;
-	}
-
-#if defined(_WIN32)
-	const DWORD timeoutMs = 1;
-	if (setsockopt(dl->socket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeoutMs, sizeof(timeoutMs)) == SOCKET_ERROR) {
-		PrintSocketError(dl, "setsockopt");
-		return qfalse;
-	}
-#else
-	timeval timeout;      
-	timeout.tv_sec = 0;
-	timeout.tv_usec = 1000;
-	if (setsockopt(dl->socket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout)) == SOCKET_ERROR) {
-		PrintSocketError(dl, "setsockopt");
-		return qfalse;
-	}
-#endif
+	const mapDownloadSource_t& source = cl_mapDLSources[dl->sourceIndex];
+	const int port = source.port;
+	const char* const hostName = dl->addressIndex >= dl->addressCount ? source.numericHostName : source.hostName;
+	const char* const query = dl->query;
 
 	char request[256];
-	Com_sprintf(request, sizeof(request), "GET /%s HTTP/1.0\r\nHost: %s:%d\r\n\r\n", file, server, port);
+	Com_sprintf(request, sizeof(request), "GET /%s HTTP/1.0\r\nHost: %s:%d\r\n\r\n", query, hostName, port);
 	const int requestLength = strlen(request);
 	if (send(dl->socket, request, requestLength, 0) != requestLength) {
 		PrintSocketError(dl, "send");
 		return qfalse;
 	}
 
-	const char* const tempPathBase = FS_BuildOSPath(Cvar_VariableString("fs_basepath"), "baseq3", "");
+	const char* const tempPathBase = FS_BuildOSPath(Cvar_VariableString("fs_homepath"), "baseq3", "");
+	if (!EnsureDirectoryExists(tempPathBase)) {
+		PrintError(dl, "Couldn't create the baseq3 directory in fs_homepath");
+		return qfalse;
+	}
+
 #if defined(_WIN32)
 	if (GetTempFileNameA(tempPathBase, "", 0, dl->tempPath) == 0) {
 		PrintError(dl, "Couldn't create a file name");
@@ -452,6 +503,211 @@ static qbool Download_Begin( mapDownload_t* dl, int port, const char* server, co
 	dl->startTimeMS = Sys_Milliseconds();
 
 	return qtrue;
+}
+
+
+static qbool Download_CreateSocket( mapDownload_t* dl )
+{
+	if (dl->socket != INVALID_SOCKET) {
+		Q_closesocket(dl->socket);
+		dl->socket = INVALID_SOCKET;
+	}
+
+	dl->socket = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
+	if (dl->socket == INVALID_SOCKET) {
+		PrintSocketError(dl, "socket");
+		return qfalse;
+	}
+
+	if (!SetSocketBlocking(dl->socket, qfalse)) {
+		PrintSocketError(dl, "ioctlsocket/fnctl");
+		return qfalse;
+	}
+
+	// We want to block no longer than 1 ms every frame.
+#if defined(_WIN32)
+	DWORD timeout = 1;
+#else
+	timeval timeout;      
+	timeout.tv_sec = 0;
+	timeout.tv_usec = 1000;
+#endif
+	if (!SetSocketOption(dl, SO_RCVTIMEO, &timeout, sizeof(timeout)))
+	   return qfalse;
+
+	// We want to block no longer than MAX_TIMEOUT_MS ms once.
+#if defined(_WIN32)
+	timeout = MAX_TIMEOUT_MS;
+#else
+	timeout.tv_sec = MAX_TIMEOUT_MS / 1000;
+	timeout.tv_usec = MAX_TIMEOUT_MS * 1000 - timeout.tv_sec * 1000000;
+#endif
+	if (!SetSocketOption(dl, SO_SNDTIMEO, &timeout, sizeof(timeout)))
+	   return qfalse;
+
+	return qtrue;
+}
+
+
+enum connState_t {
+	CS_OPEN,
+	CS_OPENING,
+	CS_CLOSED,
+	CS_LIST_EXHAUSTED
+};
+
+
+static connState_t Download_OpenNextConnection( mapDownload_t* dl )
+{
+	if (dl->addressIndex >= dl->addressCount)
+		return CS_LIST_EXHAUSTED;
+
+	if (dl->addressIndex >= 1) {
+		Com_Printf("Attempting download again at address #%d...\n", dl->addressIndex + 1);
+		// We destroy and re-create the socket because non-blocking connect calls can't be canceled.
+		// Making it blocking to wait around means our custom time-out duration is gone.
+		if (!Download_CreateSocket(dl))
+			return CS_CLOSED;
+	}
+
+	const sockaddr_in& address = dl->addresses[dl->addressIndex];
+	if (connect(dl->socket, (const sockaddr*)&address, sizeof(sockaddr_in)) != SOCKET_ERROR) {
+		const connState_t result = Download_SendFileRequest(dl) ? CS_OPEN : CS_CLOSED;
+		++dl->addressIndex;
+		return result;
+	}
+
+	++dl->addressIndex;
+	if (!IsConnectionInProgressError()) {
+		PrintSocketError(dl, "connect");
+		return CS_CLOSED;
+	}
+
+	dl->timeOutStartTimeMS = Sys_Milliseconds();
+	return CS_OPENING;
+}
+
+
+static connState_t Download_FinishCurrentConnection( mapDownload_t* dl )
+{
+	const int now = Sys_Milliseconds();
+	if (now - dl->timeOutStartTimeMS >= MAX_TIMEOUT_MS) {
+		PrintError(dl, "Failed to connect longer than " XSTRING(MAX_TIMEOUT_MS) "ms");
+		return CS_CLOSED;
+	}
+
+	const SOCKET socket = dl->socket;
+
+	fd_set writeSet;
+	FD_ZERO(&writeSet);
+	FD_SET(socket, &writeSet);
+
+	fd_set exceptionSet;
+	FD_ZERO(&exceptionSet);
+	FD_SET(socket, &exceptionSet);
+
+	timeval tv;
+	tv.tv_sec = 0;
+	tv.tv_usec = 500;
+
+	// see if our socket is write-able yet
+	const int selectResult = select(socket + 1, NULL, &writeSet, &exceptionSet, &tv);
+	if (selectResult == -1) {
+		PrintSocketError(dl, "select");
+		return CS_CLOSED;
+	}
+
+	if (selectResult == 0) {
+		// nothing happened yet, so we wait
+		return CS_OPENING;
+	}
+	
+	// now we can actually query the connect status
+#if defined(_WIN32)
+	DWORD connectResult = 0;
+#else
+	int connectResult = 0;
+#endif
+	size_t connectResultLength = sizeof(connectResult);
+	if (!GetSocketOption(dl, SO_ERROR, &connectResult, &connectResultLength)) {
+		PrintSocketError(dl, "getsockopt");
+		return CS_CLOSED;
+	}
+
+	if (connectResult != 0) {
+		PrintSocketError(dl, "connect (delay)", (int)connectResult);
+		return CS_CLOSED;
+	}
+
+	if (!SetSocketBlocking(dl->socket, qtrue)) {
+		PrintSocketError(dl, "ioctlsocket/fnctl");
+		return CS_CLOSED;
+	}
+
+	if (!Download_SendFileRequest(dl)) {
+		return CS_CLOSED;
+	}
+
+	dl->timeOutStartTimeMS = INT_MIN;
+	return CS_OPEN;
+}
+
+
+static qbool Download_Begin( mapDownload_t* dl, int sourceIndex )
+{
+	Download_CleanUp(dl, qfalse);
+	Download_Clear(dl);
+	dl->sourceIndex = sourceIndex;
+
+	if (!Download_CreateSocket(dl))
+		return qfalse;
+
+	addrInfo_t hints;
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_protocol = IPPROTO_TCP;
+
+	const mapDownloadSource_t& source = cl_mapDLSources[dl->sourceIndex];
+	addrInfo_t* addresses;
+	const int ec = getaddrinfo(source.hostName, va("%d", source.port), &hints, &addresses);
+	if (ec == 0) {
+		addrInfo_t* a = addresses;
+
+		while (a != NULL && dl->addressCount < ARRAY_LEN(dl->addresses)) {
+			sockaddr_in& address = dl->addresses[dl->addressCount++];
+			memset(&address, 0, sizeof(sockaddr_in));
+			memcpy(&address, a->ai_addr, sizeof(*a->ai_addr));
+			a = a->ai_next;
+		}
+
+		freeaddrinfo(addresses);
+	} else {
+		// EAI* errors map to WSA* errors, so it's ok to call this
+		PrintSocketError(dl, "getaddrinfo", ec);
+	}
+
+	if (dl->addressCount < ARRAY_LEN(dl->addresses)) {
+		sockaddr_in& address = dl->addresses[dl->addressCount++];
+		memset(&address, 0, sizeof(address));
+		address.sin_family = AF_INET;
+		address.sin_port = htons(source.port);
+		inet_pton(AF_INET, source.numericHostName, &address.sin_addr.s_addr);
+	}
+	
+	for (;;) {
+		const connState_t result = Download_OpenNextConnection(dl);
+		if (result == CS_OPENING) {
+			dl->connecting = qtrue;
+			return qtrue;
+		}
+		if (result == CS_OPEN) {
+			dl->timeOutStartTimeMS = INT_MIN;
+			return qtrue;
+		}
+		if(result == CS_LIST_EXHAUSTED)
+			return qfalse;
+	}
 }
 
 
@@ -584,6 +840,35 @@ int Download_Continue( mapDownload_t* dl )
 	if (dl->socket == INVALID_SOCKET)
 		return MDLS_NOTHING;
 
+	if (dl->connecting) {
+		connState_t cs = Download_FinishCurrentConnection(dl);
+		if (cs == CS_CLOSED) {
+			for (;;) {
+				cs = Download_OpenNextConnection(dl);
+				if (cs == CS_OPENING)
+					return MDLS_IN_PROGRESS;
+				if (cs == CS_OPEN) {
+					dl->connecting = qfalse;
+					dl->timeOutStartTimeMS = INT_MIN;
+					dl->lastErrorTimeOut = qfalse;
+					return MDLS_IN_PROGRESS;
+				}
+				if (cs == CS_LIST_EXHAUSTED) {
+					Download_CleanUp(dl, qfalse);
+					return MDLS_ERROR;
+				}
+			}
+		}
+		if (cs == CS_OPENING)
+			return MDLS_IN_PROGRESS;
+
+		// cs == CS_OPEN
+		dl->connecting = qfalse;
+		dl->timeOutStartTimeMS = INT_MIN;
+		dl->lastErrorTimeOut = qfalse;
+		return MDLS_IN_PROGRESS;
+	}
+
 	// the -1 is necessary because we need to be able to safely null-terminate
 	// the buffer for ParseHeader without stomping another buffer's memory
 	const int ec = recv(dl->socket, dl->recBuffer, sizeof(dl->recBuffer) - 1, 0);
@@ -651,15 +936,18 @@ int Download_Continue( mapDownload_t* dl )
 }
 
 
-static qbool CL_MapDownload_StartImpl( const char* mapName, int source, const char* query, qbool fromCommand, qbool exactMatch, qbool realMapName )
+static qbool CL_MapDownload_StartImpl( const char* mapName, int sourceIndex, qbool fromCommand, qbool exactMatch, qbool realMapName )
 {
-	Com_Printf("Attempting download from the %s map server...\n", cl_mapDLSources[source].name);
+	const mapDownloadSource_t& source = cl_mapDLSources[sourceIndex];
+
+	Com_Printf("Attempting download from the %s map server...\n", source.name);
 
 	Q_strncpyz(cl_mapDL.mapName, mapName, sizeof(cl_mapDL.mapName));
 	cl_mapDL.realMapName = realMapName;
 
-	const qbool success = Download_Begin(&cl_mapDL, cl_mapDLSources[source].port, cl_mapDLSources[source].hostName, query);	
+	const qbool success = Download_Begin(&cl_mapDL, sourceIndex);
 	if (!success) {
+		Download_CleanUp(&cl_mapDL, qfalse);
 		if (!fromCommand)
 			Com_Error(ERR_DROP, cl_mapDL.errorMessage);
 		return qfalse;
@@ -667,7 +955,7 @@ static qbool CL_MapDownload_StartImpl( const char* mapName, int source, const ch
 
 	// We set these after the Download_Begin call since it clears cl_mapDL.
 	cl_mapDL.fromCommand = fromCommand;
-	cl_mapDL.sourceIndex = source;
+	cl_mapDL.sourceIndex = sourceIndex;
 	cl_mapDL.exactMatch = exactMatch;
 
 	if (!fromCommand) {
@@ -696,13 +984,12 @@ qbool CL_MapDownload_Start( const char* mapName, qbool fromCommand )
 	if (CL_MapDownload_CheckActive())
 		return qfalse;
 
-	char query[256];
-	(*cl_mapDLSources[0].formatQuery)(query, sizeof(query), mapName);
-	if (CL_MapDownload_StartImpl(mapName, 0, query, fromCommand, qfalse, qtrue))
+	(*cl_mapDLSources[0].formatQuery)(cl_mapDL.query, sizeof(cl_mapDL.query), mapName);
+	if (CL_MapDownload_StartImpl(mapName, 0, fromCommand, qfalse, qtrue))
 		return qtrue;
 
-	(*cl_mapDLSources[1].formatQuery)(query, sizeof(query), mapName);
-	return CL_MapDownload_StartImpl(mapName, 1, query, fromCommand, qfalse, qtrue);
+	(*cl_mapDLSources[1].formatQuery)(cl_mapDL.query, sizeof(cl_mapDL.query), mapName);
+	return CL_MapDownload_StartImpl(mapName, 1, fromCommand, qfalse, qtrue);
 }
 
 
@@ -711,12 +998,11 @@ qbool CL_MapDownload_Start_MapChecksum( const char* mapName, unsigned int mapCrc
 	if (mapCrc32 == 0 || CL_MapDownload_CheckActive())
 		return qfalse;
 
-	char query[256];
-	Com_sprintf(query, sizeof(query), "map?n=%s&m=%x", mapName, mapCrc32);
+	Com_sprintf(cl_mapDL.query, sizeof(cl_mapDL.query), "map?n=%s&m=%x", mapName, mapCrc32);
 	if (!exactMatch)
-		Q_strcat(query, sizeof(query), "&e=0");
+		Q_strcat(cl_mapDL.query, sizeof(cl_mapDL.query), "&e=0");
 
-	return CL_MapDownload_StartImpl(mapName, 0, query, qfalse, exactMatch, qtrue);
+	return CL_MapDownload_StartImpl(mapName, 0, qfalse, exactMatch, qtrue);
 }
 
 
@@ -725,16 +1011,15 @@ qbool CL_MapDownload_Start_PakChecksums( const char* mapName, unsigned int* pakC
 	if (pakCount == 0 || CL_MapDownload_CheckActive())
 		return qfalse;
 
-	static char query[1024];
-	Com_sprintf(query, sizeof(query), "map?n=%s&p=", mapName);
-	Q_strcat(query, sizeof(query), va("%x", pakChecksums[0]));
+	Com_sprintf(cl_mapDL.query, sizeof(cl_mapDL.query), "map?n=%s&p=", mapName);
+	Q_strcat(cl_mapDL.query, sizeof(cl_mapDL.query), va("%x", pakChecksums[0]));
 	for (int i = 1; i < pakCount; ++i) {
-		Q_strcat(query, sizeof(query), va(",%x", pakChecksums[i]));
+		Q_strcat(cl_mapDL.query, sizeof(cl_mapDL.query), va(",%x", pakChecksums[i]));
 	}
 	if (!exactMatch)
-		Q_strcat(query, sizeof(query), "&e=0");
+		Q_strcat(cl_mapDL.query, sizeof(cl_mapDL.query), "&e=0");
 
-	return CL_MapDownload_StartImpl(mapName, 0, query, qfalse, exactMatch, qtrue);
+	return CL_MapDownload_StartImpl(mapName, 0, qfalse, exactMatch, qtrue);
 }
 
 
@@ -743,8 +1028,7 @@ qbool CL_PakDownload_Start( unsigned int checksum, qbool fromCommand, const char
 	if (checksum == 0 || CL_MapDownload_CheckActive())
 		return qfalse;
 
-	char query[64];
-	Com_sprintf(query, sizeof(query), "pak?%x", checksum);
+	Com_sprintf(cl_mapDL.query, sizeof(cl_mapDL.query), "pak?%x", checksum);
 
 	qbool realMapName = qtrue;
 	char name[64];
@@ -754,7 +1038,7 @@ qbool CL_PakDownload_Start( unsigned int checksum, qbool fromCommand, const char
 		realMapName = qfalse;
 	}
 
-	return CL_MapDownload_StartImpl(mapName, 0, query, fromCommand, qtrue, realMapName);
+	return CL_MapDownload_StartImpl(mapName, 0, fromCommand, qtrue, realMapName);
 }
 
 
@@ -789,9 +1073,8 @@ void CL_MapDownload_Continue()
 			CL_MapDownload_ClearCvars();
 			Com_Error(ERR_DROP, cl_mapDL.errorMessage);
 		} else if (cl_mapDL.sourceIndex == 0 && !cl_mapDL.exactMatch) {
-			char query[256];
-			(*cl_mapDLSources[1].formatQuery)(query, sizeof(query), cl_mapDL.mapName);
-			CL_MapDownload_StartImpl(cl_mapDL.mapName, 1, query, cl_mapDL.fromCommand, qfalse, cl_mapDL.realMapName);
+			(*cl_mapDLSources[1].formatQuery)(cl_mapDL.query, sizeof(cl_mapDL.query), cl_mapDL.mapName);
+			CL_MapDownload_StartImpl(cl_mapDL.mapName, 1, cl_mapDL.fromCommand, qfalse, cl_mapDL.realMapName);
 		}
 	}
 }

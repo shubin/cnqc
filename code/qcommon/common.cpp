@@ -1974,6 +1974,12 @@ static void Com_Exit_f( void )
 }
 
 
+static void Com_Rand_f( void )
+{
+	Com_Printf("%d\n", rand());
+}
+
+
 // force a bus error for development reasons
 
 static void Com_Crash_f( void )
@@ -2170,6 +2176,7 @@ static const cmdTableItem_t com_cmds[] =
 	{ "crash", Com_Crash_f },
 	{ "freeze", Com_Freeze_f },
 	{ "exit", Com_Exit_f },
+	{ "rand", Com_Rand_f },
 #endif
 	{ "quit", Com_Quit_f, NULL, "closes the application" },
 	{ "writeconfig", Com_WriteConfig_f, Com_CompleteWriteConfig_f, "write the cvars and key binds to a file" }
@@ -2212,6 +2219,8 @@ void Com_Init( char *commandLine )
 	if ( setjmp(abortframe) ) {
 		Sys_Error ("Error during initialization");
 	}
+
+	srand( time( NULL ) );
 
 	memset( com_pushedEvents, 0, sizeof(com_pushedEvents) );
 	com_pushedEventsHead = 0;
