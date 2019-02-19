@@ -262,8 +262,8 @@ LRESULT CALLBACK MainWndProc (
 				AdjustWindowRect( &r, GetWindowLong( hWnd, GWL_STYLE ), FALSE );
 				
 				const RECT& monRect = g_wv.monitorRects[g_wv.monitor];
-				const int x = LOWORD( lParam );
-				const int y = HIWORD( lParam );
+				const int x = (int)(short)LOWORD( lParam );
+				const int y = (int)(short)HIWORD( lParam );
 				Cvar_SetValue( "vid_xpos", x + r.left - monRect.left );
 				Cvar_SetValue( "vid_ypos", y + r.top - monRect.top );
 				vid_xpos->modified = qfalse;
