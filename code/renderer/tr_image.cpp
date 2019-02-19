@@ -742,7 +742,7 @@ const image_t* R_FindImageFile( const char* name, int flags, int glWrapClampMode
 			if ( strcmp( name, image->name ) )
 				continue;
 
-			if ( strcmp( name, "*white" ) )
+			if ( !strcmp( name, "*white" ) )
 				return image;
 
 			// since this WASN'T enforced as an error, half the shaders out there (including most of id's)
@@ -751,8 +751,8 @@ const image_t* R_FindImageFile( const char* name, int flags, int glWrapClampMode
 			if ( (image->flags & IMG_NOMIPMAP) != (flags & IMG_NOMIPMAP) ) {
 				ri.Printf( PRINT_DEVELOPER, "WARNING: reused image %s with mixed nomipmap settings\n", name );
 			}
-			if ( (image->flags & IMG_NOPICMIP) != (image->flags & IMG_NOPICMIP) ) {
-				ri.Printf( PRINT_DEVELOPER, "WARNING: reused image %s with mixed nomipmaps settings\n", name );
+			if ( (image->flags & IMG_NOPICMIP) != (flags & IMG_NOPICMIP) ) {
+				ri.Printf( PRINT_DEVELOPER, "WARNING: reused image %s with mixed nopicmip settings\n", name );
 			}
 			if ( image->wrapClampMode != glWrapClampMode ) {
 				ri.Printf( PRINT_DEVELOPER, "WARNING: reused image %s with mixed clamp settings (map vs clampMap)\n", name );
