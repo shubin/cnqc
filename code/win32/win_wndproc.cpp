@@ -30,59 +30,15 @@ cvar_t		*vid_xpos;			// X coordinate of window position
 cvar_t		*vid_ypos;			// Y coordinate of window position
 cvar_t		*r_fullscreen;
 
-static qbool s_alttab_disabled;
-
-
-#pragma warning(disable : 4702) // unreachable code
-
-static void WIN_DisableAltTab()
-{
-	//if ( s_alttab_disabled )
-		return;
-
-	if ( !Q_stricmp( Cvar_VariableString( "arch" ), "winnt" ) )
-	{
-		RegisterHotKey( 0, 0, MOD_ALT, VK_TAB );
-	}
-	else
-	{
-		BOOL old;
-		SystemParametersInfo( SPI_SCREENSAVERRUNNING, 1, &old, 0 );
-	}
-
-	s_alttab_disabled = qtrue;
-}
-
-
-static void WIN_EnableAltTab()
-{
-	if ( !s_alttab_disabled )
-		return;
-
-	if ( !Q_stricmp( Cvar_VariableString( "arch" ), "winnt" ) )
-	{
-		UnregisterHotKey( 0, 0 );
-	}
-	else
-	{
-		BOOL old;
-		SystemParametersInfo( SPI_SCREENSAVERRUNNING, 0, &old, 0 );
-	}
-
-	s_alttab_disabled = qfalse;
-}
-
 
 static void WIN_AppActivate( BOOL fActive, BOOL fMinimized )
 {
 	const qbool active = fActive && !fMinimized;
 
-	if (r_fullscreen->integer)
+	if ( r_fullscreen->integer )
 		SetWindowPos( g_wv.hWnd, active ? HWND_TOPMOST : HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE );
 
-	Com_DPrintf("VID_AppActivate: %i\n", fActive );
-
-	Key_ClearStates();	// FIXME!!!
+	Key_ClearStates();
 
 	// we don't want to act like we're active if we're minimized
 	g_wv.activeApp = active;
@@ -223,11 +179,6 @@ LRESULT CALLBACK MainWndProc (
 		r_fullscreen = Cvar_Get( "r_fullscreen", "1", CVAR_ARCHIVE | CVAR_LATCH );
 		Cvar_Get( "r_monitor", "0", CVAR_ARCHIVE | CVAR_LATCH ); // 1-based monitor index, 0 means primary
 
-		if ( r_fullscreen->integer )
-			WIN_DisableAltTab();
-		else
-			WIN_EnableAltTab();
-
 		WIN_RegisterLastValidHotKey();
 
 		break;
@@ -235,8 +186,6 @@ LRESULT CALLBACK MainWndProc (
 	case WM_DESTROY:
 		WIN_UnregisterHotKey();
 		g_wv.hWnd = NULL;
-		if ( r_fullscreen->integer )
-			WIN_EnableAltTab();
 		break;
 
 	case WM_CLOSE:
@@ -283,7 +232,7 @@ LRESULT CALLBACK MainWndProc (
 		break;
 
 	case WM_SYSKEYDOWN:
-		if ( wParam == 13 )
+		if ( wParam == VK_RETURN )
 		{
 			if ( r_fullscreen )
 			{
