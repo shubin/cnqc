@@ -413,8 +413,10 @@ static qbool GLW_CreateWindow()
 		const int x = monRect.left + dx;
 		const int y = monRect.top + dy;
 
+		g_wv.duringCreateWindow = qtrue;
 		g_wv.hWnd = CreateWindowEx( exstyle, CLIENT_WINDOW_TITLE, " " CLIENT_WINDOW_TITLE, style,
 				x, y, w, h, NULL, NULL, g_wv.hInstance, NULL );
+		g_wv.duringCreateWindow = qfalse;
 
 		if ( !g_wv.hWnd )
 			ri.Error( ERR_FATAL, "GLW_CreateWindow() - Couldn't create window" );
@@ -550,6 +552,7 @@ void WIN_SetDesktopDisplaySettings()
 
 static qbool GLW_SetMode()
 {
+	WIN_InitMonitorList();
 	WIN_UpdateMonitorIndexFromCvar();
 
 	const RECT& monRect = g_wv.monitorRects[g_wv.monitor];

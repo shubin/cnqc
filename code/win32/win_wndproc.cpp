@@ -168,6 +168,8 @@ LRESULT CALLBACK MainWndProc (
     WPARAM  wParam,
     LPARAM  lParam)
 {
+	static qbool draggingWindow = qfalse;
+
 	switch (uMsg)
 	{
 	case WM_CREATE:
@@ -197,12 +199,16 @@ LRESULT CALLBACK MainWndProc (
 		WIN_S_Mute( !g_wv.activeApp );
 		break;
 
+	case WM_MOVING:
+		draggingWindow = qtrue;
+		break;
+
 	case WM_MOVE:
 		{
-			if (!r_fullscreen->integer )
-			{
-				WIN_UpdateMonitorIndexFromMainWindow();
+			WIN_UpdateMonitorIndexFromMainWindow();
 
+			if ( !r_fullscreen->integer )
+			{
 				RECT r;
 				r.left   = 0;
 				r.top    = 0;
@@ -218,12 +224,33 @@ LRESULT CALLBACK MainWndProc (
 				vid_xpos->modified = qfalse;
 				vid_ypos->modified = qfalse;
 			}
+
+			draggingWindow = qfalse;
 		}
 		break;
 
 	case WM_SIZE:
-		if ( wParam != SIZE_MINIMIZED )
-			WIN_UpdateResolution( (int)LOWORD(lParam), (int)HIWORD(lParam) );
+		if ( wParam == SIZE_RESTORED || wParam == SIZE_MAXIMIZED )
+		{
+			WIN_UpdateMonitorIndexFromMainWindow();
+
+			// note that WM_SIZE can be called with no actual size change
+			const int w = (int)LOWORD( lParam );
+			const int h = (int)HIWORD( lParam );
+			if ( g_wv.duringCreateWindow )
+				WIN_UpdateResolution( w, h );
+		}
+		break;
+
+	case WM_WINDOWPOSCHANGED:
+		{
+			const int prevMon = g_wv.monitor;
+			WIN_UpdateMonitorIndexFromMainWindow();
+			const int currMon = g_wv.monitor;
+
+			if ( !g_wv.duringCreateWindow && !draggingWindow && currMon != prevMon )
+				Cbuf_AddText( "vid_restart\n" );
+		}
 		break;
 
 	case WM_SYSCOMMAND:

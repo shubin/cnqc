@@ -23,6 +23,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../client/client.h"
 #include "../qcommon/qcommon.h"
 #include "win_local.h"
+#include "win_help.h"
 #include "resource.h"
 #include <errno.h>
 #include <float.h>
@@ -653,8 +654,12 @@ static BOOL CALLBACK WIN_MonitorEnumCallback( HMONITOR hMonitor, HDC hdcMonitor,
 }
 
 
-static void WIN_InitMonitorList()
+void WIN_InitMonitorList()
 {
+	g_wv.monitor = 0;
+	g_wv.primaryMonitor = 0;
+	g_wv.monitorCount = 0;
+
 	EnumDisplayMonitors( NULL, NULL, &WIN_MonitorEnumCallback, 0 );
 
 	const POINT zero = { 0, 0 };
@@ -675,7 +680,7 @@ void WIN_UpdateMonitorIndexFromCvar()
 	// use Cvar_Get to enforce the latched change, if any
 	const int monitor = Cvar_Get( "r_monitor", "0", CVAR_ARCHIVE | CVAR_LATCH )->integer;
 	Cvar_SetRange( "r_monitor", CVART_INTEGER, "0", va("%d", g_wv.monitorCount) );
-	Cvar_SetHelp( "r_monitor", "1-based monitor index, 0=primary" );
+	Cvar_SetHelp( "r_monitor", help_r_monitor );
 	if ( monitor <= 0 || monitor > g_wv.monitorCount ) {
 		g_wv.monitor = g_wv.primaryMonitor;
 		return;
@@ -707,6 +712,36 @@ void WIN_UpdateMonitorIndexFromMainWindow()
 }
 
 
+static void WIN_MonitorList_f()
+{
+	WIN_InitMonitorList();
+	WIN_UpdateMonitorIndexFromCvar();
+
+	if ( g_wv.monitorCount <= 0 ) {
+		Com_Printf( "No monitor detected.\n" );
+		return;
+	}
+
+	Com_Printf( "Monitors detected (left is " S_COLOR_CVAR "r_monitor ^7value):\n" );
+	for ( int i = 0; i < g_wv.monitorCount; i++ ) {
+		const RECT r = g_wv.monitorRects[i];
+		const int w = (int)( r.right - r.left );
+		const int h = (int)( r.bottom - r.top );
+		const char* const p = i == g_wv.primaryMonitor ? " (primary)" : "";
+		Com_Printf( S_COLOR_VAL "%d ^7%dx%d at %d,%d%s\n",
+				   i + 1, w, h, (int)r.left, (int)r.top, p );
+	}
+}
+
+
+static void WIN_RegisterMonitorCommands()
+{
+	Cmd_AddCommand( "monitorlist", &WIN_MonitorList_f );
+	Cmd_SetModule( "monitorlist", MODULE_CLIENT );
+	Cmd_SetHelp( "monitorlist", "refreshes and prints the monitor list" );
+}
+
+
 ///////////////////////////////////////////////////////////////
 
 
@@ -720,6 +755,7 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 
 	WIN_InstallExceptionHandlers();
 
+	// done here so the early console can be shown on the primary monitor
 	WIN_InitMonitorList();
 
 	// done before Com/Sys_Init since we need this for error output
@@ -732,6 +768,7 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	Q_strncpyz( sys_cmdline, lpCmdLine, sizeof( sys_cmdline ) );
 	Com_Init( sys_cmdline );
 	WIN_RegisterExceptionCommands();
+	WIN_RegisterMonitorCommands();
 
 	NET_Init();
 

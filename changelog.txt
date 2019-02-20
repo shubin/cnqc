@@ -1,5 +1,5 @@
 
-DD Mmm 18 - 1.51
+DD Mmm 19 - 1.51
 
 add: demo recording status query extension for CPMA 1.52+
 
@@ -15,6 +15,12 @@ add: /toggle can now accept a value sequence (2 or more entries) to loop through
   syntax: /toggle <cvar> [<value1> <value2> [value3]..]
   if the cvar's current value is in the sequence and not in the last spot, the next one is used
   otherwise, the first value in the sequence is used
+
+chg: multi-monitor support improvements
+  add: /monitorlist will print all detected monitors and the indices to use with r_monitor
+  chg: the monitor list now gets updated during video restarts and calls to /monitorlist
+  chg: Linux   | r_monitor is a 0-based index and monitors are sorted top-to-bottom, left-to-right
+  fix: Windows | the Windows + shift + left/right arrow key shortcuts should be usable now
 
 chg: bundling lightmap tiles into texture atlases for improved rendering performance
 
@@ -36,7 +42,7 @@ fix: the last byte of a maximum length bitstream string wasn't parsed ("q3msgboo
 fix: aborting demo playback would crash when the "nextdemo" cvar was set to play a demo
 
 fix: no longer feeding cs commands that came from a previous gamestate to cgame
-	example: "/map cpm22" -> "/cv map cpm25" -> elevator sound was broken
+	example in CPMA: "/map cpm22" -> "/cv map cpm25" -> elevator sound was broken
 
 fix: on Windows, could sometimes click outside the engine's window in raw mouse input mode
 
@@ -50,7 +56,7 @@ fix: /video and /stopvideo fixes
   fix: broken raw video output when r_width wasn't a multiple of 4
   fix: /stopvideo no longer leaves sound output broken for a while after stopping
 
-fix: /cv and /callvote auto-completion were disabled after cgame was shut down at least once
+fix: /cv and /callvote map auto-completion was disabled after cgame was shut down at least once
 
 
 12 Feb 18 - 1.50

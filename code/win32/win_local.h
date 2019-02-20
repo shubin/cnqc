@@ -38,6 +38,7 @@ qbool	IN_ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam ); // returns tr
 void	IN_Frame();
 
 // misc. Windows-specific stuff
+void WIN_InitMonitorList();
 void WIN_UpdateMonitorIndexFromCvar();
 void WIN_UpdateMonitorIndexFromMainWindow();
 void WIN_UpdateResolution( int width, int height );
@@ -72,6 +73,8 @@ typedef struct {
 	// when we get a windows message, we store the time off
 	// using Sys_Milliseconds
 	int			sysMsgTime;
+
+	qbool		duringCreateWindow;	// qtrue during the call to CreateWindow
 
 	RECT		monitorRects[MAX_MONITOR_COUNT];
 	HMONITOR	hMonitors[MAX_MONITOR_COUNT];

@@ -1,4 +1,5 @@
 #include "linux_local.h"
+#include "linux_help.h"
 #include "../renderer/tr_local.h"
 #include "../renderer/qgl.h"
 
@@ -14,13 +15,13 @@ static cvar_t* r_monitor; // 1-based, 0 means use primary monitor
 
 static const cvarTableItem_t glimp_cvars[] = {
 	{ &r_fullscreen, "r_fullscreen", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, "full-screen mode" },
-	{ &r_monitor, "r_monitor", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", NULL, "1-based monitor index, 0=primary" }
+	{ &r_monitor, "r_monitor", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", NULL, help_r_monitor }
 };
 
-static void sdl_PrintMonitorList();
+static void sdl_MonitorList_f();
 
 static const cmdTableItem_t glimp_cmds[] = {
-	{ "monitorlist", &sdl_PrintMonitorList, NULL, "prints the list of monitors" }
+	{ "monitorlist", &sdl_MonitorList_f, NULL, "refreshes and prints the monitor list" }
 };
 
 
@@ -28,26 +29,32 @@ static qbool sdl_IsMonitorListValid()
 {
 	const int count = glimp.monitorCount;
 	const int curr = glimp.monitor;
-	const int prim = glimp.primaryMonitor;
 
 	return
-		count >= 1 &&
-		curr >= 0 &&
-		curr < count &&
-		prim >= 0 &&
-		prim < count &&
-		glimp.monitorRects[prim].x == 0 &&
-		glimp.monitorRects[prim].y == 0;
+		count >= 1 && count <= MAX_MONITOR_COUNT &&
+		curr >= 0 && curr < count;
+}
+
+
+static int sdl_CompareMonitorRects( const void* aPtr, const void* bPtr )
+{
+	const SDL_Rect* const a = (const SDL_Rect*)aPtr;
+	const SDL_Rect* const b = (const SDL_Rect*)bPtr;
+	const int dy = a->y - b->y;
+	if (dy != 0)
+		return dy;
+
+	return a->x - b->x;
 }
 
 
 static void sdl_CreateMonitorList()
 {
+	glimp.monitorCount = 0;
+
 	const int count = SDL_GetNumVideoDisplays();
-	if (count <= 0) {
-		glimp.monitorCount = 0;
+	if (count <= 0)
 		return;
-	}
 
 	int gi = 0;
 	for (int si = 0; si < count; ++si) {
@@ -58,17 +65,9 @@ static void sdl_CreateMonitorList()
 	}
 	glimp.monitorCount = gi;
 
-	glimp.primaryMonitor = -1;
-	const int finalCount = glimp.monitorCount;
-	for(int i = 0; i < finalCount; ++i) {
-		const SDL_Rect rect = glimp.monitorRects[i];
-		if (rect.x == 0 && rect.y == 0) {
-			glimp.primaryMonitor = i;
-			break;
-		}
-	}
-
-	if (!sdl_IsMonitorListValid())
+	if (sdl_IsMonitorListValid())
+		qsort(glimp.monitorRects, (size_t)glimp.monitorCount, sizeof(glimp.monitorRects[0]), &sdl_CompareMonitorRects);
+	else
 		glimp.monitorCount = 0;
 }
 
@@ -76,15 +75,15 @@ static void sdl_CreateMonitorList()
 // call this before creating the window
 static void sdl_UpdateMonitorIndexFromCvar()
 {
-	if (glimp.monitorCount <= 0)
+	if (glimp.monitorCount <= 0 || glimp.monitorCount >= MAX_MONITOR_COUNT)
 		return;
 
 	const int monitor = Cvar_Get("r_monitor", "0", CVAR_ARCHIVE | CVAR_LATCH)->integer;
-	if (monitor <= 0 || monitor > glimp.monitorCount) {
-		glimp.monitor = glimp.primaryMonitor;
+	if (monitor < 0 || monitor >= glimp.monitorCount) {
+		glimp.monitor = 0;
 		return;
 	}
-	glimp.monitor = Com_ClampInt(0, glimp.monitorCount - 1, monitor - 1);
+	glimp.monitor = monitor;
 }
 
 
@@ -96,25 +95,20 @@ void sdl_UpdateMonitorIndexFromWindow()
 
 	// update the glimp index
 	const int current = SDL_GetWindowDisplayIndex(glimp.window);
-	if (current < 0) {
+	if (current < 0 || current >= glimp.monitorCount) {
 		glimp.monitorCount = 0;
 		return;
 	}
 	glimp.monitor = current;
 
 	// update the cvar index
-	if( r_monitor->integer == 0 &&
-		glimp.monitor == glimp.primaryMonitor)
-		return;
-	Cvar_Set("r_monitor", va("%d", glimp.monitor + 1));
+	Cvar_Set("r_monitor", va("%d", glimp.monitor));
 }
 
 
 static void sdl_GetSafeDesktopRect( SDL_Rect* rect )
 {
-	if (glimp.monitorCount <= 0 ||
-		glimp.monitor < 0 ||
-		glimp.monitor >= glimp.monitorCount) {
+	if (!sdl_IsMonitorListValid()) {
 		rect->x = 0;
 		rect->y = 0;
 		rect->w = 1280;
@@ -128,12 +122,24 @@ static void sdl_GetSafeDesktopRect( SDL_Rect* rect )
 static void sdl_PrintMonitorList()
 {
 	const int count = glimp.monitorCount;
-	Com_Printf("Monitor count: %d\n", count);
+	if (count <= 0) {
+		Com_Printf("No monitor detected.\n");
+		return;
+	}
 
+	Com_Printf("Monitors detected (left is " S_COLOR_CVAR "r_monitor ^7value):\n");
 	for (int i = 0; i < count; ++i) {
 		const SDL_Rect rect = glimp.monitorRects[i];
-		Com_Printf("Monitor #%d: %d,%d %dx%d\n", i + 1, rect.x, rect.y, rect.w, rect.h);
+		Com_Printf(S_COLOR_VAL "%d ^7%dx%d at %d,%d\n", i, rect.w, rect.h, rect.x, rect.y);
 	}
+}
+
+
+static void sdl_MonitorList_f()
+{
+	sdl_CreateMonitorList();
+	sdl_UpdateMonitorIndexFromCvar();
+	sdl_PrintMonitorList();
 }
 
 
