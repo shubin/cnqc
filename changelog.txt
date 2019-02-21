@@ -1,6 +1,8 @@
 
 DD Mmm 19 - 1.51
 
+add: now showing the cvar's current and latched values in the help panel
+
 add: new console and chat keyboard shortcuts
    Ctrl-left/right arrow | move caret to previous/next word
   Shift-left/right arrow | move caret to previous/next argument

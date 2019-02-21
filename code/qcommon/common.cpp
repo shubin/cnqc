@@ -3480,6 +3480,25 @@ printHelpResult_t Com_PrintHelp( const char* name, printf_t print, qbool printNo
 	else
 		print( S_COLOR_CMD "%s\n", name );
 
+	const cvar_t* const cvar = Cvar_FindVar( name );
+	if ( cvar != NULL ) {
+		const char* const quote1 = cvar->type == CVART_STRING ? "\"" : "";
+		const char* const quote2 = cvar->type == CVART_STRING ? "^7\"" : "^7";
+		if ( cvar->latchedString != NULL ) {
+			const char* const combined =
+				va( "Current: %s" S_COLOR_VAL "%s%s (Latched: %s" S_COLOR_VAL "%s%s)\n",
+					quote1, cvar->string, quote2, quote1, cvar->latchedString, quote2 );
+			if ( strlen( combined ) < CONSOLE_WIDTH ) {
+				print( combined );
+			} else {
+				print( "Current: %s" S_COLOR_VAL "%s%s\n", quote1, cvar->string, quote2 );
+				print( "Latched: %s" S_COLOR_VAL "%s%s\n", quote1, cvar->latchedString, quote2 );
+			}
+		} else {
+			print( "Current: %s" S_COLOR_VAL "%s" S_COLOR_HELP "%s\n", quote1, cvar->string, quote2 );
+		}
+	}
+
 	if ( printModules )
 		Com_PrintModules( firstModule, moduleMask, print );
 
