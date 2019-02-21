@@ -392,16 +392,53 @@ static void Field_KeyDownEvent( field_t *edit, int key )
 	}
 
 	len = strlen( edit->buffer );
+	if ( len == 0 && ( key == K_LEFTARROW || key == K_RIGHTARROW ) )
+		return;
 
 	if ( key == K_DEL ) {
 		if ( edit->cursor < len )
 			memmove( edit->buffer + edit->cursor, edit->buffer + edit->cursor + 1, len - edit->cursor );
 	} else if ( key == K_RIGHTARROW ) {
-		if ( edit->cursor < len )
-			edit->cursor++;
+		if ( keys[K_CTRL].down ) {
+			const char* c = edit->buffer + edit->cursor;
+			if ( *c != ' ' )
+				while ( *c != '\0' && *c != ' ' ) c++;
+			while ( *c != '\0' && *c == ' ' ) c++;
+			edit->cursor = (int)( c - edit->buffer );
+		} else if ( keys[K_SHIFT].down ) {
+			Cmd_TokenizeString( edit->buffer );
+			const int currentArg = Cmd_ArgIndexFromOffset( edit->cursor );
+			const int lastArg = Cmd_Argc() - 1;
+			if ( currentArg == lastArg )
+				edit->cursor = len;
+			else if ( currentArg >= 0 && currentArg < lastArg )
+				edit->cursor = Cmd_ArgOffset( currentArg + 1 );
+		} else {
+			if ( edit->cursor < len )
+				edit->cursor++;
+		}
 	} else if ( key == K_LEFTARROW ) {
-		if ( edit->cursor > 0 )
-			edit->cursor--;
+		if ( keys[K_CTRL].down ) {
+			const char* const s = edit->buffer;
+			const char* c = s + edit->cursor;
+			if ( c > s && c[-1] == ' ' )
+				while ( c > s && c[-1] == ' ' ) c--;
+			while ( c > s && c[-1] != ' ' ) c--;
+			edit->cursor = (int)( c - edit->buffer );
+		} else if ( keys[K_SHIFT].down ) {
+			Cmd_TokenizeString( edit->buffer );
+			int currentArg = Cmd_ArgIndexFromOffset( edit->cursor );
+			if ( currentArg == -1 ) // past the last argument?
+				currentArg = Cmd_Argc() - 1;
+			const int currentArgOff = Cmd_ArgOffset( currentArg );
+			if ( currentArgOff < edit->cursor )
+				edit->cursor = currentArgOff;
+			else if ( currentArg > 0 )
+				edit->cursor = Cmd_ArgOffset( currentArg - 1 );
+		} else {
+			if ( edit->cursor > 0 )
+				edit->cursor--;
+		}
 	} else if ( key == K_HOME || ( tolower(key) == 'a' && keys[K_CTRL].down ) ) {
 		edit->cursor = 0;
 	} else if ( key == K_END || ( tolower(key) == 'e' && keys[K_CTRL].down ) ) {
