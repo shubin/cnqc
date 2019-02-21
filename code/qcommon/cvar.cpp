@@ -86,7 +86,7 @@ static qbool Cvar_ValidateString( const char *s )
 }
 
 
-static cvar_t* Cvar_FindVar( const char* var_name )
+cvar_t* Cvar_FindVar( const char* var_name )
 {
 	long hash = Cvar_Hash(var_name);
 

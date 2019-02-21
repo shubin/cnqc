@@ -3162,6 +3162,31 @@ void Field_AutoCompleteKeyName( fieldCallback_t callback )
 #endif
 
 
+void Field_InsertValue( field_t *edit, qbool defaultValue )
+{
+	if ( Cmd_Argc() < 1 )
+		return;
+
+	const char* name = Cmd_Argv( 0 );
+	if ( name[0] == '\\' || name[0] == '/' )
+		name++;
+
+	if ( name[0] == '\0' )
+		return;
+
+	const cvar_t* const cvar = Cvar_FindVar( name );
+	if ( !cvar )
+		return;
+
+	const char* const valueString = defaultValue ? cvar->resetString : cvar->string;
+	const qbool quotesNeeded = valueString[0] == '\0' || strchr( valueString, ' ' ) != NULL;
+	const char* const quotes = quotesNeeded ? "\"" : "";
+	Com_sprintf( edit->buffer, sizeof( edit->buffer ), "\\%s %s", cvar->name, quotes );
+	edit->cursor = strlen( edit->buffer );
+	Q_strcat( edit->buffer, sizeof( edit->buffer ), va( "%s%s", valueString, quotes ) );
+}
+
+
 void History_Clear( history_t* history, int width )
 {
 	for ( int i = 0; i < COMMAND_HISTORY; ++i ) {

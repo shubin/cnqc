@@ -1,6 +1,10 @@
 
 DD Mmm 19 - 1.51
 
+add: new console keyboard shortcuts
+  Ctrl-I | insert cvar's current value
+  Ctrl-D | insert cvar's default value
+
 add: demo recording status query extension for CPMA 1.52+
 
 add: /cvar_add <cvar> <number> to add a number to a cvar

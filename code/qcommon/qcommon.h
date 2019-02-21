@@ -516,6 +516,8 @@ cvar_t *Cvar_Get( const char *var_name, const char *value, int flags );
 // that allows variables to be unarchived without needing bitflags
 // if value is "", the value will not override a previously set value.
 
+cvar_t*	Cvar_FindVar( const char* var_name );
+
 void	Cvar_PrintDeprecationWarnings();
 
 void	Cvar_SetHelp( const char *var_name, const char *help );
@@ -777,6 +779,7 @@ typedef struct {
 
 void Field_Clear( field_t *edit );
 void Field_AutoComplete( field_t *edit, qbool insertBackslash ); // should only be called by Console_Key
+void Field_InsertValue( field_t *edit, qbool defaultValue );
 
 typedef void (*fieldCallback_t)( const char* );
 typedef void (*fieldCompletionHandler_t)( fieldCallback_t );

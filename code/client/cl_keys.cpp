@@ -546,6 +546,18 @@ static void Console_Key( int key )
 		return;
 	}
 
+	// ctrl-i = insert CVar's current value
+	if ( keys[K_CTRL].down && tolower(key) == 'i' ) {
+		Field_InsertValue( &g_consoleField, qfalse );
+		return;
+	}
+
+	// ctrl-d = insert CVar's default value
+	if ( keys[K_CTRL].down && tolower(key) == 'd' ) {
+		Field_InsertValue( &g_consoleField, qtrue );
+		return;
+	}
+
 	// pass to the normal editline routine
 	Field_KeyDownEvent( &g_consoleField, key );
 }
