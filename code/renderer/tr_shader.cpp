@@ -1721,12 +1721,27 @@ static void CollapseStages()
 		if ( collapse[i].blendA == -1 )
 			CollapseFailure;
 
-		// Check that all colors are pure white on the second stage
+		// Check that all colors are opaque white on the second stage
 		// because the stage iterator can't currently specify
 		// another color array.
 		// Example shader broken without this extra test:
 		// "textures/sfx/diamond2cjumppad"
 		// The ring pulses in and out instead of only out.
+
+		// These cases must always be rejected because they depend
+		// on time elapsed, camera position, entity colors, etc.
+		if (	aStages[1].rgbGen == CGEN_LIGHTING_DIFFUSE ||
+				aStages[1].rgbGen == CGEN_WAVEFORM ||
+				aStages[1].rgbGen == CGEN_ENTITY ||
+				aStages[1].rgbGen == CGEN_ONE_MINUS_ENTITY ||
+				aStages[1].alphaGen == AGEN_WAVEFORM ||
+				aStages[1].alphaGen == AGEN_LIGHTING_SPECULAR ||
+				aStages[1].alphaGen == AGEN_ENTITY ||
+				aStages[1].alphaGen == AGEN_ONE_MINUS_ENTITY ||
+				aStages[1].alphaGen == AGEN_PORTAL )
+			CollapseFailure;
+
+		// For the remaining cases, we generate and test the colors.
 		static stageVars_t svarsMT;
 		R_ComputeColors( &aStages[1], svarsMT );
 		const int* colors = (const int*)svarsMT.colors;

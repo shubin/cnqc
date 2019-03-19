@@ -38,6 +38,8 @@ chg: faster map loads by limiting the rendering back-end's frame-rate
 
 chg: on Windows, the upper limit of open stdio file handles was raised from 512 to 2048
 
+fix: shader stage collapsing was happening in cases where it would yield incorrect results
+
 fix: map download improvements
   add: using numeric addresses as fallbacks in case DNS resolves fail
   chg: made connections non-blocking so the engine won't freeze for long when starting a download
