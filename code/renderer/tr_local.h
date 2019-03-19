@@ -384,6 +384,10 @@ struct shader_t {
 	double clampTime;				// time this shader is clamped to
 	double timeOffset;				// current time offset for this shader
 
+	// lightmap texture coordinates transform
+	vec2_t lmScale;
+	vec2_t lmBias;
+
 	shader_t* next;
 };
 

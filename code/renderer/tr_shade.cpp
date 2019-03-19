@@ -475,5 +475,18 @@ void R_ComputeTexCoords( const shaderStage_t* pStage, stageVars_t& svars )
 			break;
 		}
 	}
+
+	// fix up uncorrected lightmap texture coordinates
+
+	if ( pStage->type == ST_LIGHTMAP && pStage->tcGen != TCGEN_LIGHTMAP )
+	{
+		const shader_t* const shader = tess.shader;
+
+		for ( int i = 0; i < tess.numVertexes; ++i )
+		{
+			svars.texcoords[i][0] = svars.texcoords[i][0] * shader->lmScale[0] + shader->lmBias[0];
+			svars.texcoords[i][1] = svars.texcoords[i][1] * shader->lmScale[1] + shader->lmBias[1];
+		}
+	}
 }
 

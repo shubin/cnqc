@@ -229,7 +229,16 @@ static void R_GetLightmapTransform( int* number, vec2_t scale, vec2_t bias )
 		scale[1] = 1.0f;
 		bias[0] = 0.0f;
 		bias[1] = 0.0f;
-	}	
+	}
+}
+
+
+static void R_SaveLightmapTransform( shader_t* shader, const vec2_t scale, const vec2_t bias )
+{
+	shader->lmScale[0] = scale[0];
+	shader->lmScale[1] = scale[1];
+	shader->lmBias[0] = bias[0];
+	shader->lmBias[1] = bias[1];
 }
 
 
@@ -313,7 +322,9 @@ static void ParseFace( const dsurface_t* ds, const drawVert_t* verts, msurface_t
 	int lightmapNum = LittleLong( ds->lightmapNum );
 	vec2_t lmScale, lmBias;
 	R_GetLightmapTransform( &lightmapNum, lmScale, lmBias );
-	surf->shader = ShaderForShaderNum( ds->shaderNum, lightmapNum );
+	shader_t* const shader = ShaderForShaderNum( ds->shaderNum, lightmapNum );
+	surf->shader = shader;
+	R_SaveLightmapTransform( shader, lmScale, lmBias );
 
 	int numVerts = LittleLong( ds->numVerts );
 	if (numVerts > MAX_FACE_POINTS) {
@@ -365,7 +376,9 @@ static void ParseMesh( const dsurface_t* ds, const drawVert_t* verts, msurface_t
 	int lightmapNum = LittleLong(ds->lightmapNum);
 	vec2_t lmScale, lmBias;
 	R_GetLightmapTransform( &lightmapNum, lmScale, lmBias );
-	surf->shader = ShaderForShaderNum( ds->shaderNum, lightmapNum );
+	shader_t* const shader = ShaderForShaderNum( ds->shaderNum, lightmapNum );
+	surf->shader = shader;
+	R_SaveLightmapTransform( shader, lmScale, lmBias );
 
 	// we may have a nodraw surface, because they might still need to
 	// be around for movement clipping
@@ -415,8 +428,14 @@ static void ParseTriSurf( const dsurface_t* ds, const drawVert_t* verts, msurfac
 {
 	int i, j;
 
+	shader_t* const shader = ShaderForShaderNum( ds->shaderNum, LIGHTMAP_BY_VERTEX );
 	surf->fogIndex = LittleLong( ds->fogNum ) + 1;
-	surf->shader = ShaderForShaderNum( ds->shaderNum, LIGHTMAP_BY_VERTEX );
+	surf->shader = shader;
+
+	int lightmapNum = LittleLong( ds->lightmapNum );
+	vec2_t lmScale, lmBias;
+	R_GetLightmapTransform( &lightmapNum, lmScale, lmBias );
+	R_SaveLightmapTransform( shader, lmScale, lmBias );
 
 	int numVerts = LittleLong( ds->numVerts );
 	int numIndexes = LittleLong( ds->numIndexes );
@@ -436,7 +455,7 @@ static void ParseTriSurf( const dsurface_t* ds, const drawVert_t* verts, msurfac
 		AddPointToBounds( tri->verts[i].xyz, tri->bounds[0], tri->bounds[1] );
 		for ( j = 0 ; j < 2 ; j++ ) {
 			tri->verts[i].st[j] = LittleFloat( verts[i].st[j] );
-			tri->verts[i].st2[j] = LittleFloat( verts[i].lightmap[j] );
+			tri->verts[i].st2[j] = lmBias[j] + lmScale[j] * LittleFloat( verts[i].lightmap[j] );
 		}
 		R_ColorShiftLightingBytes( verts[i].color, tri->verts[i].rgba );
 	}
