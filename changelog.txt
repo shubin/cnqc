@@ -26,6 +26,8 @@ add: /toggle can now accept a value sequence (2 or more entries) to loop through
   if the cvar's current value is in the sequence and not in the last spot, the next one is used
   otherwise, the first value in the sequence is used
 
+chg: r_lodCurveError <250.0 to 10000.0> (default: 2000) is now archived and no longer cheat-protected
+
 chg: multi-monitor support improvements
   add: /monitorlist will print all detected monitors and the indices to use with r_monitor
   chg: the monitor list now gets updated during video restarts and calls to /monitorlist

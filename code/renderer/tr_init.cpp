@@ -573,11 +573,11 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_greyscale, "r_greyscale", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", "1", "controls how monochrome the final image looks" },
 	{ &r_lightmap, "r_lightmap", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_lightmap },
 	{ &r_fullbright, "r_fullbright", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_fullbright },
+	{ &r_lodCurveError, "r_lodCurveError", "2000", CVAR_ARCHIVE, CVART_FLOAT, "250", "10000", "curved surfaces LOD scale" },
 
 	//
 	// temporary variables that can change at any time
 	//
-	{ &r_lodCurveError, "r_lodCurveError", "250", CVAR_CHEAT },
 	{ &r_ambientScale, "r_ambientScale", "0.6", CVAR_CHEAT },
 	{ &r_directedScale, "r_directedScale", "1", CVAR_CHEAT },
 	{ &r_uiFullScreen, "r_uifullscreen", "0", CVAR_TEMP },
