@@ -837,19 +837,22 @@ qbool FS_FilenameCompare( const char *s1, const char *s2 ) {
 
 static qbool FS_IsPureClientReadException( const char* filename )
 {
-	const int l = strlen( filename );
-	if ( l < 5 )
+	static const char* extensions[] =  { ".cfg", ".ttf", ".dat", ".jpg", ".jpeg", ".tga", ".png", ".shader" };
+	const int shortestExtLength = 3;
+
+	const int nameLength = strlen(filename);
+	if (nameLength < shortestExtLength + 2)
 		return qfalse;
 
-	const char* const s4 = filename + l - 4;
-	const char* const s5 = filename + l - 5;
-	return	!Q_stricmp( s4, ".cfg" ) ||
-			!Q_stricmp( s4, ".ttf" ) ||
-			!Q_stricmp( s4, ".dat" ) ||
-			!Q_stricmp( s4, ".jpg" ) ||
-			!Q_stricmp( s4, ".tga" ) ||
-			!Q_stricmp( s4, ".png" ) ||
-			!Q_stricmp( s5, ".jpeg" );
+	for (int i = 0; i < ARRAY_LEN(extensions); ++i) {
+		const char* const ext = extensions[i];
+		const int extLength = strlen(ext);
+
+		if (nameLength > extLength && !Q_strncmp(filename + nameLength - extLength, ext, extLength))
+			return qtrue;
+	}
+
+	return qfalse;
 }
 
 

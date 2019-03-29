@@ -40,6 +40,8 @@ chg: faster map loads by limiting the rendering back-end's frame-rate
 
 chg: on Windows, the upper limit of open stdio file handles was raised from 512 to 2048
 
+fix: the presence of .shader files outside of PK3s no longer triggers a drop error
+
 fix: shader stage collapsing was happening in cases where it would yield incorrect results
 
 fix: map download improvements
