@@ -1,5 +1,5 @@
 
-DD Mmm 19 - 1.51
+31 Mar 19 - 1.51
 
 add: now showing the cvar's current and latched values in the help panel
 
