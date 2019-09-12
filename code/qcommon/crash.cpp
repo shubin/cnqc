@@ -20,13 +20,6 @@ typedef struct {
 static crash_t crash;
 
 
-#if defined(_WIN32)
-#	define NEWLINE	"\n"
-#else
-#	define NEWLINE	"\r\n"
-#endif
-
-
 static qbool IsVMIndexValid(vmIndex_t vmIndex)
 {
 	return vmIndex >= 0 && vmIndex < VM_COUNT;
