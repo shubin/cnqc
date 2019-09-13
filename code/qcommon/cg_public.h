@@ -129,7 +129,7 @@ typedef enum {
 	CG_SETUSERCMDVALUE,
 	CG_R_REGISTERSHADERNOMIP,
 	CG_MEMORY_REMAINING,
-	CG_R_REGISTERFONT,
+	DO_NOT_WANT_CG_R_REGISTERFONT,
 	CG_KEY_ISDOWN,
 	CG_KEY_GETCATCHER,
 	CG_KEY_SETCATCHER,
@@ -360,7 +360,6 @@ qboolean	trap_GetUserCmd( int cmdNumber, usercmd_t *ucmd );
 void		trap_SetUserCmdValue( int stateValue, float sensitivityScale );
 
 int			trap_MemoryRemaining( void );
-qboolean	trap_R_RegisterFont( const char* fontName, int pointSize, fontInfo_t* font );
 qboolean	trap_Key_IsDown( int keynum );
 int			trap_Key_GetCatcher( void );
 void		trap_Key_SetCatcher( int catcher );

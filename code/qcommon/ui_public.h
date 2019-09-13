@@ -94,7 +94,7 @@ typedef enum {
 	UI_MEMORY_REMAINING,
 	UI_GET_CDKEY,
 	UI_SET_CDKEY,
-	UI_R_REGISTERFONT,
+	DO_NOT_WANT_UI_R_REGISTERFONT,
 	UI_R_MODELBOUNDS,
 	DO_NOT_WANT_UI_PC_ADD_GLOBAL_DEFINE,
 	DO_NOT_WANT_UI_PC_LOAD_SOURCE,
@@ -214,7 +214,6 @@ void		trap_GetClientState( uiClientState_t *state );
 void		trap_GetGlconfig( glconfig_t *glconfig );
 int			trap_GetConfigString( int index, char* buff, int buffsize );
 int			trap_MemoryRemaining( void );
-qboolean	trap_R_RegisterFont( const char* fontName, int pointSize, fontInfo_t* font );
 
 int			trap_LAN_GetServerCount( int source );
 void		trap_LAN_GetServerAddressString( int source, int n, char *buf, int buflen );

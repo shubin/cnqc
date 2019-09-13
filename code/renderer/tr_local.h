@@ -747,24 +747,6 @@ void R_Modellist_f( void );
 ///////////////////////////////////////////////////////////////
 
 
-struct font_t {
-	char name[MAX_QPATH];
-	fontInfo_t info;
-	// WARNING! pointsize bears NO resemblance to ANYTHING "real" about a font
-	// the ONLY reason we keep it around at all is to optimise duplicate RegisterFont() detection
-	int pointsize;
-};
-
-const int MAX_FONTS = 64;
-
-void R_InitFreeType();
-void R_DoneFreeType();
-qbool RE_RegisterFont( const char* fontName, int pointSize, fontInfo_t* info );
-
-
-///////////////////////////////////////////////////////////////
-
-
 extern	refimport_t		ri;
 
 #define	MAX_DRAWIMAGES			2048
@@ -896,9 +878,6 @@ typedef struct {
 
 	int numImages;
 	image_t* images[MAX_DRAWIMAGES];
-
-	int numFonts;
-	font_t* fonts[MAX_FONTS];
 
 	// shader indexes from other modules will be looked up in tr.shaders[]
 	// shader indexes from drawsurfs will be looked up in sortedShaders[]

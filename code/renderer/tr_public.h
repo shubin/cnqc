@@ -155,7 +155,6 @@ typedef struct {
 					float frac, const char *tagName );
 	void	(*ModelBounds)( qhandle_t model, vec3_t mins, vec3_t maxs );
 
-	qbool (*RegisterFont)( const char* fontName, int pointSize, fontInfo_t* font );
 	qbool (*GetEntityToken)( char* buffer, int size );
 	qbool (*inPVS)( const vec3_t p1, const vec3_t p2 );
 

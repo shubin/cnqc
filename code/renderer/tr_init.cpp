@@ -675,8 +675,6 @@ void R_Init()
 
 	R_ModelInit();
 
-	R_InitFreeType();
-
 	int err = qglGetError();
 	if (err != GL_NO_ERROR)
 		ri.Printf( PRINT_ALL, "glGetError() = 0x%x\n", err );
@@ -694,8 +692,6 @@ static void RE_Shutdown( qbool destroyWindow )
 		R_SyncRenderThread();
 		R_DeleteTextures();
 	}
-
-	R_DoneFreeType();
 	
 	// shut down platform specific OpenGL stuff
 	if ( destroyWindow ) {
@@ -799,7 +795,6 @@ const refexport_t* GetRefAPI( const refimport_t* rimp )
 	re.DrawStretchRaw = RE_StretchRaw;
 	re.UploadCinematic = RE_UploadCinematic;
 
-	re.RegisterFont = RE_RegisterFont;
 	re.GetEntityToken = R_GetEntityToken;
 	re.inPVS = R_inPVS;
 

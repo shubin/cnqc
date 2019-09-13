@@ -16,7 +16,7 @@ ifeq ($(config),debug_x32)
   TARGET = $(TARGETDIR)/librenderer.a
   OBJDIR = ../../.build/debug_x32/renderer
   DEFINES += -DDEBUG -D_DEBUG
-  INCLUDES += -I../../code/freetype/include
+  INCLUDES +=
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -g -Wno-unused-parameter -Wno-write-strings -std=c++98
@@ -43,7 +43,7 @@ ifeq ($(config),debug_x64)
   TARGET = $(TARGETDIR)/librenderer.a
   OBJDIR = ../../.build/debug_x64/renderer
   DEFINES += -DDEBUG -D_DEBUG
-  INCLUDES += -I../../code/freetype/include
+  INCLUDES +=
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g -Wno-unused-parameter -Wno-write-strings -std=c++98
@@ -70,7 +70,7 @@ ifeq ($(config),release_x32)
   TARGET = $(TARGETDIR)/librenderer.a
   OBJDIR = ../../.build/release_x32/renderer
   DEFINES += -DNDEBUG
-  INCLUDES += -I../../code/freetype/include
+  INCLUDES +=
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -fomit-frame-pointer -ffast-math -Os -g -msse2 -Wno-unused-parameter -Wno-write-strings -g1 -std=c++98
@@ -97,7 +97,7 @@ ifeq ($(config),release_x64)
   TARGET = $(TARGETDIR)/librenderer.a
   OBJDIR = ../../.build/release_x64/renderer
   DEFINES += -DNDEBUG
-  INCLUDES += -I../../code/freetype/include
+  INCLUDES +=
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -fomit-frame-pointer -ffast-math -Os -g -msse2 -Wno-unused-parameter -Wno-write-strings -g1 -std=c++98
@@ -125,7 +125,6 @@ OBJECTS := \
 	$(OBJDIR)/tr_cmds.o \
 	$(OBJDIR)/tr_curve.o \
 	$(OBJDIR)/tr_flares.o \
-	$(OBJDIR)/tr_font.o \
 	$(OBJDIR)/tr_gl2.o \
 	$(OBJDIR)/tr_image.o \
 	$(OBJDIR)/tr_init.o \
@@ -215,9 +214,6 @@ $(OBJDIR)/tr_curve.o: ../../code/renderer/tr_curve.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/tr_flares.o: ../../code/renderer/tr_flares.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/tr_font.o: ../../code/renderer/tr_font.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/tr_gl2.o: ../../code/renderer/tr_gl2.cpp

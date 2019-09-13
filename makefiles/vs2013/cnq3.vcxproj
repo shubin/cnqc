@@ -104,7 +104,6 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <PreprocessorDefinitions>DEBUG;_DEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\code\freetype\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -133,7 +132,6 @@ copy "..\..\.bin\debug_x32\cnq3-x86.pdb" "$(QUAKE3DIR)"</Command>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <PreprocessorDefinitions>DEBUG;_DEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\code\freetype\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -163,7 +161,6 @@ copy "..\..\.bin\debug_x64\cnq3-x64.pdb" "$(QUAKE3DIR)"</Command>
       <WarningLevel>Level4</WarningLevel>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <PreprocessorDefinitions>NDEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\code\freetype\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>MinSpace</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -203,7 +200,6 @@ copy "..\..\.bin\release_x32\cnq3-x86.pdb" "$(QUAKE3DIR)"</Command>
       <WarningLevel>Level4</WarningLevel>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <PreprocessorDefinitions>NDEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\code\freetype\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>MinSpace</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -381,9 +377,6 @@ copy "..\..\.bin\release_x64\cnq3-x64.pdb" "$(QUAKE3DIR)"</Command>
     </ProjectReference>
     <ProjectReference Include="renderer.vcxproj">
       <Project>{9C6AA017-8837-FB22-B150-E9CA9D7C30B1}</Project>
-    </ProjectReference>
-    <ProjectReference Include="freetype.vcxproj">
-      <Project>{89895BD8-7556-B6E3-9E6F-A48B8A9BEB71}</Project>
     </ProjectReference>
     <ProjectReference Include="libjpeg-turbo.vcxproj">
       <Project>{DB56484D-4717-C483-1052-0D017CD10860}</Project>

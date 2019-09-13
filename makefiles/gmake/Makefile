@@ -16,7 +16,6 @@ ifeq ($(config),debug_x32)
   botlib_config = debug_x32
   renderer_config = debug_x32
   libjpeg_turbo_config = debug_x32
-  freetype_config = debug_x32
 endif
 ifeq ($(config),debug_x64)
   cnq3_config = debug_x64
@@ -24,7 +23,6 @@ ifeq ($(config),debug_x64)
   botlib_config = debug_x64
   renderer_config = debug_x64
   libjpeg_turbo_config = debug_x64
-  freetype_config = debug_x64
 endif
 ifeq ($(config),release_x32)
   cnq3_config = release_x32
@@ -32,7 +30,6 @@ ifeq ($(config),release_x32)
   botlib_config = release_x32
   renderer_config = release_x32
   libjpeg_turbo_config = release_x32
-  freetype_config = release_x32
 endif
 ifeq ($(config),release_x64)
   cnq3_config = release_x64
@@ -40,16 +37,15 @@ ifeq ($(config),release_x64)
   botlib_config = release_x64
   renderer_config = release_x64
   libjpeg_turbo_config = release_x64
-  freetype_config = release_x64
 endif
 
-PROJECTS := cnq3 cnq3-server botlib renderer libjpeg-turbo freetype
+PROJECTS := cnq3 cnq3-server botlib renderer libjpeg-turbo
 
 .PHONY: all clean help $(PROJECTS) 
 
 all: $(PROJECTS)
 
-cnq3: botlib renderer freetype libjpeg-turbo
+cnq3: botlib renderer libjpeg-turbo
 ifneq (,$(cnq3_config))
 	@echo "==== Building cnq3 ($(cnq3_config)) ===="
 	@${MAKE} --no-print-directory -C . -f cnq3.make config=$(cnq3_config)
@@ -79,19 +75,12 @@ ifneq (,$(libjpeg_turbo_config))
 	@${MAKE} --no-print-directory -C . -f libjpeg-turbo.make config=$(libjpeg_turbo_config)
 endif
 
-freetype:
-ifneq (,$(freetype_config))
-	@echo "==== Building freetype ($(freetype_config)) ===="
-	@${MAKE} --no-print-directory -C . -f freetype.make config=$(freetype_config)
-endif
-
 clean:
 	@${MAKE} --no-print-directory -C . -f cnq3.make clean
 	@${MAKE} --no-print-directory -C . -f cnq3-server.make clean
 	@${MAKE} --no-print-directory -C . -f botlib.make clean
 	@${MAKE} --no-print-directory -C . -f renderer.make clean
 	@${MAKE} --no-print-directory -C . -f libjpeg-turbo.make clean
-	@${MAKE} --no-print-directory -C . -f freetype.make clean
 
 help:
 	@echo "Usage: make [config=name] [target]"
@@ -110,6 +99,5 @@ help:
 	@echo "   botlib"
 	@echo "   renderer"
 	@echo "   libjpeg-turbo"
-	@echo "   freetype"
 	@echo ""
 	@echo "For more information, see http://industriousone.com/premake/quick-start"

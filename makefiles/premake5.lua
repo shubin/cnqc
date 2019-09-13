@@ -422,9 +422,8 @@ local function ApplyExeProjectSettings(exeName, server)
 		AddSourcesFromArray(".", server_sources)
 	else
 		AddSourcesFromArray(".", client_sources)
-		includedirs { path_src.."/freetype/include" }
 		AddHeaders("renderer")
-		links { "renderer", "freetype", "libjpeg-turbo" }
+		links { "renderer", "libjpeg-turbo" }
 	end
 
 	filter { "system:windows" }
@@ -686,7 +685,6 @@ solution "cnq3"
 		kind "StaticLib"
 		language "C++"
 		AddSourcesAndHeaders("renderer")
-		includedirs { path_src.."/freetype/include" }
 		ApplyLibProjectSettings()
 		filter "action:gmake"
 			buildoptions { "-std=c++98" }
@@ -696,28 +694,3 @@ solution "cnq3"
 		kind "StaticLib"
 		language "C"
 		ApplyLibJpegTurboProjectSettings()
-
-	project "freetype"
-
-		local ft_sources =
-		{
-			"base/ftbbox.c",
-			"base/ftsynth.c",
-			"base/ftbase.c",
-			"base/ftglyph.c",
-			"base/ftinit.c",
-			"base/ftstroke.c",
-			"base/ftsystem.c",
-			"sfnt/sfnt.c",
-			"smooth/smooth.c",
-			"truetype/truetype.c"
-		}
-
-		kind "StaticLib"
-		language "C"
-		AddSourcesFromArray("freetype/src", ft_sources)
-		includedirs { path_src.."/freetype/include" }
-		defines { "_LIB", "FT2_BUILD_LIBRARY", "_BIND_TO_CURRENT_VCLIBS_VERSION=1" }
-		ApplyLibProjectSettings()
-		filter "action:vs*"
-			buildoptions { "/wd4324" } -- "structure was padded due to __declspec(align())"

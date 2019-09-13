@@ -236,10 +236,6 @@ qhandle_t trap_R_RegisterShaderNoMip( const char *name ) {
 	return syscall( CG_R_REGISTERSHADERNOMIP, name );
 }
 
-qboolean trap_R_RegisterFont( const char* fontName, int pointSize, fontInfo_t* font ) {
-	return syscall( CG_R_REGISTERFONT, fontName, pointSize, font );
-}
-
 void	trap_R_ClearScene( void ) {
 	syscall( CG_R_CLEARSCENE );
 }
