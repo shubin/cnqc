@@ -1,6 +1,8 @@
 
 DD Mmm 19 - 1.52
 
+chg: SSE2 instruction set support is now required
+
 chg: removed FreeType 2 and the unused R_REGISTERFONT syscalls that were using it
 
 fix: r_monitor on Linux is now 0-based and the value doesn't change incorrectly on its own anymore

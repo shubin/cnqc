@@ -232,6 +232,9 @@ local function ApplyProjectSettings(outputExe)
 		buildoptions { "/GL"  }
 		linkoptions { "" }
 
+	filter { "action:vs*", "platforms:x32" }
+		buildoptions { "/arch:SSE2" }
+
 	-- disable the "conversion from 'X' to 'Y', possible loss of data" warning
 	-- this should be removed once the x64 port is complete
 	filter { "action:vs*", "platforms:x64" }
@@ -256,6 +259,9 @@ local function ApplyProjectSettings(outputExe)
 	filter { "action:gmake", "configurations:release" }
 		buildoptions { "-g1" }
 		linkoptions { "" }
+
+	filter { "action:gmake", "platforms:x32" }
+		buildoptions { "-mmmx -msse -msse2" }
 
 end
 

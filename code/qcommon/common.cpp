@@ -2108,31 +2108,27 @@ typedef struct {
 	int reg;
 	int bit;
 	int flag;
-	qbool noTest;
+	qbool required;
 } cpuFeatureBit_t;
 
-#if idx64
-#define IS_X64 qtrue
-#define BASIC_CPU_FEATURES (CPU_MMX | CPU_SSE | CPU_SSE2)
-#else
-#define IS_X64 qfalse
-#define BASIC_CPU_FEATURES 0
-#endif
 
 static const cpuFeatureBit_t cpu_featureBits[] = {
-	{ " MMX", 3, 23, CPU_MMX, IS_X64 },
-	{ " SSE", 3, 25, CPU_SSE, IS_X64 },
-	{ " SSE2", 3, 26, CPU_SSE2, IS_X64 },
-// the following aren't used anywhere for now:
-//	{ " SSE3", 2, 0, CPU_SSE3, qfalse },
-//	{ " SSSE3", 2, 9, CPU_SSSE3, qfalse },
-//	{ " SSE4.1", 2, 19, CPU_SSE41, qfalse },
-//	{ " SSE4.2", 2, 20, CPU_SSE42, qfalse },
+#if id386
+	{ " MMX",    3, 23, 0,         qtrue },
+	{ " SSE",    3, 25, 0,         qtrue },
+	{ " SSE2",   3, 26, 0,         qtrue },
+#endif
+	{ " SSE3",   2,  0, CPU_SSE3,  qfalse },
+	{ " SSSE3",  2,  9, CPU_SSSE3, qfalse },
+	{ " SSE4.1", 2, 19, CPU_SSE41, qfalse },
+	{ " SSE4.2", 2, 20, CPU_SSE42, qfalse }
+// we want to avoid AVX for anything that isn't really super costly
+// because otherwise the power management changes will be counter-productive
 //	{ " AVX", 2, 28, CPU_AVX, qfalse }
 // for AVX2 and later, you'd need to call cpuid with eax=7 and ecx=0 ("extended features")
 };
 
-int cpu_features = BASIC_CPU_FEATURES;
+int cpu_features = 0;
 
 static qbool Com_GetProcessorInfo()
 {
@@ -2141,18 +2137,22 @@ static qbool Com_GetProcessorInfo()
 	int regs[4];
 	const char* name = Com_ProcessorName();
 	if ( name == NULL || !Com_CPUID( 1, regs ) ) {
-		cpu_features = BASIC_CPU_FEATURES;
 		return qfalse;
 	}
 
 	char s[256] = "";
 	Q_strcat( s, sizeof(s), name );
 
-	int features = BASIC_CPU_FEATURES;
+	int features = 0;
 	for (int i = 0; i < ARRAY_LEN(cpu_featureBits); i++) {
 		const cpuFeatureBit_t* f = cpu_featureBits + i;
+		const qbool active = ( regs[f->reg] & ( 1 << f->bit ) ) != 0;
 
-		if ( f->noTest || (regs[f->reg] & (1 << f->bit)) ) {
+		if ( f->required && !active ) {
+			Com_Error( ERR_FATAL, "CNQ3 requires a processor with SSE2 support\n" );
+		}
+
+		if ( active ) {
 			Q_strcat( s, sizeof(s), f->s );
 			features |= f->flag;
 		}
@@ -2164,9 +2164,6 @@ static qbool Com_GetProcessorInfo()
 
 	return qtrue;
 }
-
-#undef BASIC_CPU_FEATURES
-#undef IS_X64
 
 
 static const cmdTableItem_t com_cmds[] =

@@ -247,9 +247,10 @@ VIRTUAL MACHINE
 */
 
 typedef enum {
-	CPU_MMX  = (1 << 0),
-	CPU_SSE  = (1 << 1),
-	CPU_SSE2 = (1 << 2)
+	CPU_SSE3  = (1 << 0),
+	CPU_SSSE3 = (1 << 1),
+	CPU_SSE41 = (1 << 2),
+	CPU_SSE42 = (1 << 3)
 } cpuFeatureFlags_t;
 
 extern int cpu_features;

@@ -29,6 +29,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define id386 0
 #define idppc 0
 #define idx64 0
+#define idSSE2 0
 
 #else
 
@@ -42,6 +43,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define idx64 1
 #else
 #define idx64 0
+#endif
+
+#if id386 || idx64
+#define idSSE2 1
+#else
+#define idSSE2 0
 #endif
 
 #if (defined(powerc) || defined(powerpc) || defined(ppc) || \

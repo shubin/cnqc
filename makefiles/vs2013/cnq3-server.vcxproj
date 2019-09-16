@@ -110,7 +110,7 @@
       <ExceptionHandling>false</ExceptionHandling>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
-      <AdditionalOptions>/Gm %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/Gm /arch:SSE2 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -175,7 +175,7 @@ copy "..\..\.bin\debug_x64\cnq3-server-x64.pdb" "$(QUAKE3DIR)"</Command>
       <FloatingPointModel>Fast</FloatingPointModel>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalOptions>/GL %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/GL /arch:SSE2 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
