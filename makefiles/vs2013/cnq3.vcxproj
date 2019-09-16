@@ -273,7 +273,6 @@ copy "..\..\.bin\release_x64\cnq3-x64.pdb" "$(QUAKE3DIR)"</Command>
     <ClInclude Include="..\..\code\client\snd_codec.h" />
     <ClInclude Include="..\..\code\client\snd_local.h" />
     <ClInclude Include="..\..\code\client\snd_public.h" />
-    <ClInclude Include="..\..\code\game\bg_public.h" />
     <ClInclude Include="..\..\code\qcommon\cg_public.h" />
     <ClInclude Include="..\..\code\qcommon\cm_local.h" />
     <ClInclude Include="..\..\code\qcommon\cm_patch.h" />

@@ -7,9 +7,6 @@
     <Filter Include="client">
       <UniqueIdentifier>{8461ABF6-7003-D6CC-59BE-E92045FF5C1D}</UniqueIdentifier>
     </Filter>
-    <Filter Include="game">
-      <UniqueIdentifier>{9F35977C-8B6C-980D-3459-7E10206F140F}</UniqueIdentifier>
-    </Filter>
     <Filter Include="qcommon">
       <UniqueIdentifier>{7F6839ED-EB47-B888-F45F-435F60BE1EEA}</UniqueIdentifier>
     </Filter>
@@ -140,9 +137,6 @@
     </ClInclude>
     <ClInclude Include="..\..\code\client\snd_public.h">
       <Filter>client</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\code\game\bg_public.h">
-      <Filter>game</Filter>
     </ClInclude>
     <ClInclude Include="..\..\code\qcommon\cg_public.h">
       <Filter>qcommon</Filter>
