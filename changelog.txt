@@ -89,6 +89,8 @@ chg: r_textureMode and r_measureOverdraw were removed
 
 chg: r_speeds 1 now reports more precise timings, V-Sync status, GPU time and the selected back-end
 
+chg: using the roundss SSE4.1 instruction for inlining floor and ceil syscalls when possible
+
 chg: improved face and grid processing performance with SSE2
 
 chg: r_lightmap is now latched again

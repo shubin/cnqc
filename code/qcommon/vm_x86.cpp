@@ -863,6 +863,24 @@ static void EmitDATAFunc(vm_t *vm)
 }
 
 
+static qbool IsFloorTrap(vm_t *vm, int trap)
+{
+	if ( vm->index == VM_CGAME || vm->index == VM_UI )
+		return trap == ~107;
+
+	return trap == ~110; // VM_GAME
+}
+
+
+static qbool IsCeilTrap(vm_t *vm, int trap)
+{
+	if ( vm->index == VM_CGAME || vm->index == VM_UI )
+		return trap == ~108;
+
+	return trap == ~111; // VM_GAME
+}
+
+
 /*
 =================
 ConstOptimize
@@ -1111,6 +1129,20 @@ static qboolean ConstOptimize(vm_t *vm)
 			EmitString( "f3 0f 10 45 08" );		// movss xmm0, dword ptr [ebp + 8]
 			EmitAddEDI4( vm );
 			EmitString( "f3 0f 51 c0" );		// sqrtss xmm0, xmm0
+			EmitCommand( LAST_COMMAND_STORE_FLOAT_EDI );
+			ip += 1;
+			return qtrue;
+		} else if ( IsFloorTrap( vm, v ) && ( cpu_features & CPU_SSE41 ) != 0 ) {
+			EmitString( "f3 0f 10 45 08" );		// movss xmm0, dword ptr [ebp + 8]
+			EmitAddEDI4( vm );
+			EmitString( "66 0f 3a 0a c0 01" );	// roundss xmm0, xmm0, 1 (exceptions not masked)
+			EmitCommand( LAST_COMMAND_STORE_FLOAT_EDI );
+			ip += 1;
+			return qtrue;
+		} else if ( IsCeilTrap( vm, v ) && ( cpu_features & CPU_SSE41 ) != 0 ) {
+			EmitString( "f3 0f 10 45 08" );		// movss xmm0, dword ptr [ebp + 8]
+			EmitAddEDI4( vm );
+			EmitString( "66 0f 3a 0a c0 02" );	// roundss xmm0, xmm0, 2 (exceptions not masked)
 			EmitCommand( LAST_COMMAND_STORE_FLOAT_EDI );
 			ip += 1;
 			return qtrue;

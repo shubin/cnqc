@@ -764,46 +764,46 @@ static intptr_t SV_GameSystemCalls( intptr_t* args )
 	case BOTLIB_AI_GENETIC_PARENTS_AND_CHILD_SELECTION:
 		return botlib_export->ai.GeneticParentsAndChildSelection(args[1], VMA(2), VMA(3), VMA(4), VMA(5));
 
-	case TRAP_MEMSET:
+	case G_MEMSET:
 		Com_Memset( VMA(1), args[2], args[3] );
 		return 0;
 
-	case TRAP_MEMCPY:
+	case G_MEMCPY:
 		Com_Memcpy( VMA(1), VMA(2), args[3] );
 		return 0;
 
-	case TRAP_STRNCPY:
+	case G_STRNCPY:
 		strncpy( VMA(1), VMA(2), args[3] );
 		return args[1];
 
-	case TRAP_SIN:
+	case G_SIN:
 		return PASSFLOAT( sin( VMF(1) ) );
 
-	case TRAP_COS:
+	case G_COS:
 		return PASSFLOAT( cos( VMF(1) ) );
 
-	case TRAP_ATAN2:
+	case G_ATAN2:
 		return PASSFLOAT( atan2( VMF(1), VMF(2) ) );
 
-	case TRAP_SQRT:
+	case G_SQRT:
 		return PASSFLOAT( sqrt( VMF(1) ) );
 
-	case TRAP_MATRIXMULTIPLY:
+	case G_MATRIXMULTIPLY:
 		MatrixMultiply( VMA(1), VMA(2), VMA(3) );
 		return 0;
 
-	case TRAP_ANGLEVECTORS:
+	case G_ANGLEVECTORS:
 		AngleVectors( VMA(1), VMA(2), VMA(3), VMA(4) );
 		return 0;
 
-	case TRAP_PERPENDICULARVECTOR:
+	case G_PERPENDICULARVECTOR:
 		PerpendicularVector( VMA(1), VMA(2) );
 		return 0;
 
-	case TRAP_FLOOR:
+	case G_FLOOR:
 		return PASSFLOAT( floor( VMF(1) ) );
 
-	case TRAP_CEIL:
+	case G_CEIL:
 		return PASSFLOAT( ceil( VMF(1) ) );
 
 	// extensions

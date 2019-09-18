@@ -270,15 +270,8 @@ typedef enum {
 	TRAP_SIN,
 	TRAP_COS,
 	TRAP_ATAN2,
-	TRAP_SQRT,
-	TRAP_MATRIXMULTIPLY,
-	TRAP_ANGLEVECTORS,
-	TRAP_PERPENDICULARVECTOR,
-	TRAP_FLOOR,
-	TRAP_CEIL,
-
-	TRAP_TESTPRINTINT,
-	TRAP_TESTPRINTFLOAT
+	TRAP_SQRT
+	// note that ceil/floor etc have different numbers across VMs
 } sharedTraps_t;
 
 typedef enum {
