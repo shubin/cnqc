@@ -80,16 +80,24 @@ static byte s_intensitytable[256];
 
 void R_ImageList_f( void )
 {
+	const char* const match = Cmd_Argc() > 1 ? Cmd_Argv( 1 ) : NULL;
+
 	ri.Printf( PRINT_ALL, "\nwide high MPI W format name\n" );
 
-	int totalPixelCount = 0;
+	int totalByteCount = 0;
+	int imageCount = 0;
 	for ( int i = 0; i < tr.numImages; ++i ) {
-		const image_t* const image = tr.images[i];
-		const int pixelCount = image->width * image->height;
+		const image_t* image = tr.images[i];
+
+		if ( match && !Com_Filter( match, image->name ) )
+			continue;
+
+		const int byteCount = image->width * image->height * (image->format == TF_RGBA8 ? 4 : 1);
 		if ( !(image->flags & IMG_NOMIPMAP) && (image->width > 1) && (image->height > 1) )
-			totalPixelCount += pixelCount * 1.33f; // will overestimate, but that's what we want anyway
+			totalByteCount += (byteCount * 4) / 3; // not exact, but good enough
 		else
-			totalPixelCount += pixelCount;
+			totalByteCount += byteCount;
+		imageCount++;
 
 		ri.Printf( PRINT_ALL, "%4i %4i %c%c%c ",
 			image->width, image->height,
@@ -112,10 +120,17 @@ void R_ImageList_f( void )
 		ri.Printf( PRINT_ALL, " %s\n", image->name );
 	}
 
+	const char* units[] = { "KB", "MB", "GB", "TB" };
+	int amount = totalByteCount >> 10;
+	int unit = 0;
+	while ( amount >= 1024 ) {
+		amount >>= 10;
+		++unit;
+	}
+
 	ri.Printf( PRINT_ALL, "---------\n" );
-	ri.Printf( PRINT_ALL, "%i images\n", tr.numImages );
-	// just assume/pretend that everything is 4-component
-	ri.Printf( PRINT_ALL, "Estimated VRAM use: %iMB\n\n", totalPixelCount / (1024 * 1024 / 4) );
+	ri.Printf( PRINT_ALL, "%i images found\n", imageCount );
+	ri.Printf( PRINT_ALL, "Estimated VRAM use: %i %s\n\n", amount, units[unit] );
 }
 
 
@@ -995,9 +1010,16 @@ void R_SkinList_f( void )
 {
 	ri.Printf( PRINT_ALL, "------------------\n" );
 
+	const char* const match = Cmd_Argc() > 1 ? Cmd_Argv( 1 ) : NULL;
+
+	int skinCount = 0;
 	for (int i = 0; i < tr.numSkins; ++i) {
 		const skin_t* skin = tr.skins[i];
 
+		if ( match && !Com_Filter( match, skin->name ) )
+			continue;
+
+		skinCount++;
 		ri.Printf( PRINT_ALL, "%3i:%s\n", i, skin->name );
 		for (int j = 0; j < skin->numSurfaces; ++j) {
 			ri.Printf( PRINT_ALL, "       %s = %s\n",
@@ -1005,6 +1027,7 @@ void R_SkinList_f( void )
 		}
 	}
 
+	ri.Printf( PRINT_ALL, "%i skins found\n", skinCount );
 	ri.Printf( PRINT_ALL, "------------------\n" );
 }
 

@@ -2480,13 +2480,16 @@ const shader_t* R_GetShaderByHandle( qhandle_t hShader )
 
 void R_ShaderList_f( void )
 {
-	int i;
+	const char* const match = Cmd_Argc() > 1 ? Cmd_Argv( 1 ) : NULL;
 
-	ri.Printf( PRINT_ALL, "S P L E func   name \n" );
+	ri.Printf( PRINT_ALL, "S P L E func order   name \n" );
 
 	int count = 0;
-	for ( i = 0 ; i < tr.numShaders ; i++ ) {
-		const shader_t* sh = (ri.Cmd_Argc() > 1) ? tr.sortedShaders[i] : tr.shaders[i];
+	for ( int i = 0 ; i < tr.numShaders ; i++ ) {
+		const shader_t* sh = tr.sortedShaders[i];
+
+		if ( match && !Com_Filter( match, sh->name ) )
+			continue;
 
 		int passes = sh->numStages;
 		for ( int s = 0; s < sh->numStages; ++s )
@@ -2511,6 +2514,8 @@ void R_ShaderList_f( void )
 			ri.Printf( PRINT_ALL, "    " );
 		}
 
+		ri.Printf( PRINT_ALL, "%5.2f ", sh->sort );
+
 		if ( sh->defaultShader ) {
 			ri.Printf( PRINT_ALL,  ": %s (DEFAULTED)\n", sh->name );
 		} else {
@@ -2519,7 +2524,7 @@ void R_ShaderList_f( void )
 		count++;
 	}
 
-	ri.Printf( PRINT_ALL, "%i total shaders\n", count );
+	ri.Printf( PRINT_ALL, "%i shaders found\n", count );
 	ri.Printf( PRINT_ALL, "--------------------\n" );
 }
 
