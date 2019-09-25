@@ -383,6 +383,7 @@ struct shader_t {
 
 	qbool		entityMergable;			// multiple refentities can be combined in one batch (smoke, blood)
 
+	qbool		isSky;
 	skyParms_t	sky;
 	fogParms_t	fogParms;
 

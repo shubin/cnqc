@@ -1151,6 +1151,7 @@ static void ParseSkyParms( const char** text )
 	}
 
 	shader.sort = SS_ENVIRONMENT;
+	shader.isSky = qtrue;
 }
 
 
@@ -1443,7 +1444,7 @@ static qbool ParseShader( const char** text )
 	//
 	// ignore shaders that don't have any stages, unless it is a sky or fog
 	//
-	if ( !s && (shader.sort != SS_ENVIRONMENT) && !(shader.contentFlags & CONTENTS_FOG) ) {
+	if ( s == 0 && !shader.isSky && !(shader.contentFlags & CONTENTS_FOG ) ) {
 		return qfalse;
 	}
 
@@ -2176,9 +2177,8 @@ static shader_t* FinishShader()
 	}
 */
 
-	// fogonly shaders don't have any normal passes
-	// !!! nor does sky, and this is utterly retarded logic in the first place
-	if ( !stage && (shader.sort == SS_BAD) ) {
+	// non-sky fog-only shaders don't have any normal passes
+	if ( !shader.isSky && stage == 0 ) {
 		shader.sort = SS_FOG;
 	}
 
