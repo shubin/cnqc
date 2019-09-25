@@ -398,6 +398,32 @@ static const char* GL2_GetFBOStatusString( GLenum status )
 #undef CASE
 
 
+void GL_GetRenderTargetFormat( GLenum* internalFormat, GLenum* format, GLenum* type, int cnq3Format )
+{
+	switch( cnq3Format )
+	{
+		case RTCF_R10G10B10A2:
+			*internalFormat = GL_RGB10_A2;
+			*format = GL_BGRA;
+			*type = GL_UNSIGNED_INT_2_10_10_10_REV;
+			break;
+
+		case RTCF_R16G16B16A16:
+			*internalFormat = GL_RGBA16;
+			*format = GL_BGRA;
+			*type = GL_UNSIGNED_SHORT;
+			break;
+
+		case RTCF_R8G8B8A8:
+		default:
+			*internalFormat = GL_RGBA8;
+			*format = GL_BGRA;
+			*type = GL_UNSIGNED_BYTE;
+			break;
+	}
+}
+
+
 static qbool GL2_FBO_CreateSS( FrameBuffer& fb, qbool depthStencil )
 {
 	while ( glGetError() != GL_NO_ERROR ) {} // clear the error queue
@@ -411,11 +437,13 @@ static qbool GL2_FBO_CreateSS( FrameBuffer& fb, qbool depthStencil )
 		GL(glTexImage2D( GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, glConfig.vidWidth, glConfig.vidHeight, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL ));
 	}
 
+	GLenum internalFormat, format, type;
+	GL_GetRenderTargetFormat( &internalFormat, &format, &type, r_rtColorFormat->integer );
 	GL(glGenTextures( 1, &fb.color ));
 	GL(glBindTexture( GL_TEXTURE_2D, fb.color ));
 	GL(glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR ));
 	GL(glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR ));
-	GL(glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA8, glConfig.vidWidth, glConfig.vidHeight, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL ));
+	GL(glTexImage2D( GL_TEXTURE_2D, 0, internalFormat, glConfig.vidWidth, glConfig.vidHeight, 0, format, type, NULL ));
 
 	GL(glGenFramebuffers( 1, &fb.fbo ));
 	GL(glBindFramebuffer( GL_FRAMEBUFFER, fb.fbo ));
@@ -446,9 +474,11 @@ static qbool GL2_FBO_CreateMS( FrameBuffer& fb )
 	GL(glGenFramebuffers( 1, &fb.fbo ));
 	GL(glBindFramebuffer( GL_FRAMEBUFFER, fb.fbo ));
 
+	GLenum internalFormat, format, type;
+	GL_GetRenderTargetFormat( &internalFormat, &format, &type, r_rtColorFormat->integer );
 	GL(glGenRenderbuffers( 1, &fb.color ));
 	GL(glBindRenderbuffer( GL_RENDERBUFFER, fb.color ));
-	GL(glRenderbufferStorageMultisample( GL_RENDERBUFFER, r_msaa->integer, GL_RGBA8, glConfig.vidWidth, glConfig.vidHeight ));
+	GL(glRenderbufferStorageMultisample( GL_RENDERBUFFER, r_msaa->integer, internalFormat, glConfig.vidWidth, glConfig.vidHeight ));
 	GL(glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, fb.color ));
 
 	GL(glGenRenderbuffers( 1, &fb.depthStencil ));

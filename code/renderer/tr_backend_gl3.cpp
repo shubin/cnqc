@@ -823,6 +823,8 @@ static qbool CreateComputeProgram(Program* prog, const char* cs, const char* deb
 	return qfalse;
 }
 
+extern void GL_GetRenderTargetFormat(GLenum* internalFormat, GLenum* format, GLenum* type, int cnq3Format);
+
 static void FBO_CreateSS(FrameBuffer* fb, qbool color, qbool depthStencil, const char* name)
 {
 	if(depthStencil)
@@ -837,11 +839,13 @@ static void FBO_CreateSS(FrameBuffer* fb, qbool color, qbool depthStencil, const
 
 	if(color)
 	{
+		GLenum internalFormat, format, type;
+		GL_GetRenderTargetFormat(&internalFormat, &format, &type, r_rtColorFormat->integer);
 		glGenTextures(1, &fb->color);
 		glBindTexture(GL_TEXTURE_2D, fb->color);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, glConfig.vidWidth, glConfig.vidHeight, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, glConfig.vidWidth, glConfig.vidHeight, 0, format, type, NULL);
 		SetDebugName(GL_TEXTURE, fb->color, va("%s color attachment 0", name));
 	}
 	
@@ -875,9 +879,11 @@ static void FBO_CreateMS(FrameBuffer* fb, const char* name)
 	glGenFramebuffers(1, &fb->fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, fb->fbo);
 
+	GLenum internalFormat, format, type;
+	GL_GetRenderTargetFormat(&internalFormat, &format, &type, r_rtColorFormat->integer);
 	glGenRenderbuffers(1, &fb->color);
 	glBindRenderbuffer(GL_RENDERBUFFER, fb->color);
-	glRenderbufferStorageMultisample(GL_RENDERBUFFER, r_msaa->integer, GL_RGBA8, glConfig.vidWidth, glConfig.vidHeight);
+	glRenderbufferStorageMultisample(GL_RENDERBUFFER, r_msaa->integer, internalFormat, glConfig.vidWidth, glConfig.vidHeight);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, fb->color);
 	SetDebugName(GL_RENDERBUFFER, fb->color, va("%s color attachment 0", name));
 

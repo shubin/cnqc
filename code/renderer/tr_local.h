@@ -930,6 +930,12 @@ extern trGlobals_t	tr;
 #define BLITMODE_STRETCHED	2	// dumb stretch, takes the full screen
 #define BLITMODE_MAX		2
 
+// r_rtColorFormat
+#define RTCF_R8G8B8A8		0
+#define RTCF_R10G10B10A2	1
+#define RTCF_R16G16B16A16	2
+#define RTCF_MAX			2
+
 // r_gl3_geoStream
 #define GL3MAP_AUTO			0
 #define GL3MAP_SUBDATA		1
@@ -979,6 +985,7 @@ extern cvar_t	*r_softSprites;			// draws certain surfaces as depth particles
 extern cvar_t	*r_gpuMipGen;			// uses GPU-side mip-map generation
 extern cvar_t	*r_alphaToCoverage;		// enables A2C on alpha-tested surfaces
 extern cvar_t	*r_dither;				// enables dithering
+extern cvar_t	*r_rtColorFormat;		// see RTCF_*
 
 extern cvar_t	*r_mipGenFilter;			// if the string is invalid, Lanczos 4 is used
 extern cvar_t	*r_mipGenGamma;				// what gamma-space do we consider the textures to be in

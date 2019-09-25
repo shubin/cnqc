@@ -71,6 +71,11 @@ add: r_khr_debug <0|1|2> (default: 2) decides whether to create an OpenGL debug 
   r_khr_debug 0 = forced OFF
   r_khr_debug 1 = forced ON
   r_khr_debug 2 = only in debug builds
+
+add: r_rtColorFormat <0|1|2> (default: 0) selects the color format for render targets
+  r_rtColorFormat 0 = R8G8B8A8
+  r_rtColorFormat 1 = R10G10B10A2
+  r_rtColorFormat 2 = R16G16B16A16
   
 add: r_mapBrightness now works on q3map2's external lightmap atlas images
 

@@ -151,3 +151,8 @@ S_COLOR_VAL "    T2  " S_COLOR_HELP "= Tent 2 (1/3 2/3, same as the CPU version)
 "dithering noise strength\n" \
 "The dithering on/off switch is " S_COLOR_CVAR "r_dither" S_COLOR_HELP "."
 
+#define help_r_rtColorFormat \
+"render target color format\n" \
+S_COLOR_VAL "    0 " S_COLOR_HELP "= R8G8B8A8\n" \
+S_COLOR_VAL "    1 " S_COLOR_HELP "= R10G10B10A2\n" \
+S_COLOR_VAL "    2 " S_COLOR_HELP "= R16G16B16A16"

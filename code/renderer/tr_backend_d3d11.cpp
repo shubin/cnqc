@@ -278,6 +278,11 @@ struct Direct3D
 	texEnv_t texEnv;
 	float frameSeed[2];
 
+	DXGI_FORMAT formatColorRT;
+	DXGI_FORMAT formatDepth;     // float: DXGI_FORMAT_R32_TYPELESS
+	DXGI_FORMAT formatDepthRTV;  // float: DXGI_FORMAT_R32_FLOAT
+	DXGI_FORMAT formatDepthView; // float: DXGI_FORMAT_D32_FLOAT
+
 	Texture textures[MAX_DRAWIMAGES];
 	int textureCount;
 
@@ -537,6 +542,17 @@ static D3D11_BLEND GetDestinationBlend(unsigned int stateBits)
 		case GLS_DSTBLEND_DST_ALPHA: return D3D11_BLEND_DEST_ALPHA;
 		case GLS_DSTBLEND_ONE_MINUS_DST_ALPHA: return D3D11_BLEND_INV_DEST_ALPHA;
 		default: return D3D11_BLEND_ONE;
+	}
+}
+
+static DXGI_FORMAT GetRenderTargetColorFormat(int format)
+{
+	switch(format)
+	{
+		case RTCF_R8G8B8A8: return DXGI_FORMAT_R8G8B8A8_UNORM;
+		case RTCF_R10G10B10A2: return DXGI_FORMAT_R10G10B10A2_UNORM;
+		case RTCF_R16G16B16A16: return DXGI_FORMAT_R16G16B16A16_UNORM;
+		default: return DXGI_FORMAT_R8G8B8A8_UNORM;
 	}
 }
 
@@ -979,7 +995,9 @@ static void FindBestAvailableAA(DXGI_SAMPLE_DESC* sampleDesc)
 	while(sampleDesc->Count > 0)
 	{
 		UINT levelCount = 0;
-		if(SUCCEEDED(d3d.device->CheckMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, sampleDesc->Count, &levelCount)) &&
+		if(SUCCEEDED(d3d.device->CheckMultisampleQualityLevels(d3d.formatColorRT, sampleDesc->Count, &levelCount)) &&
+		   levelCount > 0 &&
+		   SUCCEEDED(d3d.device->CheckMultisampleQualityLevels(d3d.formatDepth, sampleDesc->Count, &levelCount)) &&
 		   levelCount > 0)
 		   break;
 
@@ -1045,6 +1063,11 @@ create_device:
 	}
 	Check(hr, "D3D11CreateDeviceAndSwapChain");
 
+	d3d.formatColorRT = GetRenderTargetColorFormat(r_rtColorFormat->integer);
+	d3d.formatDepth = DXGI_FORMAT_R24G8_TYPELESS;
+	d3d.formatDepthRTV = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+	d3d.formatDepthView = DXGI_FORMAT_D24_UNORM_S8_UINT;
+
 	D3D11_TEXTURE2D_DESC readbackTexDesc;
 	ZeroMemory(&readbackTexDesc, sizeof(readbackTexDesc));
 	readbackTexDesc.Width = glConfig.vidWidth;
@@ -1083,7 +1106,7 @@ create_device:
 	renderTargetTexDesc.Height = glConfig.vidHeight;
 	renderTargetTexDesc.MipLevels = 1;
 	renderTargetTexDesc.ArraySize = 1;
-	renderTargetTexDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	renderTargetTexDesc.Format = d3d.formatColorRT;
 	renderTargetTexDesc.SampleDesc.Count = sampleDesc.Count;
 	renderTargetTexDesc.SampleDesc.Quality = sampleDesc.Quality;
 	renderTargetTexDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -1103,7 +1126,7 @@ create_device:
 	renderTargetTexDesc.Height = glConfig.vidHeight;
 	renderTargetTexDesc.MipLevels = 1;
 	renderTargetTexDesc.ArraySize = 1;
-	renderTargetTexDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	renderTargetTexDesc.Format = d3d.formatColorRT;
 	renderTargetTexDesc.SampleDesc.Count = 1;
 	renderTargetTexDesc.SampleDesc.Quality = 0;
 	renderTargetTexDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -1126,8 +1149,7 @@ create_device:
 	depthStencilTexDesc.Height = glConfig.vidHeight;
 	depthStencilTexDesc.MipLevels = 1;
 	depthStencilTexDesc.ArraySize = 1;
-	//depthStencilTexDesc.Format = DXGI_FORMAT_R32_TYPELESS; // DXGI_FORMAT_R24G8_TYPELESS
-	depthStencilTexDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
+	depthStencilTexDesc.Format = d3d.formatDepth;
 	depthStencilTexDesc.SampleDesc.Count = sampleDesc.Count;
 	depthStencilTexDesc.SampleDesc.Quality = sampleDesc.Quality;
 	depthStencilTexDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -1138,16 +1160,14 @@ create_device:
 
 	D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc;
 	ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
-	//depthStencilViewDesc.Format = DXGI_FORMAT_D32_FLOAT; // DXGI_FORMAT_D24_UNORM_S8_UINT
-	depthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	depthStencilViewDesc.Format = d3d.formatDepthView;
 	depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DMS;
 	depthStencilViewDesc.Texture2D.MipSlice = 0;
 	hr = d3d.device->CreateDepthStencilView(d3d.depthStencilTexture, &depthStencilViewDesc, &d3d.depthStencilView);
 	CheckAndName(hr, "CreateDepthStencilView", d3d.depthStencilView, "depth stencil view");
 
 	ZeroMemory(&srvDesc, sizeof(srvDesc));
-	//srvDesc.Format = DXGI_FORMAT_R32_FLOAT; // DXGI_FORMAT_R24_UNORM_X8_TYPELESS
-	srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+	srvDesc.Format = d3d.formatDepthRTV;
 	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DMS;
 	D3D11_CreateShaderResourceView(d3d.depthStencilTexture, &srvDesc, &d3d.depthStencilShaderView, "depth stencil shader resource view");
 
@@ -1776,7 +1796,7 @@ static void GAL_EndFrame()
 		}
 	}
 
-	d3d.context->ResolveSubresource(d3d.resolveTexture, 0, d3d.renderTargetTextureMS, 0, DXGI_FORMAT_R8G8B8A8_UNORM);
+	d3d.context->ResolveSubresource(d3d.resolveTexture, 0, d3d.renderTargetTextureMS, 0, d3d.formatColorRT);
 	d3d.postPSData.gamma = 1.0f / r_gamma->value;
 	d3d.postPSData.brightness = r_brightness->value;
 	d3d.postPSData.greyscale = r_greyscale->value;
