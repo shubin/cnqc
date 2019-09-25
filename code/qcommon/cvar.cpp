@@ -304,8 +304,13 @@ static cvar_t* Cvar_Set2( const char *var_name, const char *value, qbool force )
 	}
 
 	const qbool okValue = Cvar_IsValidValue(var, value, qtrue);
-	if (okValue && !strcmp(value, var->string))
+	if (okValue && !strcmp(value, var->string)) {
+		if (var->latchedString) {
+			Z_Free(var->latchedString);
+			var->latchedString = NULL;
+		}
 		return var;
+	}
 
 	if (!okValue) {
 		if (!Cvar_IsValidValue(var, var->resetString, qfalse))

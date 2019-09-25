@@ -3,6 +3,8 @@ DD Mmm 19 - 1.52
 
 fix: r_monitor on Linux is now 0-based and the value doesn't change incorrectly on its own anymore
 
+fix: when a latched cvar's value is set to its default, the cvar is no longer marked as changed
+
 
 31 Mar 19 - 1.51
 
