@@ -274,7 +274,7 @@ local function ApplyProjectSettings(outputExe)
 		buildoptions { "-Wno-unused-parameter -Wno-write-strings" }
 		linkoptions { "" }
 
-	filter { "action:gmake", "configurations:rebug" }
+	filter { "action:gmake", "configurations:debug" }
 		buildoptions { "" }
 		linkoptions { "" }
 
