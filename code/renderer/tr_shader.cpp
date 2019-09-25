@@ -2351,7 +2351,11 @@ shader_t* R_FindShader( const char *name, int lightmapIndex, qbool mipRawImage )
 	stages[0].type = ST_DIFFUSE;
 	stages[0].bundle.image[0] = image;
 
-	if ( shader.lightmapIndex == LIGHTMAP_NONE ) {
+	if ( shader.lightmapIndex == LIGHTMAP_BROKEN ) {
+		stages[0].rgbGen = CGEN_VERTEX;
+		stages[0].alphaGen = AGEN_VERTEX;
+		stages[0].stateBits = GLS_DEFAULT;
+	} else if ( shader.lightmapIndex == LIGHTMAP_NONE ) {
 		// dynamic colors at vertexes
 		stages[0].rgbGen = CGEN_LIGHTING_DIFFUSE;
 		stages[0].stateBits = GLS_DEFAULT;

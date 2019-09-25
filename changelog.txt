@@ -107,6 +107,8 @@ chg: r_fullbright is now latched again
 
 chg: negative r_swapInterval values will request adaptive v-sync when using an OpenGL back-end
 
+fix: incorrect shader state when loading a map with no lighting
+
 fix: fog-only non-sky shaders were incorrectly handled as sky shaders, which broke fog on many maps
 
 fix: r_monitor on Linux is now 0-based and the value doesn't change incorrectly on its own anymore

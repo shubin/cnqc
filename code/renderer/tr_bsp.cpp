@@ -226,6 +226,8 @@ static void R_GetLightmapTransform( int* number, vec2_t scale, vec2_t bias )
 		scale[1] = 1.0f;
 		bias[0] = 0.0f;
 		bias[1] = 0.0f;
+		if ( *number <= LIGHTMAP_2D || *number >= tr.numLightmaps )
+			*number = LIGHTMAP_BROKEN;
 	}
 }
 

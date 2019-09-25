@@ -328,6 +328,7 @@ typedef struct {
 } shaderStage_t;
 
 
+#define LIGHTMAP_BROKEN		-4		// invalid data in the .bsp file
 #define LIGHTMAP_2D			-3		// shader is for 2D rendering
 #define LIGHTMAP_BY_VERTEX	-2		// pre-lit triangle models
 #define LIGHTMAP_NONE		-1
