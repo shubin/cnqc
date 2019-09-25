@@ -35,7 +35,7 @@ typedef enum {
 
 
 enum {
-	RF_MSEC,
+	RF_USEC,
 	RF_LEAF_CLUSTER,
 	RF_LEAF_AREA,
 	RF_LEAFS,
@@ -68,7 +68,9 @@ enum {
 // so we maintain two sets and switch between them as projection2D changes
 
 enum {
-	RB_MSEC,
+	RB_USEC,
+	RB_USEC_END, // post-process etc. + buffer swap
+	RB_USEC_GPU, // not always available
 
 	RB_VERTICES,
 	RB_INDICES,
@@ -137,7 +139,6 @@ typedef struct {
 
 	// Draw images for cinematic rendering, pass as 32 bit rgba
 	void	(*DrawStretchRaw) (int x, int y, int w, int h, int cols, int rows, const byte *data, int client, qbool dirty);
-	void	(*UploadCinematic) (int w, int h, int cols, int rows, const byte *data, int client, qbool dirty);
 
 	void	(*BeginFrame)( stereoFrame_t stereoFrame );
 
@@ -159,10 +160,11 @@ typedef struct {
 	// when the final model-view matrix is computed, for cl_drawMouseLag
 	int		(*GetCameraMatrixTime)();
 
-	// used for setting low frame-rates temporarily only (e.g. map loads)
-	// maxFPS > 0 -> throttles frame-rate, disables v-sync
-	// maxFPS = 0 -> no throttling       , restores v-sync to whatever it was
-	void	(*SetMaxFPS)( int maxFPS );
+	// qtrue means it should be safe to call any other function
+	qbool	(*Registered)();
+
+	// do we need to sleep this frame to maintain the frame-rate cap?
+	qbool	(*ShouldSleep)();
 } refexport_t;
 
 //
@@ -179,7 +181,12 @@ typedef struct {
 
 	// milliseconds should only be used for profiling, never
 	// for anything game related.  Get time from the refdef
+	// time scaled
 	int		(*Milliseconds)();
+
+	// for profiling only
+	// not time scaled
+	int64_t	(*Microseconds)();
 
 	// stack based memory allocation for per-level things that
 	// won't be freed
@@ -219,9 +226,9 @@ typedef struct {
 	void	(*FS_WriteFile)( const char *qpath, const void *buffer, int size );
 
 	// cinematic stuff
-	void	(*CIN_UploadCinematic)(int handle);
+	qbool	(*CIN_GrabCinematic)( int handle, int* w, int* h, const byte** data, int* client, qbool* dirty );
 	int		(*CIN_PlayCinematic)( const char *arg0, int xpos, int ypos, int width, int height, int bits );
-	e_status (*CIN_RunCinematic)(int handle);
+	e_status (*CIN_RunCinematic)( int handle );
 
 	void	(*CL_WriteAVIVideoFrame)( const byte *buffer, int size );
 } refimport_t;

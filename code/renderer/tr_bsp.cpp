@@ -64,7 +64,7 @@ static void R_ColorShiftLightingBytesRGB( const byte* in, byte* out )
 }
 
 
-static void R_ColorShiftLightingBytes( const byte in[4], byte out[4] )
+void R_ColorShiftLightingBytes( const byte in[4], byte out[4] )
 {
 	R_ColorShiftLightingBytesRGB( in, out );
 	out[3] = in[3];
@@ -156,9 +156,6 @@ static void R_LoadLightmaps( const lump_t* l )
 
 	byte* p = fileBase + l->fileofs;
 
-	// we are about to upload textures
-	R_SyncRenderThread();
-
 	int numFileLightmaps = fileBytes / (LMVirtPageSize * LMVirtPageSize * 3);
 	if ( numFileLightmaps >= MAX_LIGHTMAPS ) {
 		ri.Printf( PRINT_WARNING, "WARNING: number of lightmaps > MAX_LIGHTMAPS\n" );
@@ -178,7 +175,7 @@ static void R_LoadLightmaps( const lump_t* l )
 
 	int i = 0; // lightmapNum
 	for ( int a = 0; a < numAtlases; ++a ) {
-		tr.lightmaps[a] = R_CreateImage( va("*lightmapatlas%i", a), NULL, sizeX, sizeY, GL_RGBA, IMG_LMATLAS, GL_CLAMP );
+		tr.lightmaps[a] = R_CreateImage( va("*lightmapatlas%i", a), NULL, sizeX, sizeY, TF_RGBA8, IMG_LMATLAS, TW_CLAMP_TO_EDGE );
 
 		for ( int t = 0; t < numTilesPerAtlas && i < numFileLightmaps; ++t ) {
 			for ( int y = 0; y < LMVirtPageSize; ++y ) {

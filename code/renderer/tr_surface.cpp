@@ -22,6 +22,13 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // tr_surf.c
 #include "tr_local.h"
 
+#if idSSE2
+#include <emmintrin.h>
+#include <stddef.h> // offsetof macro
+static byte check_srfVertTC[(offsetof(srfVert_t, st2) == offsetof(srfVert_t, st) + 8) ? 1 : -1];
+static byte check_drawVertTC[(offsetof(drawVert_t, lightmap) == offsetof(drawVert_t, st) + 8) ? 1 : -1];
+#endif
+
 /*
 
   THIS ENTIRE FILE IS BACK END
@@ -110,17 +117,17 @@ void RB_AddQuadStampExt( vec3_t origin, vec3_t left, vec3_t up, byte *color, flo
 	tess.normal[ndx][2] = tess.normal[ndx+1][2] = tess.normal[ndx+2][2] = tess.normal[ndx+3][2] = normal[2];
 	
 	// standard square texture coordinates
-	tess.texCoords[ndx][0][0] = tess.texCoords[ndx][1][0] = s1;
-	tess.texCoords[ndx][0][1] = tess.texCoords[ndx][1][1] = t1;
+	tess.texCoords[ndx][0] = tess.texCoords2[ndx][0] = s1;
+	tess.texCoords[ndx][1] = tess.texCoords2[ndx][1] = t1;
 
-	tess.texCoords[ndx+1][0][0] = tess.texCoords[ndx+1][1][0] = s2;
-	tess.texCoords[ndx+1][0][1] = tess.texCoords[ndx+1][1][1] = t1;
+	tess.texCoords[ndx+1][0] = tess.texCoords2[ndx+1][0] = s2;
+	tess.texCoords[ndx+1][1] = tess.texCoords2[ndx+1][1] = t1;
 
-	tess.texCoords[ndx+2][0][0] = tess.texCoords[ndx+2][1][0] = s2;
-	tess.texCoords[ndx+2][0][1] = tess.texCoords[ndx+2][1][1] = t2;
+	tess.texCoords[ndx+2][0] = tess.texCoords2[ndx+2][0] = s2;
+	tess.texCoords[ndx+2][1] = tess.texCoords2[ndx+2][1] = t2;
 
-	tess.texCoords[ndx+3][0][0] = tess.texCoords[ndx+3][1][0] = s1;
-	tess.texCoords[ndx+3][0][1] = tess.texCoords[ndx+3][1][1] = t2;
+	tess.texCoords[ndx+3][0] = tess.texCoords2[ndx+3][0] = s1;
+	tess.texCoords[ndx+3][1] = tess.texCoords2[ndx+3][1] = t2;
 
 	// constant color all the way around
 	// should this be identity and let the shader specify from entity?
@@ -182,8 +189,8 @@ static void RB_SurfacePolychain( const srfPoly_t* p )
 	int numv = tess.numVertexes;
 	for ( i = 0; i < p->numVerts; ++i ) {
 		VectorCopy( p->verts[i].xyz, tess.xyz[numv] );
-		tess.texCoords[numv][0][0] = p->verts[i].st[0];
-		tess.texCoords[numv][0][1] = p->verts[i].st[1];
+		tess.texCoords[numv][0] = p->verts[i].st[0];
+		tess.texCoords[numv][1] = p->verts[i].st[1];
 		*(unsigned*)&tess.vertexColors[numv] = *(unsigned*)p->verts[i].modulate;
 		++numv;
 	}
@@ -205,7 +212,7 @@ static void RB_SurfaceTriangles( srfTriangles_t* surf )
 
 	RB_CHECKOVERFLOW( surf->numVerts, surf->numIndexes );
 
-	glIndex_t* tessIndexes = tess.indexes + tess.numIndexes;
+	unsigned int* tessIndexes = tess.indexes + tess.numIndexes;
 	for ( i = 0; i < surf->numIndexes; ++i )
 		tessIndexes[i] = tess.numVertexes + surf->indexes[i];
 	tess.numIndexes += surf->numIndexes;
@@ -213,12 +220,11 @@ static void RB_SurfaceTriangles( srfTriangles_t* surf )
 	const srfVert_t* v = surf->verts;
 	for ( i = 0, ndx = tess.numVertexes; i < surf->numVerts; ++i, ++v, ++ndx ) {
 		VectorCopy( v->xyz, tess.xyz[ndx] );
-		if ( tess.shader->needsNormal )
-			VectorCopy( v->normal, tess.normal[ndx] );
-		tess.texCoords[ndx][0][0] = v->st[0];
-		tess.texCoords[ndx][0][1] = v->st[1];
-		tess.texCoords[ndx][1][0] = v->st2[0];
-		tess.texCoords[ndx][1][1] = v->st2[1];
+		VectorCopy( v->normal, tess.normal[ndx] );
+		tess.texCoords[ndx][0] = v->st[0];
+		tess.texCoords[ndx][1] = v->st[1];
+		tess.texCoords2[ndx][0] = v->st2[0];
+		tess.texCoords2[ndx][1] = v->st2[1];
 		*(unsigned int *)&tess.vertexColors[ndx] = *(unsigned int *)v->rgba;
 	}
 
@@ -236,33 +242,32 @@ static void RB_LightningBoltFace( const vec3_t start, const vec3_t end, const ve
 
 	// FIXME: use quad stamp?
 	VectorMA( start, spanWidth, up, tess.xyz[tess.numVertexes] );
-	tess.texCoords[tess.numVertexes][0][0] = 0;
-	tess.texCoords[tess.numVertexes][0][1] = 0;
+	tess.texCoords[tess.numVertexes][0] = 0;
+	tess.texCoords[tess.numVertexes][1] = 0;
 	tess.vertexColors[tess.numVertexes][0] = backEnd.currentEntity->e.shaderRGBA[0] * 0.25;
 	tess.vertexColors[tess.numVertexes][1] = backEnd.currentEntity->e.shaderRGBA[1] * 0.25;
 	tess.vertexColors[tess.numVertexes][2] = backEnd.currentEntity->e.shaderRGBA[2] * 0.25;
 	tess.numVertexes++;
 
 	VectorMA( start, -spanWidth, up, tess.xyz[tess.numVertexes] );
-	tess.texCoords[tess.numVertexes][0][0] = 0;
-	tess.texCoords[tess.numVertexes][0][1] = 1;
+	tess.texCoords[tess.numVertexes][0] = 0;
+	tess.texCoords[tess.numVertexes][1] = 1;
 	tess.vertexColors[tess.numVertexes][0] = backEnd.currentEntity->e.shaderRGBA[0];
 	tess.vertexColors[tess.numVertexes][1] = backEnd.currentEntity->e.shaderRGBA[1];
 	tess.vertexColors[tess.numVertexes][2] = backEnd.currentEntity->e.shaderRGBA[2];
 	tess.numVertexes++;
 
 	VectorMA( end, spanWidth, up, tess.xyz[tess.numVertexes] );
-
-	tess.texCoords[tess.numVertexes][0][0] = t;
-	tess.texCoords[tess.numVertexes][0][1] = 0;
+	tess.texCoords[tess.numVertexes][0] = t;
+	tess.texCoords[tess.numVertexes][1] = 0;
 	tess.vertexColors[tess.numVertexes][0] = backEnd.currentEntity->e.shaderRGBA[0];
 	tess.vertexColors[tess.numVertexes][1] = backEnd.currentEntity->e.shaderRGBA[1];
 	tess.vertexColors[tess.numVertexes][2] = backEnd.currentEntity->e.shaderRGBA[2];
 	tess.numVertexes++;
 
 	VectorMA( end, -spanWidth, up, tess.xyz[tess.numVertexes] );
-	tess.texCoords[tess.numVertexes][0][0] = t;
-	tess.texCoords[tess.numVertexes][0][1] = 1;
+	tess.texCoords[tess.numVertexes][0] = t;
+	tess.texCoords[tess.numVertexes][1] = 1;
 	tess.vertexColors[tess.numVertexes][0] = backEnd.currentEntity->e.shaderRGBA[0];
 	tess.vertexColors[tess.numVertexes][1] = backEnd.currentEntity->e.shaderRGBA[1];
 	tess.vertexColors[tess.numVertexes][2] = backEnd.currentEntity->e.shaderRGBA[2];
@@ -504,8 +509,8 @@ void RB_SurfaceMesh(md3Surface_t *surface) {
 	texCoords = (float *) ((byte *)surface + surface->ofsSt);
 
 	for ( j = 0; j < surface->numVerts; j++ ) {
-		tess.texCoords[Doug + j][0][0] = texCoords[j*2+0];
-		tess.texCoords[Doug + j][0][1] = texCoords[j*2+1];
+		tess.texCoords[Doug + j][0] = texCoords[j*2+0];
+		tess.texCoords[Doug + j][1] = texCoords[j*2+1];
 		// FIXME: fill in lightmapST for completeness?
 	}
 
@@ -515,30 +520,84 @@ void RB_SurfaceMesh(md3Surface_t *surface) {
 
 static void RB_SurfaceFace( srfSurfaceFace_t* surf )
 {
-	int i, ndx;
-
 	RB_CHECKOVERFLOW( surf->numVerts, surf->numIndexes );
 
-	glIndex_t* tessIndexes = tess.indexes + tess.numIndexes;
-	for ( i = 0; i < surf->numIndexes; ++i )
-		tessIndexes[i] = tess.numVertexes + surf->indexes[i];
+	const int tessNumVertexes = tess.numVertexes;
+	const int* surfIndexes = surf->indexes;
+	unsigned int* tessIndexes = tess.indexes + tess.numIndexes;
+	unsigned int* const tessIndexesEnd = tessIndexes + surf->numIndexes;
+#if idSSE2
+	unsigned int* const tessIndexesEndSIMD = tessIndexesEnd - 3;
+	const __m128i xmmNumVerts = _mm_set1_epi32( tess.numVertexes );
+	while ( tessIndexes < tessIndexesEndSIMD ) {
+		const __m128i xmmIn = _mm_loadu_si128( (const __m128i*)surfIndexes );
+		const __m128i xmmOut = _mm_add_epi32( xmmIn, xmmNumVerts );
+		_mm_storeu_si128( (__m128i*)tessIndexes, xmmOut );
+		tessIndexes += 4;
+		surfIndexes += 4;
+	}
+#endif
+	while ( tessIndexes < tessIndexesEnd ) {
+		*tessIndexes++ = *surfIndexes++ + tessNumVertexes;
+	}
 	tess.numIndexes += surf->numIndexes;
 
-	if ( tess.shader->needsNormal ) {
-		const float* normal = surf->plane.normal;
-		for ( i = 0, ndx = tess.numVertexes; i < surf->numVerts; ++i, ++ndx ) {
-			VectorCopy( normal, tess.normal[ndx] );
-		}
-	}
-
 	const srfVert_t* v = surf->verts;
-	for ( i = 0, ndx = tess.numVertexes; i < surf->numVerts; ++i, ++v, ++ndx ) {
+	int i = 0;
+	int ndx = tess.numVertexes;
+	const int end = surf->numVerts;
+#if idSSE2
+	const int endSIMD = end - 1;
+	for ( ; i < endSIMD; i += 2, v += 2, ndx += 2 ) {
+		const __m128i xmmP0 = _mm_loadu_si128((const __m128i*)(v + 0)->xyz);
+		const __m128i xmmN0 = _mm_loadu_si128((const __m128i*)(v + 0)->normal);
+		const __m128i xmmT0 = _mm_loadu_si128((const __m128i*)(v + 0)->st); // tc2_0.y tc2_0.x tc_0.y tc_0.x
+		const __m128i xmmP1 = _mm_loadu_si128((const __m128i*)(v + 1)->xyz);
+		const __m128i xmmN1 = _mm_loadu_si128((const __m128i*)(v + 1)->normal);
+		const __m128i xmmT1 = _mm_loadu_si128((const __m128i*)(v + 1)->st); // tc2_1.y tc2_1.x tc_1.y tc_1.x
+		const __m128i xmmTC0 = _mm_unpacklo_epi64(xmmT0, xmmT1); // tc_1.y tc_1.x tc_0.y tc_0.x
+		const __m128i xmmTC1 = _mm_unpackhi_epi64(xmmT0, xmmT1); // tc2_1.y tc2_1.x tc2_0.y tc2_0.x
+		_mm_storeu_si128((__m128i*)tess.xyz[ndx + 0], xmmP0);
+		_mm_storeu_si128((__m128i*)tess.xyz[ndx + 1], xmmP1);
+		_mm_storeu_si128((__m128i*)tess.normal[ndx + 0], xmmN0);
+		_mm_storeu_si128((__m128i*)tess.normal[ndx + 1], xmmN1);
+		_mm_storeu_si128((__m128i*)tess.texCoords[ndx], xmmTC0);
+		_mm_storeu_si128((__m128i*)tess.texCoords2[ndx], xmmTC1);
+		*(uint32_t*)&tess.vertexColors[ndx + 0] = *(uint32_t*)(v + 0)->rgba;
+		*(uint32_t*)&tess.vertexColors[ndx + 1] = *(uint32_t*)(v + 1)->rgba;
+	}
+#endif
+	for ( ; i < end; ++i, ++v, ++ndx ) {
+#if idSSE2
+		const __m128i xmmP = _mm_loadu_si128((const __m128i*)v->xyz);
+		const __m128i xmmN = _mm_loadu_si128((const __m128i*)v->normal);
+		const __m128i xmmT1 = _mm_loadu_si128((const __m128i*)v->st);
+		const __m128i xmmT2 = _mm_shuffle_epi32(xmmT1, (2 << 0) | (3 << 2) | (0 << 4) | (1 << 6));
+		_mm_storeu_si128((__m128i*)tess.xyz[ndx], xmmP);
+		_mm_storeu_si128((__m128i*)tess.normal[ndx], xmmN);
+		_mm_storel_epi64((__m128i*)tess.texCoords[ndx], xmmT1);
+		_mm_storel_epi64((__m128i*)tess.texCoords2[ndx], xmmT2);
+		*(uint32_t*)&tess.vertexColors[ndx] = *(uint32_t*)v->rgba;
+#elif defined Q3_LITTLE_ENDIAN
+		*(uint64_t*)&tess.xyz[ndx][0] = *(uint64_t*)&v->xyz[0];
+		tess.xyz[ndx][2] = v->xyz[2];
+		*(uint64_t*)&tess.normal[ndx][0] = *(uint64_t*)&v->normal[0];
+		tess.normal[ndx][2] = v->normal[2];
+		*(uint64_t*)&tess.texCoords[ndx][0] = *(uint64_t*)&v->st[0];
+		*(uint64_t*)&tess.texCoords2[ndx][0] = *(uint64_t*)&v->st2[0];
+		*(uint32_t*)&tess.vertexColors[ndx] = *(uint32_t*)v->rgba;
+#else
 		VectorCopy( v->xyz, tess.xyz[ndx] );
-		tess.texCoords[ndx][0][0] = v->st[0];
-		tess.texCoords[ndx][0][1] = v->st[1];
-		tess.texCoords[ndx][1][0] = v->st2[0];
-		tess.texCoords[ndx][1][1] = v->st2[1];
-		*(unsigned int *)&tess.vertexColors[ndx] = *(unsigned int *)v->rgba;
+		VectorCopy( v->normal, tess.normal[ndx] );
+		tess.texCoords[ndx][0] = v->st[0];
+		tess.texCoords[ndx][1] = v->st[1];
+		tess.texCoords2[ndx][0] = v->st2[0];
+		tess.texCoords2[ndx][1] = v->st2[1];
+		tess.vertexColors[ndx][0] = v->rgba[0];
+		tess.vertexColors[ndx][1] = v->rgba[1];
+		tess.vertexColors[ndx][2] = v->rgba[2];
+		tess.vertexColors[ndx][3] = v->rgba[3];
+#endif
 	}
 
 	tess.numVertexes += surf->numVerts;
@@ -586,6 +645,7 @@ void RB_SurfaceGrid( srfGridMesh_t *cv ) {
 	int		i, j;
 	float	*xyz;
 	float	*texCoords;
+	float	*texCoords2;
 	float	*normal;
 	unsigned char *color;
 	drawVert_t	*dv;
@@ -596,7 +656,6 @@ void RB_SurfaceGrid( srfGridMesh_t *cv ) {
 	float	lodError;
 	int		lodWidth, lodHeight;
 	int		numVertexes;
-	qbool	needsNormal;
 
 	// determine the allowable discrepance
 	lodError = LodErrorForVolume( cv->lodOrigin, cv->lodRadius );
@@ -658,31 +717,52 @@ void RB_SurfaceGrid( srfGridMesh_t *cv ) {
 
 		xyz = tess.xyz[numVertexes];
 		normal = tess.normal[numVertexes];
-		texCoords = tess.texCoords[numVertexes][0];
+		texCoords = tess.texCoords[numVertexes];
+		texCoords2 = tess.texCoords2[numVertexes];
 		color = ( unsigned char * ) &tess.vertexColors[numVertexes];
-		needsNormal = tess.shader->needsNormal;
 
 		for ( i = 0 ; i < rows ; i++ ) {
 			for ( j = 0 ; j < lodWidth ; j++ ) {
 				dv = cv->verts + heightTable[ used + i ] * cv->width
 					+ widthTable[ j ];
-
+#if idSSE2
+				const __m128i xmmP = _mm_loadu_si128((const __m128i*)dv->xyz);
+				const __m128i xmmT1 = _mm_loadu_si128((const __m128i*)dv->st);
+				const __m128i xmmN = _mm_loadu_si128((const __m128i*)dv->normal);
+				const __m128i xmmT2 = _mm_shuffle_epi32(xmmT1, (2 << 0) | (3 << 2) | (0 << 4) | (1 << 6));
+				_mm_storeu_si128((__m128i*)xyz, xmmP);
+				_mm_storeu_si128((__m128i*)normal, xmmN);
+				_mm_storel_epi64((__m128i*)texCoords, xmmT1);
+				_mm_storel_epi64((__m128i*)texCoords2, xmmT2);
+				*(uint32_t*)color = *(uint32_t*)dv->color;
+#elif defined Q3_LITTLE_ENDIAN
+				*(uint64_t*)&xyz[0] = *(uint64_t*)&dv->xyz[0];
+				xyz[2] = dv->xyz[2];
+				*(uint64_t*)&texCoords[0] = *(uint64_t*)&dv->st[0];
+				*(uint64_t*)&texCoords2[0] = *(uint64_t*)&dv->lightmap[0];
+				*(uint64_t*)&normal[0] = *(uint64_t*)&dv->normal[0];
+				normal[2] = dv->normal[2];
+				*(uint32_t*)color = *(uint32_t*)dv->color;
+#else
 				xyz[0] = dv->xyz[0];
 				xyz[1] = dv->xyz[1];
 				xyz[2] = dv->xyz[2];
 				texCoords[0] = dv->st[0];
 				texCoords[1] = dv->st[1];
-				texCoords[2] = dv->lightmap[0];
-				texCoords[3] = dv->lightmap[1];
-				if ( needsNormal ) {
-					normal[0] = dv->normal[0];
-					normal[1] = dv->normal[1];
-					normal[2] = dv->normal[2];
-				}
-				* ( unsigned int * ) color = * ( unsigned int * ) dv->color;
+				texCoords2[0] = dv->lightmap[0];
+				texCoords2[1] = dv->lightmap[1];
+				normal[0] = dv->normal[0];
+				normal[1] = dv->normal[1];
+				normal[2] = dv->normal[2];
+				color[0] = dv->color[0];
+				color[1] = dv->color[1];
+				color[2] = dv->color[2];
+				color[3] = dv->color[3];
+#endif
 				xyz += 4;
 				normal += 4;
-				texCoords += 4;
+				texCoords += 2;
+				texCoords2 += 2;
 				color += 4;
 			}
 		}

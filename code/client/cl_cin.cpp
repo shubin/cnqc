@@ -115,9 +115,11 @@ typedef struct {
 	long				roqF1;
 	long				t[2];
 	long				roqFPS;
-	int					playonwalls;
 	byte*				buf;
 	long				drawX, drawY;
+
+	qbool				grabbed;
+	qbool				firstFrame;
 } cin_cache;
 
 static cinematics_t		cin;
@@ -133,6 +135,8 @@ void CIN_CloseAllVideos(void) {
 		if (cinTable[i].fileName[0] != 0 ) {
 			CIN_StopCinematic(i);
 		}
+		cinTable[i].grabbed = qfalse;
+		cinTable[i].firstFrame = qfalse;
 	}
 }
 
@@ -1106,6 +1110,7 @@ redump:
 			}
 			cinTable[currentHandle].numQuads++;
 			cinTable[currentHandle].dirty = qtrue;
+			cinTable[currentHandle].firstFrame = qtrue;
 			break;
 		case	ROQ_CODEBOOK:
 			decodeCodeBook( framedata, (unsigned short)cinTable[currentHandle].roq_flags );
@@ -1272,6 +1277,10 @@ SCR_StopCinematic
 ==================
 */
 e_status CIN_StopCinematic(int handle) {
+	if (handle >= 0 && handle < MAX_VIDEO_HANDLES) {
+		cinTable[handle].grabbed = qfalse;
+		cinTable[handle].firstFrame = qfalse;
+	}
 
 	if (handle < 0 || handle>= MAX_VIDEO_HANDLES || cinTable[handle].status == FMV_EOF) return FMV_EOF;
 	currentHandle = handle;
@@ -1306,11 +1315,6 @@ e_status CIN_RunCinematic( int handle )
 		cin.currentHandle = currentHandle;
 		cinTable[currentHandle].status = FMV_EOF;
 		RoQReset();
-	}
-
-	if (cinTable[handle].playonwalls < -1)
-	{
-		return cinTable[handle].status;
 	}
 
 	currentHandle = handle;
@@ -1413,17 +1417,17 @@ int CIN_PlayCinematic( const char *arg, int x, int y, int w, int h, int systemBi
 	cinTable[currentHandle].CIN_WIDTH  =  DEFAULT_CIN_WIDTH;
 	cinTable[currentHandle].holdAtEnd = (systemBits & CIN_hold) != 0;
 	cinTable[currentHandle].alterGameState = (systemBits & CIN_system) != 0;
-	cinTable[currentHandle].playonwalls = 1;
 	cinTable[currentHandle].silent = (systemBits & CIN_silent) != 0;
 	cinTable[currentHandle].shader = (systemBits & CIN_shader) != 0;
+	cinTable[currentHandle].dirty = qfalse;
+	cinTable[currentHandle].grabbed = qfalse;
+	cinTable[currentHandle].firstFrame = qfalse;
 
 	if (cinTable[currentHandle].alterGameState) {
 		// close the menu
 		if ( uivm ) {
 			VM_Call( uivm, UI_SET_ACTIVE_MENU, UIMENU_NONE );
 		}
-	} else {
-		cinTable[currentHandle].playonwalls = cl_inGameVideo->integer;
 	}
 
 	initRoQ();
@@ -1598,26 +1602,24 @@ void SCR_StopCinematic()
 }
 
 
-void CIN_UploadCinematic(int handle) {
-	if (handle >= 0 && handle < MAX_VIDEO_HANDLES) {
-		if (!cinTable[handle].buf) {
-			return;
-		}
-		if (cinTable[handle].playonwalls <= 0 && cinTable[handle].dirty) {
-			if (cinTable[handle].playonwalls == 0) {
-				cinTable[handle].playonwalls = -1;
-			} else {
-				if (cinTable[handle].playonwalls == -1) {
-					cinTable[handle].playonwalls = -2;
-				} else {
-					cinTable[handle].dirty = qfalse;
-				}
-			}
-		}
-		re.UploadCinematic( 256, 256, 256, 256, cinTable[handle].buf, handle, cinTable[handle].dirty);
-		if (cl_inGameVideo->integer == 0 && cinTable[handle].playonwalls == 1) {
-			cinTable[handle].playonwalls--;
-		}
-	}
-}
+qbool CIN_GrabCinematic( int handle, int* w, int* h, const byte** data, int* client, qbool* dirty )
+{
+	*client = -1;
 
+	if (handle < 0 && handle >= MAX_VIDEO_HANDLES)
+		return qfalse;
+
+	if (!cinTable[handle].buf)
+		return qfalse;
+
+	const qbool paused = cl_inGameVideo->integer == 0 && cinTable[handle].grabbed;
+	*w = 256;
+	*h = 256;
+	*data = cinTable[handle].buf;
+	*client = handle;
+	*dirty = cinTable[handle].dirty && !paused;
+	cinTable[handle].grabbed = cinTable[handle].firstFrame;
+	cinTable[handle].dirty = qfalse;
+
+	return qtrue;
+}

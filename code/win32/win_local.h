@@ -57,12 +57,6 @@ void WIN_InstallExceptionHandlers();
 void WIN_RegisterExceptionCommands();
 void WIN_EndTimePeriod();
 
-// opening OpenGL and loading core functions
-extern "C" {
-	qbool	WIN_LoadGL( const char* dllName );
-	void	WIN_UnloadGL();
-}
-
 #define MAX_MONITOR_COUNT 16
 
 typedef struct {

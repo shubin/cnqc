@@ -979,6 +979,7 @@ void CL_Init();
 void CL_Disconnect( qbool showMainMenu );
 void CL_Shutdown();
 void CL_Frame( int msec );
+qbool CL_ShouldSleep();
 qbool CL_GameCommand();
 void CL_KeyEvent (int key, qbool down, unsigned time);
 

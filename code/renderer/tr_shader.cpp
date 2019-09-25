@@ -550,7 +550,7 @@ static qbool ParseStage( const char** text, shaderStage_t* stage )
 			}
 			else
 			{
-				stage->bundle.image[0] = R_FindImageFile( token, shader.imgflags, GL_REPEAT );
+				stage->bundle.image[0] = R_FindImageFile( token, shader.imgflags, TW_REPEAT );
 				if ( !stage->bundle.image[0] )
 				{
 					ri.Printf( PRINT_WARNING, "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
@@ -570,7 +570,7 @@ static qbool ParseStage( const char** text, shaderStage_t* stage )
 				return qfalse;
 			}
 
-			stage->bundle.image[0] = R_FindImageFile( token, shader.imgflags, GL_CLAMP_TO_EDGE );
+			stage->bundle.image[0] = R_FindImageFile( token, shader.imgflags, TW_CLAMP_TO_EDGE );
 			if ( !stage->bundle.image[0] )
 			{
 				ri.Printf( PRINT_WARNING, "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
@@ -598,7 +598,7 @@ static qbool ParseStage( const char** text, shaderStage_t* stage )
 				}
 				int num = stage->bundle.numImageAnimations;
 				if ( num < MAX_IMAGE_ANIMATIONS ) {
-					stage->bundle.image[num] = R_FindImageFile( token, shader.imgflags, GL_REPEAT );
+					stage->bundle.image[num] = R_FindImageFile( token, shader.imgflags, TW_REPEAT );
 					if ( !stage->bundle.image[num] )
 					{
 						ri.Printf( PRINT_WARNING, "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
@@ -1115,7 +1115,7 @@ static void ParseSkyParms( const char** text )
 	if ( strcmp( token, "-" ) ) {
 		for (i = 0; i < 6; ++i) {
 			Com_sprintf( pathname, sizeof(pathname), "%s_%s.tga", token, suf[i] );
-			shader.sky.outerbox[i] = R_FindImageFile( pathname, IMG_NOMIPMAP | IMG_NOPICMIP, GL_CLAMP_TO_EDGE );
+			shader.sky.outerbox[i] = R_FindImageFile( pathname, IMG_NOMIPMAP | IMG_NOPICMIP, TW_CLAMP_TO_EDGE );
 			if ( !shader.sky.outerbox[i] ) {
 				shader.sky.outerbox[i] = tr.defaultImage;
 			}
@@ -1143,7 +1143,7 @@ static void ParseSkyParms( const char** text )
 	if ( strcmp( token, "-" ) ) {
 		for (i = 0; i < 6; ++i) {
 			Com_sprintf( pathname, sizeof(pathname), "%s_%s.tga", token, suf[i] );
-			shader.sky.innerbox[i] = R_FindImageFile( pathname, IMG_NOMIPMAP | IMG_NOPICMIP, GL_REPEAT );
+			shader.sky.innerbox[i] = R_FindImageFile( pathname, IMG_NOMIPMAP | IMG_NOPICMIP, TW_REPEAT );
 			if ( !shader.sky.innerbox[i] ) {
 				shader.sky.innerbox[i] = tr.defaultImage;
 			}
@@ -1534,52 +1534,41 @@ SHADER OPTIMIZATION AND FOGGING
 */
 
 
-static void ComputeStageIteratorFunc()
-{
-	if (shader.sort == SS_ENVIRONMENT) {
-		shader.siFunc = RB_StageIteratorSky;
-		return;
-	}
-
-	shader.siFunc = GL2_StageIterator;
-}
-
-
 typedef struct {
-	int		blendA;
-	int		blendB;
-	int		multitextureEnv;
-	int		multitextureBlend;
+	int			blendA;
+	int			blendB;
+	texEnv_t	multitextureEnv;
+	int			multitextureBlend;
 } collapse_t;
 
 static const collapse_t collapse[] = {
 	// the most common (and most worthwhile) collapse is for DxLM shaders
 	{ 0, GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO,
-		GL_MODULATE, 0 },
+		TE_MODULATE, 0 },
 
 	{ 0, GLS_DSTBLEND_SRC_COLOR | GLS_SRCBLEND_ZERO,
-		GL_MODULATE, 0 },
+		TE_MODULATE, 0 },
 
 	{ GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR, GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR,
-		GL_MODULATE, GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR },
+		TE_MODULATE, GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR },
 
 	{ GLS_DSTBLEND_SRC_COLOR | GLS_SRCBLEND_ZERO, GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR,
-		GL_MODULATE, GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR },
+		TE_MODULATE, GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR },
 
 	{ GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR, GLS_DSTBLEND_SRC_COLOR | GLS_SRCBLEND_ZERO,
-		GL_MODULATE, GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR },
+		TE_MODULATE, GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR },
 
 	{ GLS_DSTBLEND_SRC_COLOR | GLS_SRCBLEND_ZERO, GLS_DSTBLEND_SRC_COLOR | GLS_SRCBLEND_ZERO,
-		GL_MODULATE, GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR },
+		TE_MODULATE, GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR },
 
 	{ 0, GLS_DSTBLEND_ONE | GLS_SRCBLEND_ONE,
-		GL_ADD, 0 },
+		TE_ADD, 0 },
 
 	{ GLS_DSTBLEND_ONE | GLS_SRCBLEND_ONE, GLS_DSTBLEND_ONE | GLS_SRCBLEND_ONE,
-		GL_ADD, GLS_DSTBLEND_ONE | GLS_SRCBLEND_ONE },
+		TE_ADD, GLS_DSTBLEND_ONE | GLS_SRCBLEND_ONE },
 #if 0
 	{ 0, GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA | GLS_SRCBLEND_SRC_ALPHA,
-		GL_DECAL, 0 },
+		TE_DECAL, 0 },
 #endif
 	{ -1 }
 };
@@ -1595,10 +1584,6 @@ FIXME: I think modulated add + modulated add collapses incorrectly
 static qbool CollapseMultitexture( void ) {
 	int abits, bbits;
 	int i;
-
-	if ( !qglActiveTextureARB ) {
-		return qfalse;
-	}
 
 	// make sure both stages are active
 	if ( !stages[0].active || !stages[1].active ) {
@@ -1637,7 +1622,7 @@ static qbool CollapseMultitexture( void ) {
 	}
 
 	// an add collapse can only have identity colors
-	if ( collapse[i].multitextureEnv == GL_ADD && stages[0].rgbGen != CGEN_IDENTITY ) {
+	if ( collapse[i].multitextureEnv == TE_ADD && stages[0].rgbGen != CGEN_IDENTITY ) {
 		return qfalse;
 	}
 
@@ -1742,9 +1727,8 @@ static void CollapseStages()
 			CollapseFailure;
 
 		// For the remaining cases, we generate and test the colors.
-		static stageVars_t svarsMT;
-		R_ComputeColors( &aStages[1], svarsMT );
-		const int* colors = (const int*)svarsMT.colors;
+		R_ComputeColors( &aStages[1], tess.svars[0], 0, tess.numVertexes );
+		const int* colors = (const int*)tess.svars[0].colors;
 		const int colorCount = tess.numVertexes;
 		int allOnes = -1;
 		for ( int c = 0; c < colorCount; ++c )
@@ -1881,23 +1865,129 @@ static void VertexLightingCollapse( void ) {
 }
 
 
-/*
-
-static void VertexLightingCollapse()
+static qbool IsAdditiveBlend()
 {
-	if ( shader.sort == SS_ENVIRONMENT )
-		return;
+	for (int i = 0; i < shader.numStages; ++i) {
+		if (!stages[i].active)
+			continue;
 
-	if ( shader.lightmapIndex == LIGHTMAP_NONE ) {
-		stages[0].rgbGen = CGEN_LIGHTING_DIFFUSE;
-	} else {
-		stages[0].rgbGen = CGEN_EXACT_VERTEX;
+		const int bits = stages[i].stateBits;
+		if ((bits & GLS_SRCBLEND_BITS) != GLS_SRCBLEND_ONE ||
+			(bits & GLS_DSTBLEND_BITS) != GLS_DSTBLEND_ONE ||
+			(bits & GLS_DEPTHMASK_TRUE) != 0)
+			return qfalse;
 	}
 
-	stages[0].alphaGen = AGEN_SKIP;
+	return qtrue;
 }
 
-*/
+
+static qbool IsNormalBlend()
+{
+	for (int i = 0; i < shader.numStages; ++i) {
+		if (!stages[i].active)
+			continue;
+
+		const int bits = stages[i].stateBits;
+		if ((bits & GLS_SRCBLEND_BITS) != GLS_SRCBLEND_SRC_ALPHA ||
+			(bits & GLS_DSTBLEND_BITS) != GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA ||
+			(bits & GLS_DEPTHMASK_TRUE) != 0)
+			return qfalse;
+	}
+
+	return qtrue;
+}
+
+
+static void ProcessSoftSprite()
+{
+	struct ssShader {
+		const char* name;
+		float distance;
+		float offset;
+	};
+
+	const ssShader ssShaders[] = {
+		{ "rocketExplosion", 24.0f },
+		{ "rocketExplosionNPM", 24.0f },
+		{ "grenadeExplosion", 24.0f },
+		{ "grenadeExplosionNPM", 24.0f },
+		{ "grenadeCPMA_NPM", 24.0f },
+		{ "grenadeCPMA", 24.0f },
+		{ "bloodTrail", 24.0f },
+		{ "sprites/particleSmoke", 24.0f },
+		{ "plasmaExplosion", 8.0f, 4.0f },
+		{ "plasmaExplosionNPM", 8.0f, 4.0f },
+		{ "plasmanewExplosion", 8.0f, 4.0f },
+		{ "plasmanewExplosionNPM", 8.0f, 4.0f },
+		{ "bulletExplosion", 8.0f, 4.0f },
+		{ "bulletExplosionNPM", 8.0f, 4.0f },
+		{ "railExplosion", 8.0f },
+		{ "railExplosionNPM", 8.0f },
+		{ "bfgExplosion", 8.0f },
+		{ "bfgExplosionNPM", 8.0f },
+		{ "bloodExplosion", 8.0f },
+		{ "bloodExplosionNPM", 8.0f },
+		{ "smokePuff", 8.0f },
+		{ "smokePuffNPM", 8.0f },
+		{ "shotgunSmokePuff", 8.0f },
+		{ "shotgunSmokePuffNPM", 8.0f }
+	};
+
+	shader.softSprite = SST_NONE;
+
+	if (!glInfo.softSpriteSupport || r_softSprites->integer == 0)
+	   return;
+
+	if (shader.sort <= SS_OPAQUE)
+		return;
+
+	int activeStages = 0;
+	for (int i = 0; i < shader.numStages; ++i) {
+		if (stages[i].active)
+			++activeStages;
+	}
+
+	if (activeStages <= 0)
+		return;
+
+	qbool found = qfalse;
+	for (int i = 0; i < ARRAY_LEN(ssShaders); ++i) {
+		if (!Q_stricmp(shader.name, ssShaders[i].name)) {
+			shader.softSpriteDistance = 1.0f / ssShaders[i].distance;
+			shader.softSpriteOffset = ssShaders[i].offset;
+			found = qtrue;
+			break;
+		}
+	}
+	if (!found)
+		return;
+
+	if (IsAdditiveBlend())
+		shader.softSprite = SST_ADDITIVE;
+	else if (IsNormalBlend())
+		shader.softSprite = SST_BLEND;
+}
+
+
+static qbool UsesInternalLightmap( const shaderStage_t* stage )
+{
+	return
+		stage->active &&
+		stage->type == ST_LIGHTMAP;
+}
+
+
+static qbool UsesExternalLightmap( const shaderStage_t* stage )
+{
+	return
+		stage->active &&
+		stage->type == ST_DIFFUSE &&
+		!stage->bundle.isVideoMap &&
+		stage->bundle.numImageAnimations <= 1 &&
+		stage->bundle.image[0] != NULL &&
+		(stage->bundle.image[0]->flags & IMG_EXTLMATLAS) != 0;
+}
 
 
 // returns a freshly allocated shader with info
@@ -2029,6 +2119,53 @@ static shader_t* FinishShader()
 
 	CollapseStages();
 
+	if ( r_fullbright->integer ) {
+		// we replace the lightmap texture with the white texture
+		for ( int i = 0; i < shader.numStages; ++i ) {
+			if ( UsesInternalLightmap( &stages[i] ) || UsesExternalLightmap( &stages[i] ) ) {
+				stages[i].type = ST_DIFFUSE;
+				stages[i].bundle.image[0] = tr.whiteImage;
+			}
+		}
+	} else if ( r_lightmap->integer ) {
+		// we reduce it down to a single lightmap stage with the same state bits as
+		// the current first stage (if the shader uses a lightmap at all)
+
+		// look for "real" lightmaps first (straight from the .bsp file itself)
+		int stageIndex = -1;
+		for ( int i = 0; i < shader.numStages; ++i ) {
+			if ( UsesInternalLightmap( &stages[i] ) ) {
+				stageIndex = i;
+				break;
+			}
+		}
+
+		if ( stageIndex == -1 ) {
+			// look for external lightmaps
+			for ( int i = 0; i < shader.numStages; ++i ) {
+				if ( UsesExternalLightmap( &stages[i] ) ) {
+					stageIndex = i;
+					break;
+				}
+			}
+		}
+
+		const int stateBits = stages[0].stateBits;
+		if ( stageIndex > 0 )
+			memcpy(stages, stages + stageIndex, sizeof(stages[0]));
+
+		if ( stageIndex >= 0 ) {
+			for ( int i = 1; i < shader.numStages; ++i ) {
+				stages[i].active = qfalse;
+			}
+			stages[0].stateBits = stateBits;
+			stages[0].mtStages = 0;
+			shader.lightingStages[ST_DIFFUSE] = 0; // for working dynamic lights
+			shader.lightingStages[ST_LIGHTMAP] = 0;
+			shader.numStages = 1;
+		}
+	}
+
 /* !!!
 	if ( shader.lightmapIndex >= 0 && !hasLightmapStage ) {
 		ri.Printf( PRINT_DEVELOPER, "WARNING: shader '%s' has lightmap but no lightmap stage!\n", shader.name );
@@ -2045,8 +2182,7 @@ static shader_t* FinishShader()
 		shader.sort = SS_FOG;
 	}
 
-	// determine which stage iterator function is appropriate
-	ComputeStageIteratorFunc();
+	ProcessSoftSprite();
 
 	return GeneratePermanentShader();
 }
@@ -2175,12 +2311,6 @@ shader_t* R_FindShader( const char *name, int lightmapIndex, qbool mipRawImage )
 		stages[i].texMods = texMods[i];
 	}
 
-	// FIXME: set these "need" values apropriately
-	shader.needsNormal = qtrue;
-	shader.needsST1 = qtrue;
-	shader.needsST2 = qtrue;
-	shader.needsColor = qtrue;
-
 	//
 	// attempt to define shader from an explicit parameter file
 	//
@@ -2205,9 +2335,9 @@ shader_t* R_FindShader( const char *name, int lightmapIndex, qbool mipRawImage )
 
 	const image_t* image;
 	if (mipRawImage)
-		image = R_FindImageFile( fileName, 0, GL_REPEAT );
+		image = R_FindImageFile( fileName, 0, TW_REPEAT );
 	else
-		image = R_FindImageFile( fileName, IMG_NOMIPMAP | IMG_NOPICMIP, GL_CLAMP_TO_EDGE );
+		image = R_FindImageFile( fileName, IMG_NOMIPMAP | IMG_NOPICMIP, TW_CLAMP_TO_EDGE );
 
 	if ( !image ) {
 		ri.Printf( PRINT_DEVELOPER, "Couldn't find image for shader %s\n", name );
@@ -2281,11 +2411,6 @@ qhandle_t RE_RegisterShaderFromImage( const char* name, const image_t* image )
 	for (int i = 0; i < MAX_SHADER_STAGES; ++i) {
 		stages[i].texMods = texMods[i];
 	}
-
-	shader.needsNormal = qfalse;
-	shader.needsST1 = qtrue;
-	shader.needsST2 = qfalse;
-	shader.needsColor = qtrue;
 
 	// create the default shading commands: this can only ever be a 2D/UI shader
 	stages[0].bundle.image[0] = image;
@@ -2371,8 +2496,6 @@ void R_ShaderList_f( void )
 
 		if (sh->lightmapIndex >= 0 ) {
 			ri.Printf( PRINT_ALL, "L " );
-		//} else if (sh->lightmapIndex == LIGHTMAP_WHITE ) {
-		//	ri.Printf( PRINT_ALL, "W " );
 		} else {
 			ri.Printf( PRINT_ALL, "  " );
 		}
@@ -2382,12 +2505,10 @@ void R_ShaderList_f( void )
 			ri.Printf( PRINT_ALL, "  " );
 		}
 
-		if ( sh->siFunc == GL2_StageIterator ) {
-			ri.Printf( PRINT_ALL, "    " );
-		} else if ( sh->siFunc == RB_StageIteratorSky ) {
+		if ( sh->sort == SS_ENVIRONMENT ) {
 			ri.Printf( PRINT_ALL, "sky " );
 		} else {
-			ri.Printf( PRINT_ALL, "??? " );
+			ri.Printf( PRINT_ALL, "    " );
 		}
 
 		if ( sh->defaultShader ) {
@@ -2399,21 +2520,6 @@ void R_ShaderList_f( void )
 	}
 
 	ri.Printf( PRINT_ALL, "%i total shaders\n", count );
-/*
-	int buckets = 0, collisions = 0;
-	for (i = 0; i < MAX_SHADERTEXT_HASH; ++i) {
-		if (shaderTextHashTable[i][0]) {
-			ri.Printf( PRINT_ALL, "%i: ", i );
-			for (int c = 1; shaderTextHashTable[i][c]; ++c) {
-				ri.Printf( PRINT_ALL, "C " );
-				++collisions;
-			}
-			++buckets;
-			ri.Printf( PRINT_ALL, "\n", i );
-		}
-	}
-	ri.Printf( PRINT_ALL, "%i/%i buckets, %i collisions\n", buckets, MAX_SHADERTEXT_HASH, collisions );
-*/
 	ri.Printf( PRINT_ALL, "--------------------\n" );
 }
 
@@ -2449,8 +2555,6 @@ static void ScanAndLoadShaderFiles()
 	{
 		char filename[MAX_QPATH];
 		Com_sprintf( filename, sizeof( filename ), "scripts/%s", shaderFiles[i] );
-		// KHB  there's simply no time to EVER want this - it's self-destructive because of the HUGE spam  >:(
-		//ri.Printf( PRINT_DEVELOPER, "...loading '%s'\n", filename );
 		ri.FS_ReadFile( filename, (void **)&buffers[i] );
 		if ( !buffers[i] )
 			ri.Error( ERR_DROP, "Couldn't load %s", filename );
@@ -2523,12 +2627,14 @@ static void CreateInternalShaders()
 	Com_Memset( &stages, 0, sizeof( stages ) );
 
 	Q_strncpyz( shader.name, "<default>", sizeof( shader.name ) );
-
 	shader.lightmapIndex = LIGHTMAP_NONE;
 	stages[0].bundle.image[0] = tr.defaultImage;
 	stages[0].active = qtrue;
 	stages[0].stateBits = GLS_DEFAULT;
 	tr.defaultShader = FinishShader();
+
+	Q_strncpyz( shader.name, "<scratch>", sizeof( shader.name ) );
+	tr.scratchShader = FinishShader();
 }
 
 

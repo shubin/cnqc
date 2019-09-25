@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="hlsl">
+      <UniqueIdentifier>{98F1977C-8428-990D-2D15-7F10192B150F}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\code\renderer\stb_image.h" />
+    <ClInclude Include="..\..\code\renderer\tr_help.h" />
+    <ClInclude Include="..\..\code\renderer\tr_local.h" />
+    <ClInclude Include="..\..\code\renderer\tr_public.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\code\renderer\stb_image.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_backend.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_backend_d3d11.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_backend_gl2.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_backend_gl3.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_bsp.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_cmds.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_curve.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_image.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_init.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_light.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_main.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_marks.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_mesh.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_model.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_noise.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_scene.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_shade.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_shade_calc.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_shader.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_sky.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_surface.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_world.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\code\renderer\hlsl\dl.hlsl">
+      <Filter>hlsl</Filter>
+    </None>
+    <None Include="..\..\code\renderer\hlsl\generic.hlsl">
+      <Filter>hlsl</Filter>
+    </None>
+    <None Include="..\..\code\renderer\hlsl\mip_end.hlsl">
+      <Filter>hlsl</Filter>
+    </None>
+    <None Include="..\..\code\renderer\hlsl\mip_pass.hlsl">
+      <Filter>hlsl</Filter>
+    </None>
+    <None Include="..\..\code\renderer\hlsl\mip_start.hlsl">
+      <Filter>hlsl</Filter>
+    </None>
+    <None Include="..\..\code\renderer\hlsl\post.hlsl">
+      <Filter>hlsl</Filter>
+    </None>
+    <None Include="..\..\code\renderer\hlsl\sprite.hlsl">
+      <Filter>hlsl</Filter>
+    </None>
+  </ItemGroup>
+</Project>

@@ -302,6 +302,11 @@ typedef struct {
 	glconfig_t	glconfig;
 	qhandle_t	charSetShader;
 	qhandle_t	whiteShader;
+
+	// frame-rate limiting, useful for scenarios like CGAME_INIT
+	int			maxFPS;				// only active if > 0
+	int			nextFrameTimeMS;
+	int			oldSwapInterval;
 } clientStatic_t;
 
 extern	clientStatic_t		cls;
@@ -348,6 +353,8 @@ extern	cvar_t	*cl_allowDownload;	// 0=off, 1=CNQ3, -1=id
 extern	cvar_t	*cl_inGameVideo;
 
 extern	cvar_t	*cl_matchAlerts;	// bit mask, see the MAF_* constants
+
+extern	cvar_t	*r_khr_debug;
 
 extern	cvar_t	*s_autoMute;
 
@@ -475,7 +482,7 @@ e_status CIN_RunCinematic (int handle);
 void CIN_DrawCinematic (int handle);
 void CIN_SetExtents (int handle, int x, int y, int w, int h);
 void CIN_SetLooping (int handle, qbool loop);
-void CIN_UploadCinematic(int handle);
+qbool CIN_GrabCinematic( int handle, int* w, int* h, const byte** data, int* client, qbool* dirty ); // qtrue when there's valid data
 void CIN_CloseAllVideos(void);
 
 //
@@ -528,6 +535,12 @@ qbool CL_MapDownload_Active();
 void CL_MapDownload_Cancel();
 void CL_MapDownload_DrawConsole( float cw, float ch );
 void CL_MapDownload_CrashCleanUp();
+
+//
+// cl_gl.cpp
+//
+qbool CL_GL_WantDebug();	// do we want a debug context from the platform layer?
+void CL_GL_Init();			// enables debug output if needed
 
 //
 // OS-specific

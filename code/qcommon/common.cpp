@@ -2444,6 +2444,8 @@ static void Com_FrameSleep( qbool demoPlayback )
 		if ( Sys_IsMinimized() ) {
 			sleepUS = 20 * 1000;
 			preciseCap = qfalse;
+		} else if ( !CL_ShouldSleep() ) {
+			return;
 		}
 #endif
 	}

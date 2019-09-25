@@ -26,9 +26,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ** OpenGL refresh. When a port is being made the following functions
 ** must be implemented by the port:
 **
-** Sys_GL_EndFrame
-** Sys_GL_Init
-** Sys_GL_Shutdown
+** Sys_V_EndFrame
+** Sys_V_Init
+** Sys_V_Shutdown
+** Sys_V_IsVSynced
 **
 ** Note that the GLW_xxx functions are Windows specific GL-subsystem
 ** related functions that are relevant ONLY to win_glimp.c
@@ -39,10 +40,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #endif
 
 #include "../renderer/tr_local.h"
+#include "../client/client.h"
 #include "resource.h"
-#include "glw_win.h"
-#include "wglext.h"
 #include "win_local.h"
+#include "GL/glew.h"
+#include "GL/wglew.h"
+#include "glw_win.h"
 
 
 #define TRY_PFD_SUCCESS		0
@@ -50,6 +53,20 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define TRY_PFD_FAIL_HARD	2
 
 glwstate_t glw_state;
+static galId_t win_galId;
+
+
+static qbool WIN_UsingOpenGL()
+{
+	switch ( win_galId )
+	{
+		case GAL_GL2:
+		case GAL_GL3:
+			return qtrue;
+		default:
+			return qfalse;
+	}
+}
 
 
 /*
@@ -221,6 +238,7 @@ static void GLW_CreatePFD( PIXELFORMATDESCRIPTOR *pPFD )
 	pPFD->cStencilBits	= 8;
 }
 
+
 static int GLW_MakeContext( PIXELFORMATDESCRIPTOR *pPFD )
 {
 	int pixelformat;
@@ -262,21 +280,54 @@ static int GLW_MakeContext( PIXELFORMATDESCRIPTOR *pPFD )
 	//
 	if ( !glw_state.hGLRC )
 	{
-		if ( ( glw_state.hGLRC = qwglCreateContext( glw_state.hDC ) ) == 0 )
+		if ( ( glw_state.hGLRC = wglCreateContext( glw_state.hDC ) ) == 0 )
 		{
 			ri.Printf( PRINT_ALL, "...GL context creation failure\n" );
 			return TRY_PFD_FAIL_HARD;
 		}
 		ri.Printf( PRINT_DEVELOPER, "...GL context created\n" );
 
-		if ( !qwglMakeCurrent( glw_state.hDC, glw_state.hGLRC ) )
+		if ( !wglMakeCurrent( glw_state.hDC, glw_state.hGLRC ) )
 		{
-			qwglDeleteContext( glw_state.hGLRC );
+			wglDeleteContext( glw_state.hGLRC );
 			glw_state.hGLRC = NULL;
 			ri.Printf( PRINT_ALL, "...GL context creation currency failure\n" );
 			return TRY_PFD_FAIL_HARD;
 		}
 		ri.Printf( PRINT_DEVELOPER, "...GL context creation made current\n" );
+
+		PFNWGLCREATECONTEXTATTRIBSARBPROC const wglCreateContextAttribsARB =
+			(PFNWGLCREATECONTEXTATTRIBSARBPROC)wglGetProcAddress( "wglCreateContextAttribsARB" );
+		if ( win_galId == GAL_GL3 && wglCreateContextAttribsARB )
+		{
+			const int attribs[] =
+			{
+				WGL_CONTEXT_MAJOR_VERSION_ARB, 3,
+				WGL_CONTEXT_MINOR_VERSION_ARB, 2,
+				WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
+				WGL_CONTEXT_FLAGS_ARB, CL_GL_WantDebug() ? WGL_CONTEXT_DEBUG_BIT_ARB : 0,
+				0
+			};
+
+			const HGLRC hGLRC = wglCreateContextAttribsARB( glw_state.hDC, NULL, attribs );
+			if ( hGLRC )
+			{
+				wglMakeCurrent( NULL, NULL );
+				wglDeleteContext( glw_state.hGLRC );
+				wglMakeCurrent( glw_state.hDC, hGLRC );
+				glw_state.hGLRC = hGLRC;
+				ri.Printf( PRINT_ALL, "OpenGL version upgraded to: %s\n", (const char*)glGetString( GL_VERSION ) );
+			}
+			else
+			{
+				ri.Printf( PRINT_WARNING, "wglCreateContextAttribsARB failed\n" );
+			}
+		}
+
+		if ( glewInit() != GLEW_OK )
+			ri.Error( ERR_FATAL, "glewInit failed\n" );
+
+		CL_GL_Init();
 	}
 
 	return TRY_PFD_SUCCESS;
@@ -430,7 +481,7 @@ static qbool GLW_CreateWindow()
 		ri.Printf( PRINT_DEVELOPER, "...window already present, CreateWindowEx skipped\n" );
 	}
 
-	if ( !GLW_InitDriver() )
+	if ( WIN_UsingOpenGL() && !GLW_InitDriver() )
 	{
 		ShowWindow( g_wv.hWnd, SW_HIDE );
 		DestroyWindow( g_wv.hWnd );
@@ -600,11 +651,30 @@ static qbool GLW_SetMode()
 }
 
 
+static qbool WIN_LoadGL()
+{
+	glw_state.hinstOpenGL = LoadLibraryA( "opengl32.dll" );
+	if ( glw_state.hinstOpenGL == NULL )
+		return qfalse;
+
+	return qtrue;
+}
+
+
+static void WIN_UnloadGL()
+{
+	if ( glw_state.hinstOpenGL ) {
+		FreeLibrary( glw_state.hinstOpenGL );
+		glw_state.hinstOpenGL = NULL;
+	}
+}
+
+
 static qbool GLW_LoadOpenGL()
 {
 	// only real GL implementations are acceptable
 	// load the driver and bind our function pointers to it
-	if ( WIN_LoadGL( "opengl32" ) ) {
+	if ( WIN_LoadGL() ) {
 		// create the window and set up the context
 		if ( GLW_SetMode() ) {
 			return qtrue;
@@ -617,13 +687,19 @@ static qbool GLW_LoadOpenGL()
 }
 
 
-void Sys_GL_EndFrame()
+void Sys_V_EndFrame()
 {
+	if ( !WIN_UsingOpenGL() )
+		return;
+
 	if ( r_swapInterval->modified ) {
 		r_swapInterval->modified = qfalse;
 
-		if ( qwglSwapIntervalEXT ) {
-			qwglSwapIntervalEXT( r_swapInterval->integer );
+		if ( WGLEW_EXT_swap_control ) {
+			int swapInterval = r_swapInterval->integer;
+			if ( swapInterval < 0 && !WGLEW_EXT_swap_control_tear )
+				swapInterval = -swapInterval;
+			wglSwapIntervalEXT( swapInterval );
 		}
 	}
 
@@ -631,41 +707,37 @@ void Sys_GL_EndFrame()
 }
 
 
-void Sys_GL_Init()
+void Sys_V_Init( galId_t type )
 {
-	ri.Printf( PRINT_DEVELOPER, "Initializing OpenGL subsystem\n" );
+	win_galId = type;
 
-	// load appropriate DLL and initialize subsystem
-	if (!GLW_LoadOpenGL())
-		ri.Error( ERR_FATAL, "Sys_GL_Init - could not load OpenGL subsystem\n" );
+	if ( WIN_UsingOpenGL() ) {
+		ri.Printf( PRINT_DEVELOPER, "Initializing OpenGL subsystem\n" );
+
+		// load appropriate DLL and initialize subsystem
+		if ( !GLW_LoadOpenGL() )
+			ri.Error( ERR_FATAL, "Sys_V_Init - could not load OpenGL subsystem\n" );
+	} else {
+		if ( !GLW_SetMode() )
+			ri.Error( ERR_FATAL, "Sys_V_Init - could not load Direct3D subsystem\n" );
+	}
 }
 
 
-void Sys_GL_Shutdown()
+static void Sys_ShutdownOpenGL()
 {
 	const char* success[] = { "failed", "success" };
 	int retVal;
 
-	Sys_ShutdownInput();
-
-	// FIXME: Brian, we need better fallbacks from partially initialized failures
-	if ( !qwglMakeCurrent ) {
-		return;
-	}
-
 	ri.Printf( PRINT_DEVELOPER, "Shutting down OpenGL subsystem\n" );
 
-	// set current context to NULL
-	if ( qwglMakeCurrent )
-	{
-		retVal = qwglMakeCurrent( NULL, NULL ) != 0;
-		ri.Printf( PRINT_DEVELOPER, "...wglMakeCurrent( NULL, NULL ): %s\n", success[retVal] );
-	}
+	retVal = wglMakeCurrent( NULL, NULL ) != 0;
+	ri.Printf( PRINT_DEVELOPER, "...wglMakeCurrent( NULL, NULL ): %s\n", success[retVal] );
 
 	// delete HGLRC
 	if ( glw_state.hGLRC )
 	{
-		retVal = qwglDeleteContext( glw_state.hGLRC ) != 0;
+		retVal = wglDeleteContext( glw_state.hGLRC ) != 0;
 		ri.Printf( PRINT_DEVELOPER, "...deleting GL context: %s\n", success[retVal] );
 		glw_state.hGLRC = NULL;
 	}
@@ -677,6 +749,15 @@ void Sys_GL_Shutdown()
 		ri.Printf( PRINT_DEVELOPER, "...releasing DC: %s\n", success[retVal] );
 		glw_state.hDC   = NULL;
 	}
+}
+
+
+void Sys_V_Shutdown()
+{
+	Sys_ShutdownInput();
+
+	if ( WIN_UsingOpenGL() )
+		Sys_ShutdownOpenGL();
 
 	// destroy window
 	if ( g_wv.hWnd )
@@ -696,7 +777,29 @@ void Sys_GL_Shutdown()
 	}
 
 	// shutdown OpenGL subsystem
-	WIN_UnloadGL();
+	if ( WIN_UsingOpenGL() )
+		WIN_UnloadGL();
+}
+
+
+qbool Sys_V_IsVSynced()
+{
+	// with Direct3D, our swap interval is (normally) respected
+	if ( !WIN_UsingOpenGL() )
+		return r_swapInterval->integer != 0;
+
+	// with OpenGL, our request is often ignored (driver control panel overrides)
+	// unfortunately, the value returned here might not be what we want either...
+	if ( WGLEW_EXT_swap_control )
+	{
+		const int interval = wglGetSwapIntervalEXT();
+		if ( WGLEW_EXT_swap_control_tear )
+			return interval != 0;
+		else
+			return interval > 0;
+	}
+
+	return qfalse;
 }
 
 

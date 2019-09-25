@@ -657,6 +657,23 @@ static intptr_t CL_CgameSystemCalls( intptr_t *args )
 }
 
 
+static void CL_SetMaxFPS( int maxFPS )
+{
+	if ( maxFPS > 0 && cls.maxFPS == 0 ) {
+		cls.maxFPS = maxFPS;
+		cls.nextFrameTimeMS = Sys_Milliseconds() + 1000 / maxFPS;
+		cls.oldSwapInterval = Cvar_VariableIntegerValue( "r_swapInterval" );
+		Cvar_Set( "r_swapInterval", "0" );
+	} else if ( maxFPS == 0 && cls.maxFPS > 0 ) {
+		cls.maxFPS = 0;
+		Cvar_Set( "r_swapInterval", va( "%i", cls.oldSwapInterval ) );
+	} else if ( maxFPS > 0 && cls.maxFPS > 0 ) {
+		cls.maxFPS = maxFPS;
+		cls.nextFrameTimeMS = Sys_Milliseconds() + 1000 / maxFPS;
+	}
+}
+
+
 void CL_InitCGame()
 {
 	int t = Sys_Milliseconds();
@@ -685,9 +702,9 @@ void CL_InitCGame()
 	// init for this gamestate
 	// use the lastExecutedServerCommand instead of the serverCommandSequence
 	// otherwise server commands sent just before a gamestate are dropped
-	re.SetMaxFPS( 10 );
+	CL_SetMaxFPS( 20 );
 	VM_Call( cgvm, CG_INIT, clc.serverMessageSequence, clc.lastExecutedServerCommand, clc.clientNum );
-	re.SetMaxFPS( 0 );
+	CL_SetMaxFPS( 0 );
 
 	// send a usercmd this frame, which will cause the server to send us the first snapshot
 	cls.state = CA_PRIMED;

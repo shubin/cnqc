@@ -123,3 +123,9 @@ S_COLOR_VAL "    1 " S_COLOR_HELP "= Enables the help panel below the console\n"
 S_COLOR_VAL "    2 " S_COLOR_HELP "= Draws the help panel even if the cvar/cmd has no help text\n" \
 S_COLOR_VAL "    4 " S_COLOR_HELP "= Draws the list of modules\n" \
 S_COLOR_VAL "    8 " S_COLOR_HELP "= Draws the list of attributes (cvars only)"
+
+#define help_r_khr_debug \
+"enables an OpenGL debug context\n" \
+S_COLOR_VAL "    0 " S_COLOR_HELP "= Forced off\n" \
+S_COLOR_VAL "    1 " S_COLOR_HELP "= Forced on\n" \
+S_COLOR_VAL "    2 " S_COLOR_HELP "= On in debug builds only"

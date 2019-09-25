@@ -201,9 +201,6 @@
     <ClInclude Include="..\..\code\qcommon\vm_shim.h">
       <Filter>qcommon</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\code\renderer\qgl.h">
-      <Filter>renderer</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\code\renderer\stb_image.h">
       <Filter>renderer</Filter>
     </ClInclude>
@@ -219,16 +216,10 @@
     <ClInclude Include="..\..\code\server\server.h">
       <Filter>server</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\code\win32\glext.h">
-      <Filter>win32</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\code\win32\glw_win.h">
       <Filter>win32</Filter>
     </ClInclude>
     <ClInclude Include="..\..\code\win32\resource.h">
-      <Filter>win32</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\code\win32\wglext.h">
       <Filter>win32</Filter>
     </ClInclude>
     <ClInclude Include="..\..\code\win32\win_help.h">
@@ -258,6 +249,9 @@
       <Filter>client</Filter>
     </ClCompile>
     <ClCompile Include="..\..\code\client\cl_download.cpp">
+      <Filter>client</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\client\cl_gl.cpp">
       <Filter>client</Filter>
     </ClCompile>
     <ClCompile Include="..\..\code\client\cl_input.cpp">
@@ -408,9 +402,6 @@
       <Filter>win32</Filter>
     </ClCompile>
     <ClCompile Include="..\..\code\win32\win_main.cpp">
-      <Filter>win32</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\code\win32\win_qgl.c">
       <Filter>win32</Filter>
     </ClCompile>
     <ClCompile Include="..\..\code\win32\win_shared.cpp">

@@ -47,6 +47,8 @@ cvar_t	*cl_inGameVideo;
 
 cvar_t	*cl_matchAlerts;
 
+cvar_t	*r_khr_debug;
+
 clientActive_t		cl;
 clientConnection_t	clc;
 clientStatic_t		cls;
@@ -1559,6 +1561,12 @@ void CL_Frame( int msec )
 }
 
 
+qbool CL_ShouldSleep()
+{
+	return re.ShouldSleep();
+}
+
+
 ///////////////////////////////////////////////////////////////
 
 
@@ -1698,6 +1706,7 @@ static void CL_InitRef()
 	ri.Printf = CL_RefPrintf;
 	ri.Error = Com_Error;
 	ri.Milliseconds = CL_ScaledMilliseconds;
+	ri.Microseconds = Sys_Microseconds;
 	ri.Malloc = CL_RefMalloc;
 	ri.Free = Z_Free;
 #ifdef HUNK_DEBUG
@@ -1720,7 +1729,7 @@ static void CL_InitRef()
 
 	// cinematic stuff
 
-	ri.CIN_UploadCinematic = CIN_UploadCinematic;
+	ri.CIN_GrabCinematic = CIN_GrabCinematic;
 	ri.CIN_PlayCinematic = CIN_PlayCinematic;
 	ri.CIN_RunCinematic = CIN_RunCinematic;
 
@@ -2017,7 +2026,8 @@ static const cvarTableItem_t cl_cvars[] =
 	{ NULL, "rate", "25000", CVAR_USERINFO | CVAR_ARCHIVE, CVART_INTEGER, "4000", "99999", "network transfer rate" },
 	{ NULL, "snaps", "30", CVAR_USERINFO | CVAR_ARCHIVE, CVART_INTEGER }, // documented by the mod
 	{ NULL, "password", "", CVAR_USERINFO, CVART_STRING, NULL, NULL, "used by /" S_COLOR_CMD "connect" },
-	{ &cl_matchAlerts, "cl_matchAlerts", "7", CVAR_ARCHIVE, CVART_BITMASK, "0", XSTRING(MAF_MAX), help_cl_matchAlerts }
+	{ &cl_matchAlerts, "cl_matchAlerts", "7", CVAR_ARCHIVE, CVART_BITMASK, "0", XSTRING(MAF_MAX), help_cl_matchAlerts },
+	{ &r_khr_debug, "r_khr_debug", "2", CVAR_ARCHIVE, CVART_INTEGER, "0", "2", help_r_khr_debug }
 };
 
 

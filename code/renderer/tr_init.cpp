@@ -27,13 +27,14 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 glconfig_t	glConfig;
 glinfo_t	glInfo;
 
-glstate_t	glState;
-
 screenshotCommand_t	r_delayedScreenshot;
 qbool				r_delayedScreenshotPending = qfalse;
 int					r_delayedScreenshotFrame = 0;
 
-static void GfxInfo_f( void );
+graphicsAPILayer_t	gal;
+
+cvar_t	*r_backend;
+cvar_t	*r_frameSleep;
 
 cvar_t	*r_verbose;
 
@@ -62,7 +63,17 @@ cvar_t	*r_lightmap;
 cvar_t	*r_novis;
 cvar_t	*r_nocull;
 cvar_t	*r_nocurves;
+cvar_t	*r_softSprites;
+cvar_t	*r_gpuMipGen;
+cvar_t	*r_alphaToCoverage;
+cvar_t	*r_dither;
 
+cvar_t	*r_mipGenFilter;
+cvar_t	*r_mipGenGamma;
+cvar_t	*r_noiseScale;
+cvar_t	*r_gl3_geoStream;
+cvar_t	*r_d3d11_syncOffsets;
+cvar_t	*r_d3d11_maxQueuedFrames;
 cvar_t	*r_ext_max_anisotropy;
 cvar_t	*r_msaa;
 
@@ -83,7 +94,6 @@ cvar_t	*r_shownormals;
 cvar_t	*r_finish;
 cvar_t	*r_clear;
 cvar_t	*r_swapInterval;
-cvar_t	*r_textureMode;
 cvar_t	*r_lockpvs;
 cvar_t	*r_noportals;
 cvar_t	*r_portalOnly;
@@ -122,163 +132,6 @@ static cvar_t* r_maxpolys;
 static cvar_t* r_maxpolyverts;
 int max_polys;
 int max_polyverts;
-
-
-static void GL_SetDefaultState()
-{
-	qglClearDepth( 1.0f );
-
-	qglCullFace( GL_FRONT );
-
-	qglColor4f( 1,1,1,1 );
-
-	for ( int i = 0; i < MAX_TMUS; ++i ) {
-		GL_SelectTexture( i );
-		GL_TextureMode( r_textureMode->string );
-		GL_TexEnv( GL_MODULATE );
-		qglDisable( GL_TEXTURE_2D );
-	}
-
-	GL_SelectTexture( 0 );
-	qglEnable( GL_TEXTURE_2D );
-
-	qglShadeModel( GL_SMOOTH );
-	qglDepthFunc( GL_LEQUAL );
-
-	qglPolygonOffset( -1, -1 );
-
-	// the vertex array is always enabled, but the color and texture
-	// arrays are enabled and disabled around the compiled vertex array call
-	qglEnableClientState( GL_VERTEX_ARRAY );
-
-	//
-	// make sure our GL state vector is set correctly
-	//
-	glState.glStateBits = GLS_DEPTHTEST_DISABLE | GLS_DEPTHMASK_TRUE;
-
-	qglPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
-	qglDepthMask( GL_TRUE );
-	qglDisable( GL_DEPTH_TEST );
-	qglEnable( GL_SCISSOR_TEST );
-	qglDisable( GL_CULL_FACE );
-	qglDisable( GL_BLEND );
-
-	// Needed for some of our qglReadPixels calls.
-	// The default alignment is 4.
-	// RGB with width 1366 -> not a multiple of 4!
-	qglPixelStorei( GL_PACK_ALIGNMENT, 1 );
-}
-
-
-static void GL_InitGLConfig()
-{
-	Q_strncpyz( glConfig.vendor_string, (const char*)qglGetString( GL_VENDOR ), sizeof( glConfig.vendor_string ) );
-	Q_strncpyz( glConfig.renderer_string, (const char*)qglGetString( GL_RENDERER ), sizeof( glConfig.renderer_string ) );
-	Q_strncpyz( glConfig.version_string, (const char*)qglGetString( GL_VERSION ), sizeof( glConfig.version_string ) );
-	Q_strncpyz( glConfig.extensions_string, (const char*)qglGetString( GL_EXTENSIONS ), sizeof( glConfig.extensions_string ) );
-	qglGetIntegerv( GL_MAX_TEXTURE_SIZE, &glConfig.unused_maxTextureSize );
-	glConfig.unused_maxActiveTextures = 0;
-	glConfig.unused_driverType = 0;		// ICD
-	glConfig.unused_hardwareType = 0;	// generic
-	glConfig.unused_deviceSupportsGamma = qtrue;
-	glConfig.unused_textureCompression = 0;	// no compression
-	glConfig.unused_textureEnvAddAvailable = qtrue;
-	glConfig.unused_displayFrequency = 0;
-	glConfig.unused_isFullscreen = !!r_fullscreen->integer;
-	glConfig.unused_stereoEnabled = qfalse;
-	glConfig.unused_smpActive = qfalse;
-}
-
-
-static void GL_InitGLInfo()
-{
-	qglGetIntegerv( GL_MAX_TEXTURE_SIZE, &glInfo.maxTextureSize );
-	qglGetIntegerv( GL_MAX_ELEMENTS_INDICES, &glInfo.maxDrawElementsI );
-	qglGetIntegerv( GL_MAX_ELEMENTS_VERTICES, &glInfo.maxDrawElementsV );
-
-	if ( strstr( glConfig.extensions_string, "GL_EXT_texture_filter_anisotropic" ) )
-		qglGetIntegerv( GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &glInfo.maxAnisotropy );
-	else
-		glInfo.maxAnisotropy = 0;
-}
-
-
-static void GL_InitExtensions()
-{
-	const char* missingExtension = NULL;
-	if ( !Sys_GL_LoadExtensions( &missingExtension ) )
-		ri.Error( ERR_FATAL, "GL_InitExtensions() - failed to load %s\n", missingExtension ? missingExtension : "a required extension" );
-
-	if ( !GL2_Init() )
-		ri.Error( ERR_FATAL, "GL_InitExtensions() - failed to create GL2 objects\n" );
-}
-
-
-/*
-** InitOpenGL
-**
-** This function is responsible for initializing a valid OpenGL subsystem.  This
-** is done by calling Sys_GL_Init (which gives us a working OGL subsystem) then
-** setting variables, checking GL constants, and reporting the gfx system config
-** to the user.
-*/
-static void InitOpenGL()
-{
-	// Sys_GL_Init initializes OS-specific portions of the renderer
-	// it directly or indirectly references the following cvars:
-	// r_fullscreen, r_mode, r_width, r_height
-
-	if ( glConfig.vidWidth == 0 )
-	{
-		// the order of these calls can not be changed
-		Sys_GL_Init();
-		GL_InitGLConfig();
-		GL_InitGLInfo();
-		GL_InitExtensions();
-
-		// apply the current V-Sync option after the first rendered frame
-		r_swapInterval->modified = qtrue;
-	}
-
-	GfxInfo_f();
-
-	GL_SetDefaultState();
-}
-
-
-void GL_CheckErrors()
-{
-	int err = qglGetError();
-	if ((err == GL_NO_ERROR) || r_ignoreGLErrors->integer)
-		return;
-
-	char s[64];
-	switch( err ) {
-		case GL_INVALID_ENUM:
-			strcpy( s, "GL_INVALID_ENUM" );
-			break;
-		case GL_INVALID_VALUE:
-			strcpy( s, "GL_INVALID_VALUE" );
-			break;
-		case GL_INVALID_OPERATION:
-			strcpy( s, "GL_INVALID_OPERATION" );
-			break;
-		case GL_STACK_OVERFLOW:
-			strcpy( s, "GL_STACK_OVERFLOW" );
-			break;
-		case GL_STACK_UNDERFLOW:
-			strcpy( s, "GL_STACK_UNDERFLOW" );
-			break;
-		case GL_OUT_OF_MEMORY:
-			strcpy( s, "GL_OUT_OF_MEMORY" );
-			break;
-		default:
-			Com_sprintf( s, sizeof(s), "%i", err);
-			break;
-	}
-
-	ri.Error( ERR_FATAL, "GL_CheckErrors: %s", s );
-}
 
 
 void R_ConfigureVideoMode( int desktopWidth, int desktopHeight )
@@ -326,18 +179,7 @@ static void RB_TakeScreenshotTGA( int x, int y, int width, int height, const cha
 	tga->width = LittleShort( width );
 	tga->height = LittleShort( height );
 	tga->pixel_size = 24;
-
-	byte* pRGB = p + sizeof(TargaHeader);
-	qglReadPixels( x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, pRGB );
-
-	// swap RGB to BGR
-	for (int i = 0; i < c; i += 3)
-	{
-		byte r = pRGB[i];
-		pRGB[i] = pRGB[i+2];
-		pRGB[i+2] = r;
-	}
-
+	gal.ReadPixels( x, y, width, height, 1, CS_BGR, p + sizeof(TargaHeader) );
 	ri.FS_WriteFile( fileName, p, sizeof(TargaHeader) + c );
 }
 
@@ -345,7 +187,7 @@ static void RB_TakeScreenshotTGA( int x, int y, int width, int height, const cha
 static void RB_TakeScreenshotJPG( int x, int y, int width, int height, const char* fileName )
 {
 	RI_AutoPtr p( width * height * 4 );
-	qglReadPixels( x, y, width, height, GL_RGBA, GL_UNSIGNED_BYTE, p );
+	gal.ReadPixels( x, y, width, height, 1, CS_RGBA, p );
 
 	RI_AutoPtr out( width * height * 4 );
 	int n = SaveJPGToBuffer( out, 95, width, height, p );
@@ -356,7 +198,7 @@ static void RB_TakeScreenshotJPG( int x, int y, int width, int height, const cha
 const void* RB_TakeScreenshotCmd( const screenshotCommand_t* cmd )
 {
 	// NOTE: the current read buffer is the last FBO color attachment texture that was written to
-	// therefore, qglReadPixels will get the latest data even with double/triple buffering enabled
+	// therefore, ReadPixels will get the latest data even with double/triple buffering enabled
 
 	switch (cmd->type) {
 		case screenshotCommand_t::SS_JPG:
@@ -394,7 +236,7 @@ static void R_TakeScreenshot( const char* ext, screenshotCommand_t::ss_type type
 		r_delayedScreenshotFrame = 0;
 		cmd->delayed = qtrue;
 	} else {
-		if ( RB_FindRenderCommand( RC_SCREENSHOT ) )
+		if ( R_FindRenderCommand( RC_SCREENSHOT ) )
 			return;
 		cmd = (screenshotCommand_t*)R_GetCommandBuffer( sizeof(screenshotCommand_t) );
 		if ( !cmd )
@@ -452,21 +294,18 @@ static void R_ScreenShotNoConJPG_f()
 
 const void *RB_TakeVideoFrameCmd( const void *data )
 {
-	int frameSize;
 	const videoFrameCommand_t* cmd = (const videoFrameCommand_t*)data;
 
 	if( cmd->motionJpeg )
 	{
-		qglReadPixels( 0, 0, cmd->width, cmd->height, GL_RGBA, GL_UNSIGNED_BYTE, cmd->captureBuffer );
-		frameSize = SaveJPGToBuffer( cmd->encodeBuffer, 95, cmd->width, cmd->height, cmd->captureBuffer );
+		gal.ReadPixels( 0, 0, cmd->width, cmd->height, 1, CS_RGBA, cmd->captureBuffer );
+		const int frameSize = SaveJPGToBuffer( cmd->encodeBuffer, 95, cmd->width, cmd->height, cmd->captureBuffer );
 		ri.CL_WriteAVIVideoFrame( cmd->encodeBuffer, frameSize );
 	}
 	else
 	{
-		qglPixelStorei( GL_PACK_ALIGNMENT, 4 );
-		qglReadPixels( 0, 0, cmd->width, cmd->height, GL_BGR, GL_UNSIGNED_BYTE, cmd->captureBuffer );
-		qglPixelStorei( GL_PACK_ALIGNMENT, 1 );
-		frameSize = PAD( cmd->width, 4 ) * cmd->height * 3;
+		gal.ReadPixels( 0, 0, cmd->width, cmd->height, 4, CS_BGR, cmd->captureBuffer );
+		const int frameSize = PAD( cmd->width, 4 ) * cmd->height * 3;
 		ri.CL_WriteAVIVideoFrame( cmd->captureBuffer, frameSize );
 	}
 
@@ -479,27 +318,17 @@ const void *RB_TakeVideoFrameCmd( const void *data )
 
 void GfxInfo_f( void )
 {
-	cvar_t* sys_cpustring = ri.Cvar_Get( "sys_cpustring", "", 0 );
-
-	ri.Printf( PRINT_DEVELOPER, "\nGL_VENDOR: %s\n", glConfig.vendor_string );
-	ri.Printf( PRINT_DEVELOPER, "GL_RENDERER: %s\n", glConfig.renderer_string );
-	ri.Printf( PRINT_DEVELOPER, "GL_VERSION: %s\n", glConfig.version_string );
-	ri.Printf( PRINT_DEVELOPER, "GL_EXTENSIONS: %s\n", glConfig.extensions_string );
-	ri.Printf( PRINT_ALL, "PIXELFORMAT: RGBA%d Z%d S%d\n", glConfig.colorBits, glConfig.depthBits, glConfig.stencilBits );
-	ri.Printf( PRINT_ALL, "MODE: %dx%d ", glConfig.vidWidth, glConfig.vidHeight );
-	if ( glInfo.displayFrequency )
-		ri.Printf( PRINT_ALL, "%dHz\n", glInfo.displayFrequency );
-	else
-		ri.Printf( PRINT_ALL, "\n" );
-
-	ri.Printf( PRINT_DEVELOPER, "texturemode: %s\n", r_textureMode->string );
-	ri.Printf( PRINT_DEVELOPER, "picmip: %d\n", r_picmip->integer );
-	ri.Printf( PRINT_DEVELOPER, "ambient pass: %s\n", r_vertexLight->integer ? "vertex" : "lightmap" );
-	if ( r_finish->integer ) {
-		ri.Printf( PRINT_DEVELOPER, "Forcing glFinish\n" );
-	}
-
-	ri.Printf( PRINT_DEVELOPER, "CPU: %s\n", sys_cpustring->string );
+	ri.Printf( PRINT_ALL, "Back-end: %s\n", r_backend->string );
+	if ( glConfig.vendor_string[0] != '\0' )
+		ri.Printf( PRINT_ALL, "Vendor: %s\n", glConfig.vendor_string );
+	if ( glConfig.renderer_string[0] != '\0' )
+		ri.Printf( PRINT_ALL, "Renderer: %s\n", glConfig.renderer_string );
+	if ( glConfig.version_string[0] != '\0' )
+		ri.Printf( PRINT_ALL, "OpenGL version: %s\n", glConfig.version_string );
+	ri.Printf( PRINT_ALL, "Soft sprites          : %s\n", glInfo.softSpriteSupport ? "ON" : "OFF" );
+	ri.Printf( PRINT_ALL, "Alpha to coverage     : %s\n", glInfo.alphaToCoverageSupport ? "ON" : "OFF" );
+	ri.Printf( PRINT_ALL, "GPU mip-map generation: %s\n", glInfo.mipGenSupport ? "ON" : "OFF" );
+	gal.PrintInfo();
 }
 
 
@@ -525,6 +354,17 @@ static const cvarTableItem_t r_cvars[] =
 	//
 	// latched and archived variables
 	//
+#if defined( _WIN32 )
+	{ &r_backend, "r_backend", "D3D11", CVAR_ARCHIVE | CVAR_LATCH, CVART_STRING, NULL, NULL, help_r_backend },
+#else
+	{ &r_backend, "r_backend", "GL3", CVAR_ARCHIVE | CVAR_LATCH, CVART_STRING,  NULL, NULL, help_r_backend },
+#endif
+	{ &r_frameSleep, "r_frameSleep", "2", CVAR_ARCHIVE, CVART_INTEGER, "0", "2", help_r_frameSleep },
+	{ &r_mipGenFilter, "r_mipGenFilter", "L4", CVAR_ARCHIVE | CVAR_LATCH, CVART_STRING, NULL, NULL, help_r_mipGenFilter },
+	{ &r_mipGenGamma, "r_mipGenGamma", "1.8", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "1.0", "3.0", help_r_mipGenGamma },
+	{ &r_gl3_geoStream, "r_gl3_geoStream", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", XSTRING(GL3MAP_MAX), help_r_gl3_geoStream },
+	{ &r_d3d11_syncOffsets, "r_d3d11_syncOffsets", "2", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", XSTRING(D3D11SO_MAX), help_r_d3d11_syncOffsets },
+	{ &r_d3d11_maxQueuedFrames, "r_d3d11_maxQueuedFrames", "3", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "1", "16", help_r_d3d11_maxQueuedFrames },
 	{ &r_ext_max_anisotropy, "r_ext_max_anisotropy", "16", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "16", help_r_ext_max_anisotropy },
 	{ &r_msaa, "r_msaa", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "16", "anti-aliasing sample count, " S_COLOR_VAL "0" S_COLOR_HELP "=off" },
 	{ &r_picmip, "r_picmip", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "16", help_r_picmip },
@@ -545,6 +385,12 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_vertexLight, "r_vertexLight", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, "disables lightmap texture blending" },
 	// note that r_subdivisions > 64 will create rendering artefacts because you'll see the other side of a curved surface when against it
 	{ &r_subdivisions, "r_subdivisions", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "1", "64", help_r_subdivisions },
+	{ &r_fullbright, "r_fullbright", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_fullbright },
+	{ &r_lightmap, "r_lightmap", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_lightmap },
+	{ &r_softSprites, "r_softSprites", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_softSprites },
+	{ &r_gpuMipGen, "r_gpuMipGen", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_gpuMipGen },
+	{ &r_alphaToCoverage, "r_alphaToCoverage", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_alphaToCoverage },
+	{ &r_dither, "r_dither", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_dither },
 
 	//
 	// latched variables that can only change over a restart
@@ -561,12 +407,10 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_noportals, "r_noportals", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_noportals },
 	{ &r_dynamiclight, "r_dynamiclight", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "enables dynamic lights" },
 	{ &r_finish, "r_finish", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "enables glFinish calls" },
-	{ &r_textureMode, "r_textureMode", "GL_LINEAR_MIPMAP_LINEAR", CVAR_ARCHIVE, CVART_STRING, NULL, NULL, help_r_textureMode },
-	{ &r_swapInterval, "r_swapInterval", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "8", help_r_swapInterval },
+	{ &r_swapInterval, "r_swapInterval", "0", CVAR_ARCHIVE, CVART_INTEGER, "-8", "8", help_r_swapInterval },
 	{ &r_gamma, "r_gamma", "1.2", CVAR_ARCHIVE, CVART_FLOAT, "0.5", "3", help_r_gamma },
 	{ &r_greyscale, "r_greyscale", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", "1", "controls how monochrome the final image looks" },
-	{ &r_lightmap, "r_lightmap", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_lightmap },
-	{ &r_fullbright, "r_fullbright", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_fullbright },
+	{ &r_noiseScale, "r_noiseScale", "1.0", CVAR_ARCHIVE, CVART_FLOAT, "0.125", "8.0", help_r_noiseScale },
 	{ &r_lodCurveError, "r_lodCurveError", "2000", CVAR_ARCHIVE, CVART_FLOAT, "250", "10000", "curved surfaces LOD scale" },
 
 	//
@@ -577,17 +421,16 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_uiFullScreen, "r_uifullscreen", "0", CVAR_TEMP },
 	{ &r_showImages, "r_showImages", "0", CVAR_TEMP },
 	{ &r_debugLight, "r_debuglight", "0", CVAR_TEMP },
-	{ &r_debugSort, "r_debugSort", "0", CVAR_CHEAT },
+	{ &r_debugSort, "r_debugSort", "0", CVAR_CHEAT, CVART_FLOAT },
 	{ &r_nocurves, "r_nocurves", "0", CVAR_CHEAT },
 	{ &r_drawworld, "r_drawworld", "1", CVAR_CHEAT },
 	{ &r_portalOnly, "r_portalOnly", "0", CVAR_CHEAT },
-	{ &r_measureOverdraw, "r_measureOverdraw", "0", CVAR_CHEAT },
 	{ &r_lodscale, "r_lodscale", "5", CVAR_CHEAT },
 	{ &r_norefresh, "r_norefresh", "0", CVAR_CHEAT },
 	{ &r_drawentities, "r_drawentities", "1", CVAR_CHEAT },
 	{ &r_nocull, "r_nocull", "0", CVAR_CHEAT },
 	{ &r_novis, "r_novis", "0", CVAR_CHEAT },
-	{ &r_speeds, "r_speeds", "0", CVAR_CHEAT },
+	{ &r_speeds, "r_speeds", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "draw rendering performance counters" },
 	{ &r_verbose, "r_verbose", "0", CVAR_CHEAT },
 	{ &r_debugSurface, "r_debugSurface", "0", CVAR_CHEAT },
 	{ &r_nobind, "r_nobind", "0", CVAR_CHEAT },
@@ -605,6 +448,94 @@ static void R_Register()
 {
 	ri.Cvar_RegisterTable( r_cvars, ARRAY_LEN(r_cvars) );
 	ri.Cmd_RegisterTable( r_cmds, ARRAY_LEN(r_cmds) );
+}
+
+
+static void R_InitGAL()
+{
+	struct gal_t {
+		getGALInterface_t grabInterface;
+		const char* cvarValue;
+		const char* fullName;
+	};
+
+	// preferred option goes first
+	const gal_t galArray[] = {
+#if defined( _WIN32 )
+		{ &GAL_GetD3D11, "D3D11", "Direct3D 11" },
+#endif
+		{ &GAL_GetGL3, "GL3", "OpenGL 3" },
+		{ &GAL_GetGL2, "GL2", "OpenGL 2" }
+	};
+
+	int galIndex = -1;
+	for ( int i = 0; i < ARRAY_LEN( galArray ); ++i ) {
+		if ( !Q_stricmp( r_backend->string, galArray[i].cvarValue ) ) {
+			galIndex = i;
+			break;
+		}
+	}
+
+	if ( galIndex < 0 ) {
+		galIndex = 0;
+		ri.Printf( PRINT_WARNING, "Invalid r_backend value, selecting the %s back-end instead\n", galArray[galIndex].fullName );
+		ri.Cvar_Set( r_backend->name, galArray[galIndex].cvarValue );
+	}
+
+	ri.Printf( PRINT_ALL, "Initializing the %s back-end...\n", galArray[galIndex].fullName );
+
+#if defined( _DEBUG )
+	// helps catch unset function pointers
+	memset( &gal, 0, sizeof( gal ) );
+#endif
+
+	if ( !galArray[galIndex].grabInterface( &gal ) )
+		ri.Error( ERR_FATAL, "Failed to grab the %s back-end's interface\n", galArray[galIndex].fullName );
+
+	if ( !gal.Init() )
+		ri.Error( ERR_FATAL, "Failed to initialize the %s back-end\n", galArray[galIndex].fullName );
+
+	GfxInfo_f();
+}
+
+
+static void R_InitMipFilter()
+{
+	struct filter_t {
+		const char* cvarName;
+		const char* fullName;
+		float kernel[4];
+	};
+
+	// preferred option goes first
+	const filter_t filterArray[] = {
+		{ "L4", "Lanczos 4", -0.0491683967f, -0.0816986337f, 0.151636884f, 0.479230106f },
+		{ "L3", "Lanczos 3", 0.0f, -0.0646646321f, 0.131493837f, 0.433170795f },
+		{ "BL", "Bi-linear", 0.0f, 0.0f, 0.0f, 0.5f },
+		{ "MN2", "Mitchell-Netravali 2 (B = 1/3, C = 1/3)", 0.0f, 0.0f, 0.123327762f, 0.376672268f },
+		{ "BH4", "3-term Blackman-Harris 4", 0.00106591149f, 0.0288433302f, 0.151539952f, 0.318550885f },
+		{ "BH3", "3-term Blackman-Harris 3", 0.0f, 0.00302829780f, 0.101031370f, 0.395940334f },
+		{ "BH2", "3-term Blackman-Harris 2", 0.0f, 0.0f, 0.0151469158f, 0.484853119f },
+		{ "T2", "Tent 2 (1/3 2/3)", 0.0f, 0.0f, 1.0f / 6.0f, 2.0f / 6.0f },
+		// The results are so similar to Lanczos...
+		//{ "K4", "Kaiser 4", -0.0487834960f, -0.0811581835f, 0.151146635f, 0.478795081f },
+		//{ "K3", "Kaiser 3", 0.0f, -0.0642274171f, 0.131010026f, 0.433217406f }
+	};
+
+	int index = -1;
+	for ( int i = 0; i < ARRAY_LEN( filterArray ); ++i ) {
+		if ( !Q_stricmp( r_mipGenFilter->string, filterArray[i].cvarName ) ) {
+			index = i;
+			break;
+		}
+	}
+
+	if ( index < 0 ) {
+		index = 0;
+		ri.Printf( PRINT_WARNING, "Invalid %s value, selecting the %s filter instead\n", r_mipGenFilter->name, filterArray[index].fullName );
+	}
+
+	memcpy( tr.mipFilter, filterArray[index].kernel, sizeof( tr.mipFilter ) );
 }
 
 
@@ -656,7 +587,9 @@ void R_Init()
 
 	R_ClearFrame();
 
-	InitOpenGL();
+	R_InitMipFilter();
+
+	R_InitGAL();
 
 	R_InitImages();
 
@@ -666,29 +599,31 @@ void R_Init()
 
 	R_ModelInit();
 
-	int err = qglGetError();
-	if (err != GL_NO_ERROR)
-		ri.Printf( PRINT_ALL, "glGetError() = 0x%x\n", err );
-
 	QSUBSYSTEM_INIT_DONE( "Renderer" );
 }
 
 
 static void RE_Shutdown( qbool destroyWindow )
 {
-	ri.Printf( PRINT_DEVELOPER, "RE_Shutdown( %i )\n", destroyWindow );
+	ri.Printf( PRINT_DEVELOPER, "RE_Shutdown( %i )", destroyWindow );
+
+	// This will also force the creation of a new context when switching
+	// between GL2 and GL3, which is what we want because
+	// the implementations have their own resources we can't keep around.
+	if ( !destroyWindow && r_backend->latchedString )
+		destroyWindow = qtrue;
+
+	ri.Printf( PRINT_DEVELOPER, " -> %i\n", destroyWindow );
 
 	if ( tr.registered ) {
 		ri.Cmd_UnregisterModule();
-		R_SyncRenderThread();
-		R_DeleteTextures();
+		gal.ShutDown( destroyWindow );
 	}
-	
-	// shut down platform specific OpenGL stuff
+
+	// shut down platform-specific video stuff
 	if ( destroyWindow ) {
-		Sys_GL_Shutdown();
+		Sys_V_Shutdown();
 		memset( &glConfig, 0, sizeof( glConfig ) );
-		memset( &glState, 0, sizeof( glState ) );
 	}
 
 	tr.registered = qfalse;
@@ -701,8 +636,6 @@ static void RE_BeginRegistration( glconfig_t* glconfigOut )
 
 	*glconfigOut = glConfig;
 
-	R_SyncRenderThread();
-
 	tr.viewCluster = -1;		// force markleafs to regenerate
 	RE_ClearScene();
 
@@ -710,14 +643,8 @@ static void RE_BeginRegistration( glconfig_t* glconfigOut )
 }
 
 
-// touch all images to make sure they are resident
-
 static void RE_EndRegistration()
 {
-	R_SyncRenderThread();
-	if (!Sys_LowPhysicalMemory()) {
-		RB_ShowImages();
-	}
 }
 
 
@@ -727,20 +654,29 @@ static int RE_GetCameraMatrixTime()
 }
 
 
-static void RE_SetMaxFPS( int maxFPS )
+static void RE_StretchRaw( int x, int y, int w, int h, int cols, int rows, const byte *data, int client, qbool dirty )
 {
-	if (maxFPS > 0 && tr.maxFPS == 0) {
-		tr.maxFPS = maxFPS;
-		tr.nextFrameTimeMS = Sys_Milliseconds() + 1000 / maxFPS;
-		tr.oldSwapInterval = r_swapInterval->integer;
-		ri.Cvar_Set(r_swapInterval->name, "0");
-	} else if (maxFPS == 0 && tr.maxFPS > 0) {
-		tr.maxFPS = 0;
-		ri.Cvar_Set(r_swapInterval->name, va("%i", tr.oldSwapInterval));
-	} else if (maxFPS > 0 && tr.maxFPS > 0) {
-		tr.maxFPS = maxFPS;
-		tr.nextFrameTimeMS = Sys_Milliseconds() + 1000 / maxFPS;
-	}
+	if ( !tr.registered )
+		return;
+
+	gal.UpdateScratch( tr.scratchImage[client], cols, rows, data, dirty );
+	tr.scratchShader->stages[0]->bundle.image[0] = tr.scratchImage[client];
+	RE_StretchPic( x, y, w, h, 0.5f / cols, 0.5f / rows, (cols - 0.5f) / cols, (rows - 0.5f) / rows, (qhandle_t)tr.scratchShader->index );
+}
+
+
+static qbool RE_Registered()
+{
+	return tr.registered;
+}
+
+
+static qbool RE_IsFrameSleepNeeded()
+{
+	if ( r_frameSleep->integer != 2 )
+		return r_frameSleep->integer;
+
+	return !Sys_V_IsVSynced();
 }
 
 
@@ -783,7 +719,6 @@ const refexport_t* GetRefAPI( const refimport_t* rimp )
 	re.DrawStretchPic = RE_StretchPic;
 	re.DrawTriangle = RE_DrawTriangle;
 	re.DrawStretchRaw = RE_StretchRaw;
-	re.UploadCinematic = RE_UploadCinematic;
 
 	re.GetEntityToken = R_GetEntityToken;
 	re.inPVS = R_inPVS;
@@ -792,7 +727,9 @@ const refexport_t* GetRefAPI( const refimport_t* rimp )
 
 	re.GetCameraMatrixTime = RE_GetCameraMatrixTime;
 
-	re.SetMaxFPS = RE_SetMaxFPS;
+	re.Registered = RE_Registered;
+
+	re.ShouldSleep = RE_IsFrameSleepNeeded;
 
 	return &re;
 }

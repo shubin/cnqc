@@ -77,7 +77,7 @@ static void* q_realloc_sized( void* ptr, size_t oldSize, size_t newSize )
 }
 
 
-qbool LoadSTB( const char* fileName, byte* buffer, int len, byte** pic, int* w, int* h, GLenum* format )
+qbool LoadSTB( const char* fileName, byte* buffer, int len, byte** pic, int* w, int* h, textureFormat_t* format )
 {
 	int comp;
 	*pic = (byte*)stbi_load_from_memory(buffer, len, w, h, &comp, 4);
@@ -86,8 +86,7 @@ qbool LoadSTB( const char* fileName, byte* buffer, int len, byte** pic, int* w, 
 		return qfalse;
 	}
 		
-	*format = comp == 4 ? GL_RGBA : GL_RGB;
+	*format = TF_RGBA8;
 
 	return qtrue;
 }
-

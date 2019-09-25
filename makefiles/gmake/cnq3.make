@@ -15,15 +15,15 @@ ifeq ($(config),debug_x32)
   TARGETDIR = ../../.bin/debug_x32
   TARGET = $(TARGETDIR)/cnq3-x86
   OBJDIR = ../../.build/debug_x32/cnq3
-  DEFINES += -DDEBUG -D_DEBUG
-  INCLUDES +=
+  DEFINES += -DGLEW_STATIC -DDEBUG -D_DEBUG
+  INCLUDES += -I../../code/glew/include
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -g -Wno-unused-parameter -Wno-write-strings -mmmx -msse -msse2 -x c++ -std=c++98
   ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CFLAGS) -fno-exceptions -fno-rtti
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-  LIBS += ../../.build/debug_x32/libbotlib.a ../../.build/debug_x32/librenderer.a ../../.build/debug_x32/liblibjpeg-turbo.a -ldl -lm -lSDL2
-  LDDEPS += ../../.build/debug_x32/libbotlib.a ../../.build/debug_x32/librenderer.a ../../.build/debug_x32/liblibjpeg-turbo.a
+  LIBS += ../../.build/debug_x32/libbotlib.a ../../.build/debug_x32/librenderer.a ../../.build/debug_x32/libglew.a ../../.build/debug_x32/liblibjpeg-turbo.a -ldl -lm -lSDL2 -lGL
+  LDDEPS += ../../.build/debug_x32/libbotlib.a ../../.build/debug_x32/librenderer.a ../../.build/debug_x32/libglew.a ../../.build/debug_x32/liblibjpeg-turbo.a
   ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -L../../.build/debug_x32 -m32 
   LINKCMD = $(CXX) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
   define PREBUILDCMDS
@@ -46,15 +46,15 @@ ifeq ($(config),debug_x64)
   TARGETDIR = ../../.bin/debug_x64
   TARGET = $(TARGETDIR)/cnq3-x64
   OBJDIR = ../../.build/debug_x64/cnq3
-  DEFINES += -DDEBUG -D_DEBUG
-  INCLUDES +=
+  DEFINES += -DGLEW_STATIC -DDEBUG -D_DEBUG
+  INCLUDES += -I../../code/glew/include
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g -Wno-unused-parameter -Wno-write-strings -x c++ -std=c++98
   ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CFLAGS) -fno-exceptions -fno-rtti
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-  LIBS += ../../.build/debug_x64/libbotlib.a ../../.build/debug_x64/librenderer.a ../../.build/debug_x64/liblibjpeg-turbo.a -ldl -lm -lSDL2
-  LDDEPS += ../../.build/debug_x64/libbotlib.a ../../.build/debug_x64/librenderer.a ../../.build/debug_x64/liblibjpeg-turbo.a
+  LIBS += ../../.build/debug_x64/libbotlib.a ../../.build/debug_x64/librenderer.a ../../.build/debug_x64/libglew.a ../../.build/debug_x64/liblibjpeg-turbo.a -ldl -lm -lSDL2 -lGL
+  LDDEPS += ../../.build/debug_x64/libbotlib.a ../../.build/debug_x64/librenderer.a ../../.build/debug_x64/libglew.a ../../.build/debug_x64/liblibjpeg-turbo.a
   ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib64 -L../../.build/debug_x64 -m64 
   LINKCMD = $(CXX) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
   define PREBUILDCMDS
@@ -77,15 +77,15 @@ ifeq ($(config),release_x32)
   TARGETDIR = ../../.bin/release_x32
   TARGET = $(TARGETDIR)/cnq3-x86
   OBJDIR = ../../.build/release_x32/cnq3
-  DEFINES += -DNDEBUG
-  INCLUDES +=
+  DEFINES += -DGLEW_STATIC -DNDEBUG
+  INCLUDES += -I../../code/glew/include
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -fomit-frame-pointer -ffast-math -Os -g -msse2 -Wno-unused-parameter -Wno-write-strings -g1 -mmmx -msse -msse2 -x c++ -std=c++98
   ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CFLAGS) -fno-exceptions -fno-rtti
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-  LIBS += ../../.build/release_x32/libbotlib.a ../../.build/release_x32/librenderer.a ../../.build/release_x32/liblibjpeg-turbo.a -ldl -lm -lSDL2
-  LDDEPS += ../../.build/release_x32/libbotlib.a ../../.build/release_x32/librenderer.a ../../.build/release_x32/liblibjpeg-turbo.a
+  LIBS += ../../.build/release_x32/libbotlib.a ../../.build/release_x32/librenderer.a ../../.build/release_x32/libglew.a ../../.build/release_x32/liblibjpeg-turbo.a -ldl -lm -lSDL2 -lGL
+  LDDEPS += ../../.build/release_x32/libbotlib.a ../../.build/release_x32/librenderer.a ../../.build/release_x32/libglew.a ../../.build/release_x32/liblibjpeg-turbo.a
   ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -L../../.build/release_x32 -m32 
   LINKCMD = $(CXX) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
   define PREBUILDCMDS
@@ -108,15 +108,15 @@ ifeq ($(config),release_x64)
   TARGETDIR = ../../.bin/release_x64
   TARGET = $(TARGETDIR)/cnq3-x64
   OBJDIR = ../../.build/release_x64/cnq3
-  DEFINES += -DNDEBUG
-  INCLUDES +=
+  DEFINES += -DGLEW_STATIC -DNDEBUG
+  INCLUDES += -I../../code/glew/include
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -fomit-frame-pointer -ffast-math -Os -g -msse2 -Wno-unused-parameter -Wno-write-strings -g1 -x c++ -std=c++98
   ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CFLAGS) -fno-exceptions -fno-rtti
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-  LIBS += ../../.build/release_x64/libbotlib.a ../../.build/release_x64/librenderer.a ../../.build/release_x64/liblibjpeg-turbo.a -ldl -lm -lSDL2
-  LDDEPS += ../../.build/release_x64/libbotlib.a ../../.build/release_x64/librenderer.a ../../.build/release_x64/liblibjpeg-turbo.a
+  LIBS += ../../.build/release_x64/libbotlib.a ../../.build/release_x64/librenderer.a ../../.build/release_x64/libglew.a ../../.build/release_x64/liblibjpeg-turbo.a -ldl -lm -lSDL2 -lGL
+  LDDEPS += ../../.build/release_x64/libbotlib.a ../../.build/release_x64/librenderer.a ../../.build/release_x64/libglew.a ../../.build/release_x64/liblibjpeg-turbo.a
   ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib64 -L../../.build/release_x64 -m64 
   LINKCMD = $(CXX) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
   define PREBUILDCMDS
@@ -141,6 +141,7 @@ OBJECTS := \
 	$(OBJDIR)/cl_cin.o \
 	$(OBJDIR)/cl_console.o \
 	$(OBJDIR)/cl_download.o \
+	$(OBJDIR)/cl_gl.o \
 	$(OBJDIR)/cl_input.o \
 	$(OBJDIR)/cl_keys.o \
 	$(OBJDIR)/cl_main.o \
@@ -155,7 +156,6 @@ OBJECTS := \
 	$(OBJDIR)/snd_mem.o \
 	$(OBJDIR)/snd_mix.o \
 	$(OBJDIR)/linux_main.o \
-	$(OBJDIR)/linux_qgl.o \
 	$(OBJDIR)/linux_shared.o \
 	$(OBJDIR)/linux_signals.o \
 	$(OBJDIR)/linux_tty.o \
@@ -270,6 +270,9 @@ $(OBJDIR)/cl_console.o: ../../code/client/cl_console.cpp
 $(OBJDIR)/cl_download.o: ../../code/client/cl_download.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/cl_gl.o: ../../code/client/cl_gl.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/cl_input.o: ../../code/client/cl_input.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
@@ -312,9 +315,6 @@ $(OBJDIR)/snd_mix.o: ../../code/client/snd_mix.cpp
 $(OBJDIR)/linux_main.o: ../../code/linux/linux_main.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/linux_qgl.o: ../../code/linux/linux_qgl.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/linux_shared.o: ../../code/linux/linux_shared.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"

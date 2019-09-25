@@ -63,6 +63,28 @@ local function WIN_CreatePdbCopyPostBuildCommand(exeName)
 
 end
 
+local function WIN_CreateShaderPreBuildCommand(name, shaderType, version, options, suffix)
+
+	extra_fxc_options_map =
+	{
+	   debug = "/O0 /Zi",
+	   release = "/O3"
+	}
+
+	local fxc_path = "\"$(DXSDK_DIR)Utilities\\bin\\x86\\fxc.exe\""
+	local extra_options = "%{extra_fxc_options_map[cfg.buildcfg]}"..options
+	local name_suffix = suffix
+	local target = string.format("%s_%s", shaderType, version)
+	local entry_point = string.format("%s_main", shaderType)
+	local var_name = string.format("g_%s%s_%s", name, name_suffix, shaderType)
+	local abs_path_hlsl = os.realpath(path_src.."\\renderer\\hlsl")
+	local input_file_name = string.format("%s\\%s.hlsl", abs_path_hlsl, name)
+	local output_file_name = string.format("%s\\%s%s_%s.h", abs_path_hlsl, name, name_suffix, shaderType)
+
+	return string.format("%s %s /nologo /T %s /E %s /Vn %s /Fh %s %s", fxc_path, input_file_name, target, entry_point, var_name, output_file_name, extra_options)
+
+end
+
 local function AddSourcesAndHeaders(dirPath)
 
 	files
@@ -341,6 +363,7 @@ local function ApplyExeProjectSettings(exeName, server)
 		"client/cl_cin.cpp",
 		"client/cl_console.cpp",
 		"client/cl_download.cpp",
+		"client/cl_gl.cpp",
 		"client/cl_input.cpp",
 		"client/cl_keys.cpp",
 		"client/cl_main.cpp",
@@ -398,14 +421,12 @@ local function ApplyExeProjectSettings(exeName, server)
 		"win32/win_snd.cpp",
 		"win32/win_syscon.cpp",
 		"win32/win_wndproc.cpp",
-		"win32/win_glimp.cpp",
-		"win32/win_qgl.c"
+		"win32/win_glimp.cpp"
 	}
 
 	local client_sources_linux =
 	{
 		"linux/linux_main.cpp",
-		"linux/linux_qgl.c",
 		"linux/linux_shared.cpp",
 		"linux/linux_signals.cpp",
 		"linux/linux_tty.cpp",
@@ -429,7 +450,7 @@ local function ApplyExeProjectSettings(exeName, server)
 	else
 		AddSourcesFromArray(".", client_sources)
 		AddHeaders("renderer")
-		links { "renderer", "libjpeg-turbo" }
+		links { "renderer", "glew", "libjpeg-turbo" }
 	end
 
 	filter { "system:windows" }
@@ -481,7 +502,7 @@ local function ApplyExeProjectSettings(exeName, server)
 	filter "system:not windows"
 		links { "dl", "m" }
 		if (server == 0) then
-			links { "SDL2" }
+			links { "SDL2", "GL" }
 		end
 
 	-- RC will compile the .rc into a .res
@@ -663,6 +684,8 @@ solution "cnq3"
 
 		kind "WindowedApp"
 		language "C++"
+		defines { "GLEW_STATIC" }
+		includedirs { path_src.."/glew/include" }
 		ApplyExeProjectSettings("cnq3", 0)
 		filter "action:gmake"
 			buildoptions { "-std=c++98" }
@@ -686,14 +709,45 @@ solution "cnq3"
 		filter "action:gmake"
 			buildoptions { "-std=c++98" }
 
+	project "glew"
+	
+		kind "StaticLib"
+		language "C"
+		defines { "GLEW_STATIC" }
+		AddSourcesAndHeaders("glew")
+		includedirs { path_src.."/glew/include" }
+		ApplyLibProjectSettings()
+
 	project "renderer"
 
 		kind "StaticLib"
 		language "C++"
+		defines { "GLEW_STATIC" }
 		AddSourcesAndHeaders("renderer")
+		includedirs { path_src.."/glew/include" }
+		if os.is("windows") then
+			files { string.format("%s/renderer/hlsl/*.hlsl", path_src) }
+		end
 		ApplyLibProjectSettings()
 		filter "action:gmake"
 			buildoptions { "-std=c++98" }
+		if os.is("windows") then
+			filter "action:vs*"
+				prebuildcommands { WIN_CreateShaderPreBuildCommand("generic", "vs", "4_1", "", "") }
+				prebuildcommands { WIN_CreateShaderPreBuildCommand("generic", "ps", "4_1", "", "") }
+				prebuildcommands { WIN_CreateShaderPreBuildCommand("generic", "ps", "4_1", " /DCNQ3_A2C=1", "_a") }
+				prebuildcommands { WIN_CreateShaderPreBuildCommand("generic", "ps", "4_1", " /DCNQ3_DITHER=1", "_d") }
+				prebuildcommands { WIN_CreateShaderPreBuildCommand("generic", "ps", "4_1", " /DCNQ3_A2C=1 /DCNQ3_DITHER=1", "_ad") }
+				prebuildcommands { WIN_CreateShaderPreBuildCommand("post", "vs", "4_1", "", "") }
+				prebuildcommands { WIN_CreateShaderPreBuildCommand("post", "ps", "4_1", "", "") }
+				prebuildcommands { WIN_CreateShaderPreBuildCommand("dl", "vs", "4_1", "", "") }
+				prebuildcommands { WIN_CreateShaderPreBuildCommand("dl", "ps", "4_1", "", "") }
+				prebuildcommands { WIN_CreateShaderPreBuildCommand("sprite", "vs", "4_1", "", "") }
+				prebuildcommands { WIN_CreateShaderPreBuildCommand("sprite", "ps", "4_1", "", "") }
+				prebuildcommands { WIN_CreateShaderPreBuildCommand("mip_start", "cs", "5_0", "", "") }
+				prebuildcommands { WIN_CreateShaderPreBuildCommand("mip_pass", "cs", "5_0", "", "") }
+				prebuildcommands { WIN_CreateShaderPreBuildCommand("mip_end", "cs", "5_0", "", "") }
+		end
 
 	project "libjpeg-turbo"
 

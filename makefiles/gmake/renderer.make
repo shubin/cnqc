@@ -15,8 +15,8 @@ ifeq ($(config),debug_x32)
   TARGETDIR = ../../.build/debug_x32
   TARGET = $(TARGETDIR)/librenderer.a
   OBJDIR = ../../.build/debug_x32/renderer
-  DEFINES += -DDEBUG -D_DEBUG
-  INCLUDES +=
+  DEFINES += -DGLEW_STATIC -DDEBUG -D_DEBUG
+  INCLUDES += -I../../code/glew/include
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -g -Wno-unused-parameter -Wno-write-strings -mmmx -msse -msse2 -std=c++98
@@ -42,8 +42,8 @@ ifeq ($(config),debug_x64)
   TARGETDIR = ../../.build/debug_x64
   TARGET = $(TARGETDIR)/librenderer.a
   OBJDIR = ../../.build/debug_x64/renderer
-  DEFINES += -DDEBUG -D_DEBUG
-  INCLUDES +=
+  DEFINES += -DGLEW_STATIC -DDEBUG -D_DEBUG
+  INCLUDES += -I../../code/glew/include
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g -Wno-unused-parameter -Wno-write-strings -std=c++98
@@ -69,8 +69,8 @@ ifeq ($(config),release_x32)
   TARGETDIR = ../../.build/release_x32
   TARGET = $(TARGETDIR)/librenderer.a
   OBJDIR = ../../.build/release_x32/renderer
-  DEFINES += -DNDEBUG
-  INCLUDES +=
+  DEFINES += -DGLEW_STATIC -DNDEBUG
+  INCLUDES += -I../../code/glew/include
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -fomit-frame-pointer -ffast-math -Os -g -msse2 -Wno-unused-parameter -Wno-write-strings -g1 -mmmx -msse -msse2 -std=c++98
@@ -96,8 +96,8 @@ ifeq ($(config),release_x64)
   TARGETDIR = ../../.build/release_x64
   TARGET = $(TARGETDIR)/librenderer.a
   OBJDIR = ../../.build/release_x64/renderer
-  DEFINES += -DNDEBUG
-  INCLUDES +=
+  DEFINES += -DGLEW_STATIC -DNDEBUG
+  INCLUDES += -I../../code/glew/include
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -fomit-frame-pointer -ffast-math -Os -g -msse2 -Wno-unused-parameter -Wno-write-strings -g1 -std=c++98
@@ -121,10 +121,12 @@ endif
 OBJECTS := \
 	$(OBJDIR)/stb_image.o \
 	$(OBJDIR)/tr_backend.o \
+	$(OBJDIR)/tr_backend_d3d11.o \
+	$(OBJDIR)/tr_backend_gl2.o \
+	$(OBJDIR)/tr_backend_gl3.o \
 	$(OBJDIR)/tr_bsp.o \
 	$(OBJDIR)/tr_cmds.o \
 	$(OBJDIR)/tr_curve.o \
-	$(OBJDIR)/tr_gl2.o \
 	$(OBJDIR)/tr_image.o \
 	$(OBJDIR)/tr_init.o \
 	$(OBJDIR)/tr_light.o \
@@ -203,6 +205,15 @@ $(OBJDIR)/stb_image.o: ../../code/renderer/stb_image.cpp
 $(OBJDIR)/tr_backend.o: ../../code/renderer/tr_backend.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/tr_backend_d3d11.o: ../../code/renderer/tr_backend_d3d11.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/tr_backend_gl2.o: ../../code/renderer/tr_backend_gl2.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/tr_backend_gl3.o: ../../code/renderer/tr_backend_gl3.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/tr_bsp.o: ../../code/renderer/tr_bsp.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
@@ -210,9 +221,6 @@ $(OBJDIR)/tr_cmds.o: ../../code/renderer/tr_cmds.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/tr_curve.o: ../../code/renderer/tr_curve.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/tr_gl2.o: ../../code/renderer/tr_gl2.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/tr_image.o: ../../code/renderer/tr_image.cpp

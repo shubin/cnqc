@@ -99,7 +99,8 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
-      <PreprocessorDefinitions>DEBUG;_DEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GLEW_STATIC;DEBUG;_DEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\code\glew\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -115,12 +116,29 @@
     <Lib>
       <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
     </Lib>
+    <PreBuildEvent>
+      <Command>"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_generic_vs /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic_vs.h /O0 /Zi
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_ps /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic_ps.h /O0 /Zi
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_a_ps /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic_a_ps.h /O0 /Zi /DCNQ3_A2C=1
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_d_ps /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic_d_ps.h /O0 /Zi /DCNQ3_DITHER=1
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_ad_ps /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic_ad_ps.h /O0 /Zi /DCNQ3_A2C=1 /DCNQ3_DITHER=1
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\post.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_post_vs /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\post_vs.h /O0 /Zi
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\post.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_post_ps /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\post_ps.h /O0 /Zi
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\dl.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_dl_vs /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\dl_vs.h /O0 /Zi
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\dl.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_dl_ps /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\dl_ps.h /O0 /Zi
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\sprite.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_sprite_vs /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\sprite_vs.h /O0 /Zi
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\sprite.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_sprite_ps /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\sprite_ps.h /O0 /Zi
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\mip_start.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_start_cs /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\mip_start_cs.h /O0 /Zi
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\mip_pass.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_pass_cs /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\mip_pass_cs.h /O0 /Zi
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\mip_end.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_end_cs /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\mip_end_cs.h /O0 /Zi</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='debug|x64'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
-      <PreprocessorDefinitions>DEBUG;_DEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GLEW_STATIC;DEBUG;_DEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\code\glew\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -136,13 +154,30 @@
     <Lib>
       <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
     </Lib>
+    <PreBuildEvent>
+      <Command>"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_generic_vs /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic_vs.h /O0 /Zi
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_ps /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic_ps.h /O0 /Zi
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_a_ps /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic_a_ps.h /O0 /Zi /DCNQ3_A2C=1
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_d_ps /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic_d_ps.h /O0 /Zi /DCNQ3_DITHER=1
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_ad_ps /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic_ad_ps.h /O0 /Zi /DCNQ3_A2C=1 /DCNQ3_DITHER=1
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\post.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_post_vs /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\post_vs.h /O0 /Zi
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\post.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_post_ps /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\post_ps.h /O0 /Zi
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\dl.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_dl_vs /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\dl_vs.h /O0 /Zi
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\dl.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_dl_ps /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\dl_ps.h /O0 /Zi
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\sprite.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_sprite_vs /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\sprite_vs.h /O0 /Zi
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\sprite.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_sprite_ps /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\sprite_ps.h /O0 /Zi
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\mip_start.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_start_cs /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\mip_start_cs.h /O0 /Zi
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\mip_pass.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_pass_cs /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\mip_pass_cs.h /O0 /Zi
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\mip_end.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_end_cs /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\mip_end_cs.h /O0 /Zi</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release|Win32'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
-      <PreprocessorDefinitions>NDEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GLEW_STATIC;NDEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\code\glew\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>MinSpace</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -168,13 +203,30 @@
     <Lib>
       <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
     </Lib>
+    <PreBuildEvent>
+      <Command>"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_generic_vs /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic_vs.h /O3
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_ps /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic_ps.h /O3
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_a_ps /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic_a_ps.h /O3 /DCNQ3_A2C=1
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_d_ps /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic_d_ps.h /O3 /DCNQ3_DITHER=1
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_ad_ps /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic_ad_ps.h /O3 /DCNQ3_A2C=1 /DCNQ3_DITHER=1
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\post.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_post_vs /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\post_vs.h /O3
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\post.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_post_ps /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\post_ps.h /O3
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\dl.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_dl_vs /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\dl_vs.h /O3
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\dl.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_dl_ps /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\dl_ps.h /O3
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\sprite.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_sprite_vs /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\sprite_vs.h /O3
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\sprite.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_sprite_ps /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\sprite_ps.h /O3
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\mip_start.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_start_cs /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\mip_start_cs.h /O3
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\mip_pass.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_pass_cs /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\mip_pass_cs.h /O3
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\mip_end.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_end_cs /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\mip_end_cs.h /O3</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release|x64'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
-      <PreprocessorDefinitions>NDEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GLEW_STATIC;NDEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\code\glew\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>MinSpace</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -199,9 +251,24 @@
     <Lib>
       <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
     </Lib>
+    <PreBuildEvent>
+      <Command>"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_generic_vs /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic_vs.h /O3
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_ps /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic_ps.h /O3
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_a_ps /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic_a_ps.h /O3 /DCNQ3_A2C=1
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_d_ps /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic_d_ps.h /O3 /DCNQ3_DITHER=1
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_ad_ps /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\generic_ad_ps.h /O3 /DCNQ3_A2C=1 /DCNQ3_DITHER=1
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\post.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_post_vs /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\post_vs.h /O3
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\post.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_post_ps /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\post_ps.h /O3
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\dl.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_dl_vs /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\dl_vs.h /O3
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\dl.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_dl_ps /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\dl_ps.h /O3
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\sprite.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_sprite_vs /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\sprite_vs.h /O3
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\sprite.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_sprite_ps /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\sprite_ps.h /O3
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\mip_start.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_start_cs /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\mip_start_cs.h /O3
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\mip_pass.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_pass_cs /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\mip_pass_cs.h /O3
+"$(DXSDK_DIR)Utilities\bin\x86\fxc.exe" C:\Code\cpma_dev\cnq3\code\renderer\hlsl\mip_end.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_end_cs /Fh C:\Code\cpma_dev\cnq3\code\renderer\hlsl\mip_end_cs.h /O3</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\code\renderer\qgl.h" />
     <ClInclude Include="..\..\code\renderer\stb_image.h" />
     <ClInclude Include="..\..\code\renderer\tr_help.h" />
     <ClInclude Include="..\..\code\renderer\tr_local.h" />
@@ -210,10 +277,12 @@
   <ItemGroup>
     <ClCompile Include="..\..\code\renderer\stb_image.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_backend.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_backend_d3d11.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_backend_gl2.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_backend_gl3.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_bsp.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_cmds.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_curve.cpp" />
-    <ClCompile Include="..\..\code\renderer\tr_gl2.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_image.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_init.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_light.cpp" />
@@ -229,6 +298,15 @@
     <ClCompile Include="..\..\code\renderer\tr_sky.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_surface.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_world.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\code\renderer\hlsl\dl.hlsl" />
+    <None Include="..\..\code\renderer\hlsl\generic.hlsl" />
+    <None Include="..\..\code\renderer\hlsl\mip_end.hlsl" />
+    <None Include="..\..\code\renderer\hlsl\mip_pass.hlsl" />
+    <None Include="..\..\code\renderer\hlsl\mip_start.hlsl" />
+    <None Include="..\..\code\renderer\hlsl\post.hlsl" />
+    <None Include="..\..\code\renderer\hlsl\sprite.hlsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

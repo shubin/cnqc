@@ -30,7 +30,7 @@ refimport_t ri;
 
 const float s_flipMatrix[16] = {
 	// convert from our coordinate system (looking down X)
-	// to OpenGL's coordinate system (looking down -Z)
+	// to the back-end's coordinate system (looking down -Z)
 	0, 0, -1, 0,
 	-1, 0, 0, 0,
 	0, 1, 0, 0,
@@ -202,19 +202,65 @@ void R_TransformClipToWindow( const vec4_t clip, const viewParms_t *view, vec4_t
 }
 
 
-static void myGlMultMatrix( const float *a, const float *b, float *out )
+void R_MultMatrix( const float *a, const float *b, float *out )
 {
-	int		i, j;
-
-	for ( i = 0 ; i < 4 ; i++ ) {
-		for ( j = 0 ; j < 4 ; j++ ) {
+	for ( int i = 0 ; i < 4 ; i++ ) {
+		for ( int j = 0 ; j < 4 ; j++ ) {
 			out[ i * 4 + j ] =
-				a [ i * 4 + 0 ] * b [ 0 * 4 + j ]
-				+ a [ i * 4 + 1 ] * b [ 1 * 4 + j ]
-				+ a [ i * 4 + 2 ] * b [ 2 * 4 + j ]
-				+ a [ i * 4 + 3 ] * b [ 3 * 4 + j ];
+				a [ i * 4 + 0 ] * b [ 0 * 4 + j ] +
+				a [ i * 4 + 1 ] * b [ 1 * 4 + j ] +
+				a [ i * 4 + 2 ] * b [ 2 * 4 + j ] +
+				a [ i * 4 + 3 ] * b [ 3 * 4 + j ];
 		}
 	}
+}
+
+
+void R_MakeIdentityMatrix( float* m )
+{
+	m[ 0] = 1.0f;
+	m[ 1] = 0.0f;
+	m[ 2] = 0.0f;
+	m[ 3] = 0.0f;
+	m[ 4] = 0.0f;
+	m[ 5] = 1.0f;
+	m[ 6] = 0.0f;
+	m[ 7] = 0.0f;
+	m[ 8] = 0.0f;
+	m[ 9] = 0.0f;
+	m[10] = 1.0f;
+	m[11] = 0.0f;
+	m[12] = 0.0f;
+	m[13] = 0.0f;
+	m[14] = 0.0f;
+	m[15] = 1.0f;
+}
+
+
+void R_MakeOrthoProjectionMatrix( float* m, float w, float h )
+{
+	// 2/(r-l)      0            0           0
+	// 0            2/(t-b)      0           0
+	// 0            0            1/(zf-zn)   0
+	// (l+r)/(l-r)  (t+b)/(b-t)  zn/(zn-zf)  1
+	const float n = 0.0f;
+	const float f = 2.0f;
+	m[ 0] = 2.0f / w;
+	m[ 4] = 0.0f;
+	m[ 8] = 0.0f;
+	m[12] = -1.0f;
+	m[ 1] = 0.0f;
+	m[ 5] = -2.0f / h;
+	m[ 9] = 0.0f;
+	m[13] = 1.0f;
+	m[ 2] = 0.0f;
+	m[ 6] = 0.0f;
+	m[10] = 1.0f / (f - n);
+	m[14] = 0.0f;
+	m[ 3] = 0.0f;
+	m[ 7] = 0.0f;
+	m[11] = n / (n - f);
+	m[15] = 1.0f;
 }
 
 
@@ -264,7 +310,7 @@ void R_RotateForEntity( const trRefEntity_t* ent, const viewParms_t* viewParms, 
 	glMatrix[11] = 0;
 	glMatrix[15] = 1;
 
-	myGlMultMatrix( glMatrix, viewParms->world.modelMatrix, orient->modelMatrix );
+	R_MultMatrix( glMatrix, viewParms->world.modelMatrix, orient->modelMatrix );
 
 	// calculate the viewer origin in the model's space
 	// needed for fog, specular, and environment mapping
@@ -325,8 +371,8 @@ static void R_RotateForViewer()
 	viewerMatrix[15] = 1;
 
 	// convert from our coordinate system (looking down X)
-	// to OpenGL's coordinate system (looking down -Z)
-	myGlMultMatrix( viewerMatrix, s_flipMatrix, tr.orient.modelMatrix );
+	// to the back-end's coordinate system (looking down -Z)
+	R_MultMatrix( viewerMatrix, s_flipMatrix, tr.orient.modelMatrix );
 
 	tr.viewParms.world = tr.orient;
 }
@@ -364,7 +410,6 @@ static void SetFarClip()
 
 static void R_SetupProjection()
 {
-	float	xmin, xmax, ymin, ymax;
 	float	width, height, depth;
 	float	zNear, zFar;
 
@@ -377,24 +422,18 @@ static void R_SetupProjection()
 	zNear	= 4.0f;
 	zFar	= tr.viewParms.zFar;
 
-	ymax = zNear * tan( tr.refdef.fov_y * M_PI / 360.0f );
-	ymin = -ymax;
-
-	xmax = zNear * tan( tr.refdef.fov_x * M_PI / 360.0f );
-	xmin = -xmax;
-
-	width = xmax - xmin;
-	height = ymax - ymin;
+	height = 2.0f * zNear * tan( tr.refdef.fov_y * M_PI / 360.0f );
+	width = 2.0f * zNear * tan( tr.refdef.fov_x * M_PI / 360.0f );
 	depth = zFar - zNear;
 
 	tr.viewParms.projectionMatrix[0] = 2 * zNear / width;
 	tr.viewParms.projectionMatrix[4] = 0;
-	tr.viewParms.projectionMatrix[8] = ( xmax + xmin ) / width;	// normally 0
+	tr.viewParms.projectionMatrix[8] = 0;
 	tr.viewParms.projectionMatrix[12] = 0;
 
 	tr.viewParms.projectionMatrix[1] = 0;
 	tr.viewParms.projectionMatrix[5] = 2 * zNear / height;
-	tr.viewParms.projectionMatrix[9] = ( ymax + ymin ) / height;	// normally 0
+	tr.viewParms.projectionMatrix[9] = 0;
 	tr.viewParms.projectionMatrix[13] = 0;
 
 	tr.viewParms.projectionMatrix[2] = 0;
@@ -1033,7 +1072,9 @@ void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int fo
 	// the sort data is packed into a single 32 bit value so it can be
 	// compared quickly during the qsorting process
 	tr.refdef.drawSurfs[index].sort = (shader->sortedIndex << QSORT_SHADERNUM_SHIFT)
-			| tr.shiftedEntityNum | (fogIndex << QSORT_FOGNUM_SHIFT);
+			| tr.shiftedEntityNum | (fogIndex << QSORT_FOGNUM_SHIFT)
+			| (shader->cullType << QSORT_CULLTYPE_SHIFT)
+			| (shader->polygonOffset << QSORT_POLYOFF_SHIFT);
 	tr.refdef.drawSurfs[index].surface = surface;
 }
 
@@ -1046,7 +1087,9 @@ void R_AddLitSurf( const surfaceType_t* surface, const shader_t* shader, int fog
 	litSurf_t* litsurf = &tr.refdef.litSurfs[index];
 
 	litsurf->sort = (shader->sortedIndex << QSORT_SHADERNUM_SHIFT)
-			| tr.shiftedEntityNum | (fogIndex << QSORT_FOGNUM_SHIFT);
+			| tr.shiftedEntityNum | (fogIndex << QSORT_FOGNUM_SHIFT)
+			| (shader->cullType << QSORT_CULLTYPE_SHIFT)
+			| (shader->polygonOffset << QSORT_POLYOFF_SHIFT);
 	litsurf->surface = surface;
 
 	if (!tr.light->head)
@@ -1067,6 +1110,46 @@ void R_DecomposeSort( unsigned sort, int *entityNum, const shader_t **shader, in
 }
 
 
+static float R_ComputePointDepth( const vec3_t point, const float* modelMatrix )
+{
+	return -(
+		modelMatrix[2 + 0 * 4] * point[0] +
+		modelMatrix[2 + 1 * 4] * point[1] +
+		modelMatrix[2 + 2 * 4] * point[2] +
+		modelMatrix[2 + 3 * 4]
+		);
+}
+
+
+static float R_ComputeSurfaceDepth( const surfaceType_t* surf, int entityNum )
+{
+	if ( *surf == SF_ENTITY ) {
+		const refEntity_t* ent = &tr.refdef.entities[entityNum].e;
+		if ( ent->reType == RT_SPRITE )
+			return R_ComputePointDepth( ent->origin, tr.viewParms.world.modelMatrix );
+		if ( ent->reType == RT_LIGHTNING )
+			return -999666.0f;
+	}
+	
+	return 999666.0f;
+}
+
+
+static int R_CompareDrawSurfDepth( const void* aPtr, const void* bPtr )
+{
+	const drawSurf_t* a = ( const drawSurf_t* )aPtr;
+	const drawSurf_t* b = ( const drawSurf_t* )bPtr;
+
+	if ( a->depth > b->depth )
+		return -1;
+
+	if ( a->depth < b->depth )
+		return 1;
+
+	return a->index - b->index;
+}
+
+
 static void R_SortDrawSurfs( int firstDrawSurf, int firstLitSurf )
 {
 	int numDrawSurfs = tr.refdef.numDrawSurfs - firstDrawSurf;
@@ -1080,7 +1163,7 @@ static void R_SortDrawSurfs( int firstDrawSurf, int firstLitSurf )
 	// it is possible for some views to not have any surfaces
 	if ( numDrawSurfs < 1 ) {
 		// we still need to add it for hyperspace cases
-		R_AddDrawSurfCmd( drawSurfs, 0 );
+		R_AddDrawSurfCmd( drawSurfs, 0, 0 );
 		return;
 	}
 
@@ -1094,8 +1177,8 @@ static void R_SortDrawSurfs( int firstDrawSurf, int firstLitSurf )
 	// sort the drawsurfs by sort type, then shader, then entity, etc
 	R_RadixSort( drawSurfs, numDrawSurfs );
 
-	// check for any pass through drawing, which
-	// may cause another view to be rendered first
+	// check for any pass through drawing,
+	// which may cause another view to be rendered first
 	for ( i = 0 ; i < numDrawSurfs ; i++ ) {
 		R_DecomposeSort( (drawSurfs+i)->sort, &entityNum, &shader, &fogNum );
 
@@ -1118,6 +1201,23 @@ static void R_SortDrawSurfs( int firstDrawSurf, int firstLitSurf )
 		}
 	}
 
+	// compute the average camera depth of all transparent surfaces
+	int numTranspSurfs = 0;
+	for ( i = numDrawSurfs - 1; i >= 0; --i ) {
+		R_DecomposeSort( (drawSurfs+i)->sort, &entityNum, &shader, &fogNum );
+
+		if ( shader->sort <= SS_OPAQUE ) {
+			numTranspSurfs = numDrawSurfs - i - 1;
+			break;
+		}
+
+		drawSurfs[i].depth = R_ComputeSurfaceDepth( drawSurfs[i].surface, entityNum );
+		drawSurfs[i].index = i;
+	}
+
+	// sort transparent surfaces by depth
+	qsort( drawSurfs + numDrawSurfs - numTranspSurfs, numTranspSurfs, sizeof(drawSurf_t), &R_CompareDrawSurfDepth );
+
 	// all the lit surfaces are in a single queue
 	// but each light's surfaces are sorted within its subsection
 	for ( i = 0; i < tr.refdef.num_dlights; ++i ) {
@@ -1127,7 +1227,7 @@ static void R_SortDrawSurfs( int firstDrawSurf, int firstLitSurf )
 		}
 	}
 
-	R_AddDrawSurfCmd( drawSurfs, numDrawSurfs );
+	R_AddDrawSurfCmd( drawSurfs, numDrawSurfs, numTranspSurfs );
 }
 
 
@@ -1223,49 +1323,6 @@ static void R_GenerateDrawSurfs()
 }
 
 
-static void R_DebugPolygon( int color, int numPoints, const float* points )
-{
-	int i;
-
-	GL_State( GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE );
-
-	// draw solid shade
-	qglColor3f( color&1, (color>>1)&1, (color>>2)&1 );
-	qglBegin( GL_POLYGON );
-	for ( i = 0 ; i < numPoints ; i++ ) {
-		qglVertex3fv( points + i * 3 );
-	}
-	qglEnd();
-
-	// draw wireframe outline
-	GL_State( GLS_POLYMODE_LINE | GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE );
-	qglDepthRange( 0, 0 );
-	qglColor3f( 1, 1, 1 );
-	qglBegin( GL_POLYGON );
-	for ( i = 0 ; i < numPoints ; i++ ) {
-		qglVertex3fv( points + i * 3 );
-	}
-	qglEnd();
-	qglDepthRange( 0, 1 );
-}
-
-
-// visualization aid for movement clipping debugging
-
-static void R_DebugGraphics()
-{
-	if ( !r_debugSurface->integer )
-		return;
-
-	// the render thread can't make callbacks to the main thread
-	R_SyncRenderThread();
-
-	GL_Bind( tr.whiteImage);
-	GL_Cull( CT_FRONT_SIDED );
-	ri.CM_DrawDebugSurface( R_DebugPolygon );
-}
-
-
 int re_cameraMatrixTime;
 
 
@@ -1294,8 +1351,39 @@ void R_RenderView( const viewParms_t* parms )
 	R_GenerateDrawSurfs();
 
 	R_SortDrawSurfs( firstDrawSurf, firstLitSurf );
-
-	// draw main system development information (surface outlines, etc)
-	R_DebugGraphics();
 }
 
+
+const image_t* R_UpdateAndGetBundleImage( const textureBundle_t* bundle, updateAnimatedImage_t updateImage )
+{
+	if ( bundle->isVideoMap ) {
+		ri.CIN_RunCinematic( bundle->videoMapHandle );
+
+		int w, h, client;
+		const byte* data;
+		qbool dirty;
+		const qbool validData = ri.CIN_GrabCinematic( bundle->videoMapHandle, &w, &h, &data, &client, &dirty );
+		if ( client >= 0 && client < ARRAY_LEN( tr.scratchImage ) ) {
+			image_t* const image = tr.scratchImage[client];
+			if ( validData )
+				(*updateImage)(image, w, h, data, dirty);
+
+			return image;
+		} else {
+			return tr.whiteImage;
+		}
+	}
+
+	if ( bundle->numImageAnimations <= 1 )
+		return bundle->image[0];
+
+	// it is necessary to do this messy calc to make sure animations line up
+	// exactly with waveforms of the same frequency
+	double v = tess.shaderTime * bundle->imageAnimationSpeed * FUNCTABLE_SIZE;
+	long long int index = v;
+	index >>= FUNCTABLE_SHIFT;
+	if ( index < 0 ) // may happen with shader time offsets
+		return bundle->image[0];
+
+	return bundle->image[index % bundle->numImageAnimations];
+}

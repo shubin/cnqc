@@ -8,6 +8,7 @@
 *.idb
 code/qcommon/git.h
 code/win32/winquake.res
+code/renderer/hlsl/*.h
 makefiles/vs*/*sdf
 makefiles/*/obj
 .build

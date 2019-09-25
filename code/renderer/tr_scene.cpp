@@ -207,7 +207,7 @@ void RE_RenderScene( const refdef_t* fd )
 		return;
 	}
 
-	int startTime = ri.Milliseconds();
+	const int64_t startTime = ri.Microseconds();
 
 	if (!tr.world && !( fd->rdflags & RDF_NOWORLDMODEL ) ) {
 		ri.Error (ERR_DROP, "R_RenderScene: NULL worldmodel");
@@ -311,5 +311,5 @@ void RE_RenderScene( const refdef_t* fd )
 	r_firstSceneDlight = r_numdlights;
 	r_firstScenePoly = r_numpolys;
 
-	tr.pc[RF_MSEC] += ri.Milliseconds() - startTime;
+	tr.pc[RF_USEC] += (int)( ri.Microseconds() - startTime );
 }

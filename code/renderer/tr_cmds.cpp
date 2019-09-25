@@ -22,7 +22,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_local.h"
 
 
-static void R_IssueRenderCommands()
+void R_IssueRenderCommands()
 {
 	renderCommandList_t* cmdList = &backEndData->commands;
 
@@ -36,22 +36,66 @@ static void R_IssueRenderCommands()
 }
 
 
-/*
-====================
-R_SyncRenderThread
+void* R_FindRenderCommand( renderCommand_t type )
+{
+	renderCommandList_t* cmdList = &backEndData->commands;
+	void* data = cmdList->cmds;
+	void* end = cmdList->cmds + cmdList->used;
 
-Issue any pending commands and wait for them to complete.
-After exiting, the render thread will have completed its work
-and will remain idle and the main thread is free to issue
-OpenGL calls until R_IssueRenderCommands is called.
-====================
-*/
-void R_SyncRenderThread( void ) {
-	if ( !tr.registered ) {
-		return;
+	while ( 1 ) {
+		data = PADP(data, sizeof(void *));
+
+		if( *(int *)data == type )
+			return data;
+
+		if ( data >= end )
+			return NULL;
+
+		switch ( *(const int *)data ) {
+		case RC_SET_COLOR:
+			data = (char*)data + sizeof(setColorCommand_t);
+			break;
+		case RC_STRETCH_PIC:
+			data = (char*)data + sizeof(stretchPicCommand_t);
+			break;
+		case RC_TRIANGLE:
+			data = (char*)data + sizeof(triangleCommand_t);
+			break;
+		case RC_DRAW_SURFS:
+			data = (char*)data + sizeof(drawSurfsCommand_t);
+			break;
+		case RC_BEGIN_FRAME:
+			data = (char*)data + sizeof(beginFrameCommand_t);
+			break;
+		case RC_SWAP_BUFFERS:
+			data = (char*)data + sizeof(swapBuffersCommand_t);
+			break;
+		case RC_SCREENSHOT:
+			data = (char*)data + sizeof(screenshotCommand_t);
+			break;
+		case RC_VIDEOFRAME:
+			data = (char*)data + sizeof(videoFrameCommand_t);
+			break;
+
+		case RC_END_OF_LIST:
+		default:
+			return NULL;
+		}
 	}
-	R_IssueRenderCommands();
 }
+
+
+static void R_RemoveRenderCommand( void* cmd, int cmdSize )
+{
+	renderCommandList_t* cmdList = &backEndData->commands;
+	const int endOffset = ((char*)cmd + cmdSize) - (char*)cmdList->cmds;
+	const int endBytes = cmdList->used - endOffset;
+	assert( cmd >= cmdList->cmds && ((char*)cmd + cmdSize) <= ((char*)cmdList->cmds + cmdList->used) );
+
+	memmove( cmd, (char*)cmd + cmdSize, endBytes );
+	cmdList->used -= cmdSize;
+}
+
 
 /*
 ============
@@ -87,12 +131,13 @@ void *R_GetCommandBuffer( int bytes ) {
 #define R_CMD(T, ID) T* cmd = (T*)R_GetCommandBuffer( sizeof(T) ); if (!cmd) return; cmd->commandId = ID;
 
 
-void R_AddDrawSurfCmd( drawSurf_t* drawSurfs, int numDrawSurfs )
+void R_AddDrawSurfCmd( drawSurf_t* drawSurfs, int numDrawSurfs, int numTranspSurfs )
 {
 	R_CMD( drawSurfsCommand_t, RC_DRAW_SURFS );
 
 	cmd->drawSurfs = drawSurfs;
 	cmd->numDrawSurfs = numDrawSurfs;
+	cmd->numTranspSurfs = numTranspSurfs;
 
 	cmd->refdef = tr.refdef;
 	cmd->viewParms = tr.viewParms;
@@ -158,73 +203,10 @@ void RE_BeginFrame( stereoFrame_t stereoFrame )
 	if (!tr.registered)
 		return;
 
-	glState.finishCalled = qfalse;
-
 	tr.frameCount++;
 	tr.frameSceneNum = 0;
 
-	//
-	// do overdraw measurement
-	//
-	if ( r_measureOverdraw->integer )
-	{
-		if ( glConfig.stencilBits < 4 )
-		{
-			ri.Printf( PRINT_ALL, "Warning: not enough stencil bits to measure overdraw: %d\n", glConfig.stencilBits );
-			ri.Cvar_Set( "r_measureOverdraw", "0" );
-			r_measureOverdraw->modified = qfalse;
-		}
-		else
-		{
-			R_SyncRenderThread();
-			qglEnable( GL_STENCIL_TEST );
-			qglStencilMask( ~0U );
-			qglClearStencil( 0U );
-			qglStencilFunc( GL_ALWAYS, 0U, ~0U );
-			qglStencilOp( GL_KEEP, GL_INCR, GL_INCR );
-		}
-		r_measureOverdraw->modified = qfalse;
-	}
-	else
-	{
-		// this is only reached if it was on and is now off
-		if ( r_measureOverdraw->modified ) {
-			R_SyncRenderThread();
-			qglDisable( GL_STENCIL_TEST );
-		}
-		r_measureOverdraw->modified = qfalse;
-	}
-
-	//
-	// texturemode stuff
-	//
-	if ( r_textureMode->modified ) {
-		R_SyncRenderThread();
-		GL_TextureMode( r_textureMode->string );
-		r_textureMode->modified = qfalse;
-	}
-
-	//
-	// gamma stuff
-	//
-	if ( r_gamma->modified ) {
-		r_gamma->modified = qfalse;
-		R_SyncRenderThread();
-		R_SetColorMappings();
-	}
-
-	// check for errors
-	if ( !r_ignoreGLErrors->integer ) {
-		int err;
-		R_SyncRenderThread();
-		if ( ( err = qglGetError() ) != GL_NO_ERROR ) {
-			ri.Error( ERR_FATAL, "RE_BeginFrame() - glGetError() failed (0x%x)!\n", err );
-		}
-	}
-
-	//
 	// delayed screenshot
-	//
 	if ( r_delayedScreenshotPending ) {
 		r_delayedScreenshotFrame++;
 		if ( r_delayedScreenshotFrame >= 2 ) {
@@ -247,18 +229,12 @@ void RE_EndFrame( int* pcFE, int* pc2D, int* pc3D, qbool render )
 	if (!tr.registered)
 		return;
 
-	if (tr.maxFPS > 0) {
-		if (Sys_Milliseconds() < tr.nextFrameTimeMS)
-			return;
-		tr.nextFrameTimeMS += 1000 / tr.maxFPS;
-	}
-
 	qbool delayScreenshot = qfalse;
 	if ( !render && r_delayedScreenshotPending )
 		render = qtrue;
 
 	if ( !render ) {
-		screenshotCommand_t* ssCmd = (screenshotCommand_t*)RB_FindRenderCommand( RC_SCREENSHOT );
+		screenshotCommand_t* ssCmd = (screenshotCommand_t*)R_FindRenderCommand( RC_SCREENSHOT );
 
 		if ( ssCmd )
 			render = qtrue;
@@ -267,7 +243,7 @@ void RE_EndFrame( int* pcFE, int* pc2D, int* pc3D, qbool render )
 			// save and remove the command so we can push it back after the frame's done
 			r_delayedScreenshot = *ssCmd;
 			r_delayedScreenshot.delayed = qtrue;
-			RB_RemoveRenderCommand( ssCmd, sizeof(screenshotCommand_t) );
+			R_RemoveRenderCommand( ssCmd, sizeof(screenshotCommand_t) );
 			delayScreenshot = qtrue;
 		}
 	}

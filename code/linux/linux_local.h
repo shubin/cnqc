@@ -35,8 +35,6 @@ void		Lin_QueEvent( int time, sysEventType_t type, int value, int value2, int pt
 void		Lin_ConsoleInputInit();
 void		Lin_ConsoleInputShutdown();
 const char*	Lin_ConsoleInput();
-qbool		Lin_LoadGL();
-void		Lin_UnloadGL();	
 
 qbool		tty_Enabled();
 void		tty_Hide();

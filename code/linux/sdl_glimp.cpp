@@ -23,10 +23,10 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 #include "linux_local.h"
 #include "linux_help.h"
 #include "../renderer/tr_local.h"
-#include "../renderer/qgl.h"
 
 #include <SDL2/SDL.h>
 #include "sdl_local.h"
+#include "GL/glew.h"
 
 
 glImp_t glimp;
@@ -166,7 +166,7 @@ static void sdl_MonitorList_f()
 }
 
 
-void Sys_GL_Init()
+void Sys_V_Init( galId_t type )
 {
 	if (glimp.window != NULL)
 		return;
@@ -195,14 +195,8 @@ void Sys_GL_Init()
 			windowFlags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
 	}
 
-	// @TODO: make a cvar defaulting to an empty string for this? e.g. value: "libGL.so.1"
-	if (SDL_GL_LoadLibrary(NULL) < 0)
-		ri.Error(ERR_FATAL, "Sys_GL_Init - SDL_GL_LoadLibrary failed: %s\n", SDL_GetError());
-
-	glimp.window = SDL_CreateWindow("CNQ3", deskropRect.x, deskropRect.y, glConfig.vidWidth, glConfig.vidHeight, windowFlags);
-	if (glimp.window == NULL)
-		ri.Error(ERR_FATAL, "Sys_GL_Init - SDL_CreateWindow failed: %s\n", SDL_GetError());
-
+	// SDL docs: "All three attributes must be set prior to creating the first window"
+	const int debugFlags = CL_GL_WantDebug() ? SDL_GL_CONTEXT_DEBUG_FLAG : 0;
 	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
 	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
 	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
@@ -213,22 +207,48 @@ void Sys_GL_Init()
 	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 0);
 	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 0);
 	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
+	if (type == GAL_GL3)
+	{
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, debugFlags);
+	}
+	else
+	{
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, debugFlags);
+	}
+
+	// @TODO: make a cvar defaulting to an empty string for this? e.g. value: "libGL.so.1"
+	if (SDL_GL_LoadLibrary(NULL) < 0)
+		ri.Error(ERR_FATAL, "Sys_V_Init - SDL_GL_LoadLibrary failed: %s\n", SDL_GetError());
+
+	glimp.window = SDL_CreateWindow("CNQ3", deskropRect.x, deskropRect.y, glConfig.vidWidth, glConfig.vidHeight, windowFlags);
+	if (glimp.window == NULL)
+		ri.Error(ERR_FATAL, "Sys_V_Init - SDL_CreateWindow failed: %s\n", SDL_GetError());
+
 	glimp.glContext = SDL_GL_CreateContext(glimp.window);
 	if (glimp.glContext == NULL)
-		ri.Error(ERR_FATAL, "Sys_GL_Init - SDL_GL_CreateContext failed: %s\n", SDL_GetError());
+		ri.Error(ERR_FATAL, "Sys_V_Init - SDL_GL_CreateContext failed: %s\n", SDL_GetError());
 	glConfig.colorBits = 32;
 	glConfig.depthBits = 24;
 	glConfig.stencilBits = 8;
 
 	if (SDL_GL_MakeCurrent(glimp.window, glimp.glContext) < 0)
-		ri.Error(ERR_FATAL, "Sys_GL_Init - SDL_GL_MakeCurrent failed: %s\n", SDL_GetError());
+		ri.Error(ERR_FATAL, "Sys_V_Init - SDL_GL_MakeCurrent failed: %s\n", SDL_GetError());
 
-	if (!Lin_LoadGL())
-		ri.Error(ERR_FATAL, "Sys_GL_Init - failed to initialize core OpenGL\n");
+	const GLenum glewErrorCode = glewInit();
+	if (glewErrorCode != GLEW_OK)
+		ri.Error(ERR_FATAL, "Sys_V_Init - glewInit failed: %s\n", glewGetErrorString(glewErrorCode));
+
+	CL_GL_Init();
 }
 
 
-void Sys_GL_Shutdown()
+void Sys_V_Shutdown()
 {
 	if (glimp.glContext != NULL) {
 		SDL_GL_DeleteContext(glimp.glContext);
@@ -241,11 +261,10 @@ void Sys_GL_Shutdown()
 	}
 
 	SDL_GL_UnloadLibrary();
-	Lin_UnloadGL();
 }
 
 
-void Sys_GL_EndFrame()
+void Sys_V_EndFrame()
 {
 	if (r_swapInterval->modified) {
 		r_swapInterval->modified = qfalse;
@@ -253,4 +272,10 @@ void Sys_GL_EndFrame()
 	}
 
 	SDL_GL_SwapWindow(glimp.window);
+}
+
+
+qbool Sys_V_IsVSynced()
+{
+	return SDL_GL_GetSwapInterval() != 0;
 }

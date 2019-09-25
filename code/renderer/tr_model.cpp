@@ -234,10 +234,6 @@ qhandle_t RE_RegisterModel( const char* name )
 	Q_strncpyz( mod->name, name, sizeof( mod->name ) );
 	mod->numLods = 0;
 
-
-	// make sure the render thread is stopped
-	R_SyncRenderThread();
-
 	void* buf;
 	int lod, numLoaded = 0;
 
