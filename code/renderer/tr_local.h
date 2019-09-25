@@ -505,14 +505,6 @@ struct srfPoly_t {
 };
 
 
-typedef struct srfFlare_s {
-	surfaceType_t	surfaceType;
-	vec3_t			origin;
-	vec3_t			normal;
-	vec3_t			color;
-} srfFlare_t;
-
-
 struct srfGridMesh_t {
 	surfaceType_t	surfaceType;
 
@@ -844,8 +836,6 @@ typedef struct {
 
 	shader_t*		defaultShader;
 
-	shader_t				*flareShader;
-
 	int						numLightmaps;
 	image_t					*lightmaps[MAX_LIGHTMAPS];
 
@@ -990,11 +980,6 @@ extern	cvar_t	*r_debugSurface;
 
 extern	cvar_t	*r_showImages;
 extern	cvar_t	*r_debugSort;
-
-extern cvar_t	*r_flares;
-extern cvar_t	*r_flareSize;
-extern cvar_t	*r_flareFade;
-extern cvar_t	*r_flareCoeff;
 
 
 void  R_NoiseInit();
@@ -1222,19 +1207,6 @@ void R_AddBrushModelSurfaces( const trRefEntity_t* re );
 void R_AddWorldSurfaces();
 qbool R_inPVS( const vec3_t p1, const vec3_t p2 );
 
-
-/*
-============================================================
-
-FLARES
-
-============================================================
-*/
-
-void R_ClearFlares( void );
-void RB_AddFlare( void *surface, int fogNum, vec3_t point, vec3_t color, vec3_t normal );
-void RB_AddDlightFlares( void );
-void RB_RenderFlares (void);
 
 /*
 ============================================================

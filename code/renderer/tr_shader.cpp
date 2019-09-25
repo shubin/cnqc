@@ -2532,23 +2532,6 @@ static void CreateInternalShaders()
 }
 
 
-static void CreateExternalShaders()
-{
-	tr.flareShader = R_FindShader( "flareShader", LIGHTMAP_NONE, qtrue );
-
-	// Hack to make fogging work correctly on flares. Fog colors are calculated
-	// in tr_flare.c already.
-	if (!tr.flareShader->defaultShader)
-	{
-		for (int index = 0; index < tr.flareShader->numStages; index++)
-		{
-			tr.flareShader->stages[index]->adjustColorsForFog = ACFF_NONE;
-			tr.flareShader->stages[index]->stateBits |= GLS_DEPTHTEST_DISABLE;
-		}
-	}
-}
-
-
 void R_InitShaders()
 {
 	ri.Printf( PRINT_ALL, "Initializing Shaders\n" );
@@ -2558,6 +2541,4 @@ void R_InitShaders()
 	CreateInternalShaders();
 
 	ScanAndLoadShaderFiles();
-
-	CreateExternalShaders();
 }

@@ -213,7 +213,6 @@
     <ClCompile Include="..\..\code\renderer\tr_bsp.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_cmds.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_curve.cpp" />
-    <ClCompile Include="..\..\code\renderer\tr_flares.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_gl2.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_image.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_init.cpp" />

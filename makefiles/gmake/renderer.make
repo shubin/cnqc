@@ -124,7 +124,6 @@ OBJECTS := \
 	$(OBJDIR)/tr_bsp.o \
 	$(OBJDIR)/tr_cmds.o \
 	$(OBJDIR)/tr_curve.o \
-	$(OBJDIR)/tr_flares.o \
 	$(OBJDIR)/tr_gl2.o \
 	$(OBJDIR)/tr_image.o \
 	$(OBJDIR)/tr_init.o \
@@ -211,9 +210,6 @@ $(OBJDIR)/tr_cmds.o: ../../code/renderer/tr_cmds.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/tr_curve.o: ../../code/renderer/tr_curve.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/tr_flares.o: ../../code/renderer/tr_flares.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/tr_gl2.o: ../../code/renderer/tr_gl2.cpp

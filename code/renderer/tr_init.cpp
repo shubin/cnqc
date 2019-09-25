@@ -107,11 +107,6 @@ cvar_t	*r_directedScale;
 cvar_t	*r_debugLight;
 cvar_t	*r_debugSort;
 
-cvar_t	*r_flares;
-cvar_t	*r_flareSize;
-cvar_t	*r_flareFade;
-cvar_t	*r_flareCoeff;
-
 ///////////////////////////////////////////////////////////////
 cvar_t	*r_maplightBrightness;
 cvar_t	*r_maplightSaturation;
@@ -561,7 +556,6 @@ static const cvarTableItem_t r_cvars[] =
 	// archived variables that can change at any time
 	//
 	{ &r_lodbias, "r_lodbias", "-2", CVAR_ARCHIVE, CVART_INTEGER, "-16", "16", help_r_lodbias },
-	{ &r_flares, "r_flares", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "enables light flares" },
 	{ &r_ignoreGLErrors, "r_ignoreGLErrors", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "if " S_COLOR_VAL "0" S_COLOR_HELP ", OpenGL errors are fatal" },
 	{ &r_fastsky, "r_fastsky", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_fastsky },
 	{ &r_noportals, "r_noportals", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_noportals },
@@ -587,9 +581,6 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_nocurves, "r_nocurves", "0", CVAR_CHEAT },
 	{ &r_drawworld, "r_drawworld", "1", CVAR_CHEAT },
 	{ &r_portalOnly, "r_portalOnly", "0", CVAR_CHEAT },
-	{ &r_flareSize, "r_flareSize", "40", CVAR_CHEAT },
-	{ &r_flareFade, "r_flareFade", "7", CVAR_CHEAT },
-	{ &r_flareCoeff, "r_flareCoeff", "150", CVAR_CHEAT },
 	{ &r_measureOverdraw, "r_measureOverdraw", "0", CVAR_CHEAT },
 	{ &r_lodscale, "r_lodscale", "5", CVAR_CHEAT },
 	{ &r_norefresh, "r_norefresh", "0", CVAR_CHEAT },
@@ -713,7 +704,6 @@ static void RE_BeginRegistration( glconfig_t* glconfigOut )
 	R_SyncRenderThread();
 
 	tr.viewCluster = -1;		// force markleafs to regenerate
-	R_ClearFlares();
 	RE_ClearScene();
 
 	tr.registered = qtrue;

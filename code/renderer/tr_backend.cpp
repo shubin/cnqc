@@ -533,9 +533,6 @@ static void RB_RenderDrawSurfList( const drawSurf_t* drawSurfs, int numDrawSurfs
 	if ( depthRange ) {
 		qglDepthRange( 0, 1 );
 	}
-
-	// add light flares on lights that aren't obscured
-	RB_RenderFlares();
 }
 
 

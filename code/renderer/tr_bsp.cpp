@@ -491,21 +491,12 @@ static void ParseTriSurf( const dsurface_t* ds, const drawVert_t* verts, msurfac
 }
 
 
-static void ParseFlare( const dsurface_t* ds, const drawVert_t* verts, msurface_t* surf, const int* indexes )
+static void ParseFlare( const dsurface_t* ds, msurface_t* surf )
 {
+	static surfaceType_t flare = SF_FLARE;
 	surf->fogIndex = LittleLong( ds->fogNum ) + 1;
 	surf->shader = ShaderForShaderNum( ds->shaderNum, LIGHTMAP_BY_VERTEX );
-
-	srfFlare_t* flare = RI_New<srfFlare_t>();
-	flare->surfaceType = SF_FLARE;
-
-	surf->data = (surfaceType_t*)flare;
-
-	for (int i = 0; i < 3; ++i) {
-		flare->origin[i] = LittleFloat( ds->lightmapOrigin[i] );
-		flare->color[i] = LittleFloat( ds->lightmapVecs[0][i] );
-		flare->normal[i] = LittleFloat( ds->lightmapVecs[2][i] );
-	}
+	surf->data = &flare;
 }
 
 
@@ -1238,7 +1229,7 @@ static void R_LoadSurfaces( const lump_t* surfs, const lump_t* verts, const lump
 			numFaces++;
 			break;
 		case MST_FLARE:
-			ParseFlare( in, dv, out, indexes );
+			ParseFlare( in, out );
 			numFlares++;
 			break;
 		default:

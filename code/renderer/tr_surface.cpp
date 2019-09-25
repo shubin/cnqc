@@ -735,29 +735,6 @@ NULL MODEL
 ===========================================================================
 */
 
-// draws x/y/z lines from the origin for orientation debugging
-
-static void RB_SurfaceAxis()
-{
-	GL_Bind( tr.whiteImage );
-	qglLineWidth( 3 );
-	qglBegin( GL_LINES );
-	qglColor3f( 1,0,0 );
-	qglVertex3f( 0,0,0 );
-	qglVertex3f( 16,0,0 );
-	qglColor3f( 0,1,0 );
-	qglVertex3f( 0,0,0 );
-	qglVertex3f( 0,16,0 );
-	qglColor3f( 0,0,1 );
-	qglVertex3f( 0,0,0 );
-	qglVertex3f( 0,0,16 );
-	qglEnd();
-	qglLineWidth( 1 );
-}
-
-
-///////////////////////////////////////////////////////////////
-
 
 static void RB_SurfaceBad( const surfaceType_t* surfType )
 {
@@ -781,16 +758,9 @@ static void RB_SurfaceEntity( surfaceType_t* surfType )
 		RB_SurfaceLightningBolt();
 		break;
 	default:
-		RB_SurfaceAxis();
+		// invalid or deprecated
 		break;
 	}
-	return;
-}
-
-
-static void RB_SurfaceFlare(srfFlare_t *surf) {
-	if (r_flares->integer)
-		RB_AddFlare(surf, tess.fogNum, surf->origin, surf->color, surf->normal);
 }
 
 
@@ -802,6 +772,6 @@ void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])( const void* ) = {
 	(void(*)( const void* ))RB_SurfaceTriangles,	// SF_TRIANGLES
 	(void(*)( const void* ))RB_SurfacePolychain,	// SF_POLY
 	(void(*)( const void* ))RB_SurfaceMesh,			// SF_MD3
-	(void(*)( const void* ))RB_SurfaceFlare,		// SF_FLARE
+	(void(*)( const void* ))RB_SurfaceSkip,			// SF_FLARE
 	(void(*)( const void* ))RB_SurfaceEntity,		// SF_ENTITY
 };
