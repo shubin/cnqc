@@ -1,4 +1,9 @@
 
+DD Mmm 19 - 1.52
+
+fix: r_monitor on Linux is now 0-based and the value doesn't change incorrectly on its own anymore
+
+
 31 Mar 19 - 1.51
 
 add: now showing the cvar's current and latched values in the help panel

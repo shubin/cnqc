@@ -4,13 +4,18 @@
 #define MAX_MONITOR_COUNT 16
 
 
+struct monitor_t {
+	SDL_Rect		rect;
+	int				sdlIndex;
+};
+
 struct glImp_t {
 	SDL_Window*		window;
 	SDL_GLContext	glContext;
 
-	SDL_Rect		monitorRects[MAX_MONITOR_COUNT];
+	monitor_t		monitors[MAX_MONITOR_COUNT];
 	int				monitorCount;
-	int				monitor; // current monitor, 0-based
+	int				monitor; // indexes monitors
 };
 
 
