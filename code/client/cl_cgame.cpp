@@ -674,6 +674,12 @@ static void CL_SetMaxFPS( int maxFPS )
 }
 
 
+void CL_DisableFramerateLimiter()
+{
+	CL_SetMaxFPS( 0 );
+}
+
+
 void CL_InitCGame()
 {
 	int t = Sys_Milliseconds();

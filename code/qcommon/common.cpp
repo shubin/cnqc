@@ -282,6 +282,10 @@ void QDECL Com_ErrorExt( int code, int module, qbool realError, const char *fmt,
 		Cvar_Set("com_errorMessage", com_errorMessage);
 	}
 
+#ifndef DEDICATED
+	CL_DisableFramerateLimiter();
+#endif
+
 	if ( code == ERR_SERVERDISCONNECT ) {
 #ifndef DEDICATED
 		CL_Disconnect( qtrue );

@@ -1019,6 +1019,11 @@ qbool CL_DemoPlaying();
 void CL_NextDemo();
 // invoke the "nextdemo" cvar as a command, if not empty
 
+void CL_DisableFramerateLimiter();
+// map loads might be interrupted by a drop-style error,
+// which would leave the FPS limit enabled until the next successful map load
+// this should therefore always be called by Com_Error
+
 void Key_KeyNameCompletion( void (*callback)(const char *s) );
 // for /bind and /unbind auto-completion
 
