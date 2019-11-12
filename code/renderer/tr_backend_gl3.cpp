@@ -1937,17 +1937,16 @@ static qbool GAL_Init()
 	{
 		// the order of these calls can not be changed
 		Sys_V_Init(GAL_GL3);
+		if(!GLEW_VERSION_3_2)
+		{
+			ri.Error(ERR_FATAL, "OpenGL 3.2 is required by the selected back-end!\n");
+		}
 		InitGLConfig();
 		InitGLInfo();
 		Init();
 
 		// apply the current V-Sync option after the first rendered frame
 		r_swapInterval->modified = qtrue;
-	}
-
-	if(!GLEW_VERSION_3_2)
-	{
-		ri.Error(ERR_FATAL, "OpenGL 3.2 is required by the selected back-end!\n");
 	}
 
 	SetDefaultState();

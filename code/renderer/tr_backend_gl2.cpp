@@ -507,11 +507,8 @@ static qbool GL2_FBO_CreateMS( FrameBuffer& fb )
 static qbool GL2_FBO_Init()
 {
 	const int msaa = r_msaa->integer;
-	const qbool validOption = msaa >= 2 && msaa <= 16;
-	const qbool enable = validOption && GLEW_VERSION_3_0;
+	const qbool enable = msaa >= 2 && msaa <= 16;
 	frameBufferMultiSampling = enable;
-	if ( validOption && !enable )
-		ri.Printf( PRINT_WARNING, "MSAA requested but disabled because your OpenGL version doesn't support it\n" );
 
 	if ( !enable )
 		return	GL2_FBO_CreateSS( frameBuffersPostProcess[0], qtrue ) &&
@@ -1482,9 +1479,6 @@ static void InitGLInfo()
 
 static void InitExtensions()
 {
-	if ( !GLEW_VERSION_2_0 )
-		ri.Error( ERR_FATAL, "OpenGL 2.0 required!\n" );
-
 	GL2_Init();
 }
 
@@ -1550,6 +1544,10 @@ static qbool GAL_Init()
 	{
 		// the order of these calls can not be changed
 		Sys_V_Init( GAL_GL2 );
+		if ( !GLEW_VERSION_2_0 )
+			ri.Error( ERR_FATAL, "OpenGL 2.0 required!\n" );
+		if ( !GLEW_VERSION_3_0 && !GLEW_ARB_framebuffer_object )
+			ri.Error( ERR_FATAL, "Need at least OpenGL 3.0 or GL_ARB_framebuffer_object\n" );
 		InitGLConfig();
 		InitGLInfo();
 		InitExtensions();

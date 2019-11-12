@@ -296,10 +296,13 @@ static int GLW_MakeContext( PIXELFORMATDESCRIPTOR *pPFD )
 		}
 		ri.Printf( PRINT_DEVELOPER, "...GL context creation made current\n" );
 
-		PFNWGLCREATECONTEXTATTRIBSARBPROC const wglCreateContextAttribsARB =
-			(PFNWGLCREATECONTEXTATTRIBSARBPROC)wglGetProcAddress( "wglCreateContextAttribsARB" );
-		if ( win_galId == GAL_GL3 && wglCreateContextAttribsARB )
+		if ( win_galId == GAL_GL3 )
 		{
+			PFNWGLCREATECONTEXTATTRIBSARBPROC const wglCreateContextAttribsARB =
+				(PFNWGLCREATECONTEXTATTRIBSARBPROC)wglGetProcAddress( "wglCreateContextAttribsARB" );
+			if( wglCreateContextAttribsARB == NULL )
+				ri.Error( ERR_FATAL, "wglCreateContextAttribsARB not found: can't ask for core 3.2 context\n" );
+
 			const int attribs[] =
 			{
 				WGL_CONTEXT_MAJOR_VERSION_ARB, 3,
@@ -309,7 +312,7 @@ static int GLW_MakeContext( PIXELFORMATDESCRIPTOR *pPFD )
 				0
 			};
 
-			const HGLRC hGLRC = wglCreateContextAttribsARB( glw_state.hDC, NULL, attribs );
+			const HGLRC hGLRC = (*wglCreateContextAttribsARB)( glw_state.hDC, NULL, attribs );
 			if ( hGLRC )
 			{
 				wglMakeCurrent( NULL, NULL );
