@@ -2307,19 +2307,17 @@ static void GAL_Begin3D()
 	memcpy(d3d.projectionMatrix, backEnd.viewParms.projectionMatrix, sizeof(d3d.projectionMatrix));
 	ApplyViewportAndScissor(backEnd.viewParms.viewportX, backEnd.viewParms.viewportY, backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight, glConfig.vidHeight);
 
+	d3d.context->ClearDepthStencilView(d3d.depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 	if(backEnd.refdef.rdflags & RDF_HYPERSPACE)
 	{
-		const FLOAT c = 0.25 + 0.5 * sin(M_PI * (backEnd.refdef.time & 0x01FF) / 0x0200);
+		const FLOAT c = RB_HyperspaceColor();
 		const FLOAT clearColor[4] = { c, c, c, 1.0f };
-		d3d.context->ClearRenderTargetView(d3d.backBufferRTView, clearColor);
-		return;
+		d3d.context->ClearRenderTargetView(d3d.renderTargetViewMS, clearColor);
 	}
-
-	d3d.context->ClearDepthStencilView(d3d.depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-	if(r_fastsky->integer && !(backEnd.refdef.rdflags & RDF_NOWORLDMODEL))
+	else if(r_fastsky->integer && !(backEnd.refdef.rdflags & RDF_NOWORLDMODEL))
 	{
 		const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-		d3d.context->ClearRenderTargetView(d3d.backBufferRTView, clearColor);
+		d3d.context->ClearRenderTargetView(d3d.renderTargetViewMS, clearColor);
 	}
 
 	if(backEnd.viewParms.isPortal)

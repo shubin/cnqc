@@ -2283,7 +2283,13 @@ static void GAL_Begin3D()
 	ApplyState(GLS_DEFAULT, CT_TWO_SIDED, qfalse);
 
 	GLbitfield clearBits = GL_DEPTH_BUFFER_BIT;
-	if(r_fastsky->integer && (backEnd.refdef.rdflags & RDF_NOWORLDMODEL) != 0)
+	if(backEnd.refdef.rdflags & RDF_HYPERSPACE)
+	{
+		clearBits |= GL_COLOR_BUFFER_BIT;
+		const float c = RB_HyperspaceColor();
+		glClearColor(c, c, c, 1.0f);
+	}
+	else if(r_fastsky->integer && (backEnd.refdef.rdflags & RDF_NOWORLDMODEL) != 0)
 	{
 		clearBits |= GL_COLOR_BUFFER_BIT;
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);

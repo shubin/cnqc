@@ -1141,16 +1141,6 @@ static void GL_State( unsigned long stateBits )
 }
 
 
-// a player has predicted a teleport, but hasn't arrived yet
-
-static void RB_Hyperspace()
-{
-	float c = 0.25 + 0.5 * sin( M_PI * (backEnd.refdef.time & 0x01FF) / 0x0200 );
-	glClearColor( c, c, c, 1 );
-	glClear( GL_COLOR_BUFFER_BIT );
-}
-
-
 static void ApplyViewportAndScissor()
 {
 	glMatrixMode(GL_PROJECTION);
@@ -1191,19 +1181,17 @@ static void GAL_Begin3D()
 	// clear relevant buffers
 	clearBits = GL_DEPTH_BUFFER_BIT;
 
-	if ( r_fastsky->integer && !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) )
-	{
+	if ( backEnd.refdef.rdflags & RDF_HYPERSPACE ) {
+		const float c = RB_HyperspaceColor();
+		clearBits |= GL_COLOR_BUFFER_BIT;
+		glClearColor( c, c, c, 1.0f );
+	} else if ( r_fastsky->integer && !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) ) {
 		clearBits |= GL_COLOR_BUFFER_BIT;
 		// tr.sunLight could have colored fastsky properly for the last 9 years,
 		// ... if the code had actually been right >:(  but, it's a bad idea to trust mappers anyway
 		glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
 	}
 	glClear( clearBits );
-
-	if ( backEnd.refdef.rdflags & RDF_HYPERSPACE ) {
-		RB_Hyperspace();
-		return;
-	}
 
 	glState.faceCulling = -1;		// force face culling to set next time
 

@@ -688,3 +688,12 @@ void RB_PopShader()
 	tess.shader = prevShader;
 	tess.xstages = prevStages;
 }
+
+
+// used when a player has predicted a teleport, but hasn't arrived yet
+float RB_HyperspaceColor()
+{
+	const float c = 0.25f + 0.5f * sinf(M_PI * (backEnd.refdef.time & 0x01FF) / 0x0200);
+
+	return c;
+}

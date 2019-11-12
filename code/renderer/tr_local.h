@@ -1563,6 +1563,8 @@ void RB_ExecuteRenderCommands( const void *data );
 void RB_PushSingleStageShader( int stateBits, cullType_t cullType );
 void RB_PopShader();
 
+float RB_HyperspaceColor();
+
 void RB_DrawSky();
 void R_BuildCloudData();
 
