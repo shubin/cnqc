@@ -190,20 +190,24 @@ void RB_EndSurface()
 		tess.numVertexes > 0) {
 		if (r_showtris->integer) {
 			RB_PushSingleStageShader(GLS_POLYMODE_LINE | GLS_DEPTHMASK_TRUE, CT_FRONT_SIDED);
+			R_ComputeColors(tess.shader->stages[0], tess.svars[0], 0, tess.numVertexes);
 			gal.SetDepthRange(0, 0);
 			gal.Draw(DT_GENERIC);
 			gal.SetDepthRange(0, 1);
 			RB_PopShader();
 		}
 		if (r_shownormals->integer) {
-			const int nv = tess.numVertexes;
+			// we only draw the normals for the first (SHADER_MAX_VERTEXES / 2 - 1) vertices
+			int nv = tess.numVertexes;
+			if (nv >= SHADER_MAX_VERTEXES / 2)
+				nv = SHADER_MAX_VERTEXES / 2 - 1;
 			for (int i = 0, j = nv; i < nv; ++i, ++j) {
 				VectorMA(input->xyz[i], 2, input->normal[i], tess.xyz[j]);
 			}
-			for (int i = 0, j = 0; i < nv; ++i) {
-				tess.indexes[j++] = i;
-				tess.indexes[j++] = i;
-				tess.indexes[j++] = i + nv;
+			for (int i = 0, j = 0; i < nv; ++i, j += 3) {
+				tess.indexes[j + 0] = i;
+				tess.indexes[j + 1] = i;
+				tess.indexes[j + 2] = i + nv;
 			}
 			tess.numVertexes = nv * 2;
 			tess.numIndexes = nv * 3;
@@ -214,6 +218,7 @@ void RB_EndSurface()
 			stage->constantColor[1] = 0;
 			stage->constantColor[2] = 255;
 			stage->constantColor[3] = 255;
+			R_ComputeColors(tess.shader->stages[0], tess.svars[0], 0, tess.numVertexes);
 			gal.SetDepthRange(0, 0);
 			gal.Draw(DT_GENERIC);
 			gal.SetDepthRange(0, 1);

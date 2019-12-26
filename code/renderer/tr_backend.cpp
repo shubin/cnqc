@@ -516,6 +516,7 @@ static void R_DebugPolygon( int colorMask, int numPoints, const float* points )
 	stage.constantColor[1] = ((colorMask >> 1) & 1) ? 255 : 0;
 	stage.constantColor[2] = ((colorMask >> 2) & 1) ? 255 : 0;
 	stage.constantColor[3] = 255;
+	R_ComputeColors( &stage, tess.svars[0], 0, numPoints );
 	gal.Draw( DT_GENERIC );
 
 	// wireframe
@@ -527,10 +528,11 @@ static void R_DebugPolygon( int colorMask, int numPoints, const float* points )
 	tess.numIndexes = numPoints * 3;
 	stage.stateBits |= GLS_POLYMODE_LINE;
 	stage.rgbGen = CGEN_IDENTITY;
+	R_ComputeColors( &stage, tess.svars[0], 0, numPoints );
 	gal.SetDepthRange( 0, 0 );
 	gal.Draw( DT_GENERIC );
-
 	gal.SetDepthRange( 0, 1 );
+
 	RB_PopShader();
 	tess.numVertexes = 0;
 	tess.numIndexes = 0;
