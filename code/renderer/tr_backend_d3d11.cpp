@@ -313,9 +313,6 @@ struct Direct3D
 	int vbCount;
 	qbool splitBufferOffsets;
 
-	ID3D11Device* device;
-	ID3D11DeviceContext* context;
-	IDXGISwapChain* swapChain;
 	ID3D11Texture2D* backBufferTexture;
 	ID3D11RenderTargetView* backBufferRTView;
 	ID3D11Texture2D* renderTargetTextureMS;
@@ -326,7 +323,6 @@ struct Direct3D
 	ID3D11DepthStencilView* depthStencilView;
 	ID3D11ShaderResourceView* depthStencilShaderView;
 	ID3D11Texture2D* readbackTexture; // allowed to be NULL!
-	HMODULE library;
 
 	ID3D11ComputeShader* mipGammaToLinearComputeShader;
 	ID3D11ComputeShader* mipLinearToGammaComputeShader;
@@ -344,11 +340,21 @@ struct Direct3D
 	D3D11_VIEWPORT oldSkyViewport;
 
 	ErrorMode errorMode;
+};
+
+struct Direct3DStatic
+{
+	ID3D11Device* device;
+	ID3D11DeviceContext* context;
+	IDXGISwapChain* swapChain;
+
+	HMODULE library;
 
 	AdapterInfo adapterInfo;
 };
 
 __declspec(align(16)) static Direct3D d3d;
+__declspec(align(16)) static Direct3DStatic d3ds;
 
 
 #define COM_RELEASE(p)			do { if(p) { p->Release(); p = NULL; } } while((void)0,0)
@@ -405,61 +411,61 @@ static qbool CheckAndName(HRESULT hr, const char* function, ID3D11DeviceChild* r
 
 static qbool D3D11_CreateRenderTargetView(ID3D11Resource* pResource, const D3D11_RENDER_TARGET_VIEW_DESC* pDesc, ID3D11RenderTargetView** ppRTView, const char* name)
 {
-	const HRESULT hr = d3d.device->CreateRenderTargetView(pResource, pDesc, ppRTView);
+	const HRESULT hr = d3ds.device->CreateRenderTargetView(pResource, pDesc, ppRTView);
 	return CheckAndName(hr, "CreateRenderTargetView", *ppRTView, name);
 }
 
 static qbool D3D11_CreateTexture2D(const D3D11_TEXTURE2D_DESC* pDesc, const D3D11_SUBRESOURCE_DATA* pInitialData, ID3D11Texture2D** ppTexture2D, const char* name)
 {
-	const HRESULT hr = d3d.device->CreateTexture2D(pDesc, pInitialData, ppTexture2D);
+	const HRESULT hr = d3ds.device->CreateTexture2D(pDesc, pInitialData, ppTexture2D);
 	return CheckAndName(hr, "CreateTexture2D", *ppTexture2D, name);
 }
 
 static qbool D3D11_CreateShaderResourceView(ID3D11Resource* pResource, const D3D11_SHADER_RESOURCE_VIEW_DESC* pDesc, ID3D11ShaderResourceView** ppSRView, const char* name)
 {
-	const HRESULT hr = d3d.device->CreateShaderResourceView(pResource, pDesc, ppSRView);
+	const HRESULT hr = d3ds.device->CreateShaderResourceView(pResource, pDesc, ppSRView);
 	return CheckAndName(hr, "CreateShaderResourceView", *ppSRView, name);
 }
 
 static qbool D3D11_CreateUnorderedAccessView(ID3D11Resource* pResource, const D3D11_UNORDERED_ACCESS_VIEW_DESC* pDesc, ID3D11UnorderedAccessView** ppUAView, const char* name)
 {
-	const HRESULT hr = d3d.device->CreateUnorderedAccessView(pResource, pDesc, ppUAView);
+	const HRESULT hr = d3ds.device->CreateUnorderedAccessView(pResource, pDesc, ppUAView);
 	return CheckAndName(hr, "CreateUnorderedAccessView", *ppUAView, name);
 }
 
 static qbool D3D11_CreateVertexShader(const void* pShaderBytecode, SIZE_T BytecodeLength, ID3D11ClassLinkage* pClassLinkage, ID3D11VertexShader** ppVertexShader, const char* name)
 {
-	const HRESULT hr = d3d.device->CreateVertexShader(pShaderBytecode, BytecodeLength, pClassLinkage, ppVertexShader);
+	const HRESULT hr = d3ds.device->CreateVertexShader(pShaderBytecode, BytecodeLength, pClassLinkage, ppVertexShader);
 	return CheckAndName(hr, "CreateVertexShader", *ppVertexShader, name);
 }
 
 static qbool D3D11_CreatePixelShader(const void* pShaderBytecode, SIZE_T BytecodeLength, ID3D11ClassLinkage* pClassLinkage, ID3D11PixelShader** ppPixelShader, const char* name)
 {
-	const HRESULT hr = d3d.device->CreatePixelShader(pShaderBytecode, BytecodeLength, pClassLinkage, ppPixelShader);
+	const HRESULT hr = d3ds.device->CreatePixelShader(pShaderBytecode, BytecodeLength, pClassLinkage, ppPixelShader);
 	return CheckAndName(hr, "CreatePixelShader", *ppPixelShader, name);
 }
 
 static qbool D3D11_CreateComputeShader(const void* pShaderBytecode, SIZE_T BytecodeLength, ID3D11ClassLinkage* pClassLinkage, ID3D11ComputeShader** ppComputeShader, const char* name)
 {
-	const HRESULT hr = d3d.device->CreateComputeShader(pShaderBytecode, BytecodeLength, pClassLinkage, ppComputeShader);
+	const HRESULT hr = d3ds.device->CreateComputeShader(pShaderBytecode, BytecodeLength, pClassLinkage, ppComputeShader);
 	return CheckAndName(hr, "CreateComputeShader", *ppComputeShader, name);
 }
 
 static qbool D3D11_CreateBuffer(const D3D11_BUFFER_DESC* pDesc, const D3D11_SUBRESOURCE_DATA* pInitialData, ID3D11Buffer** ppBuffer, const char* name)
 {
-	const HRESULT hr = d3d.device->CreateBuffer(pDesc, pInitialData, ppBuffer);
+	const HRESULT hr = d3ds.device->CreateBuffer(pDesc, pInitialData, ppBuffer);
 	return CheckAndName(hr, "CreateBuffer", *ppBuffer, name);
 }
 
 static qbool D3D11_CreateInputLayout(const D3D11_INPUT_ELEMENT_DESC* pInputElementDescs, UINT NumElements, const void* pShaderBytecodeWithInputSignature, SIZE_T BytecodeLength, ID3D11InputLayout** ppInputLayout, const char* name)
 {
-	const HRESULT hr = d3d.device->CreateInputLayout(pInputElementDescs, NumElements, pShaderBytecodeWithInputSignature, BytecodeLength, ppInputLayout);
+	const HRESULT hr = d3ds.device->CreateInputLayout(pInputElementDescs, NumElements, pShaderBytecodeWithInputSignature, BytecodeLength, ppInputLayout);
 	return CheckAndName(hr, "CreateInputLayout", *ppInputLayout, name);
 }
 
 static const char* GetDeviceRemovedReason()
 {
-	switch(d3d.device->GetDeviceRemovedReason())
+	switch(d3ds.device->GetDeviceRemovedReason())
 	{
 		case DXGI_ERROR_DEVICE_HUNG: return "device hung";
 		case DXGI_ERROR_DEVICE_REMOVED: return "device removed";
@@ -559,14 +565,14 @@ static DXGI_FORMAT GetRenderTargetColorFormat(int format)
 static void ResetShaderData(ID3D11Resource* buffer, const void* data, size_t bytes)
 {
 	D3D11_MAPPED_SUBRESOURCE ms;
-	HRESULT hr = d3d.context->Map(buffer, 0, D3D11_MAP_WRITE_DISCARD, NULL, &ms);
+	HRESULT hr = d3ds.context->Map(buffer, 0, D3D11_MAP_WRITE_DISCARD, NULL, &ms);
 	if(FAILED(hr))
 	{
 		ri.Error(ERR_FATAL, "Map failed");
 		return;
 	}
 	memcpy(ms.pData, data, bytes);
-	d3d.context->Unmap(buffer, NULL);
+	d3ds.context->Unmap(buffer, NULL);
 }
 
 static void AppendVertexData(VertexBuffer* buffer, const void* data, int itemCount)
@@ -582,7 +588,7 @@ static void AppendVertexData(VertexBuffer* buffer, const void* data, int itemCou
 	if(data != NULL || mapType == D3D11_MAP_WRITE_DISCARD)
 	{
 		D3D11_MAPPED_SUBRESOURCE ms;
-		HRESULT hr = d3d.context->Map(buffer->buffer, 0, mapType, NULL, &ms);
+		HRESULT hr = d3ds.context->Map(buffer->buffer, 0, mapType, NULL, &ms);
 		if(FAILED(hr))
 		{
 			ri.Error(ERR_FATAL, "Map failed");
@@ -592,7 +598,7 @@ static void AppendVertexData(VertexBuffer* buffer, const void* data, int itemCou
 		{
 			memcpy((byte*)ms.pData + buffer->writeIndex * buffer->itemSize, data, itemCount * buffer->itemSize);
 		}
-		d3d.context->Unmap(buffer->buffer, NULL);
+		d3ds.context->Unmap(buffer->buffer, NULL);
 	}
 
 	buffer->readIndex = buffer->writeIndex;
@@ -685,7 +691,7 @@ static void ApplySamplerState(UINT slot, textureWrap_t textureWrap, qbool biline
 		return;
 	}
 
-	d3d.context->PSSetSamplers(slot, 1, &d3d.samplerStates[index]);
+	d3ds.context->PSSetSamplers(slot, 1, &d3d.samplerStates[index]);
 	d3d.samplerStateIndices[slot] = index;
 }
 
@@ -700,12 +706,12 @@ static void DrawIndexed(int indexCount)
 			offsets[i] = vb->readIndex * vb->itemSize; // in bytes, not vertices
 		}
 
-		d3d.context->IASetVertexBuffers(0, d3d.vbCount, d3d.vbBuffers, d3d.vbStrides, offsets);
-		d3d.context->DrawIndexed(indexCount, d3d.indexBuffer.readIndex, 0);
+		d3ds.context->IASetVertexBuffers(0, d3d.vbCount, d3d.vbBuffers, d3d.vbStrides, offsets);
+		d3ds.context->DrawIndexed(indexCount, d3d.indexBuffer.readIndex, 0);
 	}
 	else
 	{
-		d3d.context->DrawIndexed(indexCount, d3d.indexBuffer.readIndex, d3d.vertexBuffers[VB_POSITION].readIndex);
+		d3ds.context->DrawIndexed(indexCount, d3d.indexBuffer.readIndex, d3d.vertexBuffers[VB_POSITION].readIndex);
 	}
 }
 
@@ -719,7 +725,7 @@ static void ApplyPipeline(PipelineId index)
 	Pipeline* const pipeline = &d3d.pipelines[index];
 	if(pipeline->inputLayout)
 	{
-		d3d.context->IASetInputLayout(pipeline->inputLayout);
+		d3ds.context->IASetInputLayout(pipeline->inputLayout);
 
 		int count = 0;
 		VertexBufferId* const ids = d3d.vbIds;
@@ -755,42 +761,42 @@ static void ApplyPipeline(PipelineId index)
 		if(!d3d.splitBufferOffsets)
 		{
 			UINT offsets[VB_COUNT] = { 0 };
-			d3d.context->IASetVertexBuffers(0, count, d3d.vbBuffers, d3d.vbStrides, offsets);
+			d3ds.context->IASetVertexBuffers(0, count, d3d.vbBuffers, d3d.vbStrides, offsets);
 		}
 	}
 	else
 	{
-		d3d.context->IASetInputLayout(NULL);
-		d3d.context->IASetVertexBuffers(0, 0, NULL, NULL, NULL);
+		d3ds.context->IASetInputLayout(NULL);
+		d3ds.context->IASetVertexBuffers(0, 0, NULL, NULL, NULL);
 		d3d.vbCount = 0;
 	}
 
-	d3d.context->VSSetShader(pipeline->vertexShader, NULL, 0);
-	d3d.context->PSSetShader(pipeline->pixelShader, NULL, 0);
+	d3ds.context->VSSetShader(pipeline->vertexShader, NULL, 0);
+	d3ds.context->PSSetShader(pipeline->pixelShader, NULL, 0);
 
 	if(pipeline->vertexBuffer)
 	{
-		d3d.context->VSSetConstantBuffers(0, 1, &pipeline->vertexBuffer);
+		d3ds.context->VSSetConstantBuffers(0, 1, &pipeline->vertexBuffer);
 	}
 	if(pipeline->pixelBuffer)
 	{
-		d3d.context->PSSetConstantBuffers(0, 1, &pipeline->pixelBuffer);
+		d3ds.context->PSSetConstantBuffers(0, 1, &pipeline->pixelBuffer);
 	}
 
 	if(index == PID_POST_PROCESS)
 	{
-		d3d.context->OMSetRenderTargets(1, &d3d.backBufferRTView, NULL);
+		d3ds.context->OMSetRenderTargets(1, &d3d.backBufferRTView, NULL);
 	}
 	else if(index == PID_SOFT_SPRITE)
 	{
-		d3d.context->OMSetRenderTargets(1, &d3d.renderTargetViewMS, NULL);
-		d3d.context->PSSetShaderResources(1, 1, &d3d.depthStencilShaderView);
+		d3ds.context->OMSetRenderTargets(1, &d3d.renderTargetViewMS, NULL);
+		d3ds.context->PSSetShaderResources(1, 1, &d3d.depthStencilShaderView);
 		ApplySamplerState(1, TW_CLAMP_TO_EDGE, qtrue); // @TODO: nearest neighbor mode?
 	}
 	else
 	{
-		d3d.context->PSSetShaderResources(1, 1, &d3d.textures[0].view); // make sure the depth shader view isn't bound anymore
-		d3d.context->OMSetRenderTargets(1, &d3d.renderTargetViewMS, d3d.depthStencilView);
+		d3ds.context->PSSetShaderResources(1, 1, &d3d.textures[0].view); // make sure the depth shader view isn't bound anymore
+		d3ds.context->OMSetRenderTargets(1, &d3d.renderTargetViewMS, d3d.depthStencilView);
 	}
 
 	d3d.pipelineIndex = index;
@@ -807,7 +813,7 @@ static void ApplyViewport(int x, int y, int w, int h, int th)
 	vp.Height = h;
 	vp.MinDepth = 0.0f;
 	vp.MaxDepth = 1.0f;
-	d3d.context->RSSetViewports(1, &vp);
+	d3ds.context->RSSetViewports(1, &vp);
 }
 
 static void ApplyScissor(int x, int y, int w, int h, int th)
@@ -820,7 +826,7 @@ static void ApplyScissor(int x, int y, int w, int h, int th)
 	sr.top = top;
 	sr.right = x + w;
 	sr.bottom = bottom;
-	d3d.context->RSSetScissorRects(1, &sr);
+	d3ds.context->RSSetScissorRects(1, &sr);
 }
 
 static void ApplyViewportAndScissor(int x, int y, int w, int h, int th)
@@ -900,7 +906,7 @@ static void ApplyBlendState(D3D11_BLEND srcBlend, D3D11_BLEND dstBlend, qbool ap
 		return;
 	}
 
-	d3d.context->OMSetBlendState(d3d.blendStates[index], NULL, 0xFFFFFFFF);
+	d3ds.context->OMSetBlendState(d3d.blendStates[index], NULL, 0xFFFFFFFF);
 	d3d.blendStateIndex = index;
 }
 
@@ -918,7 +924,7 @@ static void ApplyDepthStencilState(qbool disableDepth, qbool funcEqual, qbool ma
 	}
 
 	d3d.depthStencilStateIndex = index;
-	d3d.context->OMSetDepthStencilState(d3d.depthStencilStates[index], 0);
+	d3ds.context->OMSetDepthStencilState(d3d.depthStencilStates[index], 0);
 }
 
 static int ComputeRasterizerStateIndex(int wireFrame, int cullType, int polygonOffset)
@@ -935,7 +941,7 @@ static void ApplyRasterizerState(qbool wireFrame, cullType_t cullType, qbool pol
 	}
 
 	d3d.rasterStateIndex = index;
-	d3d.context->RSSetState(d3d.rasterStates[index]);
+	d3ds.context->RSSetState(d3d.rasterStates[index]);
 }
 
 static void ApplyState(unsigned int stateBits, cullType_t cullType, qbool polygonOffset)
@@ -977,7 +983,7 @@ static void ApplyState(unsigned int stateBits, cullType_t cullType, qbool polygo
 static void BindImage(UINT slot, const image_t* image)
 {
 	ID3D11ShaderResourceView* view = d3d.textures[image->texnum].view;
-	d3d.context->PSSetShaderResources(slot, 1, &view);
+	d3ds.context->PSSetShaderResources(slot, 1, &view);
 	ApplySamplerState(slot, image->wrapClampMode, (image->flags & IMG_NOAF) != 0);
 }
 
@@ -995,9 +1001,9 @@ static void FindBestAvailableAA(DXGI_SAMPLE_DESC* sampleDesc)
 	while(sampleDesc->Count > 0)
 	{
 		UINT levelCount = 0;
-		if(SUCCEEDED(d3d.device->CheckMultisampleQualityLevels(d3d.formatColorRT, sampleDesc->Count, &levelCount)) &&
+		if(SUCCEEDED(d3ds.device->CheckMultisampleQualityLevels(d3d.formatColorRT, sampleDesc->Count, &levelCount)) &&
 		   levelCount > 0 &&
-		   SUCCEEDED(d3d.device->CheckMultisampleQualityLevels(d3d.formatDepth, sampleDesc->Count, &levelCount)) &&
+		   SUCCEEDED(d3ds.device->CheckMultisampleQualityLevels(d3d.formatDepth, sampleDesc->Count, &levelCount)) &&
 		   levelCount > 0)
 		   break;
 
@@ -1017,51 +1023,63 @@ static qbool GAL_Init()
 
 	ZeroMemory(&d3d, sizeof(d3d));
 
-	d3d.library = LoadLibraryA("D3D11.dll");
-	if(d3d.library == NULL)
-		ri.Error(ERR_FATAL, "D3D11.dll couldn't be found or opened");
+	HRESULT hr = S_OK;
+	qbool fullInit = qfalse;
+	DXGI_SWAP_CHAIN_DESC swapChainDesc;
+	if(d3ds.library == NULL)
+	{
+		fullInit = qtrue;
 
-	PFN_D3D11_CREATE_DEVICE_AND_SWAP_CHAIN pD3D11CreateDeviceAndSwapChain =
-		(PFN_D3D11_CREATE_DEVICE_AND_SWAP_CHAIN)GetProcAddress(d3d.library, "D3D11CreateDeviceAndSwapChain");
-	if(pD3D11CreateDeviceAndSwapChain == NULL)
-		ri.Error(ERR_FATAL, "Failed to locate D3D11CreateDeviceAndSwapChain in D3D11.dll");
+		d3ds.library = LoadLibraryA("D3D11.dll");
+		if(d3ds.library == NULL)
+			ri.Error(ERR_FATAL, "D3D11.dll couldn't be found or opened");
 
-	const D3D_FEATURE_LEVEL featureLevels[2] = { D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_1 };
-	UINT flags = D3D11_CREATE_DEVICE_SINGLETHREADED;
+		PFN_D3D11_CREATE_DEVICE_AND_SWAP_CHAIN pD3D11CreateDeviceAndSwapChain =
+			(PFN_D3D11_CREATE_DEVICE_AND_SWAP_CHAIN)GetProcAddress(d3ds.library, "D3D11CreateDeviceAndSwapChain");
+		if(pD3D11CreateDeviceAndSwapChain == NULL)
+			ri.Error(ERR_FATAL, "Failed to locate D3D11CreateDeviceAndSwapChain in D3D11.dll");
+
+		const D3D_FEATURE_LEVEL featureLevels[2] = { D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_1 };
+		UINT flags = D3D11_CREATE_DEVICE_SINGLETHREADED;
 #if defined(_DEBUG)
-	flags |= D3D11_CREATE_DEVICE_DEBUG;
+		flags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
 
-	DXGI_SWAP_CHAIN_DESC swapChainDesc;
-	ZeroMemory(&swapChainDesc, sizeof(swapChainDesc));
-	swapChainDesc.BufferCount = 1;
-	swapChainDesc.BufferDesc.Width = glInfo.winWidth;
-	swapChainDesc.BufferDesc.Height = glInfo.winHeight;
-	swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	swapChainDesc.BufferDesc.RefreshRate.Numerator = 0;
-	swapChainDesc.BufferDesc.RefreshRate.Denominator = 1;
-	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	swapChainDesc.OutputWindow = GetActiveWindow();
-	swapChainDesc.SampleDesc.Count = 1;
-	swapChainDesc.SampleDesc.Quality = 0;
-	swapChainDesc.Windowed = TRUE;
-	swapChainDesc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
-	swapChainDesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
-	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-	swapChainDesc.Flags = 0;
+		ZeroMemory(&swapChainDesc, sizeof(swapChainDesc));
+		swapChainDesc.BufferCount = 1;
+		swapChainDesc.BufferDesc.Width = glInfo.winWidth;
+		swapChainDesc.BufferDesc.Height = glInfo.winHeight;
+		swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		swapChainDesc.BufferDesc.RefreshRate.Numerator = 0;
+		swapChainDesc.BufferDesc.RefreshRate.Denominator = 1;
+		swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+		swapChainDesc.OutputWindow = GetActiveWindow();
+		swapChainDesc.SampleDesc.Count = 1;
+		swapChainDesc.SampleDesc.Quality = 0;
+		swapChainDesc.Windowed = TRUE;
+		swapChainDesc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
+		swapChainDesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
+		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+		swapChainDesc.Flags = 0;
 
-create_device:
-	HRESULT hr = (*pD3D11CreateDeviceAndSwapChain)(
-		NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, flags, featureLevels, ARRAY_LEN(featureLevels), D3D11_SDK_VERSION,
-		&swapChainDesc, &d3d.swapChain, &d3d.device, NULL, &d3d.context);
-	if(hr == DXGI_ERROR_SDK_COMPONENT_MISSING)
-	{
-		ri.Printf(PRINT_WARNING, "D3D11CreateDeviceAndSwapChain failed because you don't have the SDK installed.\n");
-		ri.Printf(PRINT_WARNING, "Trying to create the device again without the debug layer...\n");
-		flags &= ~D3D11_CREATE_DEVICE_DEBUG;
-		goto create_device;
+	create_device:
+		HRESULT hr = (*pD3D11CreateDeviceAndSwapChain)(
+			NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, flags, featureLevels, ARRAY_LEN(featureLevels), D3D11_SDK_VERSION,
+			&swapChainDesc, &d3ds.swapChain, &d3ds.device, NULL, &d3ds.context);
+		if(hr == DXGI_ERROR_SDK_COMPONENT_MISSING)
+		{
+			ri.Printf(PRINT_WARNING, "D3D11CreateDeviceAndSwapChain failed because you don't have the SDK installed.\n");
+			ri.Printf(PRINT_WARNING, "Trying to create the device again without the debug layer...\n");
+			flags &= ~D3D11_CREATE_DEVICE_DEBUG;
+			goto create_device;
+		}
+		Check(hr, "D3D11CreateDeviceAndSwapChain");
 	}
-	Check(hr, "D3D11CreateDeviceAndSwapChain");
+	else
+	{
+		hr = d3ds.swapChain->GetDesc(&swapChainDesc);
+		Check(hr, "IDXGISwapChain::GetDesc");
+	}
 
 	d3d.formatColorRT = GetRenderTargetColorFormat(r_rtColorFormat->integer);
 	d3d.formatDepth = DXGI_FORMAT_R24G8_TYPELESS;
@@ -1086,7 +1104,7 @@ create_device:
 		ri.Printf(PRINT_WARNING, "Screengrab texture creation failed! /" S_COLOR_CMD "screenshot^7* and /" S_COLOR_CMD "video^7 won't work\n");
 	d3d.errorMode = EM_FATAL;
 
-	hr = d3d.swapChain->GetBuffer(0, IID_ID3D11Texture2D, (void**)&d3d.backBufferTexture);
+	hr = d3ds.swapChain->GetBuffer(0, IID_ID3D11Texture2D, (void**)&d3d.backBufferTexture);
 	CheckAndName(hr, "GetBuffer", d3d.backBufferTexture, "back buffer texture");
 
 	D3D11_RENDER_TARGET_VIEW_DESC colorViewDesc; // needed?
@@ -1163,7 +1181,7 @@ create_device:
 	depthStencilViewDesc.Format = d3d.formatDepthView;
 	depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DMS;
 	depthStencilViewDesc.Texture2D.MipSlice = 0;
-	hr = d3d.device->CreateDepthStencilView(d3d.depthStencilTexture, &depthStencilViewDesc, &d3d.depthStencilView);
+	hr = d3ds.device->CreateDepthStencilView(d3d.depthStencilTexture, &depthStencilViewDesc, &d3d.depthStencilView);
 	CheckAndName(hr, "CreateDepthStencilView", d3d.depthStencilView, "depth stencil view");
 
 	ZeroMemory(&srvDesc, sizeof(srvDesc));
@@ -1184,7 +1202,7 @@ create_device:
 	};
 	D3D11_CreateInputLayout(genericInputLayoutDesc, ARRAY_LEN(genericInputLayoutDesc), g_generic_vs, ARRAY_LEN(g_generic_vs), &d3d.pipelines[PID_GENERIC].inputLayout, "generic input layout");
 
-	d3d.context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	d3ds.context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	const int maxVertexCount = SHADER_MAX_VERTEXES;
 	const int maxIndexCount = SHADER_MAX_INDEXES;
@@ -1238,7 +1256,7 @@ create_device:
 	indexBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	D3D11_CreateBuffer(&indexBufferDesc, NULL, &d3d.indexBuffer.buffer, "index buffer");
 
-	d3d.context->IASetIndexBuffer(d3d.indexBuffer.buffer, DXGI_FORMAT_R32_UINT, 0);
+	d3ds.context->IASetIndexBuffer(d3d.indexBuffer.buffer, DXGI_FORMAT_R32_UINT, 0);
 
 	D3D11_BUFFER_DESC vertexShaderBufferDesc;
 	ZeroMemory(&vertexShaderBufferDesc, sizeof(vertexShaderBufferDesc));
@@ -1277,7 +1295,7 @@ create_device:
 			samplerDesc.MinLOD = -D3D11_FLOAT32_MAX;
 			samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
 			samplerDesc.MaxAnisotropy = bilinear ? 1 : maxAnisotropy;
-			hr = d3d.device->CreateSamplerState(&samplerDesc, &samplerState);
+			hr = d3ds.device->CreateSamplerState(&samplerDesc, &samplerState);
 			CheckAndName(hr, "CreateSamplerState", samplerState, va("sampler state %d", index));
 
 			d3d.samplerStates[index] = samplerState;
@@ -1313,7 +1331,7 @@ create_device:
 				blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
 				blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
 				blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-				hr = d3d.device->CreateBlendState(&blendDesc, &blendState);
+				hr = d3ds.device->CreateBlendState(&blendDesc, &blendState);
 				CheckAndName(hr, "CreateBlendState", blendState, va("blend state %d", index));
 
 				d3d.blendStates[index] = blendState;
@@ -1337,7 +1355,7 @@ create_device:
 				depthDesc.DepthFunc = funcEqual ? D3D11_COMPARISON_EQUAL : D3D11_COMPARISON_LESS_EQUAL;
 				depthDesc.DepthWriteMask = maskTrue ? D3D11_DEPTH_WRITE_MASK_ALL : D3D11_DEPTH_WRITE_MASK_ZERO;
 				depthDesc.StencilEnable = FALSE;
-				hr = d3d.device->CreateDepthStencilState(&depthDesc, &depthState);
+				hr = d3ds.device->CreateDepthStencilState(&depthDesc, &depthState);
 				CheckAndName(hr, "CreateDepthStencilState", depthState, va("depth/stencil state %d", index));
 				
 				d3d.depthStencilStates[index] = depthState;
@@ -1365,7 +1383,7 @@ create_device:
 				rasterDesc.DepthBiasClamp = 0.0f;
 				rasterDesc.DepthBias = polygonOffset ? -1 : 0;
 				rasterDesc.SlopeScaledDepthBias = polygonOffset ? -1.0f : 0.0f;
-				hr = d3d.device->CreateRasterizerState(&rasterDesc, &rasterState);
+				hr = d3ds.device->CreateRasterizerState(&rasterDesc, &rasterState);
 				CheckAndName(hr, "CreateRasterizerState", rasterState, va("raster state %d", index));
 
 				d3d.rasterStates[index] = rasterState;
@@ -1458,7 +1476,7 @@ create_device:
 	//
 
 	qbool mipGenOK = qfalse;
-	if(r_gpuMipGen->integer && d3d.device->GetFeatureLevel() == D3D_FEATURE_LEVEL_11_0)
+	if(r_gpuMipGen->integer && d3ds.device->GetFeatureLevel() == D3D_FEATURE_LEVEL_11_0)
 	{
 		d3d.errorMode = EM_SILENT;
 
@@ -1554,34 +1572,39 @@ create_device:
 	glInfo.mipGenSupport = mipGenOK;
 	glInfo.alphaToCoverageSupport = alphaToCoverageOK;
 
-	IDXGIDevice* dxgiDevice;
-	if(SUCCEEDED(d3d.device->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgiDevice)))
+	if(fullInit)
 	{
-		IDXGIAdapter* dxgiAdapter;
-		if(SUCCEEDED(dxgiDevice->GetAdapter(&dxgiAdapter)))
+		d3ds.adapterInfo.valid = qfalse;
+
+		IDXGIDevice* dxgiDevice;
+		if(SUCCEEDED(d3ds.device->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgiDevice)))
 		{
-			DXGI_ADAPTER_DESC desc;
-			if(SUCCEEDED(dxgiAdapter->GetDesc(&desc)))
+			IDXGIAdapter* dxgiAdapter;
+			if(SUCCEEDED(dxgiDevice->GetAdapter(&dxgiAdapter)))
 			{
-				char name[ARRAY_LEN(desc.Description) + 1];
-				if(WideCharToMultiByte(CP_UTF7, 0, desc.Description, -1, name, sizeof(name) - 1, NULL, NULL) > 0)
+				DXGI_ADAPTER_DESC desc;
+				if(SUCCEEDED(dxgiAdapter->GetDesc(&desc)))
 				{
-					Q_strncpyz(glConfig.renderer_string, name, sizeof(glConfig.renderer_string));
+					char name[ARRAY_LEN(desc.Description) + 1];
+					if(WideCharToMultiByte(CP_UTF7, 0, desc.Description, -1, name, sizeof(name) - 1, NULL, NULL) > 0)
+					{
+						Q_strncpyz(glConfig.renderer_string, name, sizeof(glConfig.renderer_string));
+					}
+
+					d3ds.adapterInfo.valid = qtrue;
+					d3ds.adapterInfo.dedicatedSystemMemoryMB = (int)(desc.DedicatedSystemMemory >> 20);
+					d3ds.adapterInfo.dedicatedVideoMemoryMB = (int)(desc.DedicatedVideoMemory >> 20);
+					d3ds.adapterInfo.sharedSystemMemoryMB = (int)(desc.SharedSystemMemory >> 20);
 				}
-
-				d3d.adapterInfo.valid = qtrue;
-				d3d.adapterInfo.dedicatedSystemMemoryMB = (int)(desc.DedicatedSystemMemory >> 20);
-				d3d.adapterInfo.dedicatedVideoMemoryMB = (int)(desc.DedicatedVideoMemory >> 20);
-				d3d.adapterInfo.sharedSystemMemoryMB = (int)(desc.SharedSystemMemory >> 20);
 			}
-		}
 
-		COM_RELEASE(dxgiDevice);
+			COM_RELEASE(dxgiDevice);
+		}
 	}
 
 	qbool maxFrameLatencySet = qfalse;
 	IDXGIDevice1* dxgiDevice1;
-	if(SUCCEEDED(d3d.device->QueryInterface(__uuidof(IDXGIDevice1), (void**)&dxgiDevice1)))
+	if(SUCCEEDED(d3ds.device->QueryInterface(__uuidof(IDXGIDevice1), (void**)&dxgiDevice1)))
 	{
 		if(SUCCEEDED(dxgiDevice1->SetMaximumFrameLatency(r_d3d11_maxQueuedFrames->integer)))
 		{
@@ -1665,9 +1688,6 @@ static void GAL_ShutDown(qbool fullShutDown)
 	COM_RELEASE(d3d.mipDownSampleConstBuffer);
 	COM_RELEASE(d3d.mipLinearToGammaConstBuffer);
 	COM_RELEASE(d3d.mipGammaToLinearConstBuffer);
-	COM_RELEASE(d3d.device);
-	COM_RELEASE(d3d.context);
-	COM_RELEASE(d3d.swapChain);
 
 	for(int i = 0; i < ARRAY_LEN(d3d.frameQueries); ++i)
 	{
@@ -1676,8 +1696,17 @@ static void GAL_ShutDown(qbool fullShutDown)
 		COM_RELEASE(d3d.frameQueries[i].frameEnd);
 	}
 
-	if(d3d.library)
-		FreeLibrary(d3d.library);
+	if(fullShutDown)
+	{
+		d3ds.context->Release();
+		d3ds.device->Release();
+		d3ds.swapChain->Release();
+
+		if(d3ds.library != NULL)
+			FreeLibrary(d3ds.library);
+
+		memset(&d3ds, 0, sizeof(d3ds));
+	}
 
 	memset(&d3d, 0, sizeof(d3d));
 
@@ -1696,17 +1725,17 @@ static void BeginQueries()
 	D3D11_QUERY_DESC qd;
 	qd.MiscFlags = 0;
 	qd.Query = D3D11_QUERY_TIMESTAMP_DISJOINT;
-	d3d.device->CreateQuery(&qd, &queries->disjoint);
+	d3ds.device->CreateQuery(&qd, &queries->disjoint);
 	qd.Query = D3D11_QUERY_TIMESTAMP;
-	d3d.device->CreateQuery(&qd, &queries->frameStart);
-	d3d.device->CreateQuery(&qd, &queries->frameEnd);
+	d3ds.device->CreateQuery(&qd, &queries->frameStart);
+	d3ds.device->CreateQuery(&qd, &queries->frameEnd);
 	if(queries->disjoint != NULL &&
 	   queries->frameStart != NULL &&
 	   queries->frameEnd != NULL)
 	{
 		queries->valid = qtrue;
-		d3d.context->Begin(queries->disjoint);
-		d3d.context->End(queries->frameStart);
+		d3ds.context->Begin(queries->disjoint);
+		d3ds.context->End(queries->frameStart);
 	}
 	else
 	{
@@ -1722,8 +1751,8 @@ static void EndQueries()
 	FrameQueries* queries = &d3d.frameQueries[d3d.frameQueriesWriteIndex];
 	if(queries->valid)
 	{
-		d3d.context->End(queries->frameEnd);
-		d3d.context->End(queries->disjoint);
+		d3ds.context->End(queries->frameEnd);
+		d3ds.context->End(queries->disjoint);
 		d3d.frameQueriesWriteIndex = (d3d.frameQueriesWriteIndex + 1) % ARRAY_LEN(d3d.frameQueries);
 	}
 
@@ -1732,14 +1761,14 @@ static void EndQueries()
 	backEnd.pc3D[RB_USEC_GPU] = 0; // pessimism...
 	queries = &d3d.frameQueries[d3d.frameQueriesReadIndex];
 	if(queries->valid &&
-	   d3d.context->GetData(queries->disjoint, &disjoint, sizeof(disjoint), D3D11_ASYNC_GETDATA_DONOTFLUSH) == S_OK)
+	   d3ds.context->GetData(queries->disjoint, &disjoint, sizeof(disjoint), D3D11_ASYNC_GETDATA_DONOTFLUSH) == S_OK)
 	{
 		UINT64 start = 0;
 		UINT64 end = 0;
 		if(!disjoint.Disjoint &&
 		   disjoint.Frequency > 0 &&
-		   d3d.context->GetData(queries->frameStart, &start, sizeof(UINT64), D3D11_ASYNC_GETDATA_DONOTFLUSH) == S_OK &&
-		   d3d.context->GetData(queries->frameEnd, &end, sizeof(UINT64), D3D11_ASYNC_GETDATA_DONOTFLUSH) == S_OK)
+		   d3ds.context->GetData(queries->frameStart, &start, sizeof(UINT64), D3D11_ASYNC_GETDATA_DONOTFLUSH) == S_OK &&
+		   d3ds.context->GetData(queries->frameEnd, &end, sizeof(UINT64), D3D11_ASYNC_GETDATA_DONOTFLUSH) == S_OK)
 		{
 			backEnd.pc3D[RB_USEC_GPU] = int(((end - start) * UINT64(1000000)) / disjoint.Frequency);
 		}
@@ -1756,8 +1785,8 @@ static void GAL_BeginFrame()
 
 	const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 	const FLOAT clearColorDebug[4] = { 1.0f, 0.0f, 0.5f, 1.0f };
-	d3d.context->ClearRenderTargetView(d3d.renderTargetViewMS, r_clear->integer ? clearColorDebug : clearColor);
-	d3d.context->ClearDepthStencilView(d3d.depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+	d3ds.context->ClearRenderTargetView(d3d.renderTargetViewMS, r_clear->integer ? clearColorDebug : clearColor);
+	d3ds.context->ClearDepthStencilView(d3d.depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 	ApplyPipeline(PID_GENERIC);
 	ApplyViewportAndScissor(0, 0, glConfig.vidWidth, glConfig.vidHeight, glConfig.vidHeight);
 }
@@ -1792,11 +1821,11 @@ static void GAL_EndFrame()
 		if(scaleX != 1.0f || scaleY != 1.0f)
 		{
 			const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-			d3d.context->ClearRenderTargetView(d3d.backBufferRTView, clearColor);
+			d3ds.context->ClearRenderTargetView(d3d.backBufferRTView, clearColor);
 		}
 	}
 
-	d3d.context->ResolveSubresource(d3d.resolveTexture, 0, d3d.renderTargetTextureMS, 0, d3d.formatColorRT);
+	d3ds.context->ResolveSubresource(d3d.resolveTexture, 0, d3d.renderTargetTextureMS, 0, d3d.formatColorRT);
 	d3d.postPSData.gamma = 1.0f / r_gamma->value;
 	d3d.postPSData.brightness = r_brightness->value;
 	d3d.postPSData.greyscale = r_greyscale->value;
@@ -1806,16 +1835,16 @@ static void GAL_EndFrame()
 	ApplyState(GLS_DEPTHTEST_DISABLE, CT_TWO_SIDED, qfalse);
 	UploadPendingShaderData();
 	BindImage(0, tr.whiteImage);
-	d3d.context->PSSetShaderResources(0, 1, &d3d.resolveTextureShaderView);
+	d3ds.context->PSSetShaderResources(0, 1, &d3d.resolveTextureShaderView);
 	ApplySamplerState(0, TW_CLAMP_TO_EDGE, qtrue);
 	ApplyViewportAndScissor(0, 0, glInfo.winWidth, glInfo.winHeight, glInfo.winHeight);
-	d3d.context->Draw(3, 0);
+	d3ds.context->Draw(3, 0);
 
 	EndQueries();
 
 	// Present interval flags
 	// flags: DXGI_PRESENT_DO_NOT_SEQUENCE DXGI_PRESENT_ALLOW_TEARING
-	const HRESULT hr = d3d.swapChain->Present(abs(r_swapInterval->integer), 0);
+	const HRESULT hr = d3ds.swapChain->Present(abs(r_swapInterval->integer), 0);
 	if(hr == DXGI_ERROR_DEVICE_REMOVED)
 	{
 		ri.Error(ERR_FATAL, "Direct3D device was removed! Reason: %s", GetDeviceRemovedReason());
@@ -1837,17 +1866,17 @@ static void GAL_BeginSkyAndClouds()
 	UploadPendingShaderData();
 
 	UINT numVP = 1;
-	d3d.context->RSGetViewports(&numVP, &d3d.oldSkyViewport);
+	d3ds.context->RSGetViewports(&numVP, &d3d.oldSkyViewport);
 	d3d.oldSkyViewport.MinDepth = 1.0f;
 	d3d.oldSkyViewport.MaxDepth = 1.0f;
-	d3d.context->RSSetViewports(1, &d3d.oldSkyViewport);
+	d3ds.context->RSSetViewports(1, &d3d.oldSkyViewport);
 }
 
 static void GAL_EndSkyAndClouds()
 {
 	d3d.oldSkyViewport.MinDepth = 0.0f;
 	d3d.oldSkyViewport.MaxDepth = 1.0f;
-	d3d.context->RSSetViewports(1, &d3d.oldSkyViewport);
+	d3ds.context->RSSetViewports(1, &d3d.oldSkyViewport);
 
 	memcpy(d3d.clipPlane, d3d.oldSkyClipPlane, sizeof(d3d.clipPlane));
 }
@@ -1868,10 +1897,10 @@ static void GAL_ReadPixels(int x, int y, int w, int h, int alignment, colorSpace
 		return;
 	}
 
-	d3d.context->CopyResource(d3d.readbackTexture, d3d.backBufferTexture);
+	d3ds.context->CopyResource(d3d.readbackTexture, d3d.backBufferTexture);
 
 	D3D11_MAPPED_SUBRESOURCE ms;
-	HRESULT hr = d3d.context->Map(d3d.readbackTexture, 0, D3D11_MAP_READ, NULL, &ms);
+	HRESULT hr = d3ds.context->Map(d3d.readbackTexture, 0, D3D11_MAP_READ, NULL, &ms);
 	if(FAILED(hr))
 	{
 		WriteInvalidImage(w, h, alignment, colorSpace, out);
@@ -1922,7 +1951,7 @@ static void GAL_ReadPixels(int x, int y, int w, int h, int alignment, colorSpace
 		}
 	}
 
-	d3d.context->Unmap(d3d.readbackTexture, NULL);
+	d3ds.context->Unmap(d3d.readbackTexture, NULL);
 }
 
 static void GAL_CreateTexture(image_t* image, int mipCount, int w, int h)
@@ -1951,7 +1980,7 @@ static void GAL_UpdateTexture(image_t* image, int mip, int x, int y, int w, int 
 	box.right = x + w;
 	box.top = y;
 	box.bottom = y + h;
-	d3d.context->UpdateSubresource(texture, mip, &box, data, rowBytes, imageBytes);
+	d3ds.context->UpdateSubresource(texture, mip, &box, data, rowBytes, imageBytes);
 }
 
 static void GAL_UpdateScratch(image_t* image, int w, int h, const void* data, qbool dirty)
@@ -1996,7 +2025,7 @@ static void GAL_CreateTextureEx(image_t* image, int mipCount, int mipOffset, int
 	box.right = w;
 	box.top = 0;
 	box.bottom = h;
-	d3d.context->UpdateSubresource(d3d.mipGenTextures[2].texture, 0, &box, mip0, rowBytes, imageBytes);
+	d3ds.context->UpdateSubresource(d3d.mipGenTextures[2].texture, 0, &box, mip0, rowBytes, imageBytes);
 
 	GammaToLinearCSData dataG2L;
 	dataG2L.gamma = r_mipGenGamma->value;
@@ -2005,14 +2034,14 @@ static void GAL_CreateTextureEx(image_t* image, int mipCount, int mipOffset, int
 	int readIndex = 2;
 	int writeIndex = 0;
 	ResetShaderData(d3d.mipGammaToLinearConstBuffer, &dataG2L, sizeof(dataG2L));
-	d3d.context->CSSetShader(d3d.mipGammaToLinearComputeShader, NULL, 0);
-	d3d.context->CSSetConstantBuffers(0, 1, &bufferNull);
-	d3d.context->CSSetShaderResources(0, 1, &srvNull);
-	d3d.context->CSSetUnorderedAccessViews(0, 1, &uavNull, NULL);
-	d3d.context->CSSetConstantBuffers(0, 1, &d3d.mipGammaToLinearConstBuffer);
-	d3d.context->CSSetShaderResources(0, 1, &d3d.mipGenTextures[readIndex].srv);
-	d3d.context->CSSetUnorderedAccessViews(0, 1, &d3d.mipGenTextures[writeIndex].uav, NULL);
-	d3d.context->Dispatch((w + GroupMask) / GroupSize, (h + GroupMask) / GroupSize, 1);
+	d3ds.context->CSSetShader(d3d.mipGammaToLinearComputeShader, NULL, 0);
+	d3ds.context->CSSetConstantBuffers(0, 1, &bufferNull);
+	d3ds.context->CSSetShaderResources(0, 1, &srvNull);
+	d3ds.context->CSSetUnorderedAccessViews(0, 1, &uavNull, NULL);
+	d3ds.context->CSSetConstantBuffers(0, 1, &d3d.mipGammaToLinearConstBuffer);
+	d3ds.context->CSSetShaderResources(0, 1, &d3d.mipGenTextures[readIndex].srv);
+	d3ds.context->CSSetUnorderedAccessViews(0, 1, &d3d.mipGenTextures[writeIndex].uav, NULL);
+	d3ds.context->Dispatch((w + GroupMask) / GroupSize, (h + GroupMask) / GroupSize, 1);
 
 	LinearToGammaCSData dataL2G;
 	dataL2G.intensity = r_intensity->value;
@@ -2025,14 +2054,14 @@ static void GAL_CreateTextureEx(image_t* image, int mipCount, int mipOffset, int
 		readIndex = 0;
 		writeIndex = 2;
 		ResetShaderData(d3d.mipLinearToGammaConstBuffer, &dataL2G, sizeof(dataL2G));
-		d3d.context->CSSetShader(d3d.mipLinearToGammaComputeShader, NULL, 0);
-		d3d.context->CSSetConstantBuffers(0, 1, &bufferNull);
-		d3d.context->CSSetShaderResources(0, 1, &srvNull);
-		d3d.context->CSSetUnorderedAccessViews(0, 1, &uavNull, NULL);
-		d3d.context->CSSetConstantBuffers(0, 1, &d3d.mipLinearToGammaConstBuffer);
-		d3d.context->CSSetShaderResources(0, 1, &d3d.mipGenTextures[readIndex].srv);
-		d3d.context->CSSetUnorderedAccessViews(0, 1, &d3d.mipGenTextures[writeIndex].uav, NULL);
-		d3d.context->Dispatch((w + GroupMask) / GroupSize, (h + GroupMask) / GroupSize, 1);
+		d3ds.context->CSSetShader(d3d.mipLinearToGammaComputeShader, NULL, 0);
+		d3ds.context->CSSetConstantBuffers(0, 1, &bufferNull);
+		d3ds.context->CSSetShaderResources(0, 1, &srvNull);
+		d3ds.context->CSSetUnorderedAccessViews(0, 1, &uavNull, NULL);
+		d3ds.context->CSSetConstantBuffers(0, 1, &d3d.mipLinearToGammaConstBuffer);
+		d3ds.context->CSSetShaderResources(0, 1, &d3d.mipGenTextures[readIndex].srv);
+		d3ds.context->CSSetUnorderedAccessViews(0, 1, &d3d.mipGenTextures[writeIndex].uav, NULL);
+		d3ds.context->Dispatch((w + GroupMask) / GroupSize, (h + GroupMask) / GroupSize, 1);
 
 		box.front = 0;
 		box.back = 1;
@@ -2040,7 +2069,7 @@ static void GAL_CreateTextureEx(image_t* image, int mipCount, int mipOffset, int
 		box.right = w;
 		box.top = 0;
 		box.bottom = h;
-		d3d.context->CopySubresourceRegion(texture->texture, 0, 0, 0, 0, d3d.mipGenTextures[2].texture, 0, &box);
+		d3ds.context->CopySubresourceRegion(texture->texture, 0, 0, 0, 0, d3d.mipGenTextures[2].texture, 0, &box);
 	}
 
 	Down4CSData dataDown;
@@ -2064,14 +2093,14 @@ static void GAL_CreateTextureEx(image_t* image, int mipCount, int mipOffset, int
 		dataDown.offset[0] = 1;
 		dataDown.offset[1] = 0;
 		ResetShaderData(d3d.mipDownSampleConstBuffer, &dataDown, sizeof(dataDown));
-		d3d.context->CSSetShader(d3d.mipDownSampleComputeShader, NULL, 0);
-		d3d.context->CSSetConstantBuffers(0, 1, &bufferNull);
-		d3d.context->CSSetShaderResources(0, 1, &srvNull);
-		d3d.context->CSSetUnorderedAccessViews(0, 1, &uavNull, NULL);
-		d3d.context->CSSetConstantBuffers(0, 1, &d3d.mipDownSampleConstBuffer);
-		d3d.context->CSSetShaderResources(0, 1, &d3d.mipGenTextures[readIndex].srv);
-		d3d.context->CSSetUnorderedAccessViews(0, 1, &d3d.mipGenTextures[writeIndex].uav, NULL);
-		d3d.context->Dispatch((w + GroupMask) / GroupSize, (h1 + GroupMask) / GroupSize, 1);
+		d3ds.context->CSSetShader(d3d.mipDownSampleComputeShader, NULL, 0);
+		d3ds.context->CSSetConstantBuffers(0, 1, &bufferNull);
+		d3ds.context->CSSetShaderResources(0, 1, &srvNull);
+		d3ds.context->CSSetUnorderedAccessViews(0, 1, &uavNull, NULL);
+		d3ds.context->CSSetConstantBuffers(0, 1, &d3d.mipDownSampleConstBuffer);
+		d3ds.context->CSSetShaderResources(0, 1, &d3d.mipGenTextures[readIndex].srv);
+		d3ds.context->CSSetUnorderedAccessViews(0, 1, &d3d.mipGenTextures[writeIndex].uav, NULL);
+		d3ds.context->Dispatch((w + GroupMask) / GroupSize, (h1 + GroupMask) / GroupSize, 1);
 
 		// down-sample on the Y-axis
 		readIndex = 1;
@@ -2083,11 +2112,11 @@ static void GAL_CreateTextureEx(image_t* image, int mipCount, int mipOffset, int
 		dataDown.offset[0] = 0;
 		dataDown.offset[1] = 1;
 		ResetShaderData(d3d.mipDownSampleConstBuffer, &dataDown, sizeof(dataDown));
-		d3d.context->CSSetShaderResources(0, 1, &srvNull);
-		d3d.context->CSSetUnorderedAccessViews(0, 1, &uavNull, NULL);
-		d3d.context->CSSetShaderResources(0, 1, &d3d.mipGenTextures[readIndex].srv);
-		d3d.context->CSSetUnorderedAccessViews(0, 1, &d3d.mipGenTextures[writeIndex].uav, NULL);
-		d3d.context->Dispatch((w + GroupMask) / GroupSize, (h + GroupMask) / GroupSize, 1);
+		d3ds.context->CSSetShaderResources(0, 1, &srvNull);
+		d3ds.context->CSSetUnorderedAccessViews(0, 1, &uavNull, NULL);
+		d3ds.context->CSSetShaderResources(0, 1, &d3d.mipGenTextures[readIndex].srv);
+		d3ds.context->CSSetUnorderedAccessViews(0, 1, &d3d.mipGenTextures[writeIndex].uav, NULL);
+		d3ds.context->Dispatch((w + GroupMask) / GroupSize, (h + GroupMask) / GroupSize, 1);
 
 		const int destMip = i - mipOffset;
 		if(destMip >= 0)
@@ -2097,14 +2126,14 @@ static void GAL_CreateTextureEx(image_t* image, int mipCount, int mipOffset, int
 			writeIndex = 2;
 			memcpy(dataL2G.blendColor, r_mipBlendColors[r_colorMipLevels->integer ? destMip : 0], sizeof(dataL2G.blendColor));
 			ResetShaderData(d3d.mipLinearToGammaConstBuffer, &dataL2G, sizeof(dataL2G));
-			d3d.context->CSSetShader(d3d.mipLinearToGammaComputeShader, NULL, 0);
-			d3d.context->CSSetConstantBuffers(0, 1, &bufferNull);
-			d3d.context->CSSetShaderResources(0, 1, &srvNull);
-			d3d.context->CSSetUnorderedAccessViews(0, 1, &uavNull, NULL);
-			d3d.context->CSSetConstantBuffers(0, 1, &d3d.mipLinearToGammaConstBuffer);
-			d3d.context->CSSetShaderResources(0, 1, &d3d.mipGenTextures[readIndex].srv);
-			d3d.context->CSSetUnorderedAccessViews(0, 1, &d3d.mipGenTextures[writeIndex].uav, NULL);
-			d3d.context->Dispatch((w + GroupMask) / GroupSize, (h + GroupMask) / GroupSize, 1);
+			d3ds.context->CSSetShader(d3d.mipLinearToGammaComputeShader, NULL, 0);
+			d3ds.context->CSSetConstantBuffers(0, 1, &bufferNull);
+			d3ds.context->CSSetShaderResources(0, 1, &srvNull);
+			d3ds.context->CSSetUnorderedAccessViews(0, 1, &uavNull, NULL);
+			d3ds.context->CSSetConstantBuffers(0, 1, &d3d.mipLinearToGammaConstBuffer);
+			d3ds.context->CSSetShaderResources(0, 1, &d3d.mipGenTextures[readIndex].srv);
+			d3ds.context->CSSetUnorderedAccessViews(0, 1, &d3d.mipGenTextures[writeIndex].uav, NULL);
+			d3ds.context->Dispatch((w + GroupMask) / GroupSize, (h + GroupMask) / GroupSize, 1);
 
 			// write out the result
 			box.front = 0;
@@ -2113,7 +2142,7 @@ static void GAL_CreateTextureEx(image_t* image, int mipCount, int mipOffset, int
 			box.right = w;
 			box.top = 0;
 			box.bottom = h;
-			d3d.context->CopySubresourceRegion(texture->texture, destMip, 0, 0, 0, d3d.mipGenTextures[2].texture, 0, &box);
+			d3ds.context->CopySubresourceRegion(texture->texture, destMip, 0, 0, 0, d3d.mipGenTextures[2].texture, 0, &box);
 		}
 	}
 }
@@ -2307,17 +2336,17 @@ static void GAL_Begin3D()
 	memcpy(d3d.projectionMatrix, backEnd.viewParms.projectionMatrix, sizeof(d3d.projectionMatrix));
 	ApplyViewportAndScissor(backEnd.viewParms.viewportX, backEnd.viewParms.viewportY, backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight, glConfig.vidHeight);
 
-	d3d.context->ClearDepthStencilView(d3d.depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+	d3ds.context->ClearDepthStencilView(d3d.depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 	if(backEnd.refdef.rdflags & RDF_HYPERSPACE)
 	{
 		const FLOAT c = RB_HyperspaceColor();
 		const FLOAT clearColor[4] = { c, c, c, 1.0f };
-		d3d.context->ClearRenderTargetView(d3d.renderTargetViewMS, clearColor);
+		d3ds.context->ClearRenderTargetView(d3d.renderTargetViewMS, clearColor);
 	}
 	else if(r_fastsky->integer && !(backEnd.refdef.rdflags & RDF_NOWORLDMODEL))
 	{
 		const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-		d3d.context->ClearRenderTargetView(d3d.renderTargetViewMS, clearColor);
+		d3ds.context->ClearRenderTargetView(d3d.renderTargetViewMS, clearColor);
 	}
 
 	if(backEnd.viewParms.isPortal)
@@ -2362,11 +2391,11 @@ static void GAL_SetDepthRange(double near, double far)
 {
 	D3D11_VIEWPORT viewport;
 	UINT numVP = 1;
-	d3d.context->RSGetViewports(&numVP, &viewport);
+	d3ds.context->RSGetViewports(&numVP, &viewport);
 
 	viewport.MinDepth = (float)near;
 	viewport.MaxDepth = (float)far;
-	d3d.context->RSSetViewports(1, &viewport);
+	d3ds.context->RSSetViewports(1, &viewport);
 }
 
 static void GAL_BeginDynamicLight()
@@ -2389,13 +2418,13 @@ static void GAL_BeginDynamicLight()
 
 static void GAL_PrintInfo()
 {
-	ri.Printf(PRINT_ALL, "Direct3D device feature level: %s\n", d3d.device->GetFeatureLevel() == D3D_FEATURE_LEVEL_11_0 ? "11.0" : "10.1");
+	ri.Printf(PRINT_ALL, "Direct3D device feature level: %s\n", d3ds.device->GetFeatureLevel() == D3D_FEATURE_LEVEL_11_0 ? "11.0" : "10.1");
 	ri.Printf(PRINT_ALL, "Direct3D vertex buffer upload strategy: %s\n", d3d.splitBufferOffsets ? "split offsets" : "sync'd offsets");
-	if(d3d.adapterInfo.valid)
+	if(d3ds.adapterInfo.valid)
 	{
-		ri.Printf(PRINT_ALL, "%6d MB of dedicated GPU memory\n", d3d.adapterInfo.dedicatedVideoMemoryMB);
-		ri.Printf(PRINT_ALL, "%6d MB of shared system memory\n", d3d.adapterInfo.sharedSystemMemoryMB);
-		ri.Printf(PRINT_ALL, "%6d MB of dedicated system memory\n", d3d.adapterInfo.dedicatedSystemMemoryMB);
+		ri.Printf(PRINT_ALL, "%6d MB of dedicated GPU memory\n", d3ds.adapterInfo.dedicatedVideoMemoryMB);
+		ri.Printf(PRINT_ALL, "%6d MB of shared system memory\n", d3ds.adapterInfo.sharedSystemMemoryMB);
+		ri.Printf(PRINT_ALL, "%6d MB of dedicated system memory\n", d3ds.adapterInfo.dedicatedSystemMemoryMB);
 	}
 }
 
