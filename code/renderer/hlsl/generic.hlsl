@@ -101,8 +101,8 @@ float CorrectAlpha(float threshold, float alpha, float2 tc)
 {
 	float w, h;
 	texture0.GetDimensions(w, h);
-	float dx = max(ddx(tc.x * w), 0.001);
-	float dy = max(ddy(tc.y * h), 0.001);
+	float dx = max(abs(ddx(tc.x * w)), 0.001);
+	float dy = max(abs(ddy(tc.y * h)), 0.001);
 	float dxy = max(dx, dy); // apply the smallest boost
 	float scale = max(1.0 / dxy, 1.0);
 	float ac = threshold + (alpha - threshold) * scale;
