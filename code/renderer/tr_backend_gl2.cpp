@@ -51,6 +51,9 @@ static void RB_FogPass();
 static void GAL_Begin2D();
 static GLint GetTexEnv( texEnv_t texEnv );
 
+void GL_GetRenderTargetFormat( GLenum* internalFormat, GLenum* format, GLenum* type, int cnq3Format );
+void GL_CreateColorRenderBufferStorageMS( int* samples );
+
 
 struct GLSL_Program {
 	GLuint p;  // linked program
@@ -334,12 +337,12 @@ static unsigned int frameBufferReadIndex = 0; // read this for the latest color/
 static qbool frameBufferMultiSampling = qfalse;
 
 
-#define CASE( x )		case x: return #x
 #define GL( call )		call; GL2_CheckError( #call, __FUNCTION__, __FILE__, __LINE__ )
 
 
 static const char* GL2_GetErrorString( GLenum ec )
 {
+#define CASE( x )		case x: return #x
 	switch ( ec )
 	{
 		CASE( GL_NO_ERROR );
@@ -352,6 +355,7 @@ static const char* GL2_GetErrorString( GLenum ec )
 		CASE( GL_STACK_OVERFLOW );
 		default: return "?";
 	}
+#undef CASE
 }
 
 
@@ -374,53 +378,6 @@ static void GL2_CheckError( const char* call, const char* function, const char* 
 	ri.Printf( PRINT_ERROR, "%s:%d in %s\n", fileName, line, function );
 	ri.Printf( PRINT_ERROR, "GL error code: 0x%X (%d)\n", (unsigned int)ec, (int)ec );
 	ri.Printf( PRINT_ERROR, "GL error message: %s\n", GL2_GetErrorString(ec) );
-}
-
-
-static const char* GL2_GetFBOStatusString( GLenum status )
-{
-	switch ( status )
-	{
-		CASE( GL_FRAMEBUFFER_COMPLETE );
-		CASE( GL_FRAMEBUFFER_UNDEFINED );
-		CASE( GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT );
-		CASE( GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT );
-		CASE( GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER );
-		CASE( GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER );
-		CASE( GL_FRAMEBUFFER_UNSUPPORTED );
-		CASE( GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE );
-		CASE( GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS );
-		default: return "?";
-	}
-}
-
-
-#undef CASE
-
-
-void GL_GetRenderTargetFormat( GLenum* internalFormat, GLenum* format, GLenum* type, int cnq3Format )
-{
-	switch( cnq3Format )
-	{
-		case RTCF_R10G10B10A2:
-			*internalFormat = GL_RGB10_A2;
-			*format = GL_BGRA;
-			*type = GL_UNSIGNED_INT_2_10_10_10_REV;
-			break;
-
-		case RTCF_R16G16B16A16:
-			*internalFormat = GL_RGBA16;
-			*format = GL_BGRA;
-			*type = GL_UNSIGNED_SHORT;
-			break;
-
-		case RTCF_R8G8B8A8:
-		default:
-			*internalFormat = GL_RGBA8;
-			*format = GL_BGRA;
-			*type = GL_UNSIGNED_BYTE;
-			break;
-	}
 }
 
 
@@ -454,8 +411,7 @@ static qbool GL2_FBO_CreateSS( FrameBuffer& fb, qbool depthStencil )
 	const GLenum fboStatus = glCheckFramebufferStatus( GL_FRAMEBUFFER );
 	if ( fboStatus != GL_FRAMEBUFFER_COMPLETE )
 	{
-		ri.Printf( PRINT_ERROR, "Failed to create FBO (status 0x%X, error 0x%X)\n", (unsigned int)fboStatus, (unsigned int)glGetError() );
-		ri.Printf( PRINT_ERROR, "FBO status string: %s\n", GL2_GetFBOStatusString(fboStatus) );
+		ri.Error( ERR_FATAL, "Failed to create FBO (status 0x%X, error 0x%X)\n", (unsigned int)fboStatus, (unsigned int)glGetError() );
 		return qfalse;
 	}
 
@@ -474,16 +430,15 @@ static qbool GL2_FBO_CreateMS( FrameBuffer& fb )
 	GL(glGenFramebuffers( 1, &fb.fbo ));
 	GL(glBindFramebuffer( GL_FRAMEBUFFER, fb.fbo ));
 
-	GLenum internalFormat, format, type;
-	GL_GetRenderTargetFormat( &internalFormat, &format, &type, r_rtColorFormat->integer );
+	int sampleCount = 0;
 	GL(glGenRenderbuffers( 1, &fb.color ));
 	GL(glBindRenderbuffer( GL_RENDERBUFFER, fb.color ));
-	GL(glRenderbufferStorageMultisample( GL_RENDERBUFFER, r_msaa->integer, internalFormat, glConfig.vidWidth, glConfig.vidHeight ));
+	GL_CreateColorRenderBufferStorageMS( &sampleCount );
 	GL(glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, fb.color ));
 
 	GL(glGenRenderbuffers( 1, &fb.depthStencil ));
 	GL(glBindRenderbuffer( GL_RENDERBUFFER, fb.depthStencil ));
-	GL(glRenderbufferStorageMultisample( GL_RENDERBUFFER, r_msaa->integer, GL_DEPTH24_STENCIL8, glConfig.vidWidth, glConfig.vidHeight ));
+	GL(glRenderbufferStorageMultisample( GL_RENDERBUFFER, sampleCount, GL_DEPTH24_STENCIL8, glConfig.vidWidth, glConfig.vidHeight ));
 
 	GL(glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, fb.color ));
 	GL(glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, fb.depthStencil ));
@@ -491,14 +446,15 @@ static qbool GL2_FBO_CreateMS( FrameBuffer& fb )
 	const GLenum fboStatus = glCheckFramebufferStatus( GL_FRAMEBUFFER );
 	if ( fboStatus != GL_FRAMEBUFFER_COMPLETE )
 	{
-		ri.Printf( PRINT_ERROR, "Failed to create FBO (status 0x%X, error 0x%X)\n", (unsigned int)fboStatus, (unsigned int)glGetError() );
-		ri.Printf( PRINT_ERROR, "FBO status string: %s\n", GL2_GetFBOStatusString(fboStatus) );
+		ri.Error( ERR_FATAL, "Failed to create FBO (status 0x%X, error 0x%X)\n", (unsigned int)fboStatus, (unsigned int)glGetError() );
 		return qfalse;
 	}
 
 	glBindFramebuffer( GL_FRAMEBUFFER, 0 );
 	fb.multiSampled = qtrue;
 	fb.hasDepthStencil = qtrue;
+
+	ri.Printf( PRINT_ALL, "MSAA: %d samples requested, %d selected\n", r_msaa->integer, sampleCount );
 
 	return qtrue;
 }
@@ -507,7 +463,7 @@ static qbool GL2_FBO_CreateMS( FrameBuffer& fb )
 static qbool GL2_FBO_Init()
 {
 	const int msaa = r_msaa->integer;
-	const qbool enable = msaa >= 2 && msaa <= 16;
+	const qbool enable = msaa >= 2;
 	frameBufferMultiSampling = enable;
 
 	if ( !enable )

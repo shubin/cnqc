@@ -83,6 +83,8 @@ add: r_mapBrightness now works on q3map2's external lightmap atlas images
 add: the renderer can now batch surfaces with different (but sufficiently similar) shaders
   this new optimization works with the output of "Frozen Sand Particle Studio"
 
+chg: searching for valid sample counts for MSAA in GL2 and GL3 instead of failing right away
+
 add: /modellist /skinlist /imagelist /shaderlist can now filter results with pattern matching
 
 chg: SSE2 instruction set support is now required

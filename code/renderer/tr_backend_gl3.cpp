@@ -650,6 +650,72 @@ static const char* downSample_cs =
 "	imageStore(dstTex, dstTC, r);\n"
 "}\n";
 
+
+void GL_GetRenderTargetFormat(GLenum* internalFormat, GLenum* format, GLenum* type, int cnq3Format)
+{
+	switch(cnq3Format)
+	{
+		case RTCF_R10G10B10A2:
+			*internalFormat = GL_RGB10_A2;
+			*format = GL_BGRA;
+			*type = GL_UNSIGNED_INT_2_10_10_10_REV;
+			break;
+
+		case RTCF_R16G16B16A16:
+			*internalFormat = GL_RGBA16;
+			*format = GL_BGRA;
+			*type = GL_UNSIGNED_SHORT;
+			break;
+
+		case RTCF_R8G8B8A8:
+		default:
+			*internalFormat = GL_RGBA8;
+			*format = GL_BGRA;
+			*type = GL_UNSIGNED_BYTE;
+			break;
+	}
+}
+
+void GL_CreateColorRenderBufferStorageMS(int* samples)
+{
+	GLenum internalFormat, format, type;
+	GL_GetRenderTargetFormat(&internalFormat, &format, &type, r_rtColorFormat->integer);
+
+	int sampleCount = r_msaa->integer;
+	while(glGetError() != GL_NO_ERROR) {} // clear the error queue
+
+	if(GLEW_VERSION_4_2 || GLEW_ARB_internalformat_query)
+	{
+		GLint maxSampleCount = 0;
+		glGetInternalformativ(GL_RENDERBUFFER, internalFormat, GL_SAMPLES, 1, &maxSampleCount);
+		if(glGetError() == GL_NO_ERROR)
+		{
+			sampleCount = min(sampleCount, (int)maxSampleCount);
+		}
+	}
+
+	GLenum errorCode = GL_NO_ERROR;
+	for(;;)
+	{
+		// @NOTE: when the sample count is invalid, the error code is GL_INVALID_OPERATION
+		glRenderbufferStorageMultisample(GL_RENDERBUFFER, sampleCount, internalFormat, glConfig.vidWidth, glConfig.vidHeight);
+		errorCode = glGetError();
+		if(errorCode == GL_NO_ERROR || sampleCount == 0)
+		{
+			break;
+		}
+
+		--sampleCount;
+	}
+
+	if(errorCode != GL_NO_ERROR)
+	{
+		ri.Error(ERR_FATAL, "Failed to create multi-sampled render buffer storage (error 0x%X)\n", (unsigned int)errorCode);
+	}
+
+	*samples = sampleCount;
+}
+
 #if defined(_WIN32)
 
 static void AllocatePinnedMemory(ArrayBuffer* buffer)
@@ -879,17 +945,16 @@ static void FBO_CreateMS(FrameBuffer* fb, const char* name)
 	glGenFramebuffers(1, &fb->fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, fb->fbo);
 
-	GLenum internalFormat, format, type;
-	GL_GetRenderTargetFormat(&internalFormat, &format, &type, r_rtColorFormat->integer);
+	int sampleCount = 0;
 	glGenRenderbuffers(1, &fb->color);
 	glBindRenderbuffer(GL_RENDERBUFFER, fb->color);
-	glRenderbufferStorageMultisample(GL_RENDERBUFFER, r_msaa->integer, internalFormat, glConfig.vidWidth, glConfig.vidHeight);
+	GL_CreateColorRenderBufferStorageMS(&sampleCount);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, fb->color);
 	SetDebugName(GL_RENDERBUFFER, fb->color, va("%s color attachment 0", name));
 
 	glGenRenderbuffers(1, &fb->depthStencil);
 	glBindRenderbuffer(GL_RENDERBUFFER, fb->depthStencil);
-	glRenderbufferStorageMultisample(GL_RENDERBUFFER, r_msaa->integer, GL_DEPTH24_STENCIL8, glConfig.vidWidth, glConfig.vidHeight);
+	glRenderbufferStorageMultisample(GL_RENDERBUFFER, sampleCount, GL_DEPTH24_STENCIL8, glConfig.vidWidth, glConfig.vidHeight);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, fb->depthStencil);
 	SetDebugName(GL_RENDERBUFFER, fb->depthStencil, va("%s depth/stencil attachment", name));
 
@@ -905,12 +970,14 @@ static void FBO_CreateMS(FrameBuffer* fb, const char* name)
 	fb->multiSampled = qtrue;
 	fb->hasDepthStencil = qtrue;
 	fb->hasColor = qtrue;
+
+	ri.Printf(PRINT_ALL, "MSAA: %d samples requested, %d selected\n", r_msaa->integer, sampleCount);
 }
 
 static void FBO_Init()
 {
 	const int msaa = r_msaa->integer;
-	gl.fbMSEnabled = msaa >= 2 && msaa <= 16;
+	gl.fbMSEnabled = msaa >= 2;
 
 	if(gl.fbMSEnabled)
 	{
