@@ -10,6 +10,7 @@ add: r_backend <GL2|GL3|D3D11> (default: D3D11 on Windows, GL3 on Linux) selects
   feature                |        |        |                    |
   -----------------------|--------|--------|--------------------|
   MSAA                   | GL 3.0 | always | always             |
+  MSAA centroid sampling | never  | always | always             |
   depth sprites          | never  | always | always             |
   alpha to coverage AA   | never  | always | always             |
   dithering              | never  | always | always             |

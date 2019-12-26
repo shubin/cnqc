@@ -38,9 +38,9 @@ struct VIn
 struct VOut
 {
 	float4 position : SV_Position;
-	float4 color : COLOR0;
-	float2 texCoords : TEXCOORD0;
-	float2 texCoords2 : TEXCOORD1;
+	centroid float4 color : COLOR0;
+	centroid float2 texCoords : TEXCOORD0;
+	centroid float2 texCoords2 : TEXCOORD1;
 	float clipDist : SV_ClipDistance0;
 };
 
