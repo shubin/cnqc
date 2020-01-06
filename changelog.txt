@@ -1,7 +1,9 @@
 
-DD Mmm 19 - 1.52
+DD Mmm 20 - 1.52
 
-add: r_backend <GL2|GL3|D3D11> (default: D3D11 on Windows, GL3 on Linux) selects the rendering back-end
+add: FreeBSD x64 support
+
+add: r_backend <GL2|GL3|D3D11> (default: D3D11 on Windows, GL3 otherwise) selects the rendering back-end
   GL2   - OpenGL 2.0 minimum, OpenGL 3+ features used for r_msaa
   GL3   - OpenGL 3.2 minimum, OpenGL 4+ features used for faster geometry upload, compute shaders, etc
   D3D11 - Direct3D 11 hardware feature level 10.1 minimum, feature level 11.0 for compute shaders
@@ -66,7 +68,7 @@ add: r_d3d11_syncOffsets <0|1|2> (default: 2) synchronizes vertex buffer offsets
   r_d3d11_syncOffsets 1 = sync'd buffer offsets (more API calls)
   r_d3d11_syncOffsets 2 = decide automatically
 
-add: r_d3d11_maxQueuedFrames <1 to 16> (default: 3) set the maximum pre-rendered frame count
+add: r_d3d11_maxQueuedFrames <1 to 16> (default: 3) sets the maximum pre-rendered frame count
 
 add: r_khr_debug <0|1|2> (default: 2) decides whether to create an OpenGL debug context
   r_khr_debug 0 = forced OFF
@@ -116,7 +118,7 @@ fix: incorrect shader state when loading a map with no lighting
 
 fix: fog-only non-sky shaders were incorrectly handled as sky shaders, which broke fog on many maps
 
-fix: r_monitor on Linux is now 0-based and the value doesn't change incorrectly on its own anymore
+fix: r_monitor on Linux/FreeBSD is now 0-based and the value doesn't change incorrectly on its own anymore
 
 fix: when a latched cvar's value is set to its default, the cvar is no longer marked as changed
 

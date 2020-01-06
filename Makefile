@@ -1,7 +1,16 @@
 .NOTPARALLEL:
 
+host_os := $(shell uname -s)
+ifeq ($(host_os), FreeBSD)
+	make_dir := ./makefiles/bsd_gmake
+	make_name := gmake
+else
+	make_dir := ./makefiles/linux_gmake
+	make_name := make
+endif
+
 ifndef config
-  config=release_x64
+  config=release
 endif
 
 ifndef verbose
@@ -11,13 +20,11 @@ endif
 PROJECTS := server client
 
 help:
-	@echo "Usage: make [config=name] target"
+	@echo "Usage: $(make_name) [config=name] target"
 	@echo ""
 	@echo "CONFIGURATIONS:"
-	@echo "  debug_x32"
-	@echo "  debug_x64"
-	@echo "  release_x32"
-	@echo "  release_x64 (default)"
+	@echo "  release (default)"
+	@echo "  debug"
 	@echo ""
 	@echo "TARGETS:"
 	@echo "  server"
@@ -35,12 +42,12 @@ help:
 	@echo "  that directory as a post-build command."
 
 server:
-	@${MAKE} --no-print-directory -C ./makefiles/gmake cnq3-server config=$(config)
+	@${MAKE} --no-print-directory -C $(make_dir) cnq3-server config=$(config)_x64
 	
 client:
-	@${MAKE} --no-print-directory -C ./makefiles/gmake cnq3 config=$(config)
+	@${MAKE} --no-print-directory -C $(make_dir) cnq3 config=$(config)_x64
 	
 clean:
-	@${MAKE} --no-print-directory -C ./makefiles/gmake clean config=$(config)
+	@${MAKE} --no-print-directory -C $(make_dir) clean config=$(config)_x64
 
 all: server client

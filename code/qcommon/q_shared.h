@@ -164,13 +164,12 @@ typedef int		clipHandle_t;
 #define PADLEN(base, alignment)	(PAD((base), (alignment)) - (base))
 #define PADP(base, alignment)	((void *) PAD((intptr_t) (base), (alignment)))
 
-#if defined(_MSC_VER)
-	#define ALIGN(x) __declspec( align(x) )
-// fuck it, im sick of gcc's arbitrary stupidities
-//#elif defined(__GNUC__)
-//	#define ALIGN(x) __align(x)
-#else
-	#define ALIGN(x)
+#if !defined(ALIGN)
+	#if defined(_MSC_VER)
+		#define ALIGN(x) __declspec( align(x) )
+	#else
+		#define ALIGN(x)
+	#endif
 #endif
 
 #define ARRAY_LEN(x)		(sizeof(x) / sizeof(*(x)))

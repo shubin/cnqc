@@ -193,7 +193,7 @@ static void PrintSocketError( mapDownload_t* dl, const char* functionName, int e
 #else
 static void PrintSocketError( mapDownload_t* dl, const char* functionName, int ec )
 {
-#if (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && !_GNU_SOURCE
+#if defined(__FreeBSD__) || ((_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && !_GNU_SOURCE)
 	// XSI strerror_r
 	const int serec = strerror_r(ec, dl->tempMessage2, sizeof(dl->tempMessage2));
 	const char* const errorMsg = dl->tempMessage2;

@@ -49,6 +49,6 @@ void Crash_SaveQVMGitString(const char* varName, const char* varValue);
 void Crash_SaveModName(const char* modName);
 void Crash_SaveModVersion(const char* modVersion);
 void Crash_PrintToFile(const char* engineFilePath);
-#if defined(__linux__)
+#if defined(__linux__) || defined(__FreeBSD__)
 void Crash_PrintVMStackTracesASS(int fd); // async-signal-safe
 #endif

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 COMMIT="$(git rev-parse HEAD)"
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"

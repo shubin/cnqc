@@ -24,10 +24,15 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <dlfcn.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <sys/sysinfo.h>
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#if defined(__linux__)
+#include <sys/sysinfo.h>
+#elif defined(__FreeBSD__)
+#include <sys/user.h>
+#include <sys/sysctl.h>
+#endif
 #include <dirent.h>
 #include <errno.h>
 #include <inttypes.h>
@@ -281,6 +286,8 @@ static const char* Lin_GetExeName(const char* path)
 
 void Lin_TrackParentProcess()
 {
+#if defined(__linux__)
+
 	static char cmdLine[1024];
 
 	char fileName[128];
@@ -298,6 +305,24 @@ void Lin_TrackParentProcess()
 
 	cmdLine[sizeof(cmdLine) - 1] = '\0';
 	lin_hasParent = strcmp(Lin_GetExeName(cmdLine), Lin_GetExeName(q_argv[0])) == 0;
+	
+#elif defined(__FreeBSD__)
+
+	static char cmdLine[1024];
+
+	int mib[4];
+    mib[0] = CTL_KERN;
+    mib[1] = KERN_PROC;
+    mib[2] = KERN_PROC_ARGS;
+    mib[3] = getppid();
+    size_t length = sizeof(cmdLine);
+    if (sysctl(mib, 4, cmdLine, &length, NULL, 0) != 0)
+        return;
+
+	cmdLine[sizeof(cmdLine) - 1] = '\0';
+	lin_hasParent = strcmp(Lin_GetExeName(cmdLine), Lin_GetExeName(q_argv[0])) == 0;
+
+#endif
 }
 
 
@@ -309,6 +334,8 @@ qbool Sys_HasCNQ3Parent()
 
 static int Sys_GetProcessUptime( pid_t pid )
 {
+#if defined(__linux__)
+
 	// length must be in sync with the fscanf call!
 	static char word[256];
 
@@ -344,6 +371,30 @@ static int Sys_GetProcessUptime( pid_t pid )
 	const int64_t uptime = (int64_t)info.uptime - secondsSinceBoot;
 
 	return (int)uptime;
+
+#elif defined(__FreeBSD__)
+
+	int mib[4];
+    mib[0] = CTL_KERN;
+    mib[1] = KERN_PROC;
+    mib[2] = KERN_PROC_PID;
+    mib[3] = pid;
+    struct kinfo_proc kp;
+    size_t len = sizeof(kp);
+    if (sysctl(mib, 4, &kp, &len, NULL, 0) != 0) {
+        return -1;
+    }
+
+	struct timeval now;
+	gettimeofday(&now, NULL);
+
+    return (int)(now.tv_sec - kp.ki_start.tv_sec);
+
+#else
+
+	return -1;
+
+#endif
 }
 
 
@@ -581,8 +632,8 @@ const char* Sys_DefaultHomePath()
 	if (*homePath)
 		return homePath;
 
-	const char* p;
-	if (p = getenv("HOME")) {
+	const char* const p = getenv("HOME");
+	if (p != NULL) {
 		Q_strncpyz(homePath, p, sizeof(homePath));
 #ifdef MACOS_X
 		Q_strcat(homePath, sizeof(homePath), "/Library/Application Support/Quake3");

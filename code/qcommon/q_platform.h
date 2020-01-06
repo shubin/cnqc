@@ -128,10 +128,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define ID_INLINE inline
 #define PATH_SEP '/'
 
-#if defined __i386__
-#define ARCH_STRING "i386"
-#elif defined __x86_64__
-#define ARCH_STRING "x86_64"
+#if defined( __i386__ ) || defined( __i386 )
+#define ARCH_STRING "x86"
+#elif defined( __amd64__ ) || defined( __amd64 ) || defined( __x86_64__ ) || defined( __x86_64 )
+#define ARCH_STRING "x64"
 #elif defined __powerpc64__
 #define ARCH_STRING "ppc64"
 #elif defined __powerpc__
@@ -178,10 +178,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define ID_INLINE inline
 #define PATH_SEP '/'
 
-#ifdef __i386__
-#define ARCH_STRING "i386"
-#elif defined __axp__
-#define ARCH_STRING "alpha"
+#if defined( __i386__ ) || defined( __i386 )
+#define ARCH_STRING "x86"
+#elif defined( __amd64__ ) || defined( __amd64 ) || defined( __x86_64__ ) || defined( __x86_64 )
+#define ARCH_STRING "x64"
 #endif
 
 #if BYTE_ORDER == BIG_ENDIAN

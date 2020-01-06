@@ -3,9 +3,10 @@
 Currently used build:
 premake 5.0.0-alpha10
 
-There are only 2 build toolchains supported:
-- Visual C++ on Windows
-- GCC on Linux
+There are 3 supported build toolchains:
+- Visual C++ on Windows x64 and x86
+- GCC on Linux x64
+- GCC on FreeBSD x64
 
 @TODO: prevent UNICODE and _UNICODE from being #define'd with premake
 @TODO: enable Minimal Rebuild from premake (instead of adding /Gm)
@@ -137,7 +138,7 @@ end
 -- premake tokens for this script:
 -- cfg.buildcfg -> "debug", "release"
 -- cfg.architecture -> "x86", "x86_64"
--- cfg.system -> "windows", "linux"
+-- cfg.system -> "windows", "linux", "bsd"
 -- cfg.platform -> "x32", "x64"
 
 local function GetLibJpegTurboNasmFlags()
@@ -147,7 +148,9 @@ local function GetLibJpegTurboNasmFlags()
 	   windows_x32 = "-fwin32 -DWIN32",
 	   windows_x64 = "-fwin64 -DWIN64 -D__x86_64__",
 	   linux_x32 = "-felf32 -DELF",
-	   linux_x64 = "-felf64 -DELF -D__x86_64__"
+	   linux_x64 = "-felf64 -DELF -D__x86_64__",
+	   bsd_x32 = "-felf32 -DELF",
+	   bsd_x64 = "-felf64 -DELF -D__x86_64__"
 	}
 
 	return "%{libjpeg_turbo_nasm_flags_map[cfg.system..\"_\"..cfg.platform]}"
@@ -183,8 +186,6 @@ local function ApplyProjectSettings(outputExe)
 	--
 
 	filter { }
-
-	location ( path_make.."/".._ACTION )
 
 	rtti "Off"
 	exceptionhandling "Off"
@@ -479,7 +480,7 @@ local function ApplyExeProjectSettings(exeName, server)
 	else
 		prebuildcommands { CreateGitPreBuildCommand(".sh") }
 		postbuildcommands { string.format("if [ -n \"$$%s\" ]; then %s; fi",
-			envvar_q3dir, CreateExeCopyPostBuildCommand("cp -u", exeName, "")) }
+			envvar_q3dir, CreateExeCopyPostBuildCommand("cp", exeName, "")) }
 	end
 
 	-- create VC++ debug settings
@@ -504,6 +505,9 @@ local function ApplyExeProjectSettings(exeName, server)
 		if (server == 0) then
 			links { "SDL2", "GL" }
 		end
+
+	filter "system:bsd"
+		links { "execinfo" }
 
 	-- RC will compile the .rc into a .res
 	-- LINK accepts .res files directly
@@ -676,8 +680,13 @@ end
 
 solution "cnq3"
 
-	location ( path_make.."/".._ACTION )
-	platforms { "x32", "x64" }
+	if os.is("windows") then
+		platforms { "x64", "x32" }
+	else
+		platforms { "x64" }
+	end
+
+	location ( string.format("%s/%s_%s", path_make, os.get(), _ACTION) )
 	configurations { "debug", "release" }
 
 	project "cnq3"
@@ -686,6 +695,10 @@ solution "cnq3"
 		language "C++"
 		defines { "GLEW_STATIC" }
 		includedirs { path_src.."/glew/include" }
+		if os.is("bsd") then
+			includedirs { "/usr/local/include" }
+			libdirs { "/usr/local/lib" }
+		end
 		ApplyExeProjectSettings("cnq3", 0)
 		filter "action:gmake"
 			buildoptions { "-std=c++98" }
@@ -716,6 +729,9 @@ solution "cnq3"
 		defines { "GLEW_STATIC" }
 		AddSourcesAndHeaders("glew")
 		includedirs { path_src.."/glew/include" }
+		if os.is("bsd") then
+			includedirs { "/usr/local/include" }
+		end
 		ApplyLibProjectSettings()
 
 	project "renderer"
@@ -725,6 +741,9 @@ solution "cnq3"
 		defines { "GLEW_STATIC" }
 		AddSourcesAndHeaders("renderer")
 		includedirs { path_src.."/glew/include" }
+		if os.is("bsd") then
+			includedirs { "/usr/local/include" }
+		end
 		if os.is("windows") then
 			files { string.format("%s/renderer/hlsl/*.hlsl", path_src) }
 		end

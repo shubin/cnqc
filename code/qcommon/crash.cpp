@@ -240,7 +240,7 @@ void Crash_PrintToFile(const char* engineFilePath)
 }
 
 
-#if defined(__linux__)
+#if defined(__linux__) || defined(__FreeBSD__)
 
 #include <unistd.h>
 
