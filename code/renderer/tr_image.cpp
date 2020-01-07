@@ -299,6 +299,7 @@ static void Upload32( image_t* image, unsigned int* data )
 	// atlases loaded from images on disk
 	if ( Q_stristr( image->name, "maps/" ) == image->name &&
 		Q_stristr( image->name + 5, "/lm_" ) != NULL ) {
+		image->flags |= IMG_NOPICMIP;
 		image->flags |= IMG_NOMIPMAP;
 		image->flags |= IMG_NOAF;
 		image->flags |= IMG_EXTLMATLAS;
