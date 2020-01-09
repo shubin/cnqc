@@ -2128,9 +2128,19 @@ static shader_t* FinishShader()
 				stages[i].bundle.image[0] = tr.whiteImage;
 			}
 		}
-	} else if ( r_lightmap->integer ) {
+	} else if (
+		r_lightmap->integer &&
+		( shader.contentFlags & CONTENTS_TRANSLUCENT ) == 0 &&
+		shader.sort <= SS_OPAQUE ) {
 		// we reduce it down to a single lightmap stage with the same state bits as
 		// the current first stage (if the shader uses a lightmap at all)
+
+		// @NOTE: we ignore all surfaces that aren't fully opaque because:
+		// a) it's hard to know what level of uniform opacity would emulate the original look best
+		// b) alpha-tested surfaces that have been turned into alpha-blended ones can't just use any given sort key:
+		//    you can always find or design a case that won't work correctly
+		// for decals entirely pressed against opaque surfaces, we could use a keyword ("polygonoffset" or something new)
+		// to know that we should not draw them at all, but we just shouldn't trust level designers
 
 		// look for "real" lightmaps first (straight from the .bsp file itself)
 		int stageIndex = -1;
@@ -2153,7 +2163,7 @@ static shader_t* FinishShader()
 
 		const int stateBits = stages[0].stateBits;
 		if ( stageIndex > 0 )
-			memcpy(stages, stages + stageIndex, sizeof(stages[0]));
+			memcpy( stages, stages + stageIndex, sizeof( stages[0] ) );
 
 		if ( stageIndex >= 0 ) {
 			for ( int i = 1; i < shader.numStages; ++i ) {
