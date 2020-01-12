@@ -2417,7 +2417,13 @@ static void GAL_CreateTexture(image_t* image, int mipCount, int w, int h)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GetTextureWrapMode(image->wrapClampMode));
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GetTextureWrapMode(image->wrapClampMode));
 
-	if(image->flags & IMG_NOMIPMAP)
+	if(Q_stricmp(r_textureMode->string, "GL_NEAREST") == 0 &&
+	   (image->flags & (IMG_EXTLMATLAS | IMG_NOPICMIP)) == 0)
+	{
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	}
+	else if(image->flags & IMG_NOMIPMAP)
 	{
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -2484,8 +2490,17 @@ static void GAL_CreateTextureEx(image_t* image, int mipCount, int mipOffset, int
 	glTexStorage2D(GL_TEXTURE_2D, mipCount - mipOffset, GL_RGBA8, image->width, image->height);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GetTextureWrapMode(image->wrapClampMode));
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GetTextureWrapMode(image->wrapClampMode));
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	if(Q_stricmp(r_textureMode->string, "GL_NEAREST") == 0 &&
+	   (image->flags & (IMG_LMATLAS | IMG_EXTLMATLAS | IMG_NOPICMIP)) == 0)
+	{
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	}
+	else
+	{
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	}
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, GetMaxAnisotropy(image));
 	SetDebugName(GL_TEXTURE, id, image->name);
 

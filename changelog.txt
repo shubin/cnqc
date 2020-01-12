@@ -95,7 +95,11 @@ chg: removed FreeType 2 and the unused R_REGISTERFONT syscalls that were using i
 
 chg: removed light flares and all related cvars (r_flare*)
 
-chg: r_textureMode and r_measureOverdraw were removed
+chg: r_textureMode <filter> (default: "best") is now latched and only supports 2 modes:
+	r_textureMode GL_NEAREST    = LEGO(R) mode - nearest-neighbor filtering for a subset of surfaces
+	r_textureMode anything else = normal  mode - the engine picks the most appropriate filters
+
+chg: r_measureOverdraw was removed
 
 chg: r_speeds 1 now reports more precise timings, V-Sync status, GPU time and the selected back-end
 

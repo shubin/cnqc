@@ -117,6 +117,14 @@ enum VertexBufferId
 	VB_COUNT
 };
 
+enum TextureMode
+{
+	TM_BILINEAR,
+	TM_ANISOTROPIC,
+	TM_NEAREST,
+	TM_COUNT
+};
+
 // @NOTE: MSDN says "you must set the ByteWidth value of D3D11_BUFFER_DESC in multiples of 16"
 #pragma pack(push, 16)
 
@@ -286,7 +294,7 @@ struct Direct3D
 	Texture textures[MAX_DRAWIMAGES];
 	int textureCount;
 
-	ID3D11SamplerState* samplerStates[TW_COUNT * 2];
+	ID3D11SamplerState* samplerStates[TW_COUNT * TM_COUNT];
 	int samplerStateIndices[2];
 
 	ID3D11BlendState* blendStates[2 * BLEND_STATE_COUNT * BLEND_STATE_COUNT];
@@ -678,14 +686,14 @@ static void UploadPendingShaderData()
 	}
 }
 
-static int ComputeSamplerStateIndex(int textureWrap, int bilinear)
+static int ComputeSamplerStateIndex(int textureWrap, int textureMode)
 {
-	return bilinear * TW_COUNT + textureWrap;
+	return textureMode * TW_COUNT + textureWrap;
 }
 
-static void ApplySamplerState(UINT slot, textureWrap_t textureWrap, qbool bilinear)
+static void ApplySamplerState(UINT slot, textureWrap_t textureWrap, TextureMode textureMode)
 {
-	const int index = ComputeSamplerStateIndex(textureWrap, bilinear);
+	const int index = ComputeSamplerStateIndex(textureWrap, textureMode);
 	if(index == d3d.samplerStateIndices[slot])
 	{
 		return;
@@ -791,7 +799,7 @@ static void ApplyPipeline(PipelineId index)
 	{
 		d3ds.context->OMSetRenderTargets(1, &d3d.renderTargetViewMS, NULL);
 		d3ds.context->PSSetShaderResources(1, 1, &d3d.depthStencilShaderView);
-		ApplySamplerState(1, TW_CLAMP_TO_EDGE, qtrue); // @TODO: nearest neighbor mode?
+		ApplySamplerState(1, TW_CLAMP_TO_EDGE, TM_BILINEAR);
 	}
 	else
 	{
@@ -984,7 +992,18 @@ static void BindImage(UINT slot, const image_t* image)
 {
 	ID3D11ShaderResourceView* view = d3d.textures[image->texnum].view;
 	d3ds.context->PSSetShaderResources(slot, 1, &view);
-	ApplySamplerState(slot, image->wrapClampMode, (image->flags & IMG_NOAF) != 0);
+	TextureMode mode = TM_ANISOTROPIC;
+	if(Q_stricmp(r_textureMode->string, "GL_NEAREST") == 0 &&
+	   !backEnd.projection2D &&
+	   (image->flags & (IMG_LMATLAS | IMG_EXTLMATLAS | IMG_NOPICMIP)) == 0)
+	{
+		mode = TM_NEAREST;
+	}
+	else if((image->flags & IMG_NOAF) != 0)
+	{
+		mode = TM_BILINEAR;
+	}
+	ApplySamplerState(slot, image->wrapClampMode, mode);
 }
 
 static void BindBundle(UINT slot, const textureBundle_t* bundle)
@@ -1275,11 +1294,11 @@ static qbool GAL_Init()
 	D3D11_CreateBuffer(&pixelShaderBufferDesc, NULL, &d3d.pipelines[PID_GENERIC].pixelBuffer, "generic pixel shader buffer");
 
 	// create all sampler states
-	for(int bilinear = 0; bilinear < 2; ++bilinear)
+	for(int textureMode = 0; textureMode < TM_COUNT; ++textureMode)
 	{
 		for(int wrapMode = 0; wrapMode < TW_COUNT; ++wrapMode)
 		{
-			const int index = ComputeSamplerStateIndex(wrapMode, bilinear);
+			const int index = ComputeSamplerStateIndex(wrapMode, textureMode);
 
 			// @NOTE: D3D10_REQ_MAXANISOTROPY == D3D11_REQ_MAXANISOTROPY
 			const int maxAnisotropy = Com_ClampInt(1, D3D11_REQ_MAXANISOTROPY, r_ext_max_anisotropy->integer);
@@ -1287,14 +1306,16 @@ static qbool GAL_Init()
 			ID3D11SamplerState* samplerState;
 			D3D11_SAMPLER_DESC samplerDesc;
 			ZeroMemory(&samplerDesc, sizeof(samplerDesc));
-			samplerDesc.Filter = (bilinear || maxAnisotropy == 1) ? D3D11_FILTER_MIN_MAG_MIP_LINEAR : D3D11_FILTER_ANISOTROPIC;
+			samplerDesc.Filter = textureMode == TM_NEAREST ?
+				D3D11_FILTER_MIN_MAG_MIP_POINT :
+				((textureMode == TM_BILINEAR || maxAnisotropy == 1) ? D3D11_FILTER_MIN_MAG_MIP_LINEAR : D3D11_FILTER_ANISOTROPIC);
 			samplerDesc.AddressU = mode;
 			samplerDesc.AddressV = mode;
 			samplerDesc.AddressW = mode;
 			samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
 			samplerDesc.MinLOD = -D3D11_FLOAT32_MAX;
 			samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-			samplerDesc.MaxAnisotropy = bilinear ? 1 : maxAnisotropy;
+			samplerDesc.MaxAnisotropy = textureMode == TM_ANISOTROPIC ? maxAnisotropy : 1;
 			hr = d3ds.device->CreateSamplerState(&samplerDesc, &samplerState);
 			CheckAndName(hr, "CreateSamplerState", samplerState, va("sampler state %d", index));
 
@@ -1306,7 +1327,7 @@ static qbool GAL_Init()
 	for(int i = 0; i < ARRAY_LEN(d3d.samplerStateIndices); ++i)
 	{
 		d3d.samplerStateIndices[i] = -1;
-		ApplySamplerState(i, TW_CLAMP_TO_EDGE, qtrue);
+		ApplySamplerState(i, TW_CLAMP_TO_EDGE, TM_BILINEAR);
 	}
 
 	// create all blend states
@@ -1836,7 +1857,7 @@ static void GAL_EndFrame()
 	UploadPendingShaderData();
 	BindImage(0, tr.whiteImage);
 	d3ds.context->PSSetShaderResources(0, 1, &d3d.resolveTextureShaderView);
-	ApplySamplerState(0, TW_CLAMP_TO_EDGE, qtrue);
+	ApplySamplerState(0, TW_CLAMP_TO_EDGE, TM_BILINEAR);
 	ApplyViewportAndScissor(0, 0, glInfo.winWidth, glInfo.winHeight, glInfo.winHeight);
 	d3ds.context->Draw(3, 0);
 

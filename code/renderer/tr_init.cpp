@@ -95,6 +95,7 @@ cvar_t	*r_shownormals;
 cvar_t	*r_finish;
 cvar_t	*r_clear;
 cvar_t	*r_swapInterval;
+cvar_t	*r_textureMode;
 cvar_t	*r_lockpvs;
 cvar_t	*r_noportals;
 cvar_t	*r_portalOnly;
@@ -410,6 +411,8 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_dynamiclight, "r_dynamiclight", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "enables dynamic lights" },
 	{ &r_finish, "r_finish", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "enables glFinish calls" },
 	{ &r_swapInterval, "r_swapInterval", "0", CVAR_ARCHIVE, CVART_INTEGER, "-8", "8", help_r_swapInterval },
+	// r_textureMode's default value can't be an empty string because otherwise, a user-created default can stick (see Cvar_Get)
+	{ &r_textureMode, "r_textureMode", "best", CVAR_ARCHIVE | CVAR_LATCH, CVART_STRING, NULL, NULL, help_r_textureMode },
 	{ &r_gamma, "r_gamma", "1.2", CVAR_ARCHIVE, CVART_FLOAT, "0.5", "3", help_r_gamma },
 	{ &r_greyscale, "r_greyscale", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", "1", "controls how monochrome the final image looks" },
 	{ &r_noiseScale, "r_noiseScale", "1.0", CVAR_ARCHIVE, CVART_FLOAT, "0.125", "8.0", help_r_noiseScale },
