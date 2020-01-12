@@ -982,6 +982,7 @@ extern cvar_t	*r_gamma;
 extern cvar_t	*r_greyscale;
 extern cvar_t	*r_noiseScale;			// the strength of the dithering noise
 extern cvar_t	*r_lightmap;			// render lightmaps only
+extern cvar_t	*r_lightmapGreyscale;	// how monochrome the lightmap looks
 extern cvar_t	*r_fullbright;			// avoid lightmap pass
 extern cvar_t	*r_softSprites;			// draws certain surfaces as depth particles
 extern cvar_t	*r_gpuMipGen;			// uses GPU-side mip-map generation

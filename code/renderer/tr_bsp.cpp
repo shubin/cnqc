@@ -41,13 +41,20 @@ static int lightmapsPerAtlas;
 
 static void R_ColorShiftLightingBytesRGB( const byte* in, byte* out )
 {
-	const int scale16 = (int)( r_mapBrightness->value * 65536.0f );
-
 	// scale based on brightness
+	const int scale16 = (int)( r_mapBrightness->value * 65536.0f );
 	int r = ( (int)in[0] * scale16 ) >> 16;
 	int g = ( (int)in[1] * scale16 ) >> 16;
 	int b = ( (int)in[2] * scale16 ) >> 16;
 
+	// desaturate by moving the channels towards the grey "midpoint"
+	// credit for the following snippet goes to Jakub 'kubaxvx' Matraszek
+	const int grey = (r + g + b) / 3; // could use the Rec. 601 or 709 coefficients instead
+	const int greyscale16 = (int)( r_lightmapGreyscale->value * 65536.0f );
+	r = ( ( r << 16 ) + greyscale16 * ( grey - r ) ) >> 16;
+	g = ( ( g << 16 ) + greyscale16 * ( grey - g ) ) >> 16;
+	b = ( ( b << 16 ) + greyscale16 * ( grey - b ) ) >> 16;
+	
 	// normalize by color instead of saturating to white
 	if ( ( r | g | b ) > 255 ) {
 		int max;

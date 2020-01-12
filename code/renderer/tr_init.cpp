@@ -60,6 +60,7 @@ cvar_t	*r_drawworld;
 cvar_t	*r_speeds;
 cvar_t	*r_fullbright;
 cvar_t	*r_lightmap;
+cvar_t	*r_lightmapGreyscale;
 cvar_t	*r_novis;
 cvar_t	*r_nocull;
 cvar_t	*r_nocurves;
@@ -389,6 +390,7 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_subdivisions, "r_subdivisions", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "1", "64", help_r_subdivisions },
 	{ &r_fullbright, "r_fullbright", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_fullbright },
 	{ &r_lightmap, "r_lightmap", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_lightmap },
+	{ &r_lightmapGreyscale, "r_lightmapGreyscale", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "0", "1", "how monochrome the lightmap looks" },
 	{ &r_softSprites, "r_softSprites", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_softSprites },
 	{ &r_gpuMipGen, "r_gpuMipGen", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_gpuMipGen },
 	{ &r_alphaToCoverage, "r_alphaToCoverage", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_alphaToCoverage },
