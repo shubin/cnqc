@@ -2356,7 +2356,7 @@ static void GAL_Begin3D()
 		const float c = RB_HyperspaceColor();
 		glClearColor(c, c, c, 1.0f);
 	}
-	else if(r_fastsky->integer && (backEnd.refdef.rdflags & RDF_NOWORLDMODEL) != 0)
+	else if(r_fastsky->integer && !(backEnd.refdef.rdflags & RDF_NOWORLDMODEL))
 	{
 		clearBits |= GL_COLOR_BUFFER_BIT;
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
