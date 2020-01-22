@@ -940,21 +940,20 @@ static void FBO_CreateSS(FrameBuffer* fb, qbool color, qbool depthStencil, const
 	fb->hasColor = color;
 }
 
-static void FBO_CreateMS(FrameBuffer* fb, const char* name)
+static void FBO_CreateMS(int* sampleCount, FrameBuffer* fb, const char* name)
 {
 	glGenFramebuffers(1, &fb->fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, fb->fbo);
 
-	int sampleCount = 0;
 	glGenRenderbuffers(1, &fb->color);
 	glBindRenderbuffer(GL_RENDERBUFFER, fb->color);
-	GL_CreateColorRenderBufferStorageMS(&sampleCount);
+	GL_CreateColorRenderBufferStorageMS(sampleCount);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, fb->color);
 	SetDebugName(GL_RENDERBUFFER, fb->color, va("%s color attachment 0", name));
 
 	glGenRenderbuffers(1, &fb->depthStencil);
 	glBindRenderbuffer(GL_RENDERBUFFER, fb->depthStencil);
-	glRenderbufferStorageMultisample(GL_RENDERBUFFER, sampleCount, GL_DEPTH24_STENCIL8, glConfig.vidWidth, glConfig.vidHeight);
+	glRenderbufferStorageMultisample(GL_RENDERBUFFER, *sampleCount, GL_DEPTH24_STENCIL8, glConfig.vidWidth, glConfig.vidHeight);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, fb->depthStencil);
 	SetDebugName(GL_RENDERBUFFER, fb->depthStencil, va("%s depth/stencil attachment", name));
 
@@ -970,18 +969,16 @@ static void FBO_CreateMS(FrameBuffer* fb, const char* name)
 	fb->multiSampled = qtrue;
 	fb->hasDepthStencil = qtrue;
 	fb->hasColor = qtrue;
-
-	ri.Printf(PRINT_ALL, "MSAA: %d samples requested, %d selected\n", r_msaa->integer, sampleCount);
 }
 
 static void FBO_Init()
 {
-	const int msaa = r_msaa->integer;
-	gl.fbMSEnabled = msaa >= 2;
+	gl.fbMSEnabled = r_msaa->integer >= 2 && r_colorMipLevels->integer == 0;
+	int finalSampleCount = 1;
 
 	if(gl.fbMSEnabled)
 	{
-		FBO_CreateMS(&gl.fbMS, "main");
+		FBO_CreateMS(&finalSampleCount, &gl.fbMS, "main");
 		FBO_CreateSS(&gl.fbSSDepth, qfalse, qtrue, "depth resolve");
 		FBO_CreateSS(&gl.fbSS[0], qtrue, qfalse, "post-process #1");
 		FBO_CreateSS(&gl.fbSS[1], qtrue, qfalse, "post-process #2");
@@ -991,6 +988,8 @@ static void FBO_Init()
 		FBO_CreateSS(&gl.fbSS[0], qtrue, qtrue, "post-process #1");
 		FBO_CreateSS(&gl.fbSS[1], qtrue, qtrue, "post-process #2");
 	}
+
+	ri.Printf(PRINT_ALL, "MSAA: %d samples requested, %d selected\n", r_msaa->integer, finalSampleCount);
 }
 
 static void FBO_Bind(const FrameBuffer* fb)

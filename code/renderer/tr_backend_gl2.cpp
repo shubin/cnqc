@@ -423,22 +423,21 @@ static qbool GL2_FBO_CreateSS( FrameBuffer& fb, qbool depthStencil )
 }
 
 
-static qbool GL2_FBO_CreateMS( FrameBuffer& fb )
+static qbool GL2_FBO_CreateMS( int* sampleCount, FrameBuffer& fb )
 {
 	while ( glGetError() != GL_NO_ERROR ) {} // clear the error queue
 
 	GL(glGenFramebuffers( 1, &fb.fbo ));
 	GL(glBindFramebuffer( GL_FRAMEBUFFER, fb.fbo ));
 
-	int sampleCount = 0;
 	GL(glGenRenderbuffers( 1, &fb.color ));
 	GL(glBindRenderbuffer( GL_RENDERBUFFER, fb.color ));
-	GL_CreateColorRenderBufferStorageMS( &sampleCount );
+	GL_CreateColorRenderBufferStorageMS( sampleCount );
 	GL(glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, fb.color ));
 
 	GL(glGenRenderbuffers( 1, &fb.depthStencil ));
 	GL(glBindRenderbuffer( GL_RENDERBUFFER, fb.depthStencil ));
-	GL(glRenderbufferStorageMultisample( GL_RENDERBUFFER, sampleCount, GL_DEPTH24_STENCIL8, glConfig.vidWidth, glConfig.vidHeight ));
+	GL(glRenderbufferStorageMultisample( GL_RENDERBUFFER, *sampleCount, GL_DEPTH24_STENCIL8, glConfig.vidWidth, glConfig.vidHeight ));
 
 	GL(glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, fb.color ));
 	GL(glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, fb.depthStencil ));
@@ -454,25 +453,32 @@ static qbool GL2_FBO_CreateMS( FrameBuffer& fb )
 	fb.multiSampled = qtrue;
 	fb.hasDepthStencil = qtrue;
 
-	ri.Printf( PRINT_ALL, "MSAA: %d samples requested, %d selected\n", r_msaa->integer, sampleCount );
-
 	return qtrue;
 }
 
 
 static qbool GL2_FBO_Init()
 {
-	const int msaa = r_msaa->integer;
-	const qbool enable = msaa >= 2;
+	const qbool enable = r_msaa->integer >= 2;
 	frameBufferMultiSampling = enable;
+	int finalSampleCount = 1;
+	qbool result = qfalse;
 
-	if ( !enable )
-		return	GL2_FBO_CreateSS( frameBuffersPostProcess[0], qtrue ) &&
-				GL2_FBO_CreateSS( frameBuffersPostProcess[1], qtrue );
-
-	return	GL2_FBO_CreateMS( frameBufferMain ) &&
+	if ( enable ) {
+		result =
+			GL2_FBO_CreateMS( &finalSampleCount, frameBufferMain ) &&
 			GL2_FBO_CreateSS( frameBuffersPostProcess[0], qfalse ) &&
 			GL2_FBO_CreateSS( frameBuffersPostProcess[1], qfalse );
+	} else {
+		result =
+			GL2_FBO_CreateSS( frameBuffersPostProcess[0], qtrue ) &&
+			GL2_FBO_CreateSS( frameBuffersPostProcess[1], qtrue );
+	}
+
+	if ( result )
+		ri.Printf( PRINT_ALL, "MSAA: %d samples requested, %d selected\n", r_msaa->integer, finalSampleCount );
+
+	return result;
 }
 
 

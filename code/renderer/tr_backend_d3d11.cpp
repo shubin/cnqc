@@ -1017,6 +1017,11 @@ static void FindBestAvailableAA(DXGI_SAMPLE_DESC* sampleDesc)
 	sampleDesc->Count = (UINT)min(r_msaa->integer, D3D11_MAX_MULTISAMPLE_SAMPLE_COUNT);
 	sampleDesc->Quality = 0;
 
+	if(r_colorMipLevels->integer)
+	{
+		sampleDesc->Count = 0;
+	}
+
 	while(sampleDesc->Count > 0)
 	{
 		UINT levelCount = 0;
