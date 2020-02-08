@@ -1089,7 +1089,7 @@ void CL_KeyEvent( int key, qbool down, unsigned time )
 		// escape always gets out of CGAME stuff
 		if (cls.keyCatchers & KEYCATCH_CGAME) {
 			cls.keyCatchers &= ~KEYCATCH_CGAME;
-			VM_Call( cgvm, CG_KEY_EVENT, key, down );
+			VM_Call( cgvm, CG_EVENT_HANDLING, CGAME_EVENT_NONE );
 			return;
 		}
 

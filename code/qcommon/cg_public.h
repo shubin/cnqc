@@ -59,6 +59,13 @@ typedef struct {
 #define	CMD_MASK		(CMD_BACKUP - 1)
 
 
+// CG_EVENT_HANDLING constants
+enum {
+	CGAME_EVENT_NONE
+	// the rest is private mod business
+};
+
+
 /*
 ==================================================================
 

@@ -89,6 +89,9 @@ add: r_mapBrightness now works on q3map2's external lightmap atlas images
 add: the renderer can now batch surfaces with different (but sufficiently similar) shaders
   this new optimization works with the output of "Frozen Sand Particle Studio"
 
+chg: reverted an old change to the Escape key handling for cgame
+  this fixes demo playback behavior in CPMA, which enables custom binds after pressing Escape once
+
 chg: searching for valid sample counts for MSAA in GL2 and GL3 instead of failing right away
 
 add: /modellist /skinlist /imagelist /shaderlist can now filter results with pattern matching
