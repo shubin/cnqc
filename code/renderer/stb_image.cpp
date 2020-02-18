@@ -38,6 +38,7 @@ static void*	q_realloc_sized( void*, size_t, size_t );
 #define STBI_NO_STDIO
 #define STBI_FAILURE_USERMSG
 #define STBI_NO_JPEG
+#define STBI_NO_TGA
 #define STBI_NO_BMP
 #define STBI_NO_PSD
 #define STBI_NO_GIF

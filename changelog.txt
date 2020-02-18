@@ -96,6 +96,9 @@ chg: searching for valid sample counts for MSAA in GL2 and GL3 instead of failin
 
 add: /modellist /skinlist /imagelist /shaderlist can now filter results with pattern matching
 
+chg: switched away from stb_image for .tga file loading and now using an updated version of the old code
+  this lowers the chances of a fatal error from the zone memory allocator when reading large images
+
 chg: SSE2 instruction set support is now required
 
 chg: removed FreeType 2 and the unused R_REGISTERFONT syscalls that were using it

@@ -464,6 +464,144 @@ image_t* R_CreateImage( const char* name, byte* pic, int width, int height, text
 }
 
 
+static qbool LoadTGA( const char* fileName, byte* buffer, int len, byte** pic, int* w, int* h, textureFormat_t* format )
+{
+	*pic = NULL;
+
+	byte* p = buffer;
+	byte* const pEnd = buffer + len; // 1 byte past the end
+
+	TargaHeader targa_header;
+	targa_header.id_length = p[0];
+	targa_header.colormap_type = p[1];
+	targa_header.image_type = p[2];
+	targa_header.width = LittleShort( *(short*)&p[12] );
+	targa_header.height = LittleShort( *(short*)&p[14] );
+	targa_header.pixel_size = p[16];
+	targa_header.attributes = p[17];
+
+	// skip the header and the comment, if any
+	p += sizeof(TargaHeader);
+	if (targa_header.id_length != 0)
+		p += targa_header.id_length;
+
+	if (targa_header.image_type != 2 && targa_header.image_type != 10 && targa_header.image_type != 3)
+		ri.Error( ERR_DROP, "LoadTGA %s: Only type 2, 10 and 3 images supported\n", fileName );
+
+	if (targa_header.colormap_type)
+		ri.Error( ERR_DROP, "LoadTGA %s: Colormaps are not supported\n", fileName );
+
+	if (targa_header.image_type != 3 && targa_header.pixel_size != 32 && targa_header.pixel_size != 24)
+		ri.Error( ERR_DROP, "LoadTGA %s: Only 32-bit and 24-bit color images are supported\n", fileName );
+
+	if (targa_header.image_type == 3 && targa_header.pixel_size != 8)
+		ri.Error( ERR_DROP, "LoadTGA %s: Only 8-bit greyscale images are supported\n", fileName );
+
+	const int bpp = targa_header.pixel_size / 8;
+	const int width = targa_header.width;
+	const int height = targa_header.height;
+	const unsigned numBytes = width * height * 4;
+
+	if (width <= 0 || height <= 0 || numBytes > 0x7FFFFFFF || numBytes / (width * 4) != height)
+		ri.Error( ERR_DROP, "LoadTGA %s: Invalid image size\n", fileName );
+
+	*pic = (byte*)ri.Malloc( numBytes );
+	*w = width;
+	*h = height;
+	*format = TF_RGBA8;
+
+#define UNMUNGE_PIXEL       { dst[2] = pixel[0]; dst[1] = pixel[1]; dst[0] = pixel[2]; dst[3] = pixel[3]; dst += 4; }
+#define WRAP_ROW            if ((++x == width) && y--) { x = 0; dst = *pic + y*width*4; }
+#define RANGE_CHECK(Bytes)  if (p + (Bytes) > pEnd) { ri.Error( ERR_DROP, "LoadTGA %s: Truncated file\n", fileName ); }
+
+	// uncompressed luminance
+	if (targa_header.image_type == 3) {
+		RANGE_CHECK( width * height )
+		for (int y = height-1; y >= 0; --y) {
+			byte* dst = *pic + y*width * 4;
+			for (int x = 0; x < width; ++x) {
+				const byte l = *p;
+				dst[0] = l;
+				dst[1] = l;
+				dst[2] = l;
+				dst[3] = 255;
+				dst += 4;
+				p += 1;
+			}
+		}
+	// uncompressed BGRA
+	} else if (targa_header.image_type == 2 && bpp == 4) {
+		RANGE_CHECK( width * height * 4 )
+		for (int y = height-1; y >= 0; --y) {
+			byte* dst = *pic + y*width * 4;
+			for (int x = 0; x < width; ++x) {
+				dst[2] = p[0];
+				dst[1] = p[1];
+				dst[0] = p[2];
+				dst[3] = p[3];
+				dst += 4;
+				p += 4;
+			}
+		}
+	// uncompressed BGR
+	} else if (targa_header.image_type == 2 && bpp == 3) {
+		RANGE_CHECK( width * height * 3 )
+		for (int y = height-1; y >= 0; --y) {
+			byte* dst = *pic + y*width * 4;
+			for (int x = 0; x < width; ++x) {
+				dst[2] = p[0];
+				dst[1] = p[1];
+				dst[0] = p[2];
+				dst[3] = 255;
+				dst += 4;
+				p += 3;
+			}
+		}
+	// RLE_BGRA and RLE_BGR
+	} else if (targa_header.image_type == 10) {
+		byte pixel[4] = { 0, 0, 0, 255 };
+		int y = height-1;
+		while (y >= 0) {
+			byte* dst = *pic + y*width * 4;
+			int x = 0;
+			while (x < width) {
+				RANGE_CHECK( 1 )
+				const int rle = *p++;
+				int n = 1 + (rle & 0x7F);
+				if (rle & 0x80) {
+					// RLE packet: 1 pixel repeated n times
+					RANGE_CHECK( bpp )
+					for (int i = 0; i < bpp; ++i)
+						pixel[i] = *p++;
+					while (n--) {
+						UNMUNGE_PIXEL
+						WRAP_ROW
+					}
+				} else {
+					// n distinct pixels
+					RANGE_CHECK( bpp * n )
+					while (n--) {
+						for (int i = 0; i < bpp; ++i)
+							pixel[i] = *p++;
+						UNMUNGE_PIXEL
+						WRAP_ROW
+					}
+				}
+			}
+		}
+	}
+
+#undef WRAP_ROW
+#undef UNMUNGE_PIXEL
+#undef RANGE_CHECK
+
+	if (targa_header.attributes & 0x20)
+		ri.Printf( PRINT_WARNING, "LoadTGA %s: Top-down declaration ignored\n", fileName );
+
+	return qtrue;
+}
+
+
 ///////////////////////////////////////////////////////////////
 
 
@@ -631,7 +769,7 @@ typedef struct {
 
 static const imageLoader_t imageLoaders[] = {
 	{ ".jpg",	&LoadJPG },
-	{ ".tga",	&LoadSTB },
+	{ ".tga",	&LoadTGA },
 	{ ".png",	&LoadSTB },
 	{ ".jpeg",	&LoadJPG }
 };
