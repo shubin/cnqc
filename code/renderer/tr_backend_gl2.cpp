@@ -93,6 +93,7 @@ struct GLSL_DynLightProgramAttribs {
 	// pixel shader:
 	GLint texture;			// 2D texture
 	GLint lightColorRadius;	// 4f, w = 1 / (r^2)
+	GLint opaqueIntensity;	// 2f
 };
 
 static GLSL_DynLightProgramAttribs dynLightProgAttribs;
@@ -120,6 +121,8 @@ static void DrawDynamicLight()
 	if ( tess.shader->polygonOffset )
 		glEnable( GL_POLYGON_OFFSET_FILL );
 
+	glUniform2f( dynLightProgAttribs.opaqueIntensity, backEnd.dlOpaque ? 1.0f : 0.0f, backEnd.dlIntensity );
+
 	const int stage = tess.shader->lightingStages[ST_DIFFUSE];
 	const shaderStage_t* pStage = tess.xstages[ stage ];
 
@@ -136,9 +139,7 @@ static void DrawDynamicLight()
 	glVertexPointer( 3, GL_FLOAT, 16, tess.xyz );
 	glLockArraysEXT( 0, tess.numVertexes );
 
-	const int oldAlphaTestBits = pStage->stateBits & GLS_ATEST_BITS;
-	const int newBits = GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE | GLS_DEPTHFUNC_EQUAL;
-	GL_State( oldAlphaTestBits | newBits );
+	GL_State( backEnd.dlStateBits );
 
 	GL_SelectTexture( 0 );
 	R_BindAnimatedImage( &pStage->bundle );
@@ -300,10 +301,16 @@ static const char* dynLightVS =
 
 static const char* dynLightFS =
 "uniform sampler2D texture;\n"
-"uniform vec4 lightColorRadius;"	// w = 1 / (r^2)
+"uniform vec4 lightColorRadius;\n"	// w = 1 / (r^2)
+"uniform vec2 opaqueIntensity;\n"
 "varying vec4 L;\n"		// object-space light vector
 "varying vec4 V;\n"		// object-space view vector
 "varying vec3 nN;\n"	// normalized object-space normal vector
+"\n"
+"float BezierEase(float t)\n"
+"{\n"
+"	return t * t * (3.0 - 2.0 * t);\n"
+"}\n"
 "\n"
 "void main()\n"
 "{\n"
@@ -311,14 +318,16 @@ static const char* dynLightFS =
 "	vec3 nL = normalize(L.xyz);\n"	// normalized light vector
 "	vec3 nV = normalize(V.xyz);\n"	// normalized view vector
 	// light intensity
-"	float intensFactor = dot(L.xyz, L.xyz) * lightColorRadius.w;"
-"	vec3 intens = lightColorRadius.rgb * (1.0 - intensFactor);\n"
+"	float intensFactor = min(dot(L.xyz, L.xyz) * lightColorRadius.w, 1.0);"
+"	vec3 intens = lightColorRadius.rgb * BezierEase(1.0 - sqrt(intensFactor));\n"
 	// specular reflection term (N.H)
-"	float specFactor = clamp(dot(nN, normalize(nL + nV)), 0.0, 1.0);\n"
+"	float specFactor = min(abs(dot(nN, normalize(nL + nV))), 1.0);\n"
 "	float spec = pow(specFactor, 16.0) * 0.25;\n"
 	// Lambertian diffuse reflection term (N.L)
-"	float diffuse = clamp(dot(nN, nL), 0.0, 1.0);\n"
-"	gl_FragColor = vec4((base.rgb * vec3(diffuse) + vec3(spec)) * vec3(intens), base.a);\n"
+"	float diffuse = min(abs(dot(nN, nL)), 1.0);\n"
+"	vec3 color = (base.rgb * vec3(diffuse) + vec3(spec)) * intens * opaqueIntensity.y;\n"
+"	float alpha = mix(opaqueIntensity.x, 1.0, base.a);\n"
+"	gl_FragColor = vec4(color.rgb * alpha, alpha);\n"
 "}\n"
 "";
 
@@ -696,6 +705,7 @@ static qbool GL2_Init()
 	dynLightProgAttribs.osLightPos = glGetUniformLocation( dynLightProg.p, "osLightPos" );
 	dynLightProgAttribs.texture = glGetUniformLocation( dynLightProg.p, "texture" );
 	dynLightProgAttribs.lightColorRadius = glGetUniformLocation( dynLightProg.p, "lightColorRadius" );
+	dynLightProgAttribs.opaqueIntensity = glGetUniformLocation( dynLightProg.p, "opaqueIntensity" );
 
 	if ( !GL2_CreateProgram( gammaProg, gammaVS, gammaFS ) ) {
 		ri.Printf( PRINT_ERROR, "Failed to compile gamma correction shaders\n" );

@@ -177,8 +177,9 @@ struct DynamicLightPSData
 {
 	float lightColor[3];
 	float lightRadius;
-	uint32_t alphaTest; // AlphaTest enum
-	uint32_t dummy[3];
+	float opaque;
+	float intensity;
+	float dummy[2];
 };
 
 struct PostVSData
@@ -673,9 +674,10 @@ static void UploadPendingShaderData()
 		memcpy(vsData.clipPlane, d3d.clipPlane, sizeof(vsData.clipPlane));
 		memcpy(vsData.osEyePos, d3d.osEyePos, sizeof(vsData.osEyePos));
 		memcpy(vsData.osLightPos, d3d.osLightPos, sizeof(vsData.osLightPos));
-		psData.alphaTest = d3d.alphaTest;
 		memcpy(psData.lightColor, d3d.lightColor, sizeof(psData.lightColor));
 		psData.lightRadius = d3d.lightRadius;
+		psData.opaque = backEnd.dlOpaque ? 1.0f : 0.0f;
+		psData.intensity = backEnd.dlIntensity;
 		ResetShaderData(pipeline->vertexBuffer, &vsData, sizeof(vsData));
 		ResetShaderData(pipeline->pixelBuffer, &psData, sizeof(psData));
 	}
@@ -2268,7 +2270,6 @@ static void DrawDynamicLight()
 		AppendVertexData(&d3d.vertexBuffers[VB_POSITION], tess.xyz, tess.numVertexes);
 		AppendVertexData(&d3d.vertexBuffers[VB_NORMAL], tess.normal, tess.numVertexes);
 		AppendVertexData(&d3d.vertexBuffers[VB_TEXCOORD], tess.svars[stageIndex].texcoordsptr, tess.numVertexes);
-		AppendVertexData(&d3d.vertexBuffers[VB_COLOR], tess.svars[stageIndex].colors, tess.numVertexes);
 	}
 	else
 	{
@@ -2277,13 +2278,11 @@ static void DrawDynamicLight()
 		pointers[VB_NORMAL] = tess.normal;
 		pointers[VB_TEXCOORD] = tess.svars[stageIndex].texcoordsptr;
 		pointers[VB_TEXCOORD2] = NULL;
-		pointers[VB_COLOR] = tess.svars[stageIndex].colors;
+		pointers[VB_COLOR] = NULL;
 		AppendVertexDataGroup(pointers, tess.numVertexes);
 	}
 
-	const int oldAlphaTestBits = stage->stateBits & GLS_ATEST_BITS;
-	const int newBits = GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE | GLS_DEPTHFUNC_EQUAL;
-	ApplyState(oldAlphaTestBits | newBits, tess.shader->cullType, tess.shader->polygonOffset);
+	ApplyState(backEnd.dlStateBits, tess.shader->cullType, tess.shader->polygonOffset);
 	BindBundle(0, &stage->bundle);
 
 	UploadPendingShaderData();

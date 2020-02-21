@@ -57,19 +57,19 @@ void RB_BeginSurface( const shader_t* shader, int fogNum )
 
 static void RB_DrawDynamicLight()
 {
-	if (tess.shader->lightingStages[ST_DIFFUSE] == -1)
-		return;
-
 	backEnd.pc[RB_LIT_VERTICES_LATECULLTEST] += tess.numVertexes;
 
 	static byte clipBits[SHADER_MAX_VERTEXES];
 	const dlight_t* dl = tess.light;
+	const cullType_t cullType = tess.shader->cullType;
 
 	for (int i = 0; i < tess.numVertexes; ++i) {
 		vec3_t dist;
 		VectorSubtract(dl->transformed, tess.xyz[i], dist);
 
-		if (DotProduct(dist, tess.normal[i]) <= 0.0f) {
+		const float dp = DotProduct(dist, tess.normal[i]);
+		if (cullType == CT_FRONT_SIDED && dp <= 0.0f ||
+			cullType == CT_BACK_SIDED  && dp >= 0.0f) {
 			clipBits[i] = byte(-1);
 			continue;
 		}

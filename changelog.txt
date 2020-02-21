@@ -89,12 +89,14 @@ add: r_mapBrightness now works on q3map2's external lightmap atlas images
 add: the renderer can now batch surfaces with different (but sufficiently similar) shaders
   this new optimization works with the output of "Frozen Sand Particle Studio"
 
+add: /modellist /skinlist /imagelist /shaderlist can now filter results with pattern matching
+
+chg: dynamic lights now use a softer fall-off curve to create softer edges
+
 chg: reverted an old change to the Escape key handling for cgame
   this fixes demo playback behavior in CPMA, which enables custom binds after pressing Escape once
 
 chg: searching for valid sample counts for MSAA in GL2 and GL3 instead of failing right away
-
-add: /modellist /skinlist /imagelist /shaderlist can now filter results with pattern matching
 
 chg: switched away from stb_image for .tga file loading and now using an updated version of the old code
   this lowers the chances of a fatal error from the zone memory allocator when reading large images
@@ -106,8 +108,8 @@ chg: removed FreeType 2 and the unused R_REGISTERFONT syscalls that were using i
 chg: removed light flares and all related cvars (r_flare*)
 
 chg: r_textureMode <filter> (default: "best") is now latched and only supports 2 modes:
-	r_textureMode GL_NEAREST    = LEGO(R) mode - nearest-neighbor filtering for a subset of surfaces
-	r_textureMode anything else = normal  mode - the engine picks the most appropriate filters
+  r_textureMode GL_NEAREST    = LEGO(R) mode - nearest-neighbor filtering for a subset of surfaces
+  r_textureMode anything else = normal  mode - the engine picks the most appropriate filters
 
 chg: r_measureOverdraw was removed
 
@@ -140,7 +142,7 @@ fix: broken face normals get fixed up on map load, which helps with dynamic ligh
 
 fix: classes of transparent surfaces (sprites, beams, etc) now get drawn in the right order
 
-fix: dynamic lights can now affect transparent surfaces
+fix: dynamic lights can now affect transparent surfaces and double-sided surfaces on both sides
 
 fix: dynamic lights no longer "reveal" the diffuse texture when r_lightmap is 1
 

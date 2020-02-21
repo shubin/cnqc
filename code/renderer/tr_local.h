@@ -815,6 +815,15 @@ typedef struct {
 	byte			color2D[4];
 	trRefEntity_t	entity2D;		// currentEntity will point at this when doing 2D rendering
 
+	// dynamic lights data set by the back-end for the GAL
+	qbool			dlOpaque;		// qtrue when drawing an opaque surface
+	float			dlIntensity;	// 1 for most surfaces, but can be scaled down for liquids etc.
+	unsigned int	dlStateBits;	// the state bits to apply for this draw call
+	// quick explanation on why dlOpaque is useful in the first place:
+	// - opaque surfaces can have a diffuse texture whose alpha isn't 255 everywhere
+	// - when that happens and we multiply the color by the the alpha (DL uses additive blending),
+	//   we get "light holes" in opaque surfaces, which is not what we want
+
 	int* pc; // current stats set, depending on projection2D
 	int pc2D[RB_STATS_MAX];
 	int pc3D[RB_STATS_MAX];

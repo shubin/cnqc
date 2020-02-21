@@ -390,8 +390,10 @@ static void RB_RenderLitSurfList( dlight_t* dl, qbool opaque )
 	double originalTime = backEnd.refdef.floatTime;
 
 	// draw everything
+	const int liquidFlags = CONTENTS_LAVA | CONTENTS_SLIME | CONTENTS_WATER;
 	oldEntityNum = -1;
 	backEnd.currentEntity = &tr.worldEntity;
+	backEnd.dlOpaque = opaque;
 	oldDepthRange = qfalse;
 	depthRange = qfalse;
 	tess.light = dl;
@@ -417,6 +419,15 @@ static void RB_RenderLitSurfList( dlight_t* dl, qbool opaque )
 		if (shaderPrev)
 			RB_EndSurface();
 		RB_BeginSurface( shader, fogNum );
+
+		// stage index is guaranteed valid by R_AddLitSurface
+		const int stageIndex = tess.shader->lightingStages[ST_DIFFUSE];
+		const shaderStage_t* const stage = tess.xstages[stageIndex];
+		backEnd.dlIntensity = (shader->contentFlags & liquidFlags) != 0 ? 0.5f : 1.0f;
+		backEnd.dlStateBits =
+			(opaque || (stage->stateBits & GLS_ATEST_BITS) != 0) ?
+			(GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE | GLS_DEPTHFUNC_EQUAL):
+			(GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE);
 
 		sort = litSurf->sort;
 

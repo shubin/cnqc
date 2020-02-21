@@ -33,7 +33,6 @@ struct VIn
 {
 	float4 position : POSITION;
 	float4 normal : NORMAL;
-	float4 color : COLOR0;
 	float2 texCoords : TEXCOORD0;
 };
 
@@ -41,7 +40,6 @@ struct VOut
 {
 	float4 position : SV_Position;
 	float3 normal : NORMAL;
-	float4 color : COLOR0;
 	float2 texCoords : TEXCOORD0;
 	float3 osLightVec : TEXCOORD1;
 	float3 osEyeVec : TEXCOORD2;
@@ -55,7 +53,6 @@ VOut vs_main(VIn input)
 	VOut output;
 	output.position = mul(projectionMatrix, positionVS);
 	output.normal = input.normal.xyz;
-	output.color = input.color;
 	output.texCoords = input.texCoords;
 	output.osLightVec = osLightPos.xyz - input.position.xyz;
 	output.osEyeVec = osEyePos.xyz - input.position.xyz;
@@ -68,36 +65,39 @@ cbuffer PixelShaderBuffer
 {
 	float3 lightColor;
 	float lightRadius;
-	uint alphaTest;
-	uint dummy[3];
+	float opaque;
+	float intensity;
+	float dummy[2];
 };
 
 Texture2D texture0 : register(t0);
 SamplerState sampler0 : register(s0);
 
+float BezierEase(float t)
+{
+	return t * t * (3.0 - 2.0 * t);
+}
+
 float4 ps_main(VOut input) : SV_TARGET
 {
-	float4 base = texture0.Sample(sampler0, input.texCoords) * input.color;
-	if((alphaTest == 1 && base.a == 0.0) ||
-	   (alphaTest == 2 && base.a >= 0.5) ||
-	   (alphaTest == 3 && base.a <  0.5))
-	   discard;
-
+	float4 base = texture0.Sample(sampler0, input.texCoords);
 	float3 nL = normalize(input.osLightVec); // normalized object-space light vector
 	float3 nV = normalize(input.osEyeVec); // normalized object-space view vector
 	float3 nN = input.normal; // normalized object-space normal vector
 
 	// light intensity
-	float intensFactor = dot(input.osLightVec, input.osLightVec) * lightRadius;
-	float3 intens = lightColor * (1.0 - intensFactor);
+	float intensFactor = min(dot(input.osLightVec, input.osLightVec) * lightRadius, 1.0);
+	float3 intens = lightColor * BezierEase(1.0 - sqrt(intensFactor));
 
 	// specular reflection term (N.H)
-	float specFactor = clamp(dot(nN, normalize(nL + nV)), 0.0, 1.0);
+	float specFactor = min(abs(dot(nN, normalize(nL + nV))), 1.0);
 	float spec = pow(specFactor, 16.0) * 0.25;
 
 	// Lambertian diffuse reflection term (N.L)
-	float diffuse = clamp(dot(nN, nL), 0.0, 1.0);
-	float4 final = (base * float4(diffuse.rrr, 1.0) + float4(spec.rrr, 1.0)) * float4(intens.rgb, 1.0);
+	float diffuse = min(abs(dot(nN, nL)), 1.0);
+	float3 color = (base.rgb * diffuse.rrr + spec.rrr) * intens * intensity;
+	float alpha = lerp(opaque, 1.0, base.a);
+	float4 final = float4(color.rgb * alpha, alpha);
 
 	return final;
 }

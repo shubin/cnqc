@@ -331,11 +331,26 @@ static void R_AddLitSurface( msurface_t* surf, const dlight_t* light )
 	if ( surf->shader->surfaceFlags & (SURF_NODLIGHT | SURF_SKY) )
 		return;
 
+	// reject mirrors, portals, sky boxes, etc.
 	if ( surf->shader->sort < SS_OPAQUE )
 		return;
 
 	if ( surf->lightCount == tr.lightCount )
 		return; // already in the lit list (or already culled) for this light
+
+	const int stageIndex = surf->shader->lightingStages[ST_DIFFUSE];
+	if ( stageIndex < 0 )
+		return;
+
+	const shaderStage_t* const stage = surf->shader->stages[stageIndex];
+	const int srcBits = stage->stateBits & GLS_SRCBLEND_BITS;
+	const int dstBits = stage->stateBits & GLS_DSTBLEND_BITS;
+
+	// we can't use a texture that was used with such a blend mode
+	// since the final color could look nothing like the texture itself
+	if ( srcBits == GLS_SRCBLEND_ONE_MINUS_DST_COLOR ||
+	     dstBits == GLS_DSTBLEND_ONE_MINUS_SRC_COLOR )
+		return;
 
 	surf->lightCount = tr.lightCount;
 

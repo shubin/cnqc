@@ -161,7 +161,8 @@ enum DynamicLightUniform
 	DU_LIGHT_POS,
 	DU_EYE_POS,
 	DU_LIGHT_COLOR_RADIUS,
-	DU_ALPHA_TEST,
+	DU_OPAQUE,
+	DU_INTENSITY,
 	DU_COUNT
 };
 
@@ -233,6 +234,8 @@ struct OpenGL3
 	qbool enableClipPlane;
 	qbool prevEnableClipPlane;
 	AlphaTest alphaTest;
+	qbool dlOpaque;
+	float dlIntensity;
 
 	ArrayBuffer arrayBuffers[VB_COUNT];
 	ArrayBuffer indexBuffer;
@@ -400,11 +403,9 @@ static const char* dl_vs =
 "in vec4 position;\n"
 "in vec4 normal;\n"
 "in vec2 texCoords1;\n"
-"in vec4 color;\n"
 "\n"
 "out vec3 normalFS;\n"
 "out vec2 texCoords1FS;\n"
-"out vec4 colorFS;\n"
 "out vec3 L;\n"
 "out vec3 V;\n"
 "\n"
@@ -415,7 +416,6 @@ static const char* dl_vs =
 "	gl_ClipDistance[0] = dot(positionVS, clipPlane);\n"
 "	normalFS = normal.xyz;\n"
 "	texCoords1FS = texCoords1;\n"
-"	colorFS = color;\n"
 "	L = osLightPos - position.xyz;\n"
 "	V = osEyePos - position.xyz;\n"
 "}\n";
@@ -424,40 +424,41 @@ static const char* dl_fs =
 "uniform sampler2D texture1;\n"
 "\n"
 "uniform vec4 lightColorRadius;\n"
-"uniform uint alphaTest;\n"
+"uniform float opaque;\n"
+"uniform float intensity;\n"
 "\n"
 "in vec3 normalFS;\n"
 "in vec2 texCoords1FS;\n"
-"in vec4 colorFS;\n"
 "in vec3 L;\n"
 "in vec3 V;\n"
 "\n"
 "out vec4 fragColor;\n"
 "\n"
+"float BezierEase(float t)\n"
+"{\n"
+"	return t * t * (3.0 - 2.0 * t);\n"
+"}\n"
+"\n"
 "void main()\n"
 "{\n"
-"	vec4 base = colorFS * texture2D(texture1, texCoords1FS);\n"
+"	vec4 base = texture2D(texture1, texCoords1FS);\n"
 "	vec3 nL = normalize(L);\n"
 "	vec3 nV = normalize(V);\n"
 "\n"
 "	// light intensity\n"
-"	float intensFactor = dot(L, L) * lightColorRadius.w;\n"
-"	vec3 intens = lightColorRadius.rgb * (1.0 - intensFactor);\n"
+"	float intensFactor = min(dot(L, L) * lightColorRadius.w, 1.0);\n"
+"	vec3 intens = lightColorRadius.rgb * BezierEase(1.0 - sqrt(intensFactor));\n"
 "\n"
 "	// specular reflection term (N.H)\n"
-"	float specFactor = clamp(dot(normalFS, normalize(nL + nV)), 0.0, 1.0);\n"
+"	float specFactor = min(abs(dot(normalFS, normalize(nL + nV))), 1.0);\n"
 "	float spec = pow(specFactor, 16.0) * 0.25;\n"
 "\n"
 "	// Lambertian diffuse reflection term (N.L)\n"
-"	float diffuse = clamp(dot(normalFS, nL), 0.0, 1.0);\n"
-"	vec4 r = vec4((base.rgb * vec3(diffuse) + vec3(spec)) * intens, base.a);\n"
+"	float diffuse = min(abs(dot(normalFS, nL)), 1.0);\n"
+"	vec3 color = (base.rgb * vec3(diffuse) + vec3(spec)) * intens * intensity;\n"
+"	float alpha = mix(opaque, 1.0, base.a);\n"
 "\n"
-"	if(	(alphaTest == uint(1) && r.a == 0.0) ||\n"
-"		(alphaTest == uint(2) && r.a >= 0.5) ||\n"
-"		(alphaTest == uint(3) && r.a <  0.5))\n"
-"		discard;\n"
-"\n"
-"	fragColor = r;\n"
+"	fragColor = vec4(color.rgb * alpha, alpha);\n"
 "}\n";
 
 static const char* sprite_vs =
@@ -1412,10 +1413,6 @@ static void ApplyAlphaTest(AlphaTest alphaTest)
 	{
 		gl.pipelines[PID_GENERIC].uniformsDirty[GU_ALPHA_TEX] = qtrue;
 	}
-	else if(gl.pipelineId == PID_DYNAMIC_LIGHT)
-	{
-		gl.pipelines[PID_DYNAMIC_LIGHT].uniformsDirty[DU_ALPHA_TEST] = qtrue;
-	}
 	else if(gl.pipelineId == PID_SOFT_SPRITE)
 	{
 		gl.pipelines[PID_SOFT_SPRITE].uniformsDirty[SU_ALPHA_TEST] = qtrue;
@@ -1884,15 +1881,14 @@ static void Init()
 	gl.pipelines[PID_DYNAMIC_LIGHT].arrayBuffers[VB_NORMAL].attribName = "normal";
 	gl.pipelines[PID_DYNAMIC_LIGHT].arrayBuffers[VB_TEXCOORD].enabled = qtrue;
 	gl.pipelines[PID_DYNAMIC_LIGHT].arrayBuffers[VB_TEXCOORD].attribName = "texCoords1";
-	gl.pipelines[PID_DYNAMIC_LIGHT].arrayBuffers[VB_COLOR].enabled = qtrue;
-	gl.pipelines[PID_DYNAMIC_LIGHT].arrayBuffers[VB_COLOR].attribName = "color";
 	gl.pipelines[PID_DYNAMIC_LIGHT].uniformNames[DU_MODELVIEW] = "modelView";
 	gl.pipelines[PID_DYNAMIC_LIGHT].uniformNames[DU_PROJECTION] = "projection";
 	gl.pipelines[PID_DYNAMIC_LIGHT].uniformNames[DU_CLIP_PLANE] = "clipPlane";
 	gl.pipelines[PID_DYNAMIC_LIGHT].uniformNames[DU_LIGHT_POS] = "osLightPos";
 	gl.pipelines[PID_DYNAMIC_LIGHT].uniformNames[DU_EYE_POS] = "osEyePos";
 	gl.pipelines[PID_DYNAMIC_LIGHT].uniformNames[DU_LIGHT_COLOR_RADIUS] = "lightColorRadius";
-	gl.pipelines[PID_DYNAMIC_LIGHT].uniformNames[DU_ALPHA_TEST] = "alphaTest";
+	gl.pipelines[PID_DYNAMIC_LIGHT].uniformNames[DU_OPAQUE] = "opaque";
+	gl.pipelines[PID_DYNAMIC_LIGHT].uniformNames[DU_INTENSITY] = "intensity";
 
 	gl.pipelines[PID_SOFT_SPRITE].arrayBuffers[VB_POSITION].enabled = qtrue;
 	gl.pipelines[PID_SOFT_SPRITE].arrayBuffers[VB_POSITION].attribName = "position";
@@ -2209,13 +2205,22 @@ static void DrawDynamicLight()
 	UploadVertexArray(VB_POSITION, tess.xyz);
 	UploadVertexArray(VB_NORMAL, tess.normal);
 	UploadVertexArray(VB_TEXCOORD, tess.svars[stageIndex].texcoordsptr);
-	UploadVertexArray(VB_COLOR, tess.svars[stageIndex].colors);
 	UploadIndices(tess.dlIndexes, tess.dlNumIndexes);
 
-	const int oldAlphaTestBits = stage->stateBits & GLS_ATEST_BITS;
-	const int newBits = GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE | GLS_DEPTHFUNC_EQUAL;
-	ApplyState(oldAlphaTestBits | newBits, tess.shader->cullType, tess.shader->polygonOffset);
+	ApplyState(backEnd.dlStateBits, tess.shader->cullType, tess.shader->polygonOffset);
 	BindBundle(0, &stage->bundle);
+
+	if(backEnd.dlOpaque != gl.dlOpaque)
+	{
+		gl.dlOpaque = backEnd.dlOpaque;
+		pipeline->uniformsDirty[DU_OPAQUE] = qtrue;
+	}
+
+	if(backEnd.dlIntensity != gl.dlIntensity)
+	{
+		gl.dlIntensity = backEnd.dlIntensity;
+		pipeline->uniformsDirty[DU_INTENSITY] = qtrue;
+	}
 
 	if(pipeline->uniformsDirty[DU_MODELVIEW])
 	{
@@ -2229,9 +2234,13 @@ static void DrawDynamicLight()
 	{
 		glUniform4fv(pipeline->uniformLocations[DU_CLIP_PLANE], 1, gl.clipPlane);
 	}
-	if(pipeline->uniformsDirty[DU_ALPHA_TEST])
+	if(pipeline->uniformsDirty[DU_OPAQUE])
 	{
-		glUniform1ui(pipeline->uniformLocations[DU_ALPHA_TEST], gl.alphaTest);
+		glUniform1f(pipeline->uniformLocations[DU_OPAQUE], gl.dlOpaque ? 1.0f : 0.0f);
+	}
+	if(pipeline->uniformsDirty[DU_INTENSITY])
+	{
+		glUniform1f(pipeline->uniformLocations[DU_INTENSITY], gl.dlIntensity);
 	}
 
 	memset(pipeline->uniformsDirty, 0, sizeof(pipeline->uniformsDirty));
