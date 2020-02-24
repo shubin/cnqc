@@ -961,6 +961,11 @@ extern trGlobals_t	tr;
 #define D3D11SO_AUTO			2
 #define D3D11SO_MAX				2
 
+// r_d3d11_presentMode
+#define DXGIPM_BLITDISCARD		0
+#define DXGIPM_FLIPDISCARD		1
+#define DXGIPM_MAX				1
+
 extern cvar_t	*r_backend;
 
 extern cvar_t	*r_verbose;				// used for verbose debug spew
@@ -997,13 +1002,13 @@ extern cvar_t	*r_softSprites;			// draws certain surfaces as depth particles
 extern cvar_t	*r_gpuMipGen;			// uses GPU-side mip-map generation
 extern cvar_t	*r_alphaToCoverage;		// enables A2C on alpha-tested surfaces
 extern cvar_t	*r_dither;				// enables dithering
-extern cvar_t	*r_rtColorFormat;		// see RTCF_*
+extern cvar_t	*r_rtColorFormat;		// color render target format, see RTCF_*
 
 extern cvar_t	*r_mipGenFilter;			// if the string is invalid, Lanczos 4 is used
 extern cvar_t	*r_mipGenGamma;				// what gamma-space do we consider the textures to be in
-extern cvar_t	*r_gl3_geoStream;			// vertex/index streaming strategy
-extern cvar_t	*r_d3d11_syncOffsets;		// vertex attribute streaming strategy
-extern cvar_t	*r_d3d11_maxQueuedFrames;	// max. pre-rendered frames
+extern cvar_t	*r_gl3_geoStream;			// vertex/index streaming strategy, see GL3MAP_*
+extern cvar_t	*r_d3d11_syncOffsets;		// vertex attribute streaming strategy, see D3D11SO_*
+extern cvar_t	*r_d3d11_presentMode;		// DXGI presentation model, see DXGIPM_*
 extern cvar_t	*r_ext_max_anisotropy;
 extern cvar_t	*r_msaa;
 

@@ -62,13 +62,22 @@ add: r_gl3_geoStream <0 to 4> (default: 0) sets the geometry upload strategy
   r_gl3_geoStream 2 = Map Unsychronized
   r_gl3_geoStream 3 = Map Persistent when possible, else automatic
   r_gl3_geoStream 4 = AMD pinned memory when available, else automatic
+  this only applies to the GL3 rendering back-end
 
 add: r_d3d11_syncOffsets <0|1|2> (default: 2) synchronizes vertex buffer offsets
   r_d3d11_syncOffsets 0 = split  buffer offsets (more data transferred)
   r_d3d11_syncOffsets 1 = sync'd buffer offsets (more API calls)
   r_d3d11_syncOffsets 2 = decide automatically
+  this only applies to the D3D11 rendering back-end
 
-add: r_d3d11_maxQueuedFrames <1 to 16> (default: 3) sets the maximum pre-rendered frame count
+add: r_d3d11_presentMode <0|1> (default: 0) sets the Direct3D presentation mode
+  r_d3d11_presentMode 0 = blit + discard
+  r_d3d11_presentMode 1 = flip + discard when available, else blit + discard
+  about the 'flip + discard' presentation mode:
+  - Windows 10 is required and tearing must be supported
+  - it should help performance by sharing buffer data (less copying)
+  - it allows for V-Sync to be disabled with variable refresh rate displays
+  - performance issues were observed on some machines, so it's off by default
 
 add: r_khr_debug <0|1|2> (default: 2) decides whether to create an OpenGL debug context
   r_khr_debug 0 = forced OFF
@@ -126,7 +135,7 @@ chg: r_lightmap is now latched again
 chg: r_fullbright is now latched again
   it now also supports surfaces referencing q3map2's "external lightmap" atlas images
 
-chg: negative r_swapInterval values will request adaptive v-sync when using an OpenGL back-end
+chg: negative r_swapInterval values will request adaptive V-Sync when using an OpenGL back-end
 
 fix: crash due to lack of memory for the sound system
 

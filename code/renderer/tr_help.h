@@ -20,9 +20,15 @@ S_COLOR_VAL "    0 " S_COLOR_HELP "= Split  buffer offsets (more API calls)\n" \
 S_COLOR_VAL "    1 " S_COLOR_HELP "= Sync'd buffer offsets (more data transferred)\n" \
 S_COLOR_VAL "    2 " S_COLOR_HELP "= Decide automatically"
 
-#define help_r_d3d11_maxQueuedFrames \
-"max. pre-rendered frames\n" \
-"The number of frames that the system is allowed to queue for rendering."
+#define help_r_d3d11_presentMode \
+"presentation mode\n" \
+S_COLOR_VAL "    0 " S_COLOR_HELP "= Blit + Discard\n" \
+S_COLOR_VAL "    1 " S_COLOR_HELP "= Flip + Discard when available, else Blit + Discard\n" \
+"About the 'Flip + Discard' presentation mode:\n" \
+"- Windows 10 is required and tearing must be supported.\n" \
+"- It should help performance by sharing buffer data (less copying).\n" \
+"- It allows for V-Sync to be disabled with variable refresh rate displays.\n" \
+"- Performance issues were observed on some machines, so it's off by default."
 
 #define help_r_ext_max_anisotropy \
 "max. allowed anisotropy ratio\n" \

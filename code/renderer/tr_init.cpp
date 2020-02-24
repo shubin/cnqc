@@ -75,7 +75,7 @@ cvar_t	*r_mipGenGamma;
 cvar_t	*r_noiseScale;
 cvar_t	*r_gl3_geoStream;
 cvar_t	*r_d3d11_syncOffsets;
-cvar_t	*r_d3d11_maxQueuedFrames;
+cvar_t	*r_d3d11_presentMode;
 cvar_t	*r_ext_max_anisotropy;
 cvar_t	*r_msaa;
 
@@ -367,7 +367,7 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_mipGenGamma, "r_mipGenGamma", "1.8", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "1.0", "3.0", help_r_mipGenGamma },
 	{ &r_gl3_geoStream, "r_gl3_geoStream", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", XSTRING(GL3MAP_MAX), help_r_gl3_geoStream },
 	{ &r_d3d11_syncOffsets, "r_d3d11_syncOffsets", "2", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", XSTRING(D3D11SO_MAX), help_r_d3d11_syncOffsets },
-	{ &r_d3d11_maxQueuedFrames, "r_d3d11_maxQueuedFrames", "3", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "1", "16", help_r_d3d11_maxQueuedFrames },
+	{ &r_d3d11_presentMode, "r_d3d11_presentMode", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", XSTRING(DXGIPM_MAX), help_r_d3d11_presentMode },
 	{ &r_ext_max_anisotropy, "r_ext_max_anisotropy", "16", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "16", help_r_ext_max_anisotropy },
 	{ &r_msaa, "r_msaa", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "32", "anti-aliasing sample count, " S_COLOR_VAL "0" S_COLOR_HELP "=off" },
 	{ &r_picmip, "r_picmip", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "16", help_r_picmip },

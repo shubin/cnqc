@@ -27,6 +27,30 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 #include <Windows.h>
 #include <d3d11.h>
 #include <dxgi.h>
+#include <dxgi1_2.h>
+#include <dxgi1_3.h>
+
+#pragma region Windows 10 SDK
+
+	#if !defined(__dxgicommon_h__)
+		enum DXGI_COLOR_SPACE_TYPE;
+	#endif
+	#include "dxgi/dxgi1_4.h"
+	#include "dxgi/dxgi1_5.h"
+
+	#if !defined(DXGI_PRESENT_ALLOW_TEARING)
+		#define DXGI_PRESENT_ALLOW_TEARING 0x00000200UL
+	#endif
+
+	#if !defined(DXGI_SWAP_EFFECT_FLIP_DISCARD)
+		#define DXGI_SWAP_EFFECT_FLIP_DISCARD ((DXGI_SWAP_EFFECT)4)
+	#endif
+
+	#if !defined(DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING)
+		#define DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING ((DXGI_SWAP_CHAIN_FLAG)2048)
+	#endif
+
+#pragma endregion
 
 #include "hlsl/generic_vs.h"
 #include "hlsl/generic_ps.h"
@@ -66,6 +90,10 @@ static ShaderDesc genericPixelShaders[4] =
 #	undef far
 #endif
 
+#if !defined(D3DDDIERR_DEVICEREMOVED)
+#	define D3DDDIERR_DEVICEREMOVED ((HRESULT)0x88760870L)
+#endif
+
 #define MAX_GPU_TEXTURE_SIZE 2048 // instead of D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION
 
 #define BLEND_STATE_COUNT (D3D11_BLEND_SRC_ALPHA_SAT + 1)
@@ -80,7 +108,9 @@ Current info:
 
 To look at:
 - near clip plane seems to be further in the GL2 back-end in 3D land
-- find/use D3DDDIERR_DEVICEREMOVED? are the docs correct about it?
+
+Known issues:
+- device re-creation isn't handled by OBS' capture plug-in
 */
 
 
@@ -358,6 +388,7 @@ struct Direct3DStatic
 	IDXGISwapChain* swapChain;
 
 	HMODULE library;
+	qbool flipAndTear;
 
 	AdapterInfo adapterInfo;
 };
@@ -383,7 +414,24 @@ static const char* GetSystemErrorString(HRESULT hr)
 		systemErrorStr, sizeof(systemErrorStr) - 1, NULL);
 	if(written == 0)
 	{
+		// we have nothing valid
 		Q_strncpyz(systemErrorStr, "???", sizeof(systemErrorStr));
+	}
+	else
+	{
+		// remove the trailing whitespace
+		char* s = systemErrorStr + strlen(systemErrorStr) - 1;
+		while(s >= systemErrorStr)
+		{
+			if(*s == '\r' || *s == '\n' || *s == '\t' || *s == ' ')
+			{
+				*s-- = '\0';
+			}
+			else
+			{
+				break;
+			}
+		}
 	}
 
 	return systemErrorStr;
@@ -398,7 +446,7 @@ static qbool Check(HRESULT hr, const char* function)
 
 	if(d3d.errorMode == EM_FATAL)
 	{
-		ri.Error(ERR_FATAL, va("'%s' failed with code 0x%08X (%s)", function, (unsigned int)hr, GetSystemErrorString(hr)));
+		ri.Error(ERR_FATAL, "'%s' failed with code 0x%08X (%s)\n", function, (unsigned int)hr, GetSystemErrorString(hr));
 	}
 	return qfalse;
 }
@@ -413,7 +461,7 @@ static qbool CheckAndName(HRESULT hr, const char* function, ID3D11DeviceChild* r
 
 	if(d3d.errorMode == EM_FATAL)
 	{
-		ri.Error(ERR_FATAL, va("'%s' failed to create '%s' with code 0x%08X (%s)", function, resourceName, (unsigned int)hr, GetSystemErrorString(hr)));
+		ri.Error(ERR_FATAL, "'%s' failed to create '%s' with code 0x%08X (%s)\n", function, resourceName, (unsigned int)hr, GetSystemErrorString(hr));
 	}
 	return qfalse;
 }
@@ -574,12 +622,8 @@ static DXGI_FORMAT GetRenderTargetColorFormat(int format)
 static void ResetShaderData(ID3D11Resource* buffer, const void* data, size_t bytes)
 {
 	D3D11_MAPPED_SUBRESOURCE ms;
-	HRESULT hr = d3ds.context->Map(buffer, 0, D3D11_MAP_WRITE_DISCARD, NULL, &ms);
-	if(FAILED(hr))
-	{
-		ri.Error(ERR_FATAL, "Map failed");
-		return;
-	}
+	const HRESULT hr = d3ds.context->Map(buffer, 0, D3D11_MAP_WRITE_DISCARD, NULL, &ms);
+	Check(hr, "Map on shader data");
 	memcpy(ms.pData, data, bytes);
 	d3ds.context->Unmap(buffer, NULL);
 }
@@ -597,12 +641,8 @@ static void AppendVertexData(VertexBuffer* buffer, const void* data, int itemCou
 	if(data != NULL || mapType == D3D11_MAP_WRITE_DISCARD)
 	{
 		D3D11_MAPPED_SUBRESOURCE ms;
-		HRESULT hr = d3ds.context->Map(buffer->buffer, 0, mapType, NULL, &ms);
-		if(FAILED(hr))
-		{
-			ri.Error(ERR_FATAL, "Map failed");
-			return;
-		}
+		const HRESULT hr = d3ds.context->Map(buffer->buffer, 0, mapType, NULL, &ms);
+		Check(hr, "Map on vertex data");
 		if(data != NULL)
 		{
 			memcpy((byte*)ms.pData + buffer->writeIndex * buffer->itemSize, data, itemCount * buffer->itemSize);
@@ -1043,6 +1083,52 @@ static void FindBestAvailableAA(DXGI_SAMPLE_DESC* sampleDesc)
 	}
 }
 
+static qbool CheckFlipAndTearSupport()
+{
+	if(r_d3d11_presentMode->integer != DXGIPM_FLIPDISCARD)
+	{
+		return qfalse;
+	}
+
+	HMODULE library = LoadLibraryA("DXGI.dll");
+	if(library == NULL)
+	{
+		ri.Printf(PRINT_WARNING, "CheckTearingSupport: DXGI.dll couldn't be found or opened\n");
+		return qfalse;
+	}
+
+	typedef HRESULT (WINAPI *PFN_CreateDXGIFactory)(REFIID riid, _Out_ void **ppFactory);
+	PFN_CreateDXGIFactory pCreateDXGIFactory = (PFN_CreateDXGIFactory)GetProcAddress(library, "CreateDXGIFactory");
+	if(pCreateDXGIFactory == NULL)
+	{
+		FreeLibrary(library);
+		ri.Printf(PRINT_WARNING, "CheckTearingSupport: Failed to locate CreateDXGIFactory in DXGI.dll\n");
+		return qfalse;
+	}
+
+	HRESULT hr;
+	BOOL enabled = FALSE;
+	IDXGIFactory5* pFactory;
+	hr = (*pCreateDXGIFactory)(__uuidof(IDXGIFactory5), (void**)&pFactory);
+	if(FAILED(hr))
+	{
+		FreeLibrary(library);
+		ri.Printf(PRINT_WARNING, "CheckTearingSupport: 'CreateDXGIFactory' failed with code 0x%08X (%s)\n", (unsigned int)hr, GetSystemErrorString(hr));
+		return qfalse;
+	}
+	hr = pFactory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &enabled, sizeof(enabled));
+	pFactory->Release();
+	FreeLibrary(library);
+
+	if(FAILED(hr))
+	{
+		ri.Printf(PRINT_WARNING, "CheckTearingSupport: 'IDXGIFactory5::CheckFeatureSupport' failed with code 0x%08X (%s)\n", (unsigned int)hr, GetSystemErrorString(hr));
+		return qfalse;
+	}
+
+	return enabled != 0;
+}
+
 static qbool GAL_Init()
 {
 	Sys_V_Init(GAL_D3D11);
@@ -1071,8 +1157,9 @@ static qbool GAL_Init()
 		flags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
 
+		d3ds.flipAndTear = CheckFlipAndTearSupport();
+
 		ZeroMemory(&swapChainDesc, sizeof(swapChainDesc));
-		swapChainDesc.BufferCount = 1;
 		swapChainDesc.BufferDesc.Width = glInfo.winWidth;
 		swapChainDesc.BufferDesc.Height = glInfo.winHeight;
 		swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -1085,11 +1172,22 @@ static qbool GAL_Init()
 		swapChainDesc.Windowed = TRUE;
 		swapChainDesc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
 		swapChainDesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
-		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-		swapChainDesc.Flags = 0;
+		if(d3ds.flipAndTear)
+		{
+			// flip and tear, until it is done
+			swapChainDesc.BufferCount = 2;
+			swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+			swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+		}
+		else
+		{
+			swapChainDesc.BufferCount = 1;
+			swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+			swapChainDesc.Flags = 0;
+		}
 
 	create_device:
-		HRESULT hr = (*pD3D11CreateDeviceAndSwapChain)(
+		hr = (*pD3D11CreateDeviceAndSwapChain)(
 			NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, flags, featureLevels, ARRAY_LEN(featureLevels), D3D11_SDK_VERSION,
 			&swapChainDesc, &d3ds.swapChain, &d3ds.device, NULL, &d3ds.context);
 		if(hr == DXGI_ERROR_SDK_COMPONENT_MISSING)
@@ -1542,7 +1640,6 @@ static qbool GAL_Init()
 			textureDesc.MiscFlags = 0;
 			mipGenOK &= D3D11_CreateTexture2D(&textureDesc, 0, &d3d.mipGenTextures[i].texture, va("mip-map generation texture #%d", i + 1));
 
-			D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
 			ZeroMemory(&srvDesc, sizeof(srvDesc));
 			srvDesc.Format = textureDesc.Format;
 			srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
@@ -1630,30 +1727,15 @@ static qbool GAL_Init()
 		}
 	}
 
-	qbool maxFrameLatencySet = qfalse;
-	IDXGIDevice1* dxgiDevice1;
-	if(SUCCEEDED(d3ds.device->QueryInterface(__uuidof(IDXGIDevice1), (void**)&dxgiDevice1)))
-	{
-		if(SUCCEEDED(dxgiDevice1->SetMaximumFrameLatency(r_d3d11_maxQueuedFrames->integer)))
-		{
-			maxFrameLatencySet = qtrue;
-		}		
-
-		COM_RELEASE(dxgiDevice1);
-	}
-	if(maxFrameLatencySet)
-	{
-		ri.Printf(PRINT_ALL, "Max. queued frames: %d\n", r_d3d11_maxQueuedFrames->integer);
-	}
-	else
-	{
-		ri.Printf(PRINT_ERROR, "Failed to set the max. number of queued frames\n");
-	}
-
 	if(r_d3d11_syncOffsets->integer == D3D11SO_AUTO)
 	{
+#if 0
 		// only nVidia's drivers seem to consistently handle the extra IASetVertexBuffers calls well enough
 		d3d.splitBufferOffsets = Q_stristr(glConfig.renderer_string, "NVIDIA") != NULL;
+#else
+		// however, we'll just treat all drivers as equally dumb by default for now
+		d3d.splitBufferOffsets = D3D11SO_SYNCEDOFFSETS;
+#endif
 	}
 	else
 	{
@@ -1870,10 +1952,9 @@ static void GAL_EndFrame()
 
 	EndQueries();
 
-	// Present interval flags
-	// flags: DXGI_PRESENT_DO_NOT_SEQUENCE DXGI_PRESENT_ALLOW_TEARING
-	const HRESULT hr = d3ds.swapChain->Present(abs(r_swapInterval->integer), 0);
-	if(hr == DXGI_ERROR_DEVICE_REMOVED)
+	const UINT presentFlags = d3ds.flipAndTear && r_swapInterval->integer == 0 ? DXGI_PRESENT_ALLOW_TEARING : 0;
+	const HRESULT hr = d3ds.swapChain->Present(abs(r_swapInterval->integer), presentFlags);
+	if(hr == DXGI_ERROR_DEVICE_REMOVED || hr == D3DDDIERR_DEVICEREMOVED)
 	{
 		ri.Error(ERR_FATAL, "Direct3D device was removed! Reason: %s", GetDeviceRemovedReason());
 	}
@@ -1917,7 +1998,7 @@ static void WriteInvalidImage(int w, int h, int alignment, colorSpace_t colorSpa
 		memset(out, 0x7F, PAD(w * 3, alignment) * h);
 }
 
-static void GAL_ReadPixels(int x, int y, int w, int h, int alignment, colorSpace_t colorSpace, void* out)
+static void GAL_ReadPixels(int, int, int w, int h, int alignment, colorSpace_t colorSpace, void* out)
 {
 	if(d3d.readbackTexture == NULL)
 	{
@@ -2445,6 +2526,7 @@ static void GAL_PrintInfo()
 {
 	ri.Printf(PRINT_ALL, "Direct3D device feature level: %s\n", d3ds.device->GetFeatureLevel() == D3D_FEATURE_LEVEL_11_0 ? "11.0" : "10.1");
 	ri.Printf(PRINT_ALL, "Direct3D vertex buffer upload strategy: %s\n", d3d.splitBufferOffsets ? "split offsets" : "sync'd offsets");
+	ri.Printf(PRINT_ALL, "DXGI presentation model: %s\n", d3ds.flipAndTear ? "flip + discard" : "blit + discard");
 	if(d3ds.adapterInfo.valid)
 	{
 		ri.Printf(PRINT_ALL, "%6d MB of dedicated GPU memory\n", d3ds.adapterInfo.dedicatedVideoMemoryMB);
