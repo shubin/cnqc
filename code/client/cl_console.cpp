@@ -801,8 +801,8 @@ static void Con_DrawSolidConsole( float frac )
 		const short* text = con.text + (row % con.totallines)*con.linewidth;
 
 		re.SetColor( colShadow );
-		for (int i = 0; i < con.linewidth; ++i) {
-			SCR_DrawChar( 1 + con.xadjust + i * con.cw, 1 + y, con.cw, con.ch, (text[i] & 0xFF) );
+		for (int j = 0; j < con.linewidth; ++j) {
+			SCR_DrawChar( 1 + con.xadjust + j * con.cw, 1 + y, con.cw, con.ch, (text[j] & 0xFF) );
 		}
 
 		re.SetColor( colText );

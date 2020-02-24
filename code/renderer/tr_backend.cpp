@@ -246,9 +246,9 @@ static void RB_RenderDrawSurfList( const drawSurf_t* drawSurfs, int numDrawSurfs
 				const int numVertexes = tess.numVertexes - firstVertex;
 				const int numIndexes = tess.numIndexes - firstIndex;
 				RB_DeformTessGeometry( firstVertex, numVertexes, firstIndex, numIndexes );
-				for ( int i = 0; i < shader->numStages; ++i ) {
-					R_ComputeColors( shader->stages[i], tess.svars[i], firstVertex, numVertexes );
-					R_ComputeTexCoords( shader->stages[i], tess.svars[i], firstVertex, numVertexes, qfalse );
+				for ( int s = 0; s < shader->numStages; ++s ) {
+					R_ComputeColors( shader->stages[s], tess.svars[s], firstVertex, numVertexes );
+					R_ComputeTexCoords( shader->stages[s], tess.svars[s], firstVertex, numVertexes, qfalse );
 				}
 			}
 			continue;
@@ -270,9 +270,9 @@ static void RB_RenderDrawSurfList( const drawSurf_t* drawSurfs, int numDrawSurfs
 				// so we need to compute everything added with the first one now
 				tess.shader = shaderPrev;
 				RB_DeformTessGeometry( 0, tess.numVertexes, 0, tess.numIndexes );
-				for ( int i = 0; i < shaderPrev->numStages; ++i ) {
-					R_ComputeColors( shaderPrev->stages[i], tess.svars[i], 0, tess.numVertexes );
-					R_ComputeTexCoords( shaderPrev->stages[i], tess.svars[i], 0, tess.numVertexes, qfalse );
+				for ( int s = 0; s < shaderPrev->numStages; ++s ) {
+					R_ComputeColors( shaderPrev->stages[s], tess.svars[s], 0, tess.numVertexes );
+					R_ComputeTexCoords( shaderPrev->stages[s], tess.svars[s], 0, tess.numVertexes, qfalse );
 				}
 			}
 			tess.shader = shader;
@@ -283,9 +283,9 @@ static void RB_RenderDrawSurfList( const drawSurf_t* drawSurfs, int numDrawSurfs
 			const int numVertexes = tess.numVertexes - firstVertex;
 			const int numIndexes = tess.numIndexes - firstIndex;
 			RB_DeformTessGeometry( firstVertex, numVertexes, firstIndex, numIndexes );
-			for ( int i = 0; i < shader->numStages; ++i ) {
-				R_ComputeColors( shader->stages[i], tess.svars[i], firstVertex, numVertexes );
-				R_ComputeTexCoords( shader->stages[i], tess.svars[i], firstVertex, numVertexes, qfalse );
+			for ( int s = 0; s < shader->numStages; ++s ) {
+				R_ComputeColors( shader->stages[s], tess.svars[s], firstVertex, numVertexes );
+				R_ComputeTexCoords( shader->stages[s], tess.svars[s], firstVertex, numVertexes, qfalse );
 			}
 			sort = drawSurf->sort;
 			oldEntityNum = entityNum;

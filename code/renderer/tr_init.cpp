@@ -120,13 +120,6 @@ cvar_t	*r_directedScale;
 cvar_t	*r_debugLight;
 cvar_t	*r_debugSort;
 
-///////////////////////////////////////////////////////////////
-cvar_t	*r_maplightBrightness;
-cvar_t	*r_maplightSaturation;
-cvar_t	*r_maplightColor;
-cvar_t	*r_maplightColorMode;
-vec3_t	vMaplightColorFilter;
-
 // these limits apply to the sum of all scenes in a frame:
 // the main view, all the 3D icons, and even the console etc
 #define DEFAULT_MAX_POLYS		8192

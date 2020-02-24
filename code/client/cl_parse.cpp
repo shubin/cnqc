@@ -431,12 +431,12 @@ static void CL_ParseGamestate( msg_t *msg )
 
 	// all previous config string commands need to be marked as invalid
 	for ( i = 0; i < MAX_RELIABLE_COMMANDS; ++i ) {
-		const char* const cmd = clc.serverCommands[i];
+		const char* const cmdStr = clc.serverCommands[i];
 
-		if ( !strncmp(cmd, "cs "  , 3) ||
-			 !strncmp(cmd, "bcs0 ", 5) ||
-			 !strncmp(cmd, "bcs1 ", 5) ||
-			 !strncmp(cmd, "bcs2 ", 5) )
+		if ( !strncmp(cmdStr, "cs "  , 3) ||
+			 !strncmp(cmdStr, "bcs0 ", 5) ||
+			 !strncmp(cmdStr, "bcs1 ", 5) ||
+			 !strncmp(cmdStr, "bcs2 ", 5) )
 			 clc.serverCommandsBad[i] = qtrue;
 	}
 
