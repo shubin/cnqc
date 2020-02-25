@@ -5,8 +5,8 @@
 There are 3 supported build toolchains:
 
 - Visual C++ on Windows x64 and x86
-- GCC on Linux x64
-- GCC on FreeBSD x64
+- GCC or Clang on Linux x64
+- Clang or GCC on FreeBSD x64
 
 ## Directories
 
@@ -22,6 +22,9 @@ There are 3 supported build toolchains:
 
 - The %QUAKE3DIR% environment variable must be defined to the absolute path to copy the .exe and .pdb files to
 - NASM.exe is in your path for building the client
+- One of the following is true:
+  - The %FXCPATH% environment variable contains the full path to fxc.exe
+  - The June 2010 DirectX SDK is installed
 
 **Options**
 
@@ -42,9 +45,10 @@ Here's an example batch script for opening the Visual Studio solution:
 cd cnq3\makefiles\windows_vs2013
 set QUAKE3DIR=G:\CPMA_tests
 set CPMADIR=cpma_dev
+set FXCPATH=C:\Program Files (x86)\Windows Kits\8.1\bin\x64\fxc.exe
 cnq3.sln
 ```
-With this set-up, you can press F5 and run the engine on the right q3 install and right mod folder immediately.
+With this set-up, you can press F5 and run the engine through the Visual C++ debugger on the right q3 install and right mod folder immediately.
 
 ## Building on Linux / FreeBSD with GCC
 
@@ -54,8 +58,7 @@ With this set-up, you can press F5 and run the engine on the right q3 install an
 |:------|:------:|:------:|:---------------|:----------------|
 | NASM  | X      | X      | nasm           | nasm            |
 | SDL 2 |        | X      | libsdl2-dev    | sdl2            |
-
- On FreeBSD, we link against libexecinfo for the backtrace functions. We thus require FreeBSD 10.0 as a minimum target.
+ On FreeBSD, we link against libexecinfo for the backtrace functions. We thus require FreeBSD 10.0 or later.
 
 **Options**
 
@@ -69,22 +72,31 @@ With this set-up, you can press F5 and run the engine on the right q3 install an
 
 **Notes**
 
-- To create the QUAKE3DIR variable in the build shell, you can use `export QUAKE3DIR=~/games/q3`.
-- To delete the variable from the build shell, you can use `unset QUAKE3DIR`.
+- To create the QUAKE3DIR variable in the build shell, you can use `export QUAKE3DIR=~/games/q3`
+- To delete the variable from the build shell, you can use `unset QUAKE3DIR`
+- On FreeBSD, Clang is now the default compiler
+- For most Linux distros, GCC is still the default compiler
+- To force building with Clang, you can use `CC=clang CXX=clang++` as make/gmake arguments
+- To force building with GCC, you can use `CC=gcc CXX=g++` as make/gmake arguments
+- You don't have to specify $(CPP), it's not used by any of the makefiles
 
 ## Environment variables
 
-There are 2 environment variables used for compiling and debugging:
+There are 3 environment variables used for compiling and debugging:
 
-| Env. Var. | Meaning                 | Example     |
-|:----------|:------------------------|:------------|
-| QUAKE3DIR | absolute directory path | C:\Games\Q3 |
-| CPMADIR   | mod folder name         | cpma        |
+| Env. Var. | Meaning                 | Example                                                 |
+|:----------|:------------------------|:--------------------------------------------------------|
+| QUAKE3DIR | absolute directory path | C:\Games\Q3                                             |
+| CPMADIR   | mod folder name         | cpma                                                    |
+| FXCPATH   | full fxc.exe file path  | C:\Program Files (x86)\Windows Kits\8.1\bin\x64\fxc.exe |
 
-| Env. Var. | Windows                | Linux / FreeBSD |
-|:----------|:-----------------------|:----------------|
-| QUAKE3DIR | required for building  | optional        |
-| CPMADIR   | required for debugging | unused          |
+| Env. Var. | Windows                  | Linux / FreeBSD       |
+|:----------|:-------------------------|:----------------------|
+| QUAKE3DIR | required for building    | optional for building |
+| CPMADIR   | required for debugging   | unused                |
+| FXCPATH   | required for building(1) | unused                |
+
+1) FXCPATH is optional if you have the June 2010 DirectX SDK installed.
 
 ## Building with other compilers
 

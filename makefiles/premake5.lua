@@ -5,8 +5,8 @@ premake 5.0.0-alpha10
 
 There are 3 supported build toolchains:
 - Visual C++ on Windows x64 and x86
-- GCC on Linux x64
-- GCC on FreeBSD x64
+- GCC or Clang on Linux x64
+- Clang or GCC on FreeBSD x64
 
 @TODO: prevent UNICODE and _UNICODE from being #define'd with premake
 @TODO: enable Minimal Rebuild from premake (instead of adding /Gm)
@@ -72,15 +72,15 @@ local function WIN_CreateShaderPreBuildCommand(name, shaderType, version, option
 	   release = "/O3"
 	}
 
-	local fxc_path = "\"$(DXSDK_DIR)Utilities\\bin\\x86\\fxc.exe\""
+	local fxc_path = "..\\compile_shader.cmd"
 	local extra_options = "%{extra_fxc_options_map[cfg.buildcfg]}"..options
 	local name_suffix = suffix
 	local target = string.format("%s_%s", shaderType, version)
 	local entry_point = string.format("%s_main", shaderType)
 	local var_name = string.format("g_%s%s_%s", name, name_suffix, shaderType)
-	local abs_path_hlsl = os.realpath(path_src.."\\renderer\\hlsl")
-	local input_file_name = string.format("%s\\%s.hlsl", abs_path_hlsl, name)
-	local output_file_name = string.format("%s\\%s%s_%s.h", abs_path_hlsl, name, name_suffix, shaderType)
+	local path_hlsl = string.format("%s\\renderer\\hlsl", path.translate(make_path_src))
+	local input_file_name = string.format("%s\\%s.hlsl", path_hlsl, name)
+	local output_file_name = string.format("%s\\%s%s_%s.h", path_hlsl, name, name_suffix, shaderType)
 
 	return string.format("%s %s /nologo /T %s /E %s /Vn %s /Fh %s %s", fxc_path, input_file_name, target, entry_point, var_name, output_file_name, extra_options)
 
@@ -475,8 +475,11 @@ local function ApplyExeProjectSettings(exeName, server)
 	filter { }
 	if os.is("windows") then
 		prebuildcommands { path.translate(CreateGitPreBuildCommand(".cmd"), "\\") }
-		postbuildcommands { path.translate(CreateExeCopyPostBuildCommand("copy", exeName, ".exe"), "\\") }
-		postbuildcommands { path.translate(WIN_CreatePdbCopyPostBuildCommand(exeName), "\\") }
+		postbuildcommands
+		{
+			path.translate(CreateExeCopyPostBuildCommand("copy", exeName, ".exe"), "\\"),
+			path.translate(WIN_CreatePdbCopyPostBuildCommand(exeName), "\\")
+		}
 	else
 		prebuildcommands { CreateGitPreBuildCommand(".sh") }
 		postbuildcommands { string.format("if [ -n \"$$%s\" ]; then %s; fi",
@@ -752,20 +755,26 @@ solution "cnq3"
 			buildoptions { "-std=c++98" }
 		if os.is("windows") then
 			filter "action:vs*"
-				prebuildcommands { WIN_CreateShaderPreBuildCommand("generic", "vs", "4_1", "", "") }
-				prebuildcommands { WIN_CreateShaderPreBuildCommand("generic", "ps", "4_1", "", "") }
-				prebuildcommands { WIN_CreateShaderPreBuildCommand("generic", "ps", "4_1", " /DCNQ3_A2C=1", "_a") }
-				prebuildcommands { WIN_CreateShaderPreBuildCommand("generic", "ps", "4_1", " /DCNQ3_DITHER=1", "_d") }
-				prebuildcommands { WIN_CreateShaderPreBuildCommand("generic", "ps", "4_1", " /DCNQ3_A2C=1 /DCNQ3_DITHER=1", "_ad") }
-				prebuildcommands { WIN_CreateShaderPreBuildCommand("post", "vs", "4_1", "", "") }
-				prebuildcommands { WIN_CreateShaderPreBuildCommand("post", "ps", "4_1", "", "") }
-				prebuildcommands { WIN_CreateShaderPreBuildCommand("dl", "vs", "4_1", "", "") }
-				prebuildcommands { WIN_CreateShaderPreBuildCommand("dl", "ps", "4_1", "", "") }
-				prebuildcommands { WIN_CreateShaderPreBuildCommand("sprite", "vs", "4_1", "", "") }
-				prebuildcommands { WIN_CreateShaderPreBuildCommand("sprite", "ps", "4_1", "", "") }
-				prebuildcommands { WIN_CreateShaderPreBuildCommand("mip_start", "cs", "5_0", "", "") }
-				prebuildcommands { WIN_CreateShaderPreBuildCommand("mip_pass", "cs", "5_0", "", "") }
-				prebuildcommands { WIN_CreateShaderPreBuildCommand("mip_end", "cs", "5_0", "", "") }
+				local commands =
+				{
+					WIN_CreateShaderPreBuildCommand("generic", "vs", "4_1", "", ""),
+					WIN_CreateShaderPreBuildCommand("generic", "ps", "4_1", "", ""),
+					WIN_CreateShaderPreBuildCommand("generic", "ps", "4_1", " /DCNQ3_A2C=1", "_a"),
+					WIN_CreateShaderPreBuildCommand("generic", "ps", "4_1", " /DCNQ3_DITHER=1", "_d"),
+					WIN_CreateShaderPreBuildCommand("generic", "ps", "4_1", " /DCNQ3_A2C=1 /DCNQ3_DITHER=1", "_ad"),
+					WIN_CreateShaderPreBuildCommand("post", "vs", "4_1", "", ""),
+					WIN_CreateShaderPreBuildCommand("post", "ps", "4_1", "", ""),
+					WIN_CreateShaderPreBuildCommand("dl", "vs", "4_1", "", ""),
+					WIN_CreateShaderPreBuildCommand("dl", "ps", "4_1", "", ""),
+					WIN_CreateShaderPreBuildCommand("sprite", "vs", "4_1", "", ""),
+					WIN_CreateShaderPreBuildCommand("sprite", "ps", "4_1", "", ""),
+					WIN_CreateShaderPreBuildCommand("mip_start", "cs", "5_0", "", ""),
+					WIN_CreateShaderPreBuildCommand("mip_pass", "cs", "5_0", "", ""),
+					WIN_CreateShaderPreBuildCommand("mip_end", "cs", "5_0", "", "")
+				}
+				-- premake doesn't want to spit one Command XML element per pre-build command
+				-- we generate a full single-line batch command to get around that in the saddest way...
+				prebuildcommands { table.concat(commands, " && ") }
 		end
 
 	project "libjpeg-turbo"
