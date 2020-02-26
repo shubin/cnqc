@@ -137,6 +137,8 @@ chg: r_fullbright is now latched again
 
 chg: negative r_swapInterval values will request adaptive V-Sync when using an OpenGL back-end
 
+fix: dynamic lights could incorrectly stop applying to moving entities (e.g. cpm25 elevator)
+
 fix: crash due to lack of memory for the sound system
 
 fix: incorrect shader state when loading a map with no lighting

@@ -156,7 +156,7 @@ static qbool R_LightCullBounds( const dlight_t* dl, const vec3_t mins, const vec
 
 static qbool R_LightCullFace( const srfSurfaceFace_t* face, const dlight_t* dl )
 {
-	float d = DotProduct( dl->origin, face->plane.normal ) - face->plane.dist;
+	const float d = DotProduct( dl->transformed, face->plane.normal ) - face->plane.dist;
 	if ( (d < -dl->radius) || (d > dl->radius) )
 		return qtrue;
 
