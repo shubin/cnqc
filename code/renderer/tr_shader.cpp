@@ -2027,10 +2027,10 @@ static shader_t* FinishShader()
 		// ditch this stage if it's detail and detail textures are disabled
 		//
 		if ( pStage->isDetail && !r_detailTextures->integer ) {
-			if ( stage < ( MAX_SHADER_STAGES - 1 ) ) {
-				memmove( pStage, pStage + 1, sizeof( *pStage ) * ( MAX_SHADER_STAGES - stage - 1 ) );
-				Com_Memset( pStage + 1, 0, sizeof( *pStage ) );
-			}
+			const int toMove = MAX_SHADER_STAGES - stage - 1;
+			memmove( pStage, pStage + 1, sizeof( *pStage ) * toMove );
+			Com_Memset( &stages[MAX_SHADER_STAGES - 1], 0, sizeof( *pStage ) );
+			stage--;
 			continue;
 		}
 
