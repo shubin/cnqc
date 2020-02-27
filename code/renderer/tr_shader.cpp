@@ -2125,7 +2125,7 @@ static shader_t* FinishShader()
 		for ( int i = 0; i < shader.numStages; ++i ) {
 			if ( UsesInternalLightmap( &stages[i] ) || UsesExternalLightmap( &stages[i] ) ) {
 				stages[i].type = ST_DIFFUSE;
-				stages[i].bundle.image[0] = tr.whiteImage;
+				stages[i].bundle.image[0] = tr.fullBrightImage;
 			}
 		}
 	} else if (

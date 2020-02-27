@@ -134,6 +134,7 @@ chg: r_lightmap is now latched again
 
 chg: r_fullbright is now latched again
   it now also supports surfaces referencing q3map2's "external lightmap" atlas images
+  r_mapBrightness is now used by r_fullbright for lightmapped surfaces when r_vertexLight is 0
 
 chg: negative r_swapInterval values will request adaptive V-Sync when using an OpenGL back-end
 

@@ -988,6 +988,10 @@ static void R_CreateBuiltinImages()
 	Com_Memset( data, 255, 4 );
 	tr.whiteImage = R_CreateImage( "*white", data, 1, 1, TF_RGBA8, IMG_NOMIPMAP | IMG_NOAF, TW_REPEAT );
 
+	const byte mapBrightness = (byte)( min( r_mapBrightness->value, 1.0f ) * 255.0f );
+	data[0] = data[1] = data[2] = mapBrightness;
+	tr.fullBrightImage = R_CreateImage( "*fullBright", data, 1, 1, TF_RGBA8, IMG_NOMIPMAP | IMG_NOAF, TW_REPEAT );
+
 	// scratchimages usually used for cinematic drawing (signal-quality effects)
 	// these are just placeholders: RE_StretchRaw will regenerate them when it wants them
 	for (i = 0; i < ARRAY_LEN(tr.scratchImage); ++i)

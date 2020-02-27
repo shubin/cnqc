@@ -861,7 +861,8 @@ typedef struct {
 	const byte*		externalVisData;	// from RE_SetWorldVisData, shared with CM_Load
 
 	image_t*		defaultImage;
-	image_t*		whiteImage;		// { 255, 255, 255, 255 }
+	image_t*		whiteImage;			// { 255, 255, 255, 255 }
+	image_t*		fullBrightImage;	// RGB scale based on r_mapBrightness, alpha 255
 	image_t*		fogImage;
 	image_t*		scratchImage[16];	// MAX_VIDEO_HANDLES
 
