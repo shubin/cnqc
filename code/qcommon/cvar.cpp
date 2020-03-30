@@ -881,6 +881,25 @@ static void Cvar_Toggle_f( void )
 
 static void Cvar_Nuke( cvar_t* var )
 {
+	// remove this cvar from the hash table so that
+	// a) it doesn't show up as existing, and
+	// b) it doesn't make other registered cvars not show up as existing
+	//    (a zeroed cvar_t struct would cause an early exit in Cvar_FindVar)
+	const long hash = Cvar_Hash( var->name );
+	cvar_t** hashVarIter = &hashTable[hash];
+	for ( ;; ) {
+		cvar_t* const hashVar = *hashVarIter;
+		if ( hashVar == NULL ) {
+			Com_Printf( "ERROR: CVar '%s' not found in hash map\n", var->name );
+			break;
+		}
+		if ( hashVar == var ) {
+			*hashVarIter = var->hashNext;
+			break;
+		}
+		hashVarIter = &hashVar->hashNext;
+	}
+
 	if ( var->name )
 		Z_Free( var->name );
 
