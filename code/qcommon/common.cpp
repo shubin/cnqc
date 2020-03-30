@@ -48,13 +48,15 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #endif
 
 
-#define MIN_COMHUNKMEGS_DED		 8	// for the dedicated server
-#define MIN_COMHUNKMEGS			56
-#define DEF_COMZONEMEGS			32
+#define MIN_COMHUNKMEGS_DED      8  // for the dedicated server
+#define MIN_COMHUNKMEGS         56
+#define CST_COMZONEMEGS         32
 #ifdef DEDICATED
-#define DEF_COMHUNKMEGS			64
+#define DEF_COMHUNKMEGS         64
+#define CST_SMALLZONEMEGS        1
 #else
-#define DEF_COMHUNKMEGS			128
+#define DEF_COMHUNKMEGS        128
+#define CST_SMALLZONEMEGS        4
 #endif
 
 
@@ -1269,11 +1271,11 @@ void Com_TouchMemory()
 
 static void Com_InitSmallZoneMemory()
 {
-	const int s_smallZoneTotal = 512 * 1024;
+	const int s_smallZoneTotal = 1024 * 1024 * CST_SMALLZONEMEGS;
 
 	smallzone = (memzone_t*)calloc( s_smallZoneTotal, 1 );
 	if ( !smallzone )
-		Com_Error( ERR_FATAL, "Small zone data failed to allocate %1.1f megs", (float)s_smallZoneTotal / (1024*1024) );
+		Com_Error( ERR_FATAL, "Small zone data failed to allocate %d MB", CST_SMALLZONEMEGS );
 
 	Z_ClearZone( smallzone, s_smallZoneTotal );
 }
@@ -1287,7 +1289,7 @@ static void Com_InitZoneMemory()
 	// myT: removed com_zoneMegs for now
 
 	// allocate the random block zone
-	s_zoneTotal = 1024 * 1024 * DEF_COMZONEMEGS;
+	s_zoneTotal = 1024 * 1024 * CST_COMZONEMEGS;
 
 	mainzone = (memzone_t*)calloc( s_zoneTotal, 1 );
 	if ( !mainzone )
