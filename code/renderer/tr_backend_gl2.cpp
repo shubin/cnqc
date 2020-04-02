@@ -823,10 +823,6 @@ static void GL_Bind( const image_t* image )
 		texnum = (GLuint)image->texnum;
 	}
 
-	if ( r_nobind->integer && tr.defaultImage && !backEnd.projection2D ) {
-		texnum = (GLuint)tr.defaultImage->texnum;
-	}
-
 	if ( glState.texID[glState.currenttmu] != texnum ) {
 		glState.texID[glState.currenttmu] = texnum;
 		glBindTexture( GL_TEXTURE_2D, texnum );

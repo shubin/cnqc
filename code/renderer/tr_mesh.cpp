@@ -176,9 +176,7 @@ static int R_ComputeLOD( const trRefEntity_t* ent )
 
 		if ( ( projectedRadius = ProjectRadius( radius, ent->e.origin ) ) != 0 )
 		{
-			float lodscale = r_lodscale->value;
-			if (lodscale > 20) lodscale = 20;
-			flod = 1.0f - projectedRadius * lodscale;
+			flod = 1.0f - projectedRadius * r_lodscale->value;
 		}
 		else
 		{

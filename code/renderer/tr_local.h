@@ -1013,7 +1013,6 @@ extern cvar_t	*r_d3d11_presentMode;		// DXGI presentation model, see DXGIPM_*
 extern cvar_t	*r_ext_max_anisotropy;
 extern cvar_t	*r_msaa;
 
-extern	cvar_t	*r_nobind;				// turns off binding to appropriate textures
 extern	cvar_t	*r_singleShader;		// make most world faces use default shader
 extern	cvar_t	*r_roundImagesDown;
 extern	cvar_t	*r_colorMipLevels;		// development aid to see texture mip usage
@@ -1044,7 +1043,6 @@ extern	cvar_t	*r_mapBrightness;
 
 extern	cvar_t	*r_debugSurface;
 
-extern	cvar_t	*r_showImages;
 extern	cvar_t	*r_debugSort;
 
 

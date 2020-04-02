@@ -122,7 +122,7 @@ chg: r_textureMode <filter> (default: "best") is now latched and only supports 2
   r_textureMode GL_NEAREST    = LEGO(R) mode - nearest-neighbor filtering for a subset of surfaces
   r_textureMode anything else = normal  mode - the engine picks the most appropriate filters
 
-chg: r_measureOverdraw was removed
+chg: removed the following CVars: r_measureOverdraw, r_nobind, r_showImages
 
 chg: r_speeds 1 now reports more precise timings, V-Sync status, GPU time and the selected back-end
 

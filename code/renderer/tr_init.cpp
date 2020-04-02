@@ -85,7 +85,6 @@ cvar_t	*r_vertexLight;
 cvar_t	*r_uiFullScreen;
 cvar_t	*r_mode;
 cvar_t	*r_blitMode;
-cvar_t	*r_nobind;
 cvar_t	*r_singleShader;
 cvar_t	*r_roundImagesDown;
 cvar_t	*r_colorMipLevels;
@@ -112,8 +111,6 @@ cvar_t	*r_brightness;
 cvar_t	*r_mapBrightness;
 
 cvar_t	*r_debugSurface;
-
-cvar_t	*r_showImages;
 
 cvar_t	*r_ambientScale;
 cvar_t	*r_directedScale;
@@ -416,31 +413,29 @@ static const cvarTableItem_t r_cvars[] =
 	//
 	// temporary variables that can change at any time
 	//
-	{ &r_ambientScale, "r_ambientScale", "0.6", CVAR_CHEAT },
-	{ &r_directedScale, "r_directedScale", "1", CVAR_CHEAT },
-	{ &r_uiFullScreen, "r_uifullscreen", "0", CVAR_TEMP },
-	{ &r_showImages, "r_showImages", "0", CVAR_TEMP },
-	{ &r_debugLight, "r_debuglight", "0", CVAR_TEMP },
-	{ &r_debugSort, "r_debugSort", "0", CVAR_CHEAT, CVART_FLOAT },
-	{ &r_nocurves, "r_nocurves", "0", CVAR_CHEAT },
-	{ &r_drawworld, "r_drawworld", "1", CVAR_CHEAT },
-	{ &r_portalOnly, "r_portalOnly", "0", CVAR_CHEAT },
-	{ &r_lodscale, "r_lodscale", "5", CVAR_CHEAT },
-	{ &r_norefresh, "r_norefresh", "0", CVAR_CHEAT },
-	{ &r_drawentities, "r_drawentities", "1", CVAR_CHEAT },
-	{ &r_nocull, "r_nocull", "0", CVAR_CHEAT },
-	{ &r_novis, "r_novis", "0", CVAR_CHEAT },
-	{ &r_speeds, "r_speeds", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "draw rendering performance counters" },
-	{ &r_verbose, "r_verbose", "0", CVAR_CHEAT },
-	{ &r_debugSurface, "r_debugSurface", "0", CVAR_CHEAT },
-	{ &r_nobind, "r_nobind", "0", CVAR_CHEAT },
-	{ &r_showtris, "r_showtris", "0", CVAR_CHEAT },
+	{ &r_ambientScale, "r_ambientScale", "0.6", CVAR_CHEAT, CVART_FLOAT, "0", NULL, "entity ambient light scale" },
+	{ &r_directedScale, "r_directedScale", "1", CVAR_CHEAT, CVART_FLOAT, "0", NULL, "entity directed light scale" },
+	{ &r_uiFullScreen, "r_uifullscreen", "0", CVAR_TEMP, CVART_BOOL }, // keeping it around in case we enable other mods again
+	{ &r_debugLight, "r_debuglight", "0", CVAR_TEMP, CVART_BOOL, NULL, NULL, "prints entity light values" },
+	{ &r_debugSort, "r_debugSort", "0", CVAR_CHEAT, CVART_FLOAT, "0", NULL, "doesn't render shaders with a greater sort key" },
+	{ &r_nocurves, "r_nocurves", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "doesn't render grid meshes" },
+	{ &r_drawworld, "r_drawworld", "1", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "disables rendering of world surfaces" },
+	{ &r_portalOnly, "r_portalOnly", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "only draws the mirrored plane" },
+	{ &r_lodscale, "r_lodscale", "5", CVAR_CHEAT, CVART_FLOAT, "1", "20", "LOD scale for MD3 models" },
+	{ &r_norefresh, "r_norefresh", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "disables 3D scene rendering" },
+	{ &r_drawentities, "r_drawentities", "1", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "enables entity rendering" },
+	{ &r_nocull, "r_nocull", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "disables frustum culling" },
+	{ &r_novis, "r_novis", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "disables PVS usage" },
+	{ &r_speeds, "r_speeds", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "draws rendering performance counters" },
+	{ &r_verbose, "r_verbose", "0", CVAR_TEMP, CVART_BOOL, NULL, NULL, "prints additional information" },
+	{ &r_debugSurface, "r_debugSurface", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "draws collision models" },
+	{ &r_showtris, "r_showtris", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "draws wireframe triangles" },
 	{ &r_showsky, "r_showsky", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "forces sky in front of all surfaces" },
-	{ &r_shownormals, "r_shownormals", "0", CVAR_CHEAT },
-	{ &r_clear, "r_clear", "0", CVAR_CHEAT },
-	{ &r_lockpvs, "r_lockpvs", "0", CVAR_CHEAT },
-	{ &r_maxpolys, "r_maxpolys", XSTRING(DEFAULT_MAX_POLYS), 0 },
-	{ &r_maxpolyverts, "r_maxpolyverts", XSTRING(DEFAULT_MAX_POLYVERTS), 0 }
+	{ &r_shownormals, "r_shownormals", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "draws wireframe normals" },
+	{ &r_clear, "r_clear", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "clears to violet instead of black" },
+	{ &r_lockpvs, "r_lockpvs", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "helps visualize the current PVS' limits" },
+	{ &r_maxpolys, "r_maxpolys", XSTRING(DEFAULT_MAX_POLYS), 0, CVART_INTEGER, XSTRING(DEFAULT_MAX_POLYS), NULL, "maximum polygon count per frame" },
+	{ &r_maxpolyverts, "r_maxpolyverts", XSTRING(DEFAULT_MAX_POLYVERTS), 0, CVART_INTEGER, XSTRING(DEFAULT_MAX_POLYVERTS), NULL, "maximum polygon vertex count per frame" }
 };
 
 
