@@ -2395,13 +2395,11 @@ static void GAL_Begin3D()
 	gl.pipelines[PID_GENERIC].uniformsDirty[GU_CLIP_PLANE] = qtrue;
 }
 
-static void GAL_BeginSkyAndClouds()
+static void GAL_BeginSkyAndClouds(double depth)
 {
 	gl.prevEnableClipPlane = gl.enableClipPlane;
 	ApplyClipPlane(qfalse);
-	glDepthRange(1.0, 1.0);
-	ApplyState(0, CT_TWO_SIDED, qfalse);
-	gl.alphaTest = AT_ALWAYS;
+	glDepthRange(depth, depth);
 }
 
 static void GAL_EndSkyAndClouds()

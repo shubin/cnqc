@@ -1522,9 +1522,8 @@ typedef struct {
 	void	(*EndFrame)();
 
 	// saves the current clip plane and disables it
-	// sets depth range to [1; 1]
-	// disables alpha blending, alpha testing, face culling and polygon offset
-	void	(*BeginSkyAndClouds)();
+	// sets depth range to [depth; depth]
+	void	(*BeginSkyAndClouds)( double depth );
 
 	// sets depth range to [0; 1]
 	// restores the old clip plane, if any

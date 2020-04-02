@@ -1965,19 +1965,16 @@ static void GAL_EndFrame()
 	}
 }
 
-static void GAL_BeginSkyAndClouds()
+static void GAL_BeginSkyAndClouds(double depth)
 {
 	const float clipPlane[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	memcpy(d3d.oldSkyClipPlane, d3d.clipPlane, sizeof(d3d.oldSkyClipPlane));
 	memcpy(d3d.clipPlane, clipPlane, sizeof(d3d.clipPlane));
-	ApplyState(GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO, CT_TWO_SIDED, qfalse);
-	d3d.texEnv = TE_DISABLED;
-	UploadPendingShaderData();
 
 	UINT numVP = 1;
 	d3ds.context->RSGetViewports(&numVP, &d3d.oldSkyViewport);
-	d3d.oldSkyViewport.MinDepth = 1.0f;
-	d3d.oldSkyViewport.MaxDepth = 1.0f;
+	d3d.oldSkyViewport.MinDepth = (FLOAT)depth;
+	d3d.oldSkyViewport.MaxDepth = (FLOAT)depth;
 	d3ds.context->RSSetViewports(1, &d3d.oldSkyViewport);
 }
 

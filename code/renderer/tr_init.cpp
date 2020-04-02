@@ -435,7 +435,7 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_debugSurface, "r_debugSurface", "0", CVAR_CHEAT },
 	{ &r_nobind, "r_nobind", "0", CVAR_CHEAT },
 	{ &r_showtris, "r_showtris", "0", CVAR_CHEAT },
-	{ &r_showsky, "r_showsky", "0", CVAR_CHEAT },
+	{ &r_showsky, "r_showsky", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "forces sky in front of all surfaces" },
 	{ &r_shownormals, "r_shownormals", "0", CVAR_CHEAT },
 	{ &r_clear, "r_clear", "0", CVAR_CHEAT },
 	{ &r_lockpvs, "r_lockpvs", "0", CVAR_CHEAT },

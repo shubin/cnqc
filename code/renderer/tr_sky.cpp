@@ -495,7 +495,7 @@ void R_InitSkyTexCoords( float heightCloud )
 static void DrawSkyBox()
 {
 	const image_t*const* skyImages = &tess.shader->sky.outerbox[0];
-	RB_PushSingleStageShader( 0, CT_TWO_SIDED );
+	RB_PushSingleStageShader( GLS_DEPTHMASK_TRUE, CT_TWO_SIDED );
 	shaderStage_t* const stage = tess.shader->stages[0];
 	stage->rgbGen = CGEN_IDENTITY_LIGHTING;
 
@@ -548,7 +548,10 @@ void RB_DrawSky()
 	RB_ClipSkyPolygons();
 	RB_CalcSkyBounds();
 
-	gal.BeginSkyAndClouds();
+	// r_showsky will let all the sky blocks be drawn in
+	// front of everything to allow developers to see how
+	// much sky is getting sucked in
+	gal.BeginSkyAndClouds(r_showsky->integer ? 0.0 : 1.0);
 	
 	if (tess.shader->sky.outerbox[0] && tess.shader->sky.outerbox[0] != tr.defaultImage)
 		DrawSkyBox();

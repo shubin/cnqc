@@ -1191,18 +1191,9 @@ static void GAL_Begin3D()
 }
 
 
-static void GAL_BeginSkyAndClouds()
+static void GAL_BeginSkyAndClouds( double depth )
 {
-	// r_showsky will let all the sky blocks be drawn in
-	// front of everything to allow developers to see how
-	// much sky is getting sucked in
-	if ( r_showsky->integer ) {
-		glDepthRange( 0.0, 0.0 );
-	} else {
-		glDepthRange( 1.0, 1.0 );
-	}
-
-	GL_State( 0 );
+	glDepthRange( depth, depth );
 }
 
 
