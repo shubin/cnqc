@@ -277,6 +277,9 @@ static OpenGL3 gl;
 
 
 static const char* generic_vs =
+// a good way to test warning reports with r_verbose 1
+//"#extension DOESNTEXISTLOL:warn\n"
+//----------------------------------
 "uniform mat4 modelView;\n"
 "uniform mat4 projection;\n"
 "uniform vec4 clipPlane;\n"
@@ -804,20 +807,63 @@ static qbool CreateShader(GLuint* shaderPtr, PipelineId pipelineId, GLenum shade
 
 	GLint result = GL_FALSE;
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &result);
-	if(result == GL_TRUE)
+	const qbool success = result == GL_TRUE;
+	if(success)
 	{
 		*shaderPtr = shader;
 		SetDebugName(GL_SHADER, shader, va("%s %s shader", debugName, GetShaderTypeName(shaderType)));
-		return qtrue;
 	}
 
-	GLint logLength = 0;
-	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logLength);
+	if(!success || r_verbose->integer)
+	{
+		GLint logLength = 0;
+		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logLength);
+		if(logLength > 0)
+		{
+			glGetShaderInfoLog(shader, sizeof(gl.log), NULL, gl.log);
+			const ErrorMode em = gl.errorMode;
+			gl.errorMode = success ? EM_PRINT : EM_FATAL;
+			HandleError(va("'%s' %s shader compilation failed: %s\n", debugName, GetShaderTypeName(shaderType), gl.log));
+			gl.errorMode = em;
+		}
+		else if(!success)
+		{
+			HandleError(va("'%s' %s shader compilation failed\n", debugName, GetShaderTypeName(shaderType)));
+		}
+	}
 
-	glGetShaderInfoLog(shader, sizeof(gl.log), NULL, gl.log);
-	HandleError(va("'%s' %s shader compilation failed: %s\n", debugName, GetShaderTypeName(shaderType), gl.log));
+	return success;
+}
 
-	return qfalse;
+static qbool FinalizeProgram(Program* prog, const char* debugName)
+{
+	GLint result = GL_FALSE;
+	glGetProgramiv(prog->program, GL_LINK_STATUS, &result);
+	const qbool success = result == GL_TRUE;
+	if(success)
+	{
+		SetDebugName(GL_PROGRAM, prog->program, va("%s program", debugName));
+	}
+
+	if(!success || r_verbose->integer)
+	{
+		GLint logLength = 0;
+		glGetProgramiv(prog->program, GL_INFO_LOG_LENGTH, &logLength);
+		if(logLength > 0)
+		{
+			glGetProgramInfoLog(prog->program, sizeof(gl.log), NULL, gl.log);
+			const ErrorMode em = gl.errorMode;
+			gl.errorMode = success ? EM_PRINT : EM_FATAL;
+			HandleError(va("'%s' program link failed: %s\n", debugName, gl.log));
+			gl.errorMode = em;
+		}
+		else if(!success)
+		{
+			HandleError(va("'%s' program link failed\n", debugName));
+		}
+	}
+
+	return success;
 }
 
 static qbool CreateGraphicsProgram(PipelineId pipelineId, const char* vs, const char* fs, const char* debugName)
@@ -845,21 +891,7 @@ static qbool CreateGraphicsProgram(PipelineId pipelineId, const char* vs, const 
 
 	glLinkProgram(prog->program);
 
-	GLint result = GL_FALSE;
-	glGetProgramiv(prog->program, GL_LINK_STATUS, &result);
-	if(result == GL_TRUE)
-	{
-		SetDebugName(GL_PROGRAM, prog->program, va("%s program", debugName));
-		return qtrue;
-	}
-
-	GLint logLength = 0;
-	glGetProgramiv(prog->program, GL_INFO_LOG_LENGTH, &logLength);
-
-	glGetProgramInfoLog(prog->program, sizeof(gl.log), NULL, gl.log);
-	HandleError(va("'%s' program link failed: %s\n", debugName, gl.log));
-
-	return qfalse;
+	return FinalizeProgram(prog, debugName);
 }
 
 static qbool CreateComputeProgram(Program* prog, const char* cs, const char* debugName)
@@ -873,21 +905,7 @@ static qbool CreateComputeProgram(Program* prog, const char* cs, const char* deb
 	glAttachShader(prog->program, prog->computeShader);
 	glLinkProgram(prog->program);
 
-	GLint result = GL_FALSE;
-	glGetProgramiv(prog->program, GL_LINK_STATUS, &result);
-	if(result == GL_TRUE)
-	{
-		SetDebugName(GL_PROGRAM, prog->program, va("%s program", debugName));
-		return qtrue;
-	}
-
-	GLint logLength = 0;
-	glGetProgramiv(prog->program, GL_INFO_LOG_LENGTH, &logLength);
-
-	glGetProgramInfoLog(prog->program, sizeof(gl.log), NULL, gl.log);
-	HandleError(va("'%s' program link failed: %s\n", debugName, gl.log));
-
-	return qfalse;
+	return FinalizeProgram(prog, debugName);
 }
 
 extern void GL_GetRenderTargetFormat(GLenum* internalFormat, GLenum* format, GLenum* type, int cnq3Format);
