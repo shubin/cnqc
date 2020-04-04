@@ -163,6 +163,10 @@ static int QuakeKeyFromSDLKey( SDL_Keysym key )
 		case SDLK_KP_PLUS: return K_KP_PLUS;
 		case SDLK_KP_MULTIPLY: return K_KP_STAR;
 		case SDLK_BACKSLASH: return K_BACKSLASH;
+		case SDLK_PAUSE: return K_PAUSE;
+		case SDLK_NUMLOCKCLEAR: return K_KP_NUMLOCK;
+		case SDLK_KP_EQUALS: return K_KP_EQUALS;
+		case SDLK_MENU: return K_MENU;
 		case SDLK_PERIOD: return '.';
 		case SDLK_COMMA: return ',';
 		case SDLK_EXCLAIM: return '!';
@@ -186,11 +190,19 @@ static int QuakeKeyFromSDLKey( SDL_Keysym key )
 		case SDLK_LEFTBRACKET: return '[';
 		case SDLK_RIGHTBRACKET: return ']';
 		case SDLK_UNDERSCORE: return '_';
-		// missing:
-		// K_KP_NUMLOCK
-		// K_KP_EQUALS
-		default: return -1;
+		case SDLK_SEMICOLON: return ';';
+		// not handled:
+		// K_COMMAND (Apple)
+		// K_POWER (Apple)
+		// K_AUX1-16
+		// K_WIN
+		default: break;
 	}
+
+	if (sym >= 32 && sym <= 126)
+		return (int)sym;
+
+	return -1;
 }
 
 

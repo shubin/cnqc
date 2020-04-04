@@ -682,7 +682,7 @@ static int Key_StringToKeynum( const char* str )
 	if ( str[0] == '0' && str[1] == 'x' && strlen( str ) == 4) {
 		int		n1, n2;
 		
-		n1 = str[2];
+		n1 = tolower( str[2] );
 		if ( n1 >= '0' && n1 <= '9' ) {
 			n1 -= '0';
 		} else if ( n1 >= 'a' && n1 <= 'f' ) {
@@ -691,7 +691,7 @@ static int Key_StringToKeynum( const char* str )
 			n1 = 0;
 		}
 
-		n2 = str[3];
+		n2 = tolower( str[3] );
 		if ( n2 >= '0' && n2 <= '9' ) {
 			n2 -= '0';
 		} else if ( n2 >= 'a' && n2 <= 'f' ) {
@@ -748,8 +748,8 @@ const char* Key_KeynumToString( int keynum )
 
 	tinystr[0] = '0';
 	tinystr[1] = 'x';
-	tinystr[2] = i > 9 ? i - 10 + 'a' : i + '0';
-	tinystr[3] = j > 9 ? j - 10 + 'a' : j + '0';
+	tinystr[2] = i > 9 ? i - 10 + 'A' : i + '0';
+	tinystr[3] = j > 9 ? j - 10 + 'A' : j + '0';
 	tinystr[4] = 0;
 
 	return tinystr;
