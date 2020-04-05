@@ -58,7 +58,8 @@ With this set-up, you can press F5 and run the engine through the Visual C++ deb
 |:------|:------:|:------:|:---------------|:----------------|
 | NASM  | X      | X      | nasm           | nasm            |
 | SDL 2 |        | X      | libsdl2-dev    | sdl2            |
- On FreeBSD, we link against libexecinfo for the backtrace functions. We thus require FreeBSD 10.0 or later.
+
+On FreeBSD, we link against libexecinfo for the backtrace functions. We thus require FreeBSD 10.0 or later.
 
 **Options**
 
