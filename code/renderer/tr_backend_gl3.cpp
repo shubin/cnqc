@@ -149,7 +149,7 @@ enum GenericUniform
 	GU_PROJECTION,
 	GU_CLIP_PLANE,
 	GU_ALPHA_TEX,
-	GU_GAMMA_BRIGHT_NOISE_SEED,
+	GU_GAMMA_BRIGHT_NOISE_SEED, // @NOTE: not always defined
 	GU_COUNT
 };
 
@@ -1967,6 +1967,8 @@ static void Init()
 		gl.errorMode = EM_FATAL;
 	}
 
+	glInfo.softSpriteSupport = r_softSprites->integer == 1;
+
 	gl.pipelineId = PID_COUNT;
 	ApplyPipeline(PID_GENERIC);
 
@@ -2006,7 +2008,7 @@ static void InitGLInfo()
 		glInfo.maxAnisotropy = 0;
 	}
 
-	glInfo.softSpriteSupport = qtrue;
+	glInfo.softSpriteSupport = qfalse;
 	glInfo.mipGenSupport = qfalse;
 	glInfo.alphaToCoverageSupport = qfalse;
 }
@@ -2139,7 +2141,8 @@ static void DrawGeneric()
 	{
 		glUniform4fv(pipeline->uniformLocations[GU_CLIP_PLANE], 1, gl.clipPlane);
 	}
-	if(pipeline->uniformsDirty[GU_GAMMA_BRIGHT_NOISE_SEED])
+	if(pipeline->uniformsDirty[GU_GAMMA_BRIGHT_NOISE_SEED] &&
+	   pipeline->uniformLocations[GU_GAMMA_BRIGHT_NOISE_SEED] != -1)
 	{
 		glUniform4f(
 			pipeline->uniformLocations[GU_GAMMA_BRIGHT_NOISE_SEED],

@@ -1937,7 +1937,7 @@ static void ProcessSoftSprite()
 
 	shader.softSprite = SST_NONE;
 
-	if (!glInfo.softSpriteSupport || r_softSprites->integer == 0)
+	if (!glInfo.softSpriteSupport)
 	   return;
 
 	if (shader.sort <= SS_OPAQUE)

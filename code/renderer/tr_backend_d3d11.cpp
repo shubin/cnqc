@@ -1693,7 +1693,7 @@ static qbool GAL_Init()
 	glInfo.displayFrequency = 0;
 	glInfo.maxAnisotropy = D3D11_REQ_MAXANISOTROPY;	// @NOTE: D3D10_REQ_MAXANISOTROPY == D3D11_REQ_MAXANISOTROPY
 	glInfo.maxTextureSize = MAX_GPU_TEXTURE_SIZE;
-	glInfo.softSpriteSupport = qtrue;
+	glInfo.softSpriteSupport = r_softSprites->integer == 1;
 	glInfo.mipGenSupport = mipGenOK;
 	glInfo.alphaToCoverageSupport = alphaToCoverageOK;
 
