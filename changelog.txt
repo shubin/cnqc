@@ -100,6 +100,8 @@ add: the renderer can now batch surfaces with different (but sufficiently simila
 
 add: /modellist /skinlist /imagelist /shaderlist can now filter results with pattern matching
 
+chg: improved the map download initiation logic and updated the CNQ3 map server addresses
+
 chg: increased the small zone allocator's size from 512 KB to 4 MB (1 MB in the dedicated executable)
 
 chg: dynamic lights now use a softer fall-off curve to create softer edges

@@ -1149,25 +1149,51 @@ static qbool MapDL_FileExists( const char* path )
 // returns qtrue if a download started
 static qbool CL_StartDownloads()
 {
-	int mode = cl_allowDownload->integer;
-	if (mode < -1 || mode > 1) {
-		mode = 1;
-	}
+	static unsigned int pakChecksums[MAX_PAKFILES];
 
 	// never launch a download when starting a listen server...
 	if (com_sv_running->integer)
 		return qfalse;
 
+	// note that CL_SystemInfoChanged won't change our local values of "sv_pure" and "sv_currentPak",
+	// so we have to read them from the server's gamestate data
+	char mapName[MAX_NAME_LENGTH];
+	char mapPath[MAX_NAME_LENGTH];
+	const char* const systemInfo = cl.gameState.stringData + cl.gameState.stringOffsets[CS_SYSTEMINFO];
+	const char* const serverInfo = cl.gameState.stringData + cl.gameState.stringOffsets[CS_SERVERINFO];
+	const qbool pureServer = atoi(Info_ValueForKey(systemInfo, "sv_pure")) == 1;
+	const qbool exactMatch = !clc.demoplaying && pureServer;
+	Q_strncpyz(mapName, Info_ValueForKey(serverInfo, "mapname"), sizeof(mapName));
+	Q_strncpyz(mapPath, va("maps/%s.bsp", mapName), sizeof(mapPath));
+	const int mode = cl_allowDownload->integer;
+	unsigned int pakChecksum = 0;
+	if (sscanf(Info_ValueForKey(serverInfo, "sv_currentPak"), "%d", &pakChecksum) != 1)
+		pakChecksum = 0;
+
 	// downloads disabled
 	if (mode == 0) {
-		// autodownload is disabled on the client
-		// but it's possible that some referenced files on the server are missing
-		char missingfiles[1024];
-		if (FS_ComparePaks(missingfiles, sizeof(missingfiles), qfalse)) {
-			// NOTE TTimo I would rather have that printed as a modal message box
-			// but at this point while joining the game we don't know whether we will successfully join or not
-			Com_Printf("\nWARNING: You are missing some files referenced by the server:\n%s"
-					   "To enable downloads, set cl_allowDownload to 1 (new) or -1 (old)\n\n", missingfiles);
+		if (exactMatch && pakChecksum != 0) {
+			// don't allow connections to pure CNQ3 servers if we don't have the right file
+			int pakCount;
+			FS_MissingPaks(pakChecksums, &pakCount, ARRAY_LEN(pakChecksums));
+			for (int i = 0; i < pakCount; ++i) {
+				if (pakChecksums[i] == pakChecksum) {
+					Com_Printf("\nERROR: You are missing the PK3 file the pure server has loaded the current map from. "
+							   "To enable downloads, set cl_allowDownload to 1 (new) or -1 (old).\n\n");
+					Com_Error(ERR_DROP, "Missing map! Try cl_allowDownload 1");
+					break;
+				}
+			}
+		} else if (exactMatch) {
+			// we can't be sure whether we're about to break sv_pure or not :-(
+			// it's possible that some referenced files on the server are missing
+			char missingfiles[1024];
+			if (FS_ComparePaks(missingfiles, sizeof(missingfiles), qfalse)) {
+				// NOTE TTimo I would rather have that printed as a modal message box
+				// but at this point while joining the game we don't know whether we will successfully join or not
+				Com_Printf("\nWARNING: You are missing some files referenced by the server:\n%s\n"
+							"To enable downloads, set cl_allowDownload to 1 (new) or -1 (old)\n\n", missingfiles);
+			}
 		}
 		return qfalse;
 	}
@@ -1177,7 +1203,6 @@ static qbool CL_StartDownloads()
 		if (FS_ComparePaks(clc.downloadList, sizeof(clc.downloadList), qtrue)) {
 			Com_Printf("Need paks: %s\n", clc.downloadList);
 			if (*clc.downloadList) {
-				// if autodownloading is not enabled on the server
 				cls.state = CA_CONNECTED;
 				CL_NextDownload();
 				return qtrue;
@@ -1190,27 +1215,58 @@ static qbool CL_StartDownloads()
 	// CNQ3 downloads
 	//
 
-	// note: the use of FS_FileIsInPAK works here because it rejects paks that aren't in the pure list
-	const qbool pureServer = Cvar_VariableIntegerValue("sv_pure"); // the cvar is in CS_SYSTEMINFO
-	const qbool exactMatch = !clc.demoplaying && pureServer;
-	const char* const serverInfo = cl.gameState.stringData + cl.gameState.stringOffsets[CS_SERVERINFO];
-	const char* const mapName = Info_ValueForKey(serverInfo, "mapname");
-	const char* const mapPath = va("maps/%s.bsp", mapName);
-	if ((!exactMatch && MapDL_FileExists(mapPath)) || FS_FileIsInPAK(mapPath, NULL, NULL))
+	// handle the non-exact case first
+	if (!exactMatch) {
+		// if we have something of the same name, we're good (enough)
+		if (FS_FileIsInPAK(mapPath, NULL, NULL) || MapDL_FileExists(mapPath))
+			return qfalse;
+
+		// if we don't, we look for anything of the same name
+		if (CL_MapDownload_Start(mapName, qfalse)) {
+			cls.state = CA_CONNECTED;
+			return qtrue;
+		}
+
+		// the above code will trigger a drop error if it fails
 		return qfalse;
+	}
+
+	// let's first see if we can assume we have the right file
+	if (pakChecksum != 0) {
+		// CNQ3 pure server: we can directly look for a specific pak file and be 100% sure
+		if (FS_PakExists(pakChecksum)) {
+			return qfalse;
+		}
+	} else {
+		// other server: no way to 100% prove we have the pak file the server loaded the map from,
+		// unless we make sure we have every single pak file the server has...
+
+		// let's suppose we have the following scenario:
+		// - the server has bad_a.pk3 and bad_b.pk3 in baseq3
+		// - both paks contains "maps/bad.bsp"
+		// - bad_a.pk3 and bad_b.pk3 are different files with different (Quake 3 FS) checksums
+		// - the server loads the map "bad" from bad_b.pk3 because of search path ordering
+		// - the client only has bad_a.pk3 and tries to connect
+		// - the client decides everything is fine and connects anyway... oops
+
+		// This happens with the original quake3.exe too and is a design flaw of the pure system.
+		// The alternative is for the client to decide not to connect whenever a single pak is missing,
+		// but that's just going to unjustifiably antagonize users for the sake of an infrequent issue.
+		// Server owners forgetting to delete old paks certainly isn't rare, however.
+		// The simplest solutions are diligence and having servers check and warn about duplicate maps.
+		if (FS_FileIsInPAK(mapPath, NULL, NULL))
+			return qfalse;
+	}
 
 	// generate a checksum list of all the pure paks we're missing
-	unsigned int pakChecksums[256];
 	int pakCount;
-	const char* const pakChecksumString = Info_ValueForKey(serverInfo, "sv_currentPak");
-	unsigned int pakChecksum;
-	if (sscanf(pakChecksumString, "%d", &pakChecksum) == 1 && pakChecksum != 0) {
+	if (pakChecksum != 0) {
 		pakChecksums[0] = pakChecksum;
 		pakCount = 1;
 	} else {
 		FS_MissingPaks(pakChecksums, &pakCount, ARRAY_LEN(pakChecksums));
 	}
-	
+
 	if (pakCount > 0) {
 		const qbool dlStarted = pakCount == 1 ?
 			// we know exactly which pk3 we need, we don't send a map name to the server
@@ -1226,12 +1282,6 @@ static qbool CL_StartDownloads()
 		return qfalse;
 	}
 
-	// we send the map's name only because we have no additional data and
-	// an exact match isn't needed
-	if (!exactMatch && CL_MapDownload_Start(mapName, qfalse)) {
-		cls.state = CA_CONNECTED;
-		return qtrue;
-	}
 	return qfalse;
 }
 

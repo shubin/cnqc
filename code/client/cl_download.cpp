@@ -132,8 +132,8 @@ static void FormatQueryWS( char* query, int querySize, const char* mapName );
 
 
 static const mapDownloadSource_t cl_mapDLSources[2] = {
-	{ "CNQ3",       "maps.playmorepromode.org", "82.196.10.31", 8000, &FormatQueryCNQ3 },
-	{ "WorldSpawn", "ws.q3df.org",              "176.9.111.74",   80, &FormatQueryWS   }
+	{ "CNQ3",       "maps.playmorepromode.com", "95.179.180.168", 8000, &FormatQueryCNQ3 },
+	{ "WorldSpawn", "ws.q3df.org",              "176.9.111.74",     80, &FormatQueryWS   }
 };
 
 
