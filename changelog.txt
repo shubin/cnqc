@@ -93,6 +93,13 @@ add: r_lightmapGreyscale <0.0 to 1.0> (default: 0) to control how monochromatic 
   r_lightmapGreyscale 0 = full color (nothing done)
   r_lightmapGreyscale 1 = completely monochrome
 
+add: r_transpSort <0|1> (default: 0) to select the transparency sorting mode
+  r_transpSort 0 = sort dynamic transparent surfaces
+  r_transpSort 1 = sort all transparent surfaces
+  the drawback of r_transpSort 1 is that gameplay legibility might suffer and results might look
+  quite inconsistent based on the view angles and surface dimensions
+  example: dropped items in the cpm18r acid with cg_simpleItems 1
+
 add: r_mapBrightness now works on q3map2's external lightmap atlas images
 
 add: the renderer can now batch surfaces with different (but sufficiently similar) shaders

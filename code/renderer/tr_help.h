@@ -163,6 +163,14 @@ S_COLOR_VAL "    T2  " S_COLOR_HELP "= Tent 2 (1/3 2/3, same as the CPU version)
 "dithering noise strength\n" \
 "The dithering on/off switch is " S_COLOR_CVAR "r_dither" S_COLOR_HELP "."
 
+#define help_r_transpSort \
+"transparency sorting mode\n" \
+S_COLOR_VAL "    0 " S_COLOR_HELP "= Sort dynamic transparent surfaces\n" \
+S_COLOR_VAL "    1 " S_COLOR_HELP "= Sort all transparent surfaces\n" \
+"The drawback of " S_COLOR_CVAR "r_transpSort " S_COLOR_VAL "1 " S_COLOR_HELP "is that gameplay legibility " \
+"might suffer and results might look quite inconsistent based on the view angles and surface dimensions.\n" \
+"Example: dropped items in the cpm18r acid with " S_COLOR_CVAR "cg_simpleItems " S_COLOR_VAL "1"
+
 #define help_r_rtColorFormat \
 "render target color format\n" \
 S_COLOR_VAL "    0 " S_COLOR_HELP "= R8G8B8A8\n" \

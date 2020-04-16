@@ -91,9 +91,6 @@ void R_AddPolygonSurfaces()
 
 void RE_AddPolyToScene( qhandle_t hShader, int numVerts, const polyVert_t* verts, int numPolys )
 {
-	int			i, j;
-	vec3_t		bounds[2];
-
 	if ( !tr.registered ) {
 		return;
 	}
@@ -106,12 +103,12 @@ void RE_AddPolyToScene( qhandle_t hShader, int numVerts, const polyVert_t* verts
 	// make sure the entire set will fit, rather than taking as many as we can
 	// both ways have downsides, but if we ARE hitting the cap we're already screwed
 	// and it's better to avoid something degenerate than to squeeze in 3 extra snowflakes
-	if ( r_numpolyverts + numVerts > max_polyverts || r_numpolys >= max_polys ) {
+	if ( r_numpolyverts + numPolys * numVerts > max_polyverts || r_numpolys + numPolys > max_polys ) {
 		ri.Printf( PRINT_DEVELOPER, "WARNING: RE_AddPolyToScene: r_max_polys or r_max_polyverts reached\n" );
 		return;
 	}
 
-	for ( j = 0; j < numPolys; j++ ) {
+	for ( int j = 0; j < numPolys; j++ ) {
 		srfPoly_t* poly = &backEndData->polys[r_numpolys];
 		poly->surfaceType = SF_POLY;
 		poly->hShader = hShader;
@@ -123,15 +120,19 @@ void RE_AddPolyToScene( qhandle_t hShader, int numVerts, const polyVert_t* verts
 		r_numpolys++;
 		r_numpolyverts += numVerts;
 
+		vec3_t bounds[2];
+		VectorCopy( poly->verts[0].xyz, bounds[0] );
+		VectorCopy( poly->verts[0].xyz, bounds[1] );
+		for ( int i = 1 ; i < poly->numVerts ; i++ ) {
+			AddPointToBounds( poly->verts[i].xyz, bounds[0], bounds[1] );
+		}
+		VectorAdd(bounds[0], bounds[1], poly->localOrigin);
+		VectorScale(poly->localOrigin, 0.5f, poly->localOrigin);
+
 		poly->fogIndex = 0;
 		// find which fog volume the poly is in (if any)
 		if (tr.world && (tr.world->numfogs > 1)) {
-			VectorCopy( poly->verts[0].xyz, bounds[0] );
-			VectorCopy( poly->verts[0].xyz, bounds[1] );
-			for ( i = 1 ; i < poly->numVerts ; i++ ) {
-				AddPointToBounds( poly->verts[i].xyz, bounds[0], bounds[1] );
-			}
-			for ( i = 1 ; i < tr.world->numfogs ; i++ ) {
+			for ( int i = 1 ; i < tr.world->numfogs ; i++ ) {
 				const fog_t* fog = &tr.world->fogs[i];
 				if ( bounds[1][0] >= fog->bounds[0][0]
 						&& bounds[1][1] >= fog->bounds[0][1]

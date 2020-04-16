@@ -492,10 +492,13 @@ typedef enum {
 } surfaceType_t;
 
 struct drawSurf_t {
-	unsigned			sort;			// bit combination for fast compares
-	float				depth;			// for sorting transparent surfaces
-	int					index;			// for sorting transparent surfaces
-	const surfaceType_t* surface;		// any of surface*_t
+	// we keep the sort key at the top instead of the pointer
+	// to allow for slightly cleaner code gen in the radix sort code
+	unsigned				sort;		// bit combination for fast compares
+	float					depth;		// transparent surface's midpoint's depth
+	const surfaceType_t*	surface;	// any of surface*_t
+	int						index;		// transparent surface's registration order
+	qhandle_t				model;		// MD3 model handle
 };
 
 extern void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])( const void* );
@@ -531,6 +534,7 @@ struct srfPoly_t {
 	int				fogIndex;
 	int				numVerts;
 	polyVert_t*		verts;
+	vec3_t			localOrigin;
 };
 
 
@@ -578,6 +582,8 @@ struct srfSurfaceFace_t {
 
 	int				numVerts;
 	srfVert_t		*verts;
+
+	vec3_t			localOrigin;
 };
 
 
@@ -996,6 +1002,7 @@ extern cvar_t	*r_intensity;
 extern cvar_t	*r_gamma;
 extern cvar_t	*r_greyscale;
 extern cvar_t	*r_noiseScale;			// the strength of the dithering noise
+extern cvar_t	*r_transpSort;			// transparency sorting mode
 extern cvar_t	*r_lightmap;			// render lightmaps only
 extern cvar_t	*r_lightmapGreyscale;	// how monochrome the lightmap looks
 extern cvar_t	*r_fullbright;			// avoid lightmap pass

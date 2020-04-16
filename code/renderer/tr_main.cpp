@@ -1068,7 +1068,7 @@ static void R_SortLitsurfs( dlight_t* dl )
 void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int fogIndex )
 {
 	// instead of checking for overflow, we just mask the index so it wraps around
-	int index = tr.refdef.numDrawSurfs++ & DRAWSURF_MASK;
+	const int index = tr.refdef.numDrawSurfs++ & DRAWSURF_MASK;
 	// the sort data is packed into a single 32 bit value so it can be
 	// compared quickly during the qsorting process
 	tr.refdef.drawSurfs[index].sort = (shader->sortedIndex << QSORT_SHADERNUM_SHIFT)
@@ -1076,6 +1076,7 @@ void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int fo
 			| (shader->cullType << QSORT_CULLTYPE_SHIFT)
 			| (shader->polygonOffset << QSORT_POLYOFF_SHIFT);
 	tr.refdef.drawSurfs[index].surface = surface;
+	tr.refdef.drawSurfs[index].model = tr.currentModel != NULL ? tr.currentModel->index : 0;
 }
 
 
@@ -1121,20 +1122,94 @@ static float R_ComputePointDepth( const vec3_t point, const float* modelMatrix )
 }
 
 
-static float R_ComputeSurfaceDepth( const surfaceType_t* surf, int entityNum )
+static float R_ComputeEntityPointDepth( const vec3_t point, int entityNum )
 {
-	if ( *surf == SF_ENTITY ) {
-		const refEntity_t* ent = &tr.refdef.entities[entityNum].e;
-		if ( ent->reType == RT_SPRITE )
-			return R_ComputePointDepth( ent->origin, tr.viewParms.world.modelMatrix );
-		if ( ent->reType == RT_LIGHTNING )
-			return -999666.0f;
-	}
-	
-	return 999666.0f;
+	orientationr_t orient;
+	if ( entityNum != ENTITYNUM_WORLD )
+		R_RotateForEntity( &tr.refdef.entities[entityNum], &tr.viewParms, &orient );
+	else
+		orient = tr.viewParms.world;
+
+	return R_ComputePointDepth( point, orient.modelMatrix );
 }
 
 
+static float R_ComputeSurfaceDepth( const surfaceType_t* surf, int entityNum, qhandle_t model )
+{
+	const float back  =  999666.0f;
+	const float front = -999666.0f;
+
+	if ( *surf == SF_ENTITY ) {
+		const refEntity_t* const ent = &tr.refdef.entities[entityNum].e;
+		if ( ent->reType == RT_SPRITE ) // CPMA: simple items, rocket explosions, ...
+			return R_ComputeEntityPointDepth( ent->origin, entityNum );
+		if ( ent->reType == RT_LIGHTNING ) // CPMA: first-person lightning gun beam
+			return front;
+		// note that RT_MODEL not being checked isn't an omission, it's not needed
+		return back;
+	}
+
+	if ( *surf == SF_POLY ) { // CPMA: impact marks, rocket smoke, ...
+		const srfPoly_t* const poly = (const srfPoly_t*)surf;
+		return R_ComputeEntityPointDepth( poly->localOrigin, entityNum );
+	}
+
+	if ( *surf == SF_MD3 ) { // CPMA: spawn points, rocket projectiles, ...
+		vec3_t mins, maxs, midPoint;
+		R_ModelBounds( model, mins, maxs );
+		VectorAdd( mins, maxs, midPoint );
+		VectorScale( midPoint, 0.5f, midPoint );
+		return R_ComputeEntityPointDepth( midPoint, entityNum );
+	}
+
+	// If we don't sort them,  we let "static" surfaces be drawn behind the "dynamic" ones.
+	// This helps avoid inconsistent-looking results like CPMA simple items and
+	// large enough transparent liquid pools (e.g. dropped weapons in the cpm18r acid).
+	if ( r_transpSort->integer == 0 )
+		return back;
+
+	if ( *surf == SF_FACE ) { // cpm25 water
+		const srfSurfaceFace_t* const face = (const srfSurfaceFace_t*)surf;
+		return R_ComputeEntityPointDepth( face->localOrigin, entityNum );
+	}
+
+	if ( *surf == SF_GRID ) { // hektik_b3 item markers
+		const srfGridMesh_t* const grid = (const srfGridMesh_t*)surf;
+		return R_ComputeEntityPointDepth( grid->localOrigin, entityNum );
+	}
+
+	if ( *surf == SF_TRIANGLES ) { // cpm18r acid
+		const srfTriangles_t* const tri = (const srfTriangles_t*)surf;
+		return R_ComputeEntityPointDepth( tri->localOrigin, entityNum );
+	}
+
+	return back;
+}
+
+
+/*
+A few notes on transparency handling:
+
+a) User-specified blend modes and user-created data mean we can't robustly substitute blend modes
+   with better alternatives that are commutative (e.g. pre-multiplied alpha instead of the "standard" blend).
+   The amount of corner cases to handle would be a headache and textures would need to be modified.
+   I'm not even sure if it's possible. I'd gladly be proven wrong, though.
+
+b) The code currently sorts surfaces (triangle groups) back to front.
+   Sorting individual triangles would obviously be better for many scenarios,
+   but it would still not be correct at all times (e.g. intersecting triangles, 3-way overlaps).
+
+c) What we really want is true order-independent transparency (OIT).
+   There are numerous techniques, but this 2-step method is the most promising avenue:
+   1. Render transparent surfaces into per-pixel linked lists.
+   2. Do a single "full-screen" pass which sorts and resolves each pixel's list.
+   This requires support for atomic shader operations.
+
+   When atomic shader operations are not available, we could fall back to:
+   - The current approach.
+   - Per-pixel fixed-size arrays (there are several methods).
+   - Depth peeling (there are also several methods).
+*/
 static int R_CompareDrawSurfDepth( const void* aPtr, const void* bPtr )
 {
 	const drawSurf_t* a = ( const drawSurf_t* )aPtr;
@@ -1211,7 +1286,7 @@ static void R_SortDrawSurfs( int firstDrawSurf, int firstLitSurf )
 			break;
 		}
 
-		drawSurfs[i].depth = R_ComputeSurfaceDepth( drawSurfs[i].surface, entityNum );
+		drawSurfs[i].depth = R_ComputeSurfaceDepth( drawSurfs[i].surface, entityNum, drawSurfs[i].model );
 		drawSurfs[i].index = i;
 	}
 
@@ -1275,7 +1350,7 @@ static void R_AddEntitySurfaces()
 			break;
 
 		case RT_MODEL:
-			// we must set up parts of tr.or for model culling
+			// we must set up parts of tr.orient for model culling
 			R_RotateForEntity( ent, &tr.viewParms, &tr.orient );
 
 			tr.currentModel = R_GetModelByHandle( ent->e.hModel );

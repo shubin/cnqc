@@ -391,6 +391,14 @@ static void ParseFace( const dsurface_t* ds, const drawVert_t* verts, msurface_t
 			VectorCopy(cv->plane.normal, cv->verts[i].normal);
 		}
 	}
+
+	vec3_t mins, maxs;
+	ClearBounds(mins, maxs);
+	for ( int i = 0 ; i < numVerts ; i++ ) {
+		AddPointToBounds(cv->verts[i].xyz, mins, maxs);
+	}
+	VectorAdd(mins, maxs, cv->localOrigin);
+	VectorScale(cv->localOrigin, 0.5f, cv->localOrigin);
 }
 
 
@@ -486,6 +494,9 @@ static void ParseTriSurf( const dsurface_t* ds, const drawVert_t* verts, msurfac
 		}
 		R_ColorShiftLightingBytes( verts[i].color, tri->verts[i].rgba );
 	}
+
+	VectorAdd( tri->bounds[0], tri->bounds[1], tri->localOrigin );
+	VectorScale( tri->localOrigin, 0.5f, tri->localOrigin );
 
 	indexes += LittleLong( ds->firstIndex );
 	for ( i = 0 ; i < numIndexes ; i++ ) {
