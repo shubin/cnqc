@@ -2152,13 +2152,13 @@ static void GAL_CreateTextureEx(image_t* image, int mipCount, int mipOffset, int
 	LinearToGammaCSData dataL2G;
 	dataL2G.intensity = r_intensity->value;
 	dataL2G.invGamma = 1.0f / r_mipGenGamma->value;
-	dataL2G.blendColor[3] = 0.0f;
 
 	// copy to destination mip 0 now if needed
 	if(mipOffset == 0)
 	{
 		readIndex = 0;
 		writeIndex = 2;
+		memcpy(dataL2G.blendColor, r_mipBlendColors[0], sizeof(dataL2G.blendColor));
 		ResetShaderData(d3d.mipLinearToGammaConstBuffer, &dataL2G, sizeof(dataL2G));
 		d3ds.context->CSSetShader(d3d.mipLinearToGammaComputeShader, NULL, 0);
 		d3ds.context->CSSetConstantBuffers(0, 1, &bufferNull);
