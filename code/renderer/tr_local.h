@@ -357,10 +357,17 @@ typedef struct {
 } fogParms_t;
 
 typedef enum {
-	SST_NONE,		// disabled
-	SST_BLEND,		// blend    pass -> modulate alpha
-	SST_ADDITIVE	// additive pass -> modulate color
-} softSpriteType_t;
+	DFT_NONE,   // disabled
+	DFT_BLEND,  // std alpha blend -> fade color = (R G B 0)
+	DFT_ADD,    // additive        -> fade color = (0 0 0 A)
+	DFT_MULT,   // multiplicative  -> fade color = (1 1 1 A)
+	DFT_PMA,    // pre-mult alpha  -> fade color = (0 0 0 0)
+	DFT_TBD,    // to be determined, i.e. fix up later
+	DFT_COUNT
+} depthFadeType_t;
+
+extern const float r_depthFadeScale[DFT_COUNT][4];
+extern const float r_depthFadeBias [DFT_COUNT][4];
 
 
 struct shader_t {
@@ -411,9 +418,10 @@ struct shader_t {
 	vec2_t lmScale;
 	vec2_t lmBias;
 
-	softSpriteType_t softSprite;
-	float softSpriteDistance;
-	float softSpriteOffset;
+	// depth fade rendering settings
+	depthFadeType_t dfType;
+	float dfInvDist;
+	float dfBias;
 
 	shader_t* next;
 };
@@ -1006,7 +1014,7 @@ extern cvar_t	*r_transpSort;			// transparency sorting mode
 extern cvar_t	*r_lightmap;			// render lightmaps only
 extern cvar_t	*r_lightmapGreyscale;	// how monochrome the lightmap looks
 extern cvar_t	*r_fullbright;			// avoid lightmap pass
-extern cvar_t	*r_softSprites;			// draws certain surfaces as depth particles
+extern cvar_t	*r_depthFade;			// fades marked shaders based on depth
 extern cvar_t	*r_gpuMipGen;			// uses GPU-side mip-map generation
 extern cvar_t	*r_alphaToCoverage;		// enables A2C on alpha-tested surfaces
 extern cvar_t	*r_dither;				// enables dithering
@@ -1256,7 +1264,7 @@ struct shaderCommands_t
 	const shaderStage_t** xstages;
 
 	// when > 0, only soft sprites are allowed in this batch
-	softSpriteType_t softSprite;
+	depthFadeType_t depthFade;
 
 	// when qtrue, RB_EndSurface doesn't need to compute deforms, colors, texture coordinates
 	qbool deformsPreApplied;
@@ -1629,7 +1637,7 @@ struct glinfo_t {
 	// used by renderer
 	int		maxTextureSize;
 	int		maxAnisotropy;
-	qbool	softSpriteSupport;
+	qbool	depthFadeSupport;
 	qbool	mipGenSupport;
 	qbool	alphaToCoverageSupport;
 };

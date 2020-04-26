@@ -13,12 +13,12 @@ add: r_backend <GL2|GL3|D3D11> (default: D3D11 on Windows, GL3 otherwise) select
   -----------------------|--------|--------|--------------------|
   MSAA                   | GL 3.0 | always | always             |
   MSAA centroid sampling | never  | always | always             |
-  depth sprites          | never  | always | always             |
+  depth fade             | never  | always | always             |
   alpha to coverage AA   | never  | always | always             |
   dithering              | never  | always | always             |
   GPU mip-map generation | never  | GL 4.3 | feature level 11.0 |
 
-add: r_softSprite <0|1> (default: 1) enables depth sprites (soft particles)
+add: r_depthFade <0|1> (default: 1) enables depth fade rendering
   this helps explosions, smoke, blood, etc. not having "sharp edges" when intersecting geometry
 
 add: r_alphaToCoverage <0|1> (default: 1) enables alpha to coverage anti-aliasing
@@ -99,6 +99,15 @@ add: r_transpSort <0|1> (default: 0) to select the transparency sorting mode
   the drawback of r_transpSort 1 is that gameplay legibility might suffer and results might look
   quite inconsistent based on the view angles and surface dimensions
   example: dropped items in the cpm18r acid with cg_simpleItems 1
+
+add: global shader directive q3map_cnq3_depthFade <scale> <bias> enables depth fade rendering
+  scale is the depth range over wich to fade the currently rendered surface
+  bias  is a value added to the currently rendered surface's depth, positive goes towards the camera
+  whether this is enabled is decided by r_depthFade (must be 1) and r_backend (can't be GL2)
+  depth writes must be disabled in all stages (no shader stage can use the depthWrite directive)
+  the blend mode (blendFunc) must be the same for all stages and must be one of:
+    (one, one) (src_alpha, one) (one_minus_src_alpha, one) (dst_color, zero) (zero, src_color)
+    (src_alpha, one_minus_src_alpha) (one, one_minus_src_alpha)
 
 add: r_mapBrightness now works on q3map2's external lightmap atlas images
 

@@ -23,6 +23,26 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 // tr_shader.c -- this file deals with the parsing and definition of shaders
 
+const float r_depthFadeScale[DFT_COUNT][4] =
+{
+	{ 0.0f, 0.0f, 0.0f, 0.0f }, // DFT_NONE
+	{ 1.0f, 1.0f, 1.0f, 0.0f }, // DFT_BLEND
+	{ 0.0f, 0.0f, 0.0f, 1.0f }, // DFT_ADD
+	{ 0.0f, 0.0f, 0.0f, 1.0f }, // DFT_MULT
+	{ 0.0f, 0.0f, 0.0f, 0.0f }, // DFT_PMA
+	{ 0.0f, 0.0f, 0.0f, 0.0f }  // DFT_TBD
+};
+
+const float r_depthFadeBias[DFT_COUNT][4] =
+{
+	{ 0.0f, 0.0f, 0.0f, 0.0f }, // DFT_NONE
+	{ 0.0f, 0.0f, 0.0f, 0.0f }, // DFT_BLEND
+	{ 0.0f, 0.0f, 0.0f, 0.0f }, // DFT_ADD
+	{ 1.0f, 1.0f, 1.0f, 0.0f }, // DFT_MULT
+	{ 0.0f, 0.0f, 0.0f, 0.0f }, // DFT_PMA
+	{ 0.0f, 0.0f, 0.0f, 0.0f }  // DFT_TBD
+};
+
 static char* s_shaderText = 0;
 
 // the shader is parsed into these global variables, then copied into
@@ -1265,6 +1285,36 @@ static void ParseSurfaceParm( const char** text )
 }
 
 
+// q3map_cnq3_depthFade <scale> <bias>
+
+static void ParseDepthFade( const char** text )
+{
+	const char* token = COM_ParseExt( text, qfalse );
+	float scale;
+	if ( token[0] == '\0' || sscanf( token, "%f", &scale ) != 1 || scale <= 0.0f ) {
+		ri.Printf( PRINT_WARNING,
+				  "WARNING: invalid/missing depth fade scale argument '%s' in shader '%s'! "
+				  "Ignoring the directive completely.\n",
+				  token, shader.name );
+		return;
+	}
+
+	token = COM_ParseExt( text, qfalse );
+	float bias;
+	if ( token[0] == '\0' || sscanf( token, "%f", &bias ) != 1 ) {
+		ri.Printf( PRINT_WARNING,
+				  "WARNING: invalid/missing depth fade bias argument '%s' in shader '%s'! "
+				  "Ignoring the directive completely.\n",
+				  token, shader.name );
+		return;
+	}
+
+	shader.dfType = DFT_TBD;
+	shader.dfInvDist = 1.0f / scale;
+	shader.dfBias = bias;
+}
+
+
 // the current text pointer is at the explicit text definition of the shader.
 // parse it into the global shader variable. later functions will optimize it.
 
@@ -1329,6 +1379,10 @@ static qbool ParseShader( const char** text )
 			if (token[0]) {
 				shader.clampTime = atof(token);
 			}
+		}
+		else if ( !Q_stricmp( token, "q3map_cnq3_depthFade" ) ) {
+			ParseDepthFade( text );
+			continue;
 		}
 		// skip stuff that only the q3map needs
 		else if ( !Q_stricmpn( token, "q3map", 5 ) ) {
@@ -1866,15 +1920,36 @@ static void VertexLightingCollapse( void ) {
 }
 
 
-static qbool IsAdditiveBlend()
+static qbool IsAdditiveBlendDepthFade()
 {
 	for (int i = 0; i < shader.numStages; ++i) {
 		if (!stages[i].active)
 			continue;
 
-		const int bits = stages[i].stateBits;
-		if ((bits & GLS_SRCBLEND_BITS) != GLS_SRCBLEND_ONE ||
-			(bits & GLS_DSTBLEND_BITS) != GLS_DSTBLEND_ONE ||
+		const unsigned int bits = stages[i].stateBits;
+		const unsigned int src = bits & GLS_SRCBLEND_BITS;
+		const unsigned int dst = bits & GLS_DSTBLEND_BITS;
+		if ((src != GLS_SRCBLEND_ONE && src != GLS_SRCBLEND_SRC_ALPHA && src != GLS_SRCBLEND_ONE_MINUS_SRC_ALPHA) ||
+		   dst != GLS_DSTBLEND_ONE ||
+		   (bits & GLS_DEPTHMASK_TRUE) != 0)
+		   return qfalse;
+	}
+
+	return qtrue;
+}
+
+
+static qbool IsNormalBlendDepthFade()
+{
+	for (int i = 0; i < shader.numStages; ++i) {
+		if (!stages[i].active)
+			continue;
+
+		const unsigned int bits = stages[i].stateBits;
+		const unsigned int src = bits & GLS_SRCBLEND_BITS;
+		const unsigned int dst = bits & GLS_DSTBLEND_BITS;
+		if (src != GLS_SRCBLEND_SRC_ALPHA ||
+			dst != GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA ||
 			(bits & GLS_DEPTHMASK_TRUE) != 0)
 			return qfalse;
 	}
@@ -1883,15 +1958,37 @@ static qbool IsAdditiveBlend()
 }
 
 
-static qbool IsNormalBlend()
+static qbool IsMultiplicativeBlendDepthFade()
 {
 	for (int i = 0; i < shader.numStages; ++i) {
 		if (!stages[i].active)
 			continue;
 
-		const int bits = stages[i].stateBits;
-		if ((bits & GLS_SRCBLEND_BITS) != GLS_SRCBLEND_SRC_ALPHA ||
-			(bits & GLS_DSTBLEND_BITS) != GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA ||
+		const unsigned int bits = stages[i].stateBits;
+		const unsigned int src = bits & GLS_SRCBLEND_BITS;
+		const unsigned int dst = bits & GLS_DSTBLEND_BITS;
+		const qbool multA = src == GLS_SRCBLEND_DST_COLOR && dst == GLS_DSTBLEND_ZERO;
+		const qbool multB = src == GLS_SRCBLEND_ZERO && dst == GLS_DSTBLEND_SRC_COLOR;
+		if ((!multA && !multB) ||
+			(bits & GLS_DEPTHMASK_TRUE) != 0)
+		return qfalse;
+	}
+
+	return qtrue;
+}
+
+
+static qbool IsPreMultAlphaBlendDepthFade()
+{
+	for (int i = 0; i < shader.numStages; ++i) {
+		if (!stages[i].active)
+			continue;
+
+		const unsigned int bits = stages[i].stateBits;
+		const unsigned int src = bits & GLS_SRCBLEND_BITS;
+		const unsigned int dst = bits & GLS_DSTBLEND_BITS;
+		if (src != GLS_SRCBLEND_ONE ||
+			dst != GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA ||
 			(bits & GLS_DEPTHMASK_TRUE) != 0)
 			return qfalse;
 	}
@@ -1900,7 +1997,7 @@ static qbool IsNormalBlend()
 }
 
 
-static void ProcessSoftSprite()
+static void ProcessDepthFade()
 {
 	struct ssShader {
 		const char* name;
@@ -1935,9 +2032,10 @@ static void ProcessSoftSprite()
 		{ "shotgunSmokePuffNPM", 8.0f }
 	};
 
-	shader.softSprite = SST_NONE;
+	const qbool shaderEnabled = shader.dfType == DFT_TBD;
+	shader.dfType = DFT_NONE;
 
-	if (!glInfo.softSpriteSupport)
+	if (!glInfo.depthFadeSupport)
 	   return;
 
 	if (shader.sort <= SS_OPAQUE)
@@ -1952,22 +2050,28 @@ static void ProcessSoftSprite()
 	if (activeStages <= 0)
 		return;
 
-	qbool found = qfalse;
-	for (int i = 0; i < ARRAY_LEN(ssShaders); ++i) {
-		if (!Q_stricmp(shader.name, ssShaders[i].name)) {
-			shader.softSpriteDistance = 1.0f / ssShaders[i].distance;
-			shader.softSpriteOffset = ssShaders[i].offset;
-			found = qtrue;
-			break;
+	if (!shaderEnabled) {
+		qbool found = qfalse;
+		for (int i = 0; i < ARRAY_LEN(ssShaders); ++i) {
+			if (!Q_stricmp(shader.name, ssShaders[i].name)) {
+				shader.dfInvDist = 1.0f / ssShaders[i].distance;
+				shader.dfBias = ssShaders[i].offset;
+				found = qtrue;
+				break;
+			}
 		}
+		if (!found)
+			return;
 	}
-	if (!found)
-		return;
 
-	if (IsAdditiveBlend())
-		shader.softSprite = SST_ADDITIVE;
-	else if (IsNormalBlend())
-		shader.softSprite = SST_BLEND;
+	if (IsAdditiveBlendDepthFade())
+		shader.dfType = DFT_ADD;
+	else if (IsNormalBlendDepthFade())
+		shader.dfType = DFT_BLEND;
+	else if (IsMultiplicativeBlendDepthFade())
+		shader.dfType = DFT_MULT;
+	else if (IsPreMultAlphaBlendDepthFade())
+		shader.dfType = DFT_PMA;
 }
 
 
@@ -2192,7 +2296,7 @@ static shader_t* FinishShader()
 		shader.sort = SS_FOG;
 	}
 
-	ProcessSoftSprite();
+	ProcessDepthFade();
 
 	return GeneratePermanentShader();
 }

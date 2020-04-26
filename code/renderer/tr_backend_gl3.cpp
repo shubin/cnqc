@@ -172,8 +172,9 @@ enum SoftSpriteUniform
 	SU_PROJECTION,
 	SU_CLIP_PLANE,
 	SU_ALPHA_TEST,
-	SU_PROJ22_32,
-	SU_ADD_DIST_OFFSET,
+	SU_DIST_OFFSET,
+	SU_COLOR_SCALE,
+	SU_COLOR_BIAS,
 	SU_COUNT
 };
 
@@ -236,6 +237,10 @@ struct OpenGL3
 	AlphaTest alphaTest;
 	qbool dlOpaque;
 	float dlIntensity;
+	float depthFadeScale[4];
+	float depthFadeBias[4];
+	float depthFadeDist;
+	float depthFadeOffset;
 
 	ArrayBuffer arrayBuffers[VB_COUNT];
 	ArrayBuffer indexBuffer;
@@ -476,6 +481,7 @@ static const char* sprite_vs =
 "out vec2 texCoords1FS;\n"
 "out vec4 colorFS;\n"
 "out float depthVS;\n"
+"out vec2 proj22_32;\n"
 "\n"
 "void main()\n"
 "{\n"
@@ -485,6 +491,7 @@ static const char* sprite_vs =
 "	texCoords1FS = texCoords1;\n"
 "	colorFS = color;\n"
 "	depthVS = -positionVS.z;\n"
+"	proj22_32 = vec2(-projection[2][2], projection[3][2]);\n"
 "}\n";
 
 static const char* sprite_fs =
@@ -492,17 +499,18 @@ static const char* sprite_fs =
 "uniform sampler2D texture2; // depth texture\n"
 "\n"
 "uniform uint alphaTest;\n"
-"uniform vec2 proj22_32;\n"
-"uniform vec3 addDistOffset;\n"
-"#define proj22 proj22_32.x\n"
-"#define proj32 proj22_32.y\n"
-"#define additive addDistOffset.x\n"
-"#define distance addDistOffset.y\n"
-"#define offset addDistOffset.z\n"
+"uniform vec2 distOffset;\n"
+"uniform vec4 colorScale;\n"
+"uniform vec4 colorBias;\n"
+"#define distance distOffset.x\n"
+"#define offset distOffset.y\n"
 "\n"
 "in vec2 texCoords1FS;\n"
 "in vec4 colorFS;\n"
 "in float depthVS;\n"
+"in vec2 proj22_32;\n"
+"#define proj22 proj22_32.x\n"
+"#define proj32 proj22_32.y\n"
 "\n"
 "out vec4 fragColor;\n"
 "\n"
@@ -530,11 +538,9 @@ static const char* sprite_fs =
 "\n"
 "	float depthSRaw = texelFetch(texture2, ivec2(gl_FragCoord.xy), 0).r;\n"
 "	float depthS = LinearDepth(depthSRaw * 2.0 - 1.0);\n"
-"	float depthP = depthVS - offset * 0.5;\n"
+"	float depthP = depthVS - offset;\n"
 "	float scale = Contrast((depthS - depthP) * distance, 2.0);\n"
-"	float scaleColor = max(scale, 1.0 - additive);\n"
-"	float scaleAlpha = max(scale, additive);\n"
-"	vec4 r2 = vec4(r.rgb * scaleColor, r.a * scaleAlpha);\n"
+"	vec4 r2 = mix(r * colorScale + colorBias, r, scale);\n"
 "	fragColor = r2;\n"
 "}\n";
 
@@ -1134,6 +1140,12 @@ static void ApplyPipeline(PipelineId pipelineId)
 
 	if(pipelineId == PID_SOFT_SPRITE && gl.fbMSEnabled)
 	{
+		// This is not how it should be done and will counter the benefits of MSAA.
+		// To do this right, we need to bind the FBO's depth attachment to the shader and for that,
+		// we need multi-sampled textures as FBO attachments instead of multi-sampled render buffers.
+		// We also need the shader to use gl_SampleID, which changes our minimum requirements.
+		// Because of all these changes and lack of testing time,
+		// I'll do the necessary changes after the 1.52 release to avoid problems.
 		FBO_ResolveDepth();
 		FBO_Bind();
 	}
@@ -1918,8 +1930,9 @@ static void Init()
 	gl.pipelines[PID_SOFT_SPRITE].uniformNames[SU_PROJECTION] = "projection";
 	gl.pipelines[PID_SOFT_SPRITE].uniformNames[SU_CLIP_PLANE] = "clipPlane";
 	gl.pipelines[PID_SOFT_SPRITE].uniformNames[SU_ALPHA_TEST] = "alphaTest";
-	gl.pipelines[PID_SOFT_SPRITE].uniformNames[SU_PROJ22_32] = "proj22_32";
-	gl.pipelines[PID_SOFT_SPRITE].uniformNames[SU_ADD_DIST_OFFSET] = "addDistOffset";
+	gl.pipelines[PID_SOFT_SPRITE].uniformNames[SU_DIST_OFFSET] = "distOffset";
+	gl.pipelines[PID_SOFT_SPRITE].uniformNames[SU_COLOR_SCALE] = "colorScale";
+	gl.pipelines[PID_SOFT_SPRITE].uniformNames[SU_COLOR_BIAS] = "colorBias";
 
 	gl.pipelines[PID_POST_PROCESS].uniformNames[PU_BRIGHT_GAMMA_GREY] = "brightGammaGrey";
 
@@ -1967,7 +1980,7 @@ static void Init()
 		gl.errorMode = EM_FATAL;
 	}
 
-	glInfo.softSpriteSupport = r_softSprites->integer == 1;
+	glInfo.depthFadeSupport = r_depthFade->integer == 1;
 
 	gl.pipelineId = PID_COUNT;
 	ApplyPipeline(PID_GENERIC);
@@ -2008,7 +2021,7 @@ static void InitGLInfo()
 		glInfo.maxAnisotropy = 0;
 	}
 
-	glInfo.softSpriteSupport = qfalse;
+	glInfo.depthFadeSupport = qfalse;
 	glInfo.mipGenSupport = qfalse;
 	glInfo.alphaToCoverageSupport = qfalse;
 }
@@ -2269,14 +2282,13 @@ static void DrawDynamicLight()
 	DrawElements(tess.dlNumIndexes);
 }
 
-static void DrawSoftSprite()
+static void DrawDepthFade()
 {
 	Pipeline* const pipeline = &gl.pipelines[PID_SOFT_SPRITE];
 
 	if(pipeline->uniformsDirty[SU_PROJECTION])
 	{
 		glUniformMatrix4fv(pipeline->uniformLocations[SU_PROJECTION], 1, GL_FALSE, gl.projectionMatrix);
-		glUniform2f(pipeline->uniformLocations[SU_PROJ22_32], -gl.projectionMatrix[2 * 4 + 2], gl.projectionMatrix[3 * 4 + 2]);
 	}
 	if(pipeline->uniformsDirty[SU_MODELVIEW])
 	{
@@ -2286,10 +2298,26 @@ static void DrawSoftSprite()
 	{
 		glUniform4fv(pipeline->uniformLocations[SU_CLIP_PLANE], 1, gl.clipPlane);
 	}
-	glUniform3f(pipeline->uniformLocations[SU_ADD_DIST_OFFSET],
-				tess.shader->softSprite == SST_ADDITIVE ? 1.0f : 0.0f,
-				tess.shader->softSpriteDistance,
-				tess.shader->softSpriteOffset);
+	if(pipeline->uniformsDirty[SU_COLOR_SCALE] ||
+	   memcmp(gl.depthFadeScale, r_depthFadeScale[tess.shader->dfType], sizeof(gl.depthFadeScale)) != 0)
+	{
+		glUniform4fv(pipeline->uniformLocations[SU_COLOR_SCALE], 1, r_depthFadeScale[tess.shader->dfType]);
+		memcpy(gl.depthFadeScale, r_depthFadeScale[tess.shader->dfType], sizeof(gl.depthFadeScale));
+	}
+	if(pipeline->uniformsDirty[SU_COLOR_BIAS] ||
+	   memcmp(gl.depthFadeBias, r_depthFadeBias[tess.shader->dfType], sizeof(gl.depthFadeBias)) != 0)
+	{
+		glUniform4fv(pipeline->uniformLocations[SU_COLOR_BIAS], 1, r_depthFadeBias[tess.shader->dfType]);
+		memcpy(gl.depthFadeBias, r_depthFadeBias[tess.shader->dfType], sizeof(gl.depthFadeBias));
+	}
+	if(pipeline->uniformsDirty[SU_DIST_OFFSET] ||
+	   tess.shader->dfInvDist != gl.depthFadeDist ||
+	   tess.shader->dfBias != gl.depthFadeOffset)
+	{
+		glUniform2f(pipeline->uniformLocations[SU_DIST_OFFSET], tess.shader->dfInvDist, tess.shader->dfBias);
+		gl.depthFadeDist = tess.shader->dfInvDist;
+		gl.depthFadeOffset = tess.shader->dfBias;
+	}
 
 	UploadVertexArray(VB_POSITION, tess.xyz);
 
@@ -2334,7 +2362,7 @@ static void GAL_Draw(drawType_t type)
 	else if(type == DT_SOFT_SPRITE)
 	{
 		ApplyPipeline(PID_SOFT_SPRITE);
-		DrawSoftSprite();
+		DrawDepthFade();
 	}
 }
 

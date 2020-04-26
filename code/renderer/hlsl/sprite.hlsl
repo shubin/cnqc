@@ -39,6 +39,7 @@ struct VOut
 	float4 position : SV_Position;
 	float4 color : COLOR0;
 	float2 texCoords : TEXCOORD0;
+	float2 proj2232 : TEXCOORD1;
 	float depthVS : DEPTHVS;
 	float clipDist : SV_ClipDistance0;
 };
@@ -51,6 +52,7 @@ VOut vs_main(VIn input)
 	output.position = mul(projectionMatrix, positionVS);
 	output.color = input.color;
 	output.texCoords = input.texCoords;
+	output.proj2232 = float2(-projectionMatrix[2][2], projectionMatrix[2][3]);
 	output.depthVS = -positionVS.z;
 	output.clipDist = dot(positionVS, clipPlane);
 
@@ -60,13 +62,11 @@ VOut vs_main(VIn input)
 cbuffer PixelShaderBuffer
 {
 	uint alphaTest;
-	float proj22;
-	float proj32;
-	float additive;
 	float distance;
 	float offset;
-	uint dummy0;
-	uint dummy1;
+	float dummy;
+	float4 colorScale;
+	float4 colorBias;
 };
 
 Texture2D texture0 : register(t0);
@@ -74,7 +74,20 @@ SamplerState sampler0 : register(s0);
 
 Texture2DMS<float2> textureDepth;
 
-float LinearDepth(float zwDepth)
+/*
+f   = far  clip plane distance
+n   = near clip plane distance
+exp = exponential depth value (as stored in the Z-buffer)
+
+                     2 * f * n             B
+linear(exp) = ----------------------- = -------
+              (f + n) - exp * (f - n)   exp - A
+
+            f + n               -2 * f * n
+with    A = -----    and    B = ----------
+            f - n                  f - n
+*/
+float LinearDepth(float zwDepth, float proj22, float proj32)
 {
 	return proj32 / (zwDepth - proj22);
 }
@@ -88,7 +101,7 @@ float Contrast(float d, float power)
 	return aboveHalf ? (1.0 - r) : r;
 }
 
-float4 ps_main(VOut input) : SV_TARGET
+float4 ps_main(VOut input, uint sampleIndex : SV_SampleIndex) : SV_TARGET
 {
 	float4 r = input.color * texture0.Sample(sampler0, input.texCoords);
 	if((alphaTest == 1 && r.a == 0.0) ||
@@ -96,12 +109,11 @@ float4 ps_main(VOut input) : SV_TARGET
 	   (alphaTest == 3 && r.a <  0.5))
 		discard;
 
-	float depthS = LinearDepth(textureDepth.Load(input.position.xy, 0).x);
+	float zwDepth = textureDepth.Load(input.position.xy, sampleIndex).x;
+	float depthS = LinearDepth(zwDepth, input.proj2232.x, input.proj2232.y);
 	float depthP = input.depthVS - offset;
 	float scale = Contrast((depthS - depthP) * distance, 2.0);
-	float scaleColor = max(scale, 1.0 - additive);
-	float scaleAlpha = max(scale, additive);
-	float4 r2 = float4(r.rgb * scaleColor, r.a * scaleAlpha);
+	float4 r2 = lerp(r * colorScale + colorBias, r, scale);
 
 	return r2;
 }

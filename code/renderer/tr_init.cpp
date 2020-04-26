@@ -64,7 +64,7 @@ cvar_t	*r_lightmapGreyscale;
 cvar_t	*r_novis;
 cvar_t	*r_nocull;
 cvar_t	*r_nocurves;
-cvar_t	*r_softSprites;
+cvar_t	*r_depthFade;
 cvar_t	*r_gpuMipGen;
 cvar_t	*r_alphaToCoverage;
 cvar_t	*r_dither;
@@ -319,7 +319,7 @@ void GfxInfo_f( void )
 		ri.Printf( PRINT_ALL, "Renderer: %s\n", glConfig.renderer_string );
 	if ( glConfig.version_string[0] != '\0' )
 		ri.Printf( PRINT_ALL, "OpenGL version: %s\n", glConfig.version_string );
-	ri.Printf( PRINT_ALL, "Soft sprites          : %s\n", glInfo.softSpriteSupport ? "ON" : "OFF" );
+	ri.Printf( PRINT_ALL, "Depth fade            : %s\n", glInfo.depthFadeSupport ? "ON" : "OFF" );
 	ri.Printf( PRINT_ALL, "Alpha to coverage     : %s\n", glInfo.alphaToCoverageSupport ? "ON" : "OFF" );
 	ri.Printf( PRINT_ALL, "GPU mip-map generation: %s\n", glInfo.mipGenSupport ? "ON" : "OFF" );
 	gal.PrintInfo();
@@ -382,7 +382,7 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_fullbright, "r_fullbright", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_fullbright },
 	{ &r_lightmap, "r_lightmap", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_lightmap },
 	{ &r_lightmapGreyscale, "r_lightmapGreyscale", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "0", "1", "how monochrome the lightmap looks" },
-	{ &r_softSprites, "r_softSprites", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_softSprites },
+	{ &r_depthFade, "r_depthFade", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_depthFade },
 	{ &r_gpuMipGen, "r_gpuMipGen", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_gpuMipGen },
 	{ &r_alphaToCoverage, "r_alphaToCoverage", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_alphaToCoverage },
 	{ &r_dither, "r_dither", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_dither },

@@ -187,7 +187,7 @@ static qbool AreShadersStillBatchable( const shader_t* a, const shader_t* b )
 		a->polygonOffset != b->polygonOffset ||
 		a->imgflags != b->imgflags ||
 		a->numStages != b->numStages ||
-		a->softSprite != b->softSprite )
+		a->dfType != b->dfType )
 		return qfalse;
 
 	for ( int i = 0; i < a->numStages; ++i ) {
@@ -258,10 +258,10 @@ static void RB_RenderDrawSurfList( const drawSurf_t* drawSurfs, int numDrawSurfs
 		const shader_t* shaderPrev = shader;
 		int entityNum;
 		R_DecomposeSort( drawSurf->sort, &entityNum, &shader, &fogNum );
-		const qbool softSpriteChange = shader->softSprite != tess.softSprite;
+		const qbool depthFadeChange = shader->dfType != tess.depthFade;
 
 		// detect and batch surfaces across different (but sufficiently similar) shaders
-		if ( !softSpriteChange &&
+		if ( !depthFadeChange &&
 			oldEntityNum == ENTITYNUM_WORLD &&
 			entityNum == ENTITYNUM_WORLD &&
 			AreShadersStillBatchable( shaderPrev, shader ) ) {
@@ -298,11 +298,11 @@ static void RB_RenderDrawSurfList( const drawSurf_t* drawSurfs, int numDrawSurfs
 		// modern code just billboards in cgame and submits raw polys, all of which are
 		// ENTITYNUM_WORLD and thus automatically take the "same sort" fast path
 
-		if ( !shader->entityMergable || ((sort ^ drawSurf->sort) & ~QSORT_ENTITYNUM_MASK) || softSpriteChange ) {
+		if ( !shader->entityMergable || ((sort ^ drawSurf->sort) & ~QSORT_ENTITYNUM_MASK) || depthFadeChange ) {
 			if (shaderPrev)
 				RB_EndSurface();
 			RB_BeginSurface( shader, fogNum );
-			tess.softSprite = shader->softSprite;
+			tess.depthFade = shader->dfType;
 		}
 
 		sort = drawSurf->sort;

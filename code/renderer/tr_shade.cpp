@@ -45,7 +45,7 @@ void RB_BeginSurface( const shader_t* shader, int fogNum )
 	tess.shader = shader;
 	tess.fogNum = fogNum;
 	tess.xstages = (const shaderStage_t**)shader->stages;
-	tess.softSprite = SST_NONE;
+	tess.depthFade = DFT_NONE;
 	tess.deformsPreApplied = qfalse;
 
 	tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
@@ -121,7 +121,7 @@ static void RB_DrawDynamicLight()
 
 static void RB_DrawGeneric()
 {
-	if (tess.softSprite == SST_NONE && tess.fogNum && tess.shader->fogPass) {
+	if (tess.depthFade == DFT_NONE && tess.fogNum && tess.shader->fogPass) {
 		tess.drawFog = qtrue;
 
 		unsigned int fogStateBits = GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
@@ -142,7 +142,7 @@ static void RB_DrawGeneric()
 	backEnd.pc[RB_BATCHES]++;
 	backEnd.pc[RB_VERTICES] += tess.numVertexes;
 	backEnd.pc[RB_INDICES] += tess.numIndexes;
-	gal.Draw(tess.softSprite != SST_NONE ? DT_SOFT_SPRITE : DT_GENERIC);
+	gal.Draw(tess.depthFade != DFT_NONE ? DT_SOFT_SPRITE : DT_GENERIC);
 }
 
 

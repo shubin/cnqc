@@ -176,22 +176,21 @@ struct GenericPSData
 	float dummy;
 };
 
-struct SoftSpriteVSData
+struct DepthFadeVSData
 {
 	float modelViewMatrix[16];
 	float projectionMatrix[16];
 	float clipPlane[4];
 };
 
-struct SoftSpritePSData
+struct DepthFadePSData
 {
 	uint32_t alphaTest; // AlphaTest enum
-	float proj22;
-	float proj32;
-	float additive;
 	float distance;
 	float offset;
-	uint32_t dummy[2];
+	float dummy;
+	float scale[4];
+	float bias[4];
 };
 
 struct DynamicLightVSData
@@ -691,17 +690,16 @@ static void UploadPendingShaderData()
 	}
 	else if(pid == PID_SOFT_SPRITE)
 	{
-		SoftSpriteVSData vsData;
-		SoftSpritePSData psData;
+		DepthFadeVSData vsData;
+		DepthFadePSData psData;
 		memcpy(vsData.modelViewMatrix, d3d.modelViewMatrix, sizeof(vsData.modelViewMatrix));
 		memcpy(vsData.projectionMatrix, d3d.projectionMatrix, sizeof(vsData.projectionMatrix));
 		memcpy(vsData.clipPlane, d3d.clipPlane, sizeof(vsData.clipPlane));
 		psData.alphaTest = d3d.alphaTest;
-		psData.proj22 = -vsData.projectionMatrix[2 * 4 + 2];
-		psData.proj32 =  vsData.projectionMatrix[3 * 4 + 2];
-		psData.additive = tess.shader->softSprite == SST_ADDITIVE ? 1.0f : 0.0f;
-		psData.distance = tess.shader->softSpriteDistance;
-		psData.offset = tess.shader->softSpriteOffset;
+		memcpy(psData.scale, r_depthFadeScale[tess.shader->dfType], sizeof(psData.scale));
+		memcpy(psData.bias, r_depthFadeBias[tess.shader->dfType], sizeof(psData.bias));
+		psData.distance = tess.shader->dfInvDist;
+		psData.offset = tess.shader->dfBias;
 		ResetShaderData(pipeline->vertexBuffer, &vsData, sizeof(vsData));
 		ResetShaderData(pipeline->pixelBuffer, &psData, sizeof(psData));
 	}
@@ -1585,14 +1583,14 @@ static qbool GAL_Init()
 	
 	ZeroMemory(&vertexShaderBufferDesc, sizeof(vertexShaderBufferDesc));
 	vertexShaderBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-	vertexShaderBufferDesc.ByteWidth = sizeof(SoftSpriteVSData);
+	vertexShaderBufferDesc.ByteWidth = sizeof(DepthFadeVSData);
 	vertexShaderBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	vertexShaderBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	D3D11_CreateBuffer(&vertexShaderBufferDesc, NULL, &d3d.pipelines[PID_SOFT_SPRITE].vertexBuffer, "soft sprite vertex shader buffer");
 
 	ZeroMemory(&pixelShaderBufferDesc, sizeof(pixelShaderBufferDesc));
 	pixelShaderBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-	pixelShaderBufferDesc.ByteWidth = sizeof(SoftSpritePSData);
+	pixelShaderBufferDesc.ByteWidth = sizeof(DepthFadePSData);
 	pixelShaderBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	pixelShaderBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	D3D11_CreateBuffer(&pixelShaderBufferDesc, NULL, &d3d.pipelines[PID_SOFT_SPRITE].pixelBuffer, "soft sprite pixel shader buffer");
@@ -1693,7 +1691,7 @@ static qbool GAL_Init()
 	glInfo.displayFrequency = 0;
 	glInfo.maxAnisotropy = D3D11_REQ_MAXANISOTROPY;	// @NOTE: D3D10_REQ_MAXANISOTROPY == D3D11_REQ_MAXANISOTROPY
 	glInfo.maxTextureSize = MAX_GPU_TEXTURE_SIZE;
-	glInfo.softSpriteSupport = r_softSprites->integer == 1;
+	glInfo.depthFadeSupport = r_depthFade->integer == 1;
 	glInfo.mipGenSupport = mipGenOK;
 	glInfo.alphaToCoverageSupport = alphaToCoverageOK;
 
@@ -2368,7 +2366,7 @@ static void DrawDynamicLight()
 	DrawIndexed(tess.dlNumIndexes);
 }
 
-static void DrawSoftSprite()
+static void DrawDepthFade()
 {
 	AppendVertexData(&d3d.indexBuffer, tess.indexes, tess.numIndexes);
 	if(d3d.splitBufferOffsets)
@@ -2421,7 +2419,7 @@ static void GAL_Draw(drawType_t type)
 	else if(type == DT_SOFT_SPRITE)
 	{
 		ApplyPipeline(PID_SOFT_SPRITE);
-		DrawSoftSprite();
+		DrawDepthFade();
 	}
 }
 

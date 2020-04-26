@@ -1422,7 +1422,7 @@ static void InitGLInfo()
 	else
 		glInfo.maxAnisotropy = 0;
 
-	glInfo.softSpriteSupport = qfalse;
+	glInfo.depthFadeSupport = qfalse;
 	glInfo.mipGenSupport = qfalse;
 	glInfo.alphaToCoverageSupport = qfalse;
 }

@@ -140,9 +140,9 @@ S_COLOR_VAL "    T2  " S_COLOR_HELP "= Tent 2 (1/3 2/3, same as the CPU version)
 "While " S_COLOR_VAL "1.0 " S_COLOR_HELP "will match the game's original look,\n" \
 "higher values will better preserve contrast."
 
-#define help_r_softSprites \
-"enables depth sprites\n" \
-"With it, sprites like blood, smoke, etc don't 'cut' through geometry sharply."
+#define help_r_depthFade \
+"enables depth fade rendering\n" \
+"With it, surfaces like blood, smoke, etc don't 'cut' through geometry sharply."
 
 #define help_r_gpuMipGen \
 "enables GPU mip-map generation\n" \
