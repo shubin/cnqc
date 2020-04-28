@@ -428,7 +428,7 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_drawentities, "r_drawentities", "1", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "enables entity rendering" },
 	{ &r_nocull, "r_nocull", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "disables frustum culling" },
 	{ &r_novis, "r_novis", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "disables PVS usage" },
-	{ &r_speeds, "r_speeds", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "draws rendering performance counters" },
+	{ &r_speeds, "r_speeds", "0", CVAR_TEMP, CVART_BOOL, NULL, NULL, "draws rendering performance counters" },
 	{ &r_verbose, "r_verbose", "0", CVAR_TEMP, CVART_BOOL, NULL, NULL, "prints additional information" },
 	{ &r_debugSurface, "r_debugSurface", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "draws collision models" },
 	{ &r_showtris, "r_showtris", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "draws wireframe triangles" },

@@ -142,7 +142,8 @@ chg: r_textureMode <filter> (default: "best") is now latched and only supports 2
 
 chg: removed the following CVars: r_measureOverdraw, r_nobind, r_showImages
 
-chg: r_speeds 1 now reports more precise timings, V-Sync status, GPU time and the selected back-end
+chg: r_speeds is no longer cheat-protected
+  it now also reports more precise timings, V-Sync status, GPU time and the selected back-end
 
 chg: using the roundss SSE4.1 instruction for inlining floor and ceil syscalls when possible
 
