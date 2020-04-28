@@ -2161,7 +2161,7 @@ static void DrawGeneric()
 			pipeline->uniformLocations[GU_GAMMA_BRIGHT_NOISE_SEED],
 			1.0f / r_gamma->value,
 			1.0f / r_brightness->value,
-			backEnd.projection2D ? 0.0f : r_noiseScale->value,
+			backEnd.projection2D ? 0.0f : r_ditherStrength->value,
 			(float)rand() / (float)RAND_MAX);
 	}
 

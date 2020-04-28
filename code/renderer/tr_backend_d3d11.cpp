@@ -684,7 +684,7 @@ static void UploadPendingShaderData()
 		psData.seed[1] = d3d.frameSeed[1];
 		psData.invGamma = 1.0f / r_gamma->value;
 		psData.invBrightness = 1.0f / r_brightness->value;
-		psData.noiseScale = backEnd.projection2D ? 0.0f : r_noiseScale->value;
+		psData.noiseScale = backEnd.projection2D ? 0.0f : r_ditherStrength->value;
 		ResetShaderData(pipeline->vertexBuffer, &vsData, sizeof(vsData));
 		ResetShaderData(pipeline->pixelBuffer, &psData, sizeof(psData));
 	}

@@ -72,7 +72,7 @@ cvar_t	*r_rtColorFormat;
 
 cvar_t	*r_mipGenFilter;
 cvar_t	*r_mipGenGamma;
-cvar_t	*r_noiseScale;
+cvar_t	*r_ditherStrength;
 cvar_t	*r_transpSort;
 cvar_t	*r_gl3_geoStream;
 cvar_t	*r_d3d11_syncOffsets;
@@ -408,7 +408,7 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_textureMode, "r_textureMode", "best", CVAR_ARCHIVE | CVAR_LATCH, CVART_STRING, NULL, NULL, help_r_textureMode },
 	{ &r_gamma, "r_gamma", "1.2", CVAR_ARCHIVE, CVART_FLOAT, "0.5", "3", help_r_gamma },
 	{ &r_greyscale, "r_greyscale", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", "1", "controls how monochrome the final image looks" },
-	{ &r_noiseScale, "r_noiseScale", "1.0", CVAR_ARCHIVE, CVART_FLOAT, "0.125", "8.0", help_r_noiseScale },
+	{ &r_ditherStrength, "r_ditherStrength", "1.0", CVAR_ARCHIVE, CVART_FLOAT, "0.125", "8.0", help_r_ditherStrength },
 	{ &r_transpSort, "r_transpSort", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_transpSort },
 	{ &r_lodCurveError, "r_lodCurveError", "2000", CVAR_ARCHIVE, CVART_FLOAT, "250", "10000", "curved surfaces LOD scale" },
 

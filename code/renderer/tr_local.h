@@ -1009,7 +1009,7 @@ extern cvar_t	*r_displayRefresh;		// optional display refresh option
 extern cvar_t	*r_intensity;
 extern cvar_t	*r_gamma;
 extern cvar_t	*r_greyscale;
-extern cvar_t	*r_noiseScale;			// the strength of the dithering noise
+extern cvar_t	*r_ditherStrength;		// the strength of the dithering noise
 extern cvar_t	*r_transpSort;			// transparency sorting mode
 extern cvar_t	*r_lightmap;			// render lightmaps only
 extern cvar_t	*r_lightmapGreyscale;	// how monochrome the lightmap looks

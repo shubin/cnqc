@@ -157,9 +157,9 @@ S_COLOR_VAL "    T2  " S_COLOR_HELP "= Tent 2 (1/3 2/3, same as the CPU version)
 #define help_r_dither \
 "enables dithering\n" \
 "Introduces noise to fight color banding artifacts.\n" \
-"The strength of the noise is controlled by " S_COLOR_CVAR "r_noiseScale" S_COLOR_HELP "."
+"The strength of the noise is controlled by " S_COLOR_CVAR "r_ditherStrength" S_COLOR_HELP "."
 
-#define help_r_noiseScale \
+#define help_r_ditherStrength \
 "dithering noise strength\n" \
 "The dithering on/off switch is " S_COLOR_CVAR "r_dither" S_COLOR_HELP "."
 

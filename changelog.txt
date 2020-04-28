@@ -25,9 +25,9 @@ add: r_alphaToCoverage <0|1> (default: 1) enables alpha to coverage anti-aliasin
   A2C AA can only work if MSAA is enabled (i.e. r_msaa > 1)
   it is used to super-sample all fragments of alpha-tested surfaces
 
-add: r_dither <0|1> (default: 0) enables the addition of noise to fight color banding artifacts
+add: r_dither <0|1> (default: 0) enables the addition of noise to reduce color banding artifacts
 
-add: r_noiseScale <0.125 to 8.0> (default: 1.0) controls the strength of the dithering noise
+add: r_ditherStrength <0.125 to 8.0> (default: 1.0) controls the amount of noise added by dithering
 
 add: r_gpuMipGen <0|1> (default: 1) enables GPU-side mip-map generation
   this helps improve map load time (less to upload) and offers greater quality preservation options
