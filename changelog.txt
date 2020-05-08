@@ -159,6 +159,8 @@ chg: r_fullbright is now latched again
 
 chg: negative r_swapInterval values will request adaptive V-Sync when using an OpenGL back-end
 
+fix: the engine could crash due to render command list overflows
+
 fix: made more keys bindable on Linux/FreeBSD and /bind now accepts uppercase hex digits
 
 fix: removing CVars through unset/cvar_trim/cvar_restart could leave data in an invalid state

@@ -232,7 +232,7 @@ static void R_TakeScreenshot( const char* ext, screenshotCommand_t::ss_type type
 	} else {
 		if ( R_FindRenderCommand( RC_SCREENSHOT ) )
 			return;
-		cmd = (screenshotCommand_t*)R_GetCommandBuffer( sizeof(screenshotCommand_t) );
+		cmd = (screenshotCommand_t*)R_GetCommandBuffer( sizeof(screenshotCommand_t), qfalse );
 		if ( !cmd )
 			return;
 		cmd->delayed = qfalse;

@@ -1398,7 +1398,7 @@ RENDERER BACK END COMMAND QUEUE
 =============================================================
 */
 
-#define	MAX_RENDER_COMMANDS	0x40000
+#define	MAX_RENDER_COMMANDS	0x80000
 
 typedef struct {
 	byte	cmds[MAX_RENDER_COMMANDS];
@@ -1599,7 +1599,7 @@ void R_BuildCloudData();
 
 void R_IssueRenderCommands();
 void* R_FindRenderCommand( renderCommand_t type );
-void *R_GetCommandBuffer( int bytes );
+void *R_GetCommandBuffer( int bytes, qbool endFrame );
 
 void R_AddDrawSurfCmd(drawSurf_t* drawSurfs, int numDrawSurfs, int numTranspSurfs );
 
