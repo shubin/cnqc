@@ -386,7 +386,7 @@ static const char* generic_fs =
 "\n"
 "#if CNQ3_A2C\n"
 "	if(alphaTest == uint(1))\n"
-"		r.a = CorrectAlpha(0.0, r.a, texCoords1FS);\n"
+"		r.a = r.a > 0.0 ? 1.0 : 0.0;\n"
 "	if(alphaTest == uint(2))\n"
 "		r.a = CorrectAlpha(0.5, 1.0 - r.a, texCoords1FS);\n"
 "	else if(alphaTest == uint(3))\n"

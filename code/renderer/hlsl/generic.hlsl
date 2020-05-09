@@ -133,7 +133,7 @@ float4 ps_main(VOut input) : SV_Target0
 
 #ifdef CNQ3_A2C
 	if(alphaTest == 1)
-		r.a = CorrectAlpha(0.0, r.a, input.texCoords);
+		r.a = r.a > 0.0 ? 1.0 : 0.0;
 	else if(alphaTest == 2)
 		r.a = CorrectAlpha(0.5, 1.0 - r.a, input.texCoords);
 	else if(alphaTest == 3)
