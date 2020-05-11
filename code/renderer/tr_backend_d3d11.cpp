@@ -128,6 +128,7 @@ enum PipelineId
 	PID_SOFT_SPRITE,
 	PID_DYNAMIC_LIGHT,
 	PID_POST_PROCESS,
+	PID_SCREENSHOT,
 	PID_COUNT
 };
 
@@ -361,6 +362,8 @@ struct Direct3D
 	ID3D11DepthStencilView* depthStencilView;
 	ID3D11ShaderResourceView* depthStencilShaderView;
 	ID3D11Texture2D* readbackTexture; // allowed to be NULL!
+	ID3D11Texture2D* screenshotTexture; // allowed to be NULL!
+	ID3D11RenderTargetView* screenshotTextureRTView; // allowed to be NULL!
 
 	ID3D11ComputeShader* mipGammaToLinearComputeShader;
 	ID3D11ComputeShader* mipLinearToGammaComputeShader;
@@ -770,6 +773,12 @@ static void ApplyPipeline(PipelineId index)
 		return;
 	}
 
+	const PipelineId unfixedIndex = index;
+	if(index == PID_SCREENSHOT)
+	{
+		index = PID_POST_PROCESS;
+	}
+
 	Pipeline* const pipeline = &d3d.pipelines[index];
 	if(pipeline->inputLayout)
 	{
@@ -831,11 +840,15 @@ static void ApplyPipeline(PipelineId index)
 		d3ds.context->PSSetConstantBuffers(0, 1, &pipeline->pixelBuffer);
 	}
 
-	if(index == PID_POST_PROCESS)
+	if(unfixedIndex == PID_POST_PROCESS)
 	{
 		d3ds.context->OMSetRenderTargets(1, &d3d.backBufferRTView, NULL);
 	}
-	else if(index == PID_SOFT_SPRITE)
+	else if(unfixedIndex == PID_SCREENSHOT)
+	{
+		d3ds.context->OMSetRenderTargets(1, &d3d.screenshotTextureRTView, NULL);
+	}
+	else if(unfixedIndex == PID_SOFT_SPRITE)
 	{
 		d3ds.context->OMSetRenderTargets(1, &d3d.renderTargetViewMS, NULL);
 		d3ds.context->PSSetShaderResources(1, 1, &d3d.depthStencilShaderView);
@@ -1222,9 +1235,40 @@ static qbool GAL_Init()
 	readbackTexDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
 	readbackTexDesc.MiscFlags = 0;
 	d3d.errorMode = EM_SILENT;
-	if(!D3D11_CreateTexture2D(&readbackTexDesc, 0, &d3d.readbackTexture, "screenshot/video readback texture"))
+	if(!D3D11_CreateTexture2D(&readbackTexDesc, 0, &d3d.readbackTexture, "readback texture"))
 		ri.Printf(PRINT_WARNING, "Screengrab texture creation failed! /" S_COLOR_CMD "screenshot^7* and /" S_COLOR_CMD "video^7 won't work\n");
 	d3d.errorMode = EM_FATAL;
+
+	if(d3d.readbackTexture != NULL && r_mode->integer == VIDEOMODE_UPSCALE)
+	{
+		d3d.errorMode = EM_SILENT;
+
+		D3D11_TEXTURE2D_DESC screenshotTexDesc;
+		ZeroMemory(&screenshotTexDesc, sizeof(screenshotTexDesc));
+		screenshotTexDesc.Width = glConfig.vidWidth;
+		screenshotTexDesc.Height = glConfig.vidHeight;
+		screenshotTexDesc.MipLevels = 1;
+		screenshotTexDesc.ArraySize = 1;
+		screenshotTexDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		screenshotTexDesc.SampleDesc.Count = 1;
+		screenshotTexDesc.SampleDesc.Quality = 0;
+		screenshotTexDesc.Usage = D3D11_USAGE_DEFAULT;
+		screenshotTexDesc.BindFlags = D3D11_BIND_RENDER_TARGET;
+		screenshotTexDesc.CPUAccessFlags = 0;
+		screenshotTexDesc.MiscFlags = 0;
+		if(!D3D11_CreateTexture2D(&screenshotTexDesc, 0, &d3d.screenshotTexture, "screenshot texture"))
+			ri.Printf(PRINT_WARNING, "Screenshot texture creation failed! /" S_COLOR_CMD "screenshot^7* and /" S_COLOR_CMD "video^7 may not work\n");
+
+		D3D11_RENDER_TARGET_VIEW_DESC screenshotRTVDesc;
+		ZeroMemory(&screenshotRTVDesc, sizeof(screenshotRTVDesc));
+		screenshotRTVDesc.Format = swapChainDesc.BufferDesc.Format;
+		screenshotRTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+		screenshotRTVDesc.Texture2D.MipSlice = 0;
+		if(!D3D11_CreateRenderTargetView(d3d.screenshotTexture, &screenshotRTVDesc, &d3d.screenshotTextureRTView, "screenshot texture render target view"))
+			ri.Printf(PRINT_WARNING, "Screenshot texture RTV creation failed! /" S_COLOR_CMD "screenshot^7* and /" S_COLOR_CMD "video^7 may not work\n");
+
+		d3d.errorMode = EM_FATAL;
+	}
 
 	hr = d3ds.swapChain->GetBuffer(0, IID_ID3D11Texture2D, (void**)&d3d.backBufferTexture);
 	CheckAndName(hr, "GetBuffer", d3d.backBufferTexture, "back buffer texture");
@@ -1790,6 +1834,8 @@ static void GAL_ShutDown(qbool fullShutDown)
 	COM_RELEASE(d3d.depthStencilView);
 	COM_RELEASE(d3d.depthStencilShaderView);
 	COM_RELEASE(d3d.readbackTexture);
+	COM_RELEASE(d3d.screenshotTexture);
+	COM_RELEASE(d3d.screenshotTextureRTView);
 	COM_RELEASE(d3d.mipGammaToLinearComputeShader);
 	COM_RELEASE(d3d.mipLinearToGammaComputeShader);
 	COM_RELEASE(d3d.mipDownSampleComputeShader);
@@ -1899,16 +1945,52 @@ static void GAL_BeginFrame()
 	ApplyViewportAndScissor(0, 0, glConfig.vidWidth, glConfig.vidHeight, glConfig.vidHeight);
 }
 
+static void DrawPostProcess(float vsX, float vsY, float srX, float srY, qbool screenshot)
+{
+	d3d.postPSData.gamma = 1.0f / r_gamma->value;
+	d3d.postPSData.brightness = r_brightness->value;
+	d3d.postPSData.greyscale = r_greyscale->value;
+	d3d.postVSData.scaleX = vsX;
+	d3d.postVSData.scaleY = vsY;
+	ApplyPipeline(screenshot ? PID_SCREENSHOT : PID_POST_PROCESS);
+	ApplyState(GLS_DEPTHTEST_DISABLE, CT_TWO_SIDED, qfalse);
+	UploadPendingShaderData();
+	BindImage(0, tr.whiteImage);
+	d3ds.context->PSSetShaderResources(0, 1, &d3d.resolveTextureShaderView);
+	ApplySamplerState(0, TW_CLAMP_TO_EDGE, TM_BILINEAR);
+	if(screenshot)
+	{
+		ApplyViewportAndScissor(0, 0, glConfig.vidWidth, glConfig.vidHeight, glConfig.vidHeight);
+	}
+	else
+	{
+		if(vsX < 1.0f || vsY < 1.0f)
+		{
+			const int x = (glInfo.winWidth - glInfo.winWidth * vsX) / 2.0f;
+			const int y = (glInfo.winHeight - glInfo.winHeight * vsY) / 2.0f;
+			ApplyViewport(0, 0, glInfo.winWidth, glInfo.winHeight, glInfo.winHeight);
+			ApplyScissor(x, y, glConfig.vidWidth * srX, glConfig.vidHeight * srY, glInfo.winHeight);
+		}
+		else
+		{
+			ApplyViewportAndScissor(0, 0, glInfo.winWidth, glInfo.winHeight, glInfo.winHeight);
+		}
+	}
+	d3ds.context->Draw(3, 0);
+}
+
 static void GAL_EndFrame()
 {
-	float scaleX = 1.0f;
-	float scaleY = 1.0f;
+	float vsX = 1.0f; // vertex shader scale factors
+	float vsY = 1.0f;
+	float srX = 1.0f; // scissor rectangle scale factors
+	float srY = 1.0f;
 	if(r_fullscreen->integer == 1 && r_mode->integer == VIDEOMODE_UPSCALE)
 	{
 		if(r_blitMode->integer == BLITMODE_CENTERED)
 		{
-			scaleX = (float)glConfig.vidWidth / (float)glInfo.winWidth;
-			scaleY = (float)glConfig.vidHeight / (float)glInfo.winHeight;
+			vsX = (float)glConfig.vidWidth / (float)glInfo.winWidth;
+			vsY = (float)glConfig.vidHeight / (float)glInfo.winHeight;
 		}
 		else if(r_blitMode->integer == BLITMODE_ASPECT)
 		{
@@ -1916,17 +1998,21 @@ static void GAL_EndFrame()
 			const float ard = (float)glInfo.winWidth / (float)glInfo.winHeight;
 			if(ard > ars)
 			{
-				scaleX = ars / ard;
-				scaleY = 1.0f;
+				vsX = ars / ard;
+				vsY = 1.0f;
+				srX = (float)glInfo.winHeight / (float)glConfig.vidHeight;
+				srY = srX;
 			}
 			else
 			{
-				scaleX = 1.0f;
-				scaleY = ard / ars;
+				vsX = 1.0f;
+				vsY = ard / ars;
+				srX = (float)glInfo.winWidth / (float)glConfig.vidWidth;
+				srY = srX;
 			}
 		}
 
-		if(scaleX != 1.0f || scaleY != 1.0f)
+		if(vsX != 1.0f || vsY != 1.0f)
 		{
 			const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 			d3ds.context->ClearRenderTargetView(d3d.backBufferRTView, clearColor);
@@ -1934,19 +2020,7 @@ static void GAL_EndFrame()
 	}
 
 	d3ds.context->ResolveSubresource(d3d.resolveTexture, 0, d3d.renderTargetTextureMS, 0, d3d.formatColorRT);
-	d3d.postPSData.gamma = 1.0f / r_gamma->value;
-	d3d.postPSData.brightness = r_brightness->value;
-	d3d.postPSData.greyscale = r_greyscale->value;
-	d3d.postVSData.scaleX = scaleX;
-	d3d.postVSData.scaleY = scaleY;
-	ApplyPipeline(PID_POST_PROCESS);
-	ApplyState(GLS_DEPTHTEST_DISABLE, CT_TWO_SIDED, qfalse);
-	UploadPendingShaderData();
-	BindImage(0, tr.whiteImage);
-	d3ds.context->PSSetShaderResources(0, 1, &d3d.resolveTextureShaderView);
-	ApplySamplerState(0, TW_CLAMP_TO_EDGE, TM_BILINEAR);
-	ApplyViewportAndScissor(0, 0, glInfo.winWidth, glInfo.winHeight, glInfo.winHeight);
-	d3ds.context->Draw(3, 0);
+	DrawPostProcess(vsX, vsY, srX, srY, qfalse);
 
 	EndQueries();
 
@@ -2001,7 +2075,24 @@ static void GAL_ReadPixels(int, int, int w, int h, int alignment, colorSpace_t c
 		return;
 	}
 
-	d3ds.context->CopyResource(d3d.readbackTexture, d3d.backBufferTexture);
+	if(r_mode->integer != VIDEOMODE_UPSCALE)
+	{
+		// matching dimensions means we can copy the data directly from the back buffer
+		d3ds.context->CopyResource(d3d.readbackTexture, d3d.backBufferTexture);
+	}
+	else
+	{
+		if(d3d.screenshotTexture == NULL || d3d.screenshotTextureRTView == NULL)
+		{
+			WriteInvalidImage(w, h, alignment, colorSpace, out);
+			return;
+		}
+
+		// we render the post-process pass into an intermediate texture and
+		// copy its content into the readback texture
+		DrawPostProcess(1.0f, 1.0f, 1.0f, 1.0f, qtrue);
+		d3ds.context->CopyResource(d3d.readbackTexture, d3d.screenshotTexture);
+	}
 
 	D3D11_MAPPED_SUBRESOURCE ms;
 	HRESULT hr = d3ds.context->Map(d3d.readbackTexture, 0, D3D11_MAP_READ, NULL, &ms);
