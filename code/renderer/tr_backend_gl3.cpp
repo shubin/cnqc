@@ -1,6 +1,6 @@
 /*
 ===========================================================================
-Copyright (C) 2019 Gian 'myT' Schellenbaum
+Copyright (C) 2019-2020 Gian 'myT' Schellenbaum
 
 This file is part of Challenge Quake 3 (CNQ3).
 
