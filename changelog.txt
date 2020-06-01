@@ -1,5 +1,8 @@
 
-DD Mmm 20 - 1.52
+See the end of this file for known issues.
+
+
+01 Jun 20 - 1.52
 
 add: FreeBSD x64 support
 
@@ -8,15 +11,15 @@ add: r_backend <GL2|GL3|D3D11> (default: D3D11 on Windows, GL3 otherwise) select
   GL3   - OpenGL 3.2 minimum, OpenGL 4+ features used for faster geometry upload, compute shaders, etc
   D3D11 - Direct3D 11 hardware feature level 10.1 minimum, feature level 11.0 for compute shaders
 
-               r_backend | GL2    | GL3    | D3D11              |
-  feature                |        |        |                    |
-  -----------------------|--------|--------|--------------------|
-  MSAA                   | GL 3.0 | always | always             |
-  MSAA centroid sampling | never  | always | always             |
-  depth fade             | never  | always | always             |
-  alpha to coverage AA   | never  | always | always             |
-  dithering              | never  | always | always             |
-  GPU mip-map generation | never  | GL 4.3 | feature level 11.0 |
+               r_backend | GL2    | GL3    | D3D11
+  feature         avail. |        |        |
+  -----------------------|--------|--------|-------------------
+  MSAA                   | GL 3.0 | always | always
+  MSAA centroid sampling | never  | always | always
+  depth fade             | never  | always | always
+  alpha to coverage AA   | never  | always | always
+  dithering              | never  | always | always
+  GPU mip-map generation | never  | GL 4.3 | feature level 11.0
 
 add: r_depthFade <0|1> (default: 1) enables depth fade rendering
   this helps explosions, smoke, blood, etc. not having "sharp edges" when intersecting geometry
@@ -25,19 +28,19 @@ add: r_alphaToCoverage <0|1> (default: 1) enables alpha to coverage anti-aliasin
   A2C AA can only work if MSAA is enabled (i.e. r_msaa > 1)
   it is used to super-sample all fragments of alpha-tested surfaces
 
-add: r_dither <0|1> (default: 0) enables the addition of noise to reduce color banding artifacts
+add: r_dither <0|1> (default: 0) reduces color banding artefacts by adding noise
 
 add: r_ditherStrength <0.125 to 8.0> (default: 1.0) controls the amount of noise added by dithering
 
 add: r_gpuMipGen <0|1> (default: 1) enables GPU-side mip-map generation
-  this helps improve map load time (less to upload) and offers greater quality preservation options
+  this helps improve map load time (less to upload) and image quality (see r_mipGenGamma, r_mipGenFilter)
 
 add: r_mipGenGamma <1.0 to 3.0> (default: 1.8) specifies the gamma space in which the textures are stored
   r_gpuMipGen 1 is required
   it should be closer to 2.4 but defaults lower to not break the looks of some things (e.g. cpm3a tele)
   while 1.0 will preserve the original engine's look, higher values will preserve contrast better
 
-add: r_mipGenFilter <filter> (default: "L4") specified which filter window is used to generate mips
+add: r_mipGenFilter <filter> (default: "L4") specifies which filter window is used to generate mips
   r_gpuMipGen 1 is required
   the numbers specify the "radius" of the window filters
   r_mipGenFilter L4  = Lanczos
@@ -55,6 +58,7 @@ add: r_frameSleep <0|1|2> (default: 2) selects the frame capping mode
   r_frameSleep 2 = automatic  (detects V-Sync status)
   this only applies to OpenGL rendering back-ends
   for Direct3D 11, the behavior is always equivalent to "automatic"
+  the new default mode fixes the V-Sync stutter from previous releases
 
 add: r_gl3_geoStream <0 to 4> (default: 0) sets the geometry upload strategy
   r_gl3_geoStream 0 = decide automatically
@@ -88,12 +92,13 @@ add: r_rtColorFormat <0|1|2> (default: 0) selects the color format for render ta
   r_rtColorFormat 0 = R8G8B8A8
   r_rtColorFormat 1 = R10G10B10A2
   r_rtColorFormat 2 = R16G16B16A16
+  higher color bit depths help reduce color banding
 
-add: r_lightmapGreyscale <0.0 to 1.0> (default: 0) to control how monochromatic the lightmaps look
+add: r_lightmapGreyscale <0.0 to 1.0> (default: 0) controls the level of color desaturation in the lightmap
   r_lightmapGreyscale 0 = full color (nothing done)
   r_lightmapGreyscale 1 = completely monochrome
 
-add: r_transpSort <0|1> (default: 0) to select the transparency sorting mode
+add: r_transpSort <0|1> (default: 0) selects the transparency sorting mode
   r_transpSort 0 = sort dynamic transparent surfaces
   r_transpSort 1 = sort all transparent surfaces
   the drawback of r_transpSort 1 is that gameplay legibility might suffer and results might look
@@ -101,7 +106,7 @@ add: r_transpSort <0|1> (default: 0) to select the transparency sorting mode
   example: dropped items in the cpm18r acid with cg_simpleItems 1
 
 add: global shader directive q3map_cnq3_depthFade <scale> <bias> enables depth fade rendering
-  scale is the depth range over wich to fade the currently rendered surface
+  scale is the depth range over which to fade the currently rendered surface
   bias  is a value added to the currently rendered surface's depth, positive goes towards the camera
   whether this is enabled is decided by r_depthFade (must be 1) and r_backend (can't be GL2)
   depth writes must be disabled in all stages (no shader stage can use the depthWrite directive)
@@ -120,7 +125,7 @@ chg: improved the map download initiation logic and updated the CNQ3 map server 
 
 chg: increased the small zone allocator's size from 512 KB to 4 MB (1 MB in the dedicated executable)
 
-chg: dynamic lights now use a softer fall-off curve to create softer edges
+chg: dynamic lights now use a different fall-off curve to create softer edges
 
 chg: reverted an old change to the Escape key handling for cgame
   this fixes demo playback behavior in CPMA, which enables custom binds after pressing Escape once
@@ -949,3 +954,45 @@ pak list made fs_debug 1
 removed the TA cvars that were hacked into the engine
 
 reordered demo_protocols to reduce spew
+
+
+====================
+=== Known issues ===
+====================
+
+iss: OBS captures go blank after doing a video restart with the D3D11 back-end
+exp: device/swap chain re-creation isn't handled by OBS' capture plug-in
+fix: use the GL3 back-end
+act: won't fix
+
+iss: once the GL2 back-end is used, performance drops when switching back to the GL3 back-end
+cfg: nVidia GeForce GTX 1070 - Windows 7 SP1 x64 - drivers 430.64 and 445.87
+fix: don't switch back-ends at runtime or upgrade drivers
+act: can't fix (root cause unknown)
+
+iss: with GL3 and r_gpuMipGen 1, performance collapses big time
+cfg: AMD Radeon HD 6950 - Windows 10 Pro version 10.0.16299 - drivers 15.201.1151.1008
+exp: confirmed: whenever glTexStorage2D is called (even when using that function is the only change)
+fix: use D3D11 or upgrade drivers
+act: won't fix
+
+iss: with GL3 and r_gpuMipGen 1, the GPU-generated mips are corrupted
+cfg: AMD Radeon R7 360 - Windows 7 SP1 x64 - drivers 14.502.0.0
+exp: not confirmed: broken barrier implementation?
+fix: use D3D11 or upgrade drivers
+act: can't fix (root cause unknown)
+
+iss: with GL3, depth faded surfaces break anti-aliasing
+exp: can't fetch from the right sample index because render buffers
+     are used as FBO attachments instead of textures
+fix: use D3D11
+act: will get fixed
+
+iss: strong gamma correction breaks anti-aliasing
+exp: MSAA resolve happens before the post-process pass
+act: will get fixed for D3D11 and GL3
+
+iss: D3D11 full-screen toggles with the 32-bit client freeze myT's PC :-(
+cfg: nVidia GeForce GTX 1070 - Windows 7 SP1 x64 - drivers 445.87
+fix: use the 64-bit client
+act: can't fix (root cause unknown)

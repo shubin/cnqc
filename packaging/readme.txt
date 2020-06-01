@@ -10,18 +10,19 @@ cnq3-x64               64-bit Linux client
 cnq3-server-x64        64-bit Linux dedicated server
 changelog.txt          the list of changes for every release
 
-===================
-System Requirements
-===================
+===========================
+Minimum System Requirements
+===========================
 
-All clients:
-- OpenGL 2 support
-
-Windows:
-- Windows Vista or later
-
-Linux:
-- SDL 2 for the client
+OS : Windows Vista x64 or later
+     or
+     Linux x64 with SDL 2 for the client
+     or
+     FreeBSD 10.0 x64 or later with with SDL 2 for the client
+CPU: SSE2 support
+GPU: OpenGL 2.0 (all platforms)
+     or
+     Direct3D 11 with hardware feature level 10.1 (Windows only)
 
 ===========================
 Documentation and Downloads
@@ -29,8 +30,12 @@ Documentation and Downloads
 
 https://playmorepromode.com
 
-===========
-Source code
-===========
+==================
+Source Code Access
+==================
 
+Browsing the repository:
 https://bitbucket.org/CPMADevs/cnq3
+
+Cloning the Git repository:
+git clone https://bitbucket.org/CPMADevs/cnq3.git
