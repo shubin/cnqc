@@ -59,6 +59,8 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 #include "hlsl/generic_ad_ps.h"
 #include "hlsl/post_vs.h"
 #include "hlsl/post_ps.h"
+#include "hlsl/clear_vs.h"
+#include "hlsl/clear_ps.h"
 #include "hlsl/dl_vs.h"
 #include "hlsl/dl_ps.h"
 #include "hlsl/sprite_vs.h"
@@ -98,6 +100,9 @@ static ShaderDesc genericPixelShaders[4] =
 
 #define BLEND_STATE_COUNT (D3D11_BLEND_SRC_ALPHA_SAT + 1)
 
+// a special addition used by the partial depth clear pass
+#define GLS_DEPTHFUNC_ALWAYS 0x80000000
+
 
 /*
 Current info:
@@ -129,6 +134,7 @@ enum PipelineId
 	PID_DYNAMIC_LIGHT,
 	PID_POST_PROCESS,
 	PID_SCREENSHOT,
+	PID_CLEAR,
 	PID_COUNT
 };
 
@@ -154,6 +160,14 @@ enum TextureMode
 	TM_ANISOTROPIC,
 	TM_NEAREST,
 	TM_COUNT
+};
+
+enum DepthFunc
+{
+	DF_LEQUAL,
+	DF_EQUAL,
+	DF_ALWAYS,
+	DF_COUNT
 };
 
 // @NOTE: MSDN says "you must set the ByteWidth value of D3D11_BUFFER_DESC in multiples of 16"
@@ -225,6 +239,11 @@ struct PostPSData
 	float brightness;
 	float greyscale;
 	float dummy;
+};
+
+struct ClearPSData
+{
+	float color[4];
 };
 
 struct Down4CSData
@@ -306,6 +325,7 @@ struct Direct3D
 	// constant buffer data
 	PostVSData postVSData;
 	PostPSData postPSData;
+	ClearPSData clearPSData;
 	float modelViewMatrix[16];
 	float projectionMatrix[16];
 	float clipPlane[4];
@@ -331,11 +351,13 @@ struct Direct3D
 	ID3D11BlendState* blendStates[2 * BLEND_STATE_COUNT * BLEND_STATE_COUNT];
 	int blendStateIndex;
 
-	ID3D11DepthStencilState* depthStencilStates[8];
+	ID3D11DepthStencilState* depthStencilStates[2 * 2 * DF_COUNT];
 	int depthStencilStateIndex;
 
 	ID3D11RasterizerState* rasterStates[12];
 	int rasterStateIndex;
+
+	D3D11_PRIMITIVE_TOPOLOGY topology;
 
 	Pipeline pipelines[PID_COUNT];
 	PipelineId pipelineIndex;
@@ -547,6 +569,31 @@ static AlphaTest GetAlphaTest(unsigned int stateBits)
 	}
 }
 
+static DepthFunc GetDepthFunc(unsigned int stateBits)
+{
+	if(stateBits & GLS_DEPTHFUNC_ALWAYS)
+	{
+		return DF_ALWAYS;
+	}
+	
+	if(stateBits & GLS_DEPTHFUNC_EQUAL)
+	{
+		return DF_EQUAL;
+	}
+
+	return DF_LEQUAL;
+}
+
+static D3D11_COMPARISON_FUNC GetDepthComparison(DepthFunc depthFunc)
+{
+	switch(depthFunc)
+	{
+		case DF_ALWAYS: return D3D11_COMPARISON_ALWAYS;
+		case DF_EQUAL: return D3D11_COMPARISON_EQUAL;
+		default: return D3D11_COMPARISON_LESS_EQUAL;
+	}
+}
+
 static D3D11_TEXTURE_ADDRESS_MODE GetTextureAddressMode(textureWrap_t wrap)
 {
 	switch(wrap)
@@ -727,6 +774,10 @@ static void UploadPendingShaderData()
 		ResetShaderData(pipeline->vertexBuffer, &d3d.postVSData, sizeof(d3d.postVSData));
 		ResetShaderData(pipeline->pixelBuffer, &d3d.postPSData, sizeof(d3d.postPSData));
 	}
+	else if(pid == PID_CLEAR)
+	{
+		ResetShaderData(pipeline->pixelBuffer, &d3d.clearPSData, sizeof(d3d.clearPSData));
+	}
 }
 
 static int ComputeSamplerStateIndex(int textureWrap, int textureMode)
@@ -744,6 +795,17 @@ static void ApplySamplerState(UINT slot, textureWrap_t textureWrap, TextureMode 
 
 	d3ds.context->PSSetSamplers(slot, 1, &d3d.samplerStates[index]);
 	d3d.samplerStateIndices[slot] = index;
+}
+
+static void ApplyPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY topology)
+{
+	if(topology == d3d.topology)
+	{
+		return;
+	}
+
+	d3ds.context->IASetPrimitiveTopology(topology);
+	d3d.topology = topology;
 }
 
 static void DrawIndexed(int indexCount)
@@ -778,6 +840,12 @@ static void ApplyPipeline(PipelineId index)
 	{
 		index = PID_POST_PROCESS;
 	}
+
+	const D3D11_PRIMITIVE_TOPOLOGY topology =
+		index == PID_CLEAR ?
+		D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP :
+		D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	ApplyPrimitiveTopology(topology);
 
 	Pipeline* const pipeline = &d3d.pipelines[index];
 	if(pipeline->inputLayout)
@@ -971,14 +1039,14 @@ static void ApplyBlendState(D3D11_BLEND srcBlend, D3D11_BLEND dstBlend, qbool ap
 	d3d.blendStateIndex = index;
 }
 
-static int ComputeDepthStencilStateIndex(int disableDepth, int funcEqual, int maskTrue)
+static int ComputeDepthStencilStateIndex(int disableDepth, int depthFunc, int maskTrue)
 {
-	return disableDepth | (funcEqual << 1) | (maskTrue << 2);
+	return depthFunc + (disableDepth + (maskTrue * 2)) * DF_COUNT;
 }
 
-static void ApplyDepthStencilState(qbool disableDepth, qbool funcEqual, qbool maskTrue)
+static void ApplyDepthStencilState(qbool disableDepth, DepthFunc depthFunc, qbool maskTrue)
 {
-	const int index = ComputeDepthStencilStateIndex(disableDepth, funcEqual, maskTrue);
+	const int index = ComputeDepthStencilStateIndex(disableDepth, (int)depthFunc, maskTrue);
 	if(index == d3d.depthStencilStateIndex)
 	{
 		return;
@@ -1022,9 +1090,9 @@ static void ApplyState(unsigned int stateBits, cullType_t cullType, qbool polygo
 	}
 
 	const qbool disableDepth = (stateBits & GLS_DEPTHTEST_DISABLE) ? 1 : 0;
-	const qbool funcEqual = (stateBits & GLS_DEPTHFUNC_EQUAL) ? 1 : 0;
+	const DepthFunc depthFunc = GetDepthFunc(stateBits);
 	const qbool maskTrue = (stateBits & GLS_DEPTHMASK_TRUE) ? 1 : 0;
-	ApplyDepthStencilState(disableDepth, funcEqual, maskTrue);
+	ApplyDepthStencilState(disableDepth, depthFunc, maskTrue);
 
 	// fix up the cull mode for mirrors
 	if(backEnd.viewParms.isMirror)
@@ -1369,6 +1437,7 @@ static qbool GAL_Init()
 	D3D11_CreateInputLayout(genericInputLayoutDesc, ARRAY_LEN(genericInputLayoutDesc), g_generic_vs, ARRAY_LEN(g_generic_vs), &d3d.pipelines[PID_GENERIC].inputLayout, "generic input layout");
 
 	d3ds.context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	d3d.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
 	const int maxVertexCount = SHADER_MAX_VERTEXES;
 	const int maxIndexCount = SHADER_MAX_INDEXES;
@@ -1510,17 +1579,17 @@ static qbool GAL_Init()
 	// create all the depth/stencil states
 	for(int disableDepth = 0; disableDepth < 2; ++disableDepth)
 	{
-		for(int funcEqual = 0; funcEqual < 2; ++funcEqual)
+		for(int depthFunc = 0; depthFunc < DF_COUNT; ++depthFunc)
 		{
 			for(int maskTrue = 0; maskTrue < 2; ++maskTrue)
 			{
-				const int index = ComputeDepthStencilStateIndex(disableDepth, funcEqual, maskTrue);
+				const int index = ComputeDepthStencilStateIndex(disableDepth, depthFunc, maskTrue);
 
 				ID3D11DepthStencilState* depthState;
 				D3D11_DEPTH_STENCIL_DESC depthDesc;
 				ZeroMemory(&depthDesc, sizeof(depthDesc));
 				depthDesc.DepthEnable = disableDepth ? FALSE : TRUE;
-				depthDesc.DepthFunc = funcEqual ? D3D11_COMPARISON_EQUAL : D3D11_COMPARISON_LESS_EQUAL;
+				depthDesc.DepthFunc = GetDepthComparison((DepthFunc)depthFunc);
 				depthDesc.DepthWriteMask = maskTrue ? D3D11_DEPTH_WRITE_MASK_ALL : D3D11_DEPTH_WRITE_MASK_ZERO;
 				depthDesc.StencilEnable = FALSE;
 				hr = d3ds.device->CreateDepthStencilState(&depthDesc, &depthState);
@@ -1579,6 +1648,20 @@ static qbool GAL_Init()
 	pixelShaderBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	pixelShaderBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	D3D11_CreateBuffer(&pixelShaderBufferDesc, NULL, &d3d.pipelines[PID_POST_PROCESS].pixelBuffer, "post-process pixel shader buffer");
+
+	//
+	// partial render target clears
+	//
+
+	D3D11_CreateVertexShader(g_clear_vs, ARRAY_LEN(g_clear_vs), NULL, &d3d.pipelines[PID_CLEAR].vertexShader, "clear vertex shader");
+	D3D11_CreatePixelShader(g_clear_ps, ARRAY_LEN(g_clear_ps), NULL, &d3d.pipelines[PID_CLEAR].pixelShader, "clear pixel shader");
+
+	ZeroMemory(&pixelShaderBufferDesc, sizeof(pixelShaderBufferDesc));
+	pixelShaderBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	pixelShaderBufferDesc.ByteWidth = sizeof(d3d.clearPSData);
+	pixelShaderBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	pixelShaderBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	D3D11_CreateBuffer(&pixelShaderBufferDesc, NULL, &d3d.pipelines[PID_CLEAR].pixelBuffer, "clear pixel shader buffer");
 
 	//
 	// dynamic lights
@@ -2522,24 +2605,64 @@ static void GAL_Begin2D()
 	ApplyState(GLS_DEFAULT_2D, CT_TWO_SIDED, qfalse);
 }
 
+static void ClearViews(qbool shouldClearColor, const FLOAT* clearColor)
+{
+	// Direct3D 11.1 does provide support for partial clears for color and depth-only views.
+	// However, depth/stencil views are not supported so we can't use that right now.
+	// Getting rid of the stencil buffer is definitely on the cards.
+
+	const qbool fullClear =
+		backEnd.viewParms.viewportX == 0 &&
+		backEnd.viewParms.viewportY == 0 &&
+		backEnd.viewParms.viewportWidth == glConfig.vidWidth &&
+		backEnd.viewParms.viewportHeight == glConfig.vidHeight;
+
+	if(fullClear)
+	{
+		d3ds.context->ClearDepthStencilView(d3d.depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+		if(shouldClearColor)
+		{
+			d3ds.context->ClearRenderTargetView(d3d.renderTargetViewMS, clearColor);
+		}
+	}
+	else
+	{
+		const unsigned int stateBits =
+			GLS_DEPTHMASK_TRUE | GLS_DEPTHFUNC_ALWAYS |
+			GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
+		ApplyPipeline(PID_CLEAR);
+		ApplyState(stateBits, CT_TWO_SIDED, qfalse);
+		d3d.clearPSData.color[0] = clearColor[0];
+		d3d.clearPSData.color[1] = clearColor[1];
+		d3d.clearPSData.color[2] = clearColor[2];
+		d3d.clearPSData.color[3] = shouldClearColor ? 1.0f : 0.0f;
+		UploadPendingShaderData();
+		d3ds.context->Draw(4, 0);
+		ApplyPipeline(PID_GENERIC);
+	}
+}
+
 static void GAL_Begin3D()
 {
 	ApplyPipeline(PID_GENERIC);
 	memcpy(d3d.projectionMatrix, backEnd.viewParms.projectionMatrix, sizeof(d3d.projectionMatrix));
 	ApplyViewportAndScissor(backEnd.viewParms.viewportX, backEnd.viewParms.viewportY, backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight, glConfig.vidHeight);
 
-	d3ds.context->ClearDepthStencilView(d3d.depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+	qbool shouldClearColor = qfalse;
+	FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 	if(backEnd.refdef.rdflags & RDF_HYPERSPACE)
 	{
 		const FLOAT c = RB_HyperspaceColor();
-		const FLOAT clearColor[4] = { c, c, c, 1.0f };
-		d3ds.context->ClearRenderTargetView(d3d.renderTargetViewMS, clearColor);
+		clearColor[0] = c;
+		clearColor[1] = c;
+		clearColor[2] = c;
+		shouldClearColor = qtrue;
 	}
 	else if(r_fastsky->integer && !(backEnd.refdef.rdflags & RDF_NOWORLDMODEL))
 	{
-		const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-		d3ds.context->ClearRenderTargetView(d3d.renderTargetViewMS, clearColor);
+		shouldClearColor = qtrue;
 	}
+	ClearViews(shouldClearColor, clearColor);
 
 	if(backEnd.viewParms.isPortal)
 	{

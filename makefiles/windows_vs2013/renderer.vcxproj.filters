@@ -37,6 +37,9 @@
     <ClCompile Include="..\..\code\renderer\tr_world.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\..\code\renderer\hlsl\clear.hlsl">
+      <Filter>hlsl</Filter>
+    </None>
     <None Include="..\..\code\renderer\hlsl\dl.hlsl">
       <Filter>hlsl</Filter>
     </None>

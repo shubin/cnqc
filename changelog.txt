@@ -2,6 +2,12 @@
 See the end of this file for known issues.
 
 
+DD Mmm 20 - 1.53
+
+fix: with r_backend D3D11, partial clears incorrectly affected entire render targets
+  this was creating black views in CPMA multi-view with r_fastsky 1
+
+
 01 Jun 20 - 1.52
 
 add: FreeBSD x64 support

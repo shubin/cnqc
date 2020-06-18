@@ -768,6 +768,8 @@ solution "cnq3"
 					WIN_CreateShaderPreBuildCommand("dl", "ps", "4_1", "", ""),
 					WIN_CreateShaderPreBuildCommand("sprite", "vs", "4_1", "", ""),
 					WIN_CreateShaderPreBuildCommand("sprite", "ps", "4_1", "", ""),
+					WIN_CreateShaderPreBuildCommand("clear", "vs", "4_1", "", ""),
+					WIN_CreateShaderPreBuildCommand("clear", "ps", "4_1", "", ""),
 					WIN_CreateShaderPreBuildCommand("mip_start", "cs", "5_0", "", ""),
 					WIN_CreateShaderPreBuildCommand("mip_pass", "cs", "5_0", "", ""),
 					WIN_CreateShaderPreBuildCommand("mip_end", "cs", "5_0", "", "")
