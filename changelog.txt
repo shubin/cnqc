@@ -4,6 +4,8 @@ See the end of this file for known issues.
 
 DD Mmm 20 - 1.53
 
+fix: with r_backend GL3, shader uniforms caching could break with fog-only shaders
+
 fix: with r_backend D3D11, partial clears incorrectly affected entire render targets
   this was creating black views in CPMA multi-view with r_fastsky 1
 

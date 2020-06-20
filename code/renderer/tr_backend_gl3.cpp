@@ -2145,14 +2145,17 @@ static void DrawGeneric()
 	if(pipeline->uniformsDirty[GU_MODELVIEW])
 	{
 		glUniformMatrix4fv(pipeline->uniformLocations[GU_MODELVIEW], 1, GL_FALSE, gl.modelViewMatrix);
+		pipeline->uniformsDirty[GU_MODELVIEW] = qfalse;
 	}
 	if(pipeline->uniformsDirty[GU_PROJECTION])
 	{
 		glUniformMatrix4fv(pipeline->uniformLocations[GU_PROJECTION], 1, GL_FALSE, gl.projectionMatrix);
+		pipeline->uniformsDirty[GU_PROJECTION] = qfalse;
 	}
 	if(pipeline->uniformsDirty[GU_CLIP_PLANE])
 	{
 		glUniform4fv(pipeline->uniformLocations[GU_CLIP_PLANE], 1, gl.clipPlane);
+		pipeline->uniformsDirty[GU_CLIP_PLANE] = qfalse;
 	}
 	if(pipeline->uniformsDirty[GU_GAMMA_BRIGHT_NOISE_SEED] &&
 	   pipeline->uniformLocations[GU_GAMMA_BRIGHT_NOISE_SEED] != -1)
@@ -2163,6 +2166,7 @@ static void DrawGeneric()
 			1.0f / r_brightness->value,
 			backEnd.projection2D ? 0.0f : r_ditherStrength->value,
 			(float)rand() / (float)RAND_MAX);
+		pipeline->uniformsDirty[GU_GAMMA_BRIGHT_NOISE_SEED] = qfalse;
 	}
 
 	UploadVertexArray(VB_POSITION, tess.xyz);
@@ -2199,6 +2203,7 @@ static void DrawGeneric()
 		if(pipeline->uniformsDirty[GU_ALPHA_TEX])
 		{
 			glUniform2ui(pipeline->uniformLocations[GU_ALPHA_TEX], gl.alphaTest, gl.texEnv);
+			pipeline->uniformsDirty[GU_ALPHA_TEX] = qfalse;
 		}
 
 		DrawElements(tess.numIndexes);
@@ -2221,12 +2226,11 @@ static void DrawGeneric()
 		if(pipeline->uniformsDirty[GU_ALPHA_TEX])
 		{
 			glUniform2ui(pipeline->uniformLocations[GU_ALPHA_TEX], gl.alphaTest, gl.texEnv);
+			pipeline->uniformsDirty[GU_ALPHA_TEX] = qfalse;
 		}
 
 		DrawElements(tess.numIndexes);
 	}
-
-	memset(pipeline->uniformsDirty, 0, sizeof(pipeline->uniformsDirty));
 }
 
 static void DrawDynamicLight()
@@ -2289,26 +2293,31 @@ static void DrawDepthFade()
 	if(pipeline->uniformsDirty[SU_PROJECTION])
 	{
 		glUniformMatrix4fv(pipeline->uniformLocations[SU_PROJECTION], 1, GL_FALSE, gl.projectionMatrix);
+		pipeline->uniformsDirty[SU_PROJECTION] = qfalse;
 	}
 	if(pipeline->uniformsDirty[SU_MODELVIEW])
 	{
 		glUniformMatrix4fv(pipeline->uniformLocations[SU_MODELVIEW], 1, GL_FALSE, gl.modelViewMatrix);
+		pipeline->uniformsDirty[SU_MODELVIEW] = qfalse;
 	}
 	if(pipeline->uniformsDirty[SU_CLIP_PLANE])
 	{
 		glUniform4fv(pipeline->uniformLocations[SU_CLIP_PLANE], 1, gl.clipPlane);
+		pipeline->uniformsDirty[SU_CLIP_PLANE] = qfalse;
 	}
 	if(pipeline->uniformsDirty[SU_COLOR_SCALE] ||
 	   memcmp(gl.depthFadeScale, r_depthFadeScale[tess.shader->dfType], sizeof(gl.depthFadeScale)) != 0)
 	{
 		glUniform4fv(pipeline->uniformLocations[SU_COLOR_SCALE], 1, r_depthFadeScale[tess.shader->dfType]);
 		memcpy(gl.depthFadeScale, r_depthFadeScale[tess.shader->dfType], sizeof(gl.depthFadeScale));
+		pipeline->uniformsDirty[SU_COLOR_SCALE] = qfalse;
 	}
 	if(pipeline->uniformsDirty[SU_COLOR_BIAS] ||
 	   memcmp(gl.depthFadeBias, r_depthFadeBias[tess.shader->dfType], sizeof(gl.depthFadeBias)) != 0)
 	{
 		glUniform4fv(pipeline->uniformLocations[SU_COLOR_BIAS], 1, r_depthFadeBias[tess.shader->dfType]);
 		memcpy(gl.depthFadeBias, r_depthFadeBias[tess.shader->dfType], sizeof(gl.depthFadeBias));
+		pipeline->uniformsDirty[SU_COLOR_BIAS] = qfalse;
 	}
 	if(pipeline->uniformsDirty[SU_DIST_OFFSET] ||
 	   tess.shader->dfInvDist != gl.depthFadeDist ||
@@ -2317,6 +2326,7 @@ static void DrawDepthFade()
 		glUniform2f(pipeline->uniformLocations[SU_DIST_OFFSET], tess.shader->dfInvDist, tess.shader->dfBias);
 		gl.depthFadeDist = tess.shader->dfInvDist;
 		gl.depthFadeOffset = tess.shader->dfBias;
+		pipeline->uniformsDirty[SU_DIST_OFFSET] = qfalse;
 	}
 
 	UploadVertexArray(VB_POSITION, tess.xyz);
@@ -2334,6 +2344,7 @@ static void DrawDepthFade()
 		if(pipeline->uniformsDirty[SU_ALPHA_TEST])
 		{
 			glUniform1ui(pipeline->uniformLocations[SU_ALPHA_TEST], gl.alphaTest);
+			pipeline->uniformsDirty[SU_ALPHA_TEST] = qfalse;
 		}
 
 		BindBundle(0, &stage->bundle);
@@ -2343,8 +2354,6 @@ static void DrawDepthFade()
 
 		DrawElements(tess.numIndexes);
 	}
-
-	memset(pipeline->uniformsDirty, 0, sizeof(pipeline->uniformsDirty));
 }
 
 static void GAL_Draw(drawType_t type)
