@@ -192,6 +192,7 @@ static void R_AddWorldSurface( msurface_t* surf )
 
 	// surfaces that don't ever draw anything are not considered visible
 	if ( surf->shader->numStages == 0 &&
+		surf->shader->sort > SS_ENVIRONMENT &&
 		( surf->shader->fogPass == FP_NONE || surf->fogIndex == 0 ) )
 		return;
 
