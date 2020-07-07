@@ -466,7 +466,16 @@ breaks every single mod except CPMA otherwise, but it IS wrong, and critically s
 	if ( cvar_numIndexes >= MAX_CVARS ) {
 		Com_Error( ERR_FATAL, "MAX_CVARS" );
 	}
-	var = &cvar_indexes[cvar_numIndexes];
+	for ( int i = 0; i < MAX_CVARS; ++i ) {
+		cvar_t* const temp = &cvar_indexes[ (cvar_numIndexes + i) % MAX_CVARS ];
+		if ( temp->name == NULL ) {
+			var = temp;
+			break;
+		}
+	}
+	if ( var == NULL ) {
+		Com_Error( ERR_FATAL, "no free CVar found" );
+	}
 	cvar_numIndexes++;
 	var->name = CopyString( var_name );
 	var->string = CopyString( var_value );
@@ -918,9 +927,12 @@ static void Cvar_Nuke( cvar_t* var )
 	if ( var->help )
 		Z_Free( var->help );
 
-	// clear the var completely, since we
-	// can't remove the index from the list
+	// clear the var completely
+	// even though clearing the name alone would be enough
 	Com_Memset( var, 0, sizeof( *var ) );
+
+	// make sure this index can be allocated again
+	cvar_numIndexes--;
 }
 
 
@@ -1125,10 +1137,13 @@ static void Cvar_List_f( void )
 	const char* match = (Cmd_Argc() > 1) ? Cmd_Argv(1) : NULL;
 
 	int i = 0;
+	int found = 0;
 	for (const cvar_t* var = cvar_vars; var; var = var->next, ++i)
 	{
 		if (match && !Com_Filter(match, var->name))
 			continue;
+
+		++found;
 
 		Com_Printf( (var->flags & CVAR_SERVERINFO) ? "S" : " " );
 		Com_Printf( (var->flags & CVAR_USERINFO) ? "U" : " " );
@@ -1142,8 +1157,8 @@ static void Cvar_List_f( void )
 		Com_Printf(" %s \"%s\"\n", var->name, var->string);
 	}
 
-	Com_Printf("\n%i total cvars\n", i);
-	Com_Printf("%i cvar indexes\n", cvar_numIndexes);
+	Com_Printf("\n%4i cvars total\n", i);
+	Com_Printf("%4i cvar%s matched\n", found, found > 1 ? "s" : "");
 }
 
 
@@ -1286,7 +1301,7 @@ void Cvar_Update( vmCvar_t *vmCvar )
 	cvar_t* cv = NULL;
 	assert(vmCvar);
 
-	if ( (unsigned)vmCvar->handle >= cvar_numIndexes ) {
+	if ( (unsigned int)vmCvar->handle >= MAX_CVARS ) {
 		Com_Error( ERR_DROP, "Cvar_Update: handle out of range" );
 	}
 

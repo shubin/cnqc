@@ -9,6 +9,8 @@ add: r_alphaToCoverageMipBoost <0.0 to 0.5> (default: 0.125) boosts the alpha va
 
 chg: with r_backend GL3, alpha to coverage now requires GLSL 4.00 at a minimum
 
+fix: CVar slots that have been freed (e.g. through unset/cvar_trim/cvar_reset) can now be re-used
+
 fix: with alpha to coverage enabled, high r_picmip values should longer cause
   alpha-tested surfaces to become transparent in the distance (e.g. q3wcp14 corridor floors)
 
