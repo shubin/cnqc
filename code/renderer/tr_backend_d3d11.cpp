@@ -542,16 +542,17 @@ static qbool D3D11_CreateInputLayout(const D3D11_INPUT_ELEMENT_DESC* pInputEleme
 	return CheckAndName(hr, "CreateInputLayout", *ppInputLayout, name);
 }
 
-static const char* GetDeviceRemovedReason()
+static const char* GetDeviceRemovedReasonString(HRESULT reason)
 {
-	switch(d3ds.device->GetDeviceRemovedReason())
+	switch(reason)
 	{
 		case DXGI_ERROR_DEVICE_HUNG: return "device hung";
 		case DXGI_ERROR_DEVICE_REMOVED: return "device removed";
 		case DXGI_ERROR_DEVICE_RESET: return "device reset";
 		case DXGI_ERROR_DRIVER_INTERNAL_ERROR: return "internal driver error";
 		case DXGI_ERROR_INVALID_CALL: return "invalid call";
-		default: return "unknown";
+		case S_OK: return "no error";
+		default: return va("unknown error code 0x%08X", (unsigned int)reason);
 	}
 }
 
@@ -2090,11 +2091,37 @@ static void GAL_EndFrame()
 
 	const UINT presentFlags = d3ds.flipAndTear && r_swapInterval->integer == 0 ? DXGI_PRESENT_ALLOW_TEARING : 0;
 	const HRESULT hr = d3ds.swapChain->Present(abs(r_swapInterval->integer), presentFlags);
+
+	enum PresentError
+	{
+		PE_NONE,
+		PE_DEVICE_REMOVED,
+		PE_DEVICE_RESET
+	};
+	PresentError presentError = PE_NONE;
+	HRESULT deviceRemovedReason = S_OK;
 	if(hr == DXGI_ERROR_DEVICE_REMOVED || hr == D3DDDIERR_DEVICEREMOVED)
 	{
-		ri.Error(ERR_FATAL, "Direct3D device was removed! Reason: %s", GetDeviceRemovedReason());
+		deviceRemovedReason = d3ds.device->GetDeviceRemovedReason();
+		if(deviceRemovedReason == DXGI_ERROR_DEVICE_RESET)
+		{
+			presentError = PE_DEVICE_RESET;
+		}
+		else
+		{
+			presentError = PE_DEVICE_REMOVED;
+		}
 	}
 	else if(hr == DXGI_ERROR_DEVICE_RESET)
+	{
+		presentError = PE_DEVICE_RESET;
+	}
+
+	if(presentError == PE_DEVICE_REMOVED)
+	{
+		ri.Error(ERR_FATAL, "Direct3D device was removed! Reason: %s", GetDeviceRemovedReasonString(deviceRemovedReason));
+	}
+	else if(presentError == PE_DEVICE_RESET)
 	{
 		ri.Printf(PRINT_ERROR, "Direct3D device was reset! Restarting the video system...");
 		Cmd_ExecuteString("vid_restart;");
