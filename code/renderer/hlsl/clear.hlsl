@@ -28,8 +28,8 @@ struct VOut
 VOut vs_main(uint id : SV_VertexID)
 {
 	VOut output;
-	output.position.x = -1.0 + 2.0 * (float)(id / 2);
-	output.position.y = -1.0 + 2.0 * (float)(id % 2);
+	output.position.x = (float)(id / 2) * 4.0 - 1.0;
+	output.position.y = (float)(id % 2) * 4.0 - 1.0;
 	output.position.z = 1.0;
 	output.position.w = 1.0;
 

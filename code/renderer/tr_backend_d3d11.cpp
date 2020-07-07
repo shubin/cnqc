@@ -357,8 +357,6 @@ struct Direct3D
 	ID3D11RasterizerState* rasterStates[12];
 	int rasterStateIndex;
 
-	D3D11_PRIMITIVE_TOPOLOGY topology;
-
 	Pipeline pipelines[PID_COUNT];
 	PipelineId pipelineIndex;
 
@@ -798,17 +796,6 @@ static void ApplySamplerState(UINT slot, textureWrap_t textureWrap, TextureMode 
 	d3d.samplerStateIndices[slot] = index;
 }
 
-static void ApplyPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY topology)
-{
-	if(topology == d3d.topology)
-	{
-		return;
-	}
-
-	d3ds.context->IASetPrimitiveTopology(topology);
-	d3d.topology = topology;
-}
-
 static void DrawIndexed(int indexCount)
 {
 	if(d3d.splitBufferOffsets)
@@ -841,12 +828,6 @@ static void ApplyPipeline(PipelineId index)
 	{
 		index = PID_POST_PROCESS;
 	}
-
-	const D3D11_PRIMITIVE_TOPOLOGY topology =
-		index == PID_CLEAR ?
-		D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP :
-		D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	ApplyPrimitiveTopology(topology);
 
 	Pipeline* const pipeline = &d3d.pipelines[index];
 	if(pipeline->inputLayout)
@@ -1438,7 +1419,6 @@ static qbool GAL_Init()
 	D3D11_CreateInputLayout(genericInputLayoutDesc, ARRAY_LEN(genericInputLayoutDesc), g_generic_vs, ARRAY_LEN(g_generic_vs), &d3d.pipelines[PID_GENERIC].inputLayout, "generic input layout");
 
 	d3ds.context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	d3d.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
 	const int maxVertexCount = SHADER_MAX_VERTEXES;
 	const int maxIndexCount = SHADER_MAX_INDEXES;
@@ -2638,7 +2618,7 @@ static void ClearViews(qbool shouldClearColor, const FLOAT* clearColor)
 		d3d.clearPSData.color[2] = clearColor[2];
 		d3d.clearPSData.color[3] = shouldClearColor ? 1.0f : 0.0f;
 		UploadPendingShaderData();
-		d3ds.context->Draw(4, 0);
+		d3ds.context->Draw(3, 0);
 		ApplyPipeline(PID_GENERIC);
 	}
 }
