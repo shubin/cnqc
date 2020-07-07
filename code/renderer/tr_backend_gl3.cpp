@@ -38,6 +38,7 @@ Current info:
 - fancy mip-map generations requires:
 	- OpenGL 4.3 (or equivalent extensions)
 	- GLSL 4.30
+- alpha to coverage requires GLSL 4.00
 
 Vertex and index data streaming notes:
 - everyone: persistent coherent buffer mapping is the best option whenever available
@@ -149,7 +150,8 @@ enum GenericUniform
 	GU_PROJECTION,
 	GU_CLIP_PLANE,
 	GU_ALPHA_TEX,
-	GU_GAMMA_BRIGHT_NOISE_SEED, // @NOTE: not always defined
+	GU_GAMMA_BRIGHT_NOISE_SEED, // only defined when dithering is enabled
+	GU_A2C_ALPHA_BOOST,         // only defined when alpha to coverage is enabled
 	GU_COUNT
 };
 
@@ -322,6 +324,9 @@ static const char* generic_fs =
 "#define noiseScale gammaBrightNoiseSeed.z\n"
 "#define seed gammaBrightNoiseSeed.w\n"
 "#endif\n"
+"#ifdef CNQ3_A2C\n"
+"uniform float alphaBoost;\n"
+"#endif\n"
 "\n"
 "centroid in vec2 texCoords1FS;\n"
 "centroid in vec2 texCoords2FS;\n"
@@ -354,10 +359,12 @@ static const char* generic_fs =
 "float CorrectAlpha(float threshold, float alpha, vec2 tc)\n"
 "{\n"
 "	vec2 size = vec2(textureSize(texture1, 0));\n"
-"	float dx = max(abs(dFdx(tc.x * size.x)), 0.001);\n"
-"	float dy = max(abs(dFdy(tc.y * size.y)), 0.001);\n"
-"	float dxy = max(dx, dy); // apply the smallest boost\n"
-"	float scale = max(1.0 / dxy, 1.0);\n"
+"	if(min(size.x, size.y) <= 8.0)\n"
+"		return alpha >= threshold ? 1.0 : 0.0;\n"
+"	alpha *= 1.0 + alphaBoost * textureQueryLod(texture1, tc).x;"
+"	vec2 dtc = fwidth(tc * size);\n"
+"	float recScale = max(0.25 * (dtc.x + dtc.y), 1.0 / 16384.0);\n"
+"	float scale = max(1.0 / recScale, 1.0);\n"
 "	float ac = threshold + (alpha - threshold) * scale;\n"
 "\n"
 "	return ac;\n"
@@ -388,7 +395,7 @@ static const char* generic_fs =
 "	if(alphaTest == uint(1))\n"
 "		r.a = r.a > 0.0 ? 1.0 : 0.0;\n"
 "	if(alphaTest == uint(2))\n"
-"		r.a = CorrectAlpha(0.5, 1.0 - r.a, texCoords1FS);\n"
+"		r.a = CorrectAlpha(uintBitsToFloat(0x3F000001), 1.0 - r.a, texCoords1FS);\n"
 "	else if(alphaTest == uint(3))\n"
 "		r.a = CorrectAlpha(0.5, r.a, texCoords1FS);\n"
 "#else\n"
@@ -798,12 +805,21 @@ static const char* GetShaderTypeName(GLenum shaderType)
 
 static qbool CreateShader(GLuint* shaderPtr, PipelineId pipelineId, GLenum shaderType, const char* shaderSource, const char* debugName)
 {
+	// A2C now requires GLSL 4.00 for textureQueryLod
+	const qbool enableA2C =
+		pipelineId == PID_GENERIC &&
+		shaderType == GL_FRAGMENT_SHADER &&
+		glInfo.alphaToCoverageSupport;
+	const qbool enableDithering =
+		pipelineId == PID_GENERIC &&
+		shaderType == GL_FRAGMENT_SHADER &&
+		r_dither->integer;
 	const char* sourceArray[] =
 	{
-		shaderType == GL_COMPUTE_SHADER ? "#version 430\n" : "#version 140\n",
+		shaderType == GL_COMPUTE_SHADER ? "#version 430\n" : (enableA2C ? "#version 400\n" : "#version 140\n"),
 		"\n",
-		pipelineId == PID_GENERIC && glInfo.alphaToCoverageSupport && shaderType == GL_FRAGMENT_SHADER ? "#define CNQ3_A2C 1\n" : "#define CNQ3_A2C 0\n",
-		pipelineId == PID_GENERIC && r_dither->integer && shaderType == GL_FRAGMENT_SHADER ? "#define CNQ3_DITHER 1\n" : "#define CNQ3_DITHER 0\n",
+		enableA2C ? "#define CNQ3_A2C 1\n" : "#define CNQ3_A2C 0\n",
+		enableDithering ? "#define CNQ3_DITHER 1\n" : "#define CNQ3_DITHER 0\n",
 		shaderSource
 	};
 
@@ -1904,6 +1920,7 @@ static void Init()
 	gl.pipelines[PID_GENERIC].uniformNames[GU_CLIP_PLANE] = "clipPlane";
 	gl.pipelines[PID_GENERIC].uniformNames[GU_ALPHA_TEX] = "alphaTex";
 	gl.pipelines[PID_GENERIC].uniformNames[GU_GAMMA_BRIGHT_NOISE_SEED] = "gammaBrightNoiseSeed";
+	gl.pipelines[PID_GENERIC].uniformNames[GU_A2C_ALPHA_BOOST] = "alphaBoost";
 
 	gl.pipelines[PID_DYNAMIC_LIGHT].arrayBuffers[VB_POSITION].enabled = qtrue;
 	gl.pipelines[PID_DYNAMIC_LIGHT].arrayBuffers[VB_POSITION].attribName = "position";
@@ -1964,7 +1981,8 @@ static void Init()
 			{
 				pipeline->uniformLocations[i] = glGetUniformLocation(pipeline->program.program, pipeline->uniformNames[i]);
 #if defined(_DEBUG)
-				if(!(r_dither->integer == 0 && p == PID_GENERIC && i == GU_GAMMA_BRIGHT_NOISE_SEED))
+				if(!(r_dither->integer == 0 && p == PID_GENERIC && i == GU_GAMMA_BRIGHT_NOISE_SEED) &&
+				   !(r_alphaToCoverage->integer == 0 && p == PID_GENERIC && i == GU_A2C_ALPHA_BOOST))
 				{
 					assert(pipeline->uniformLocations[i] != -1);
 				}
@@ -2167,6 +2185,12 @@ static void DrawGeneric()
 			backEnd.projection2D ? 0.0f : r_ditherStrength->value,
 			(float)rand() / (float)RAND_MAX);
 		pipeline->uniformsDirty[GU_GAMMA_BRIGHT_NOISE_SEED] = qfalse;
+	}
+	if(pipeline->uniformsDirty[GU_A2C_ALPHA_BOOST] &&
+	   pipeline->uniformLocations[GU_A2C_ALPHA_BOOST] != -1)
+	{
+		glUniform1f(pipeline->uniformLocations[GU_A2C_ALPHA_BOOST], r_alphaToCoverageMipBoost->value);
+		pipeline->uniformsDirty[GU_A2C_ALPHA_BOOST] = qfalse;
 	}
 
 	UploadVertexArray(VB_POSITION, tess.xyz);

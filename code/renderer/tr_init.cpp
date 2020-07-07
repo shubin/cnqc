@@ -104,6 +104,8 @@ cvar_t	*r_portalOnly;
 cvar_t	*r_subdivisions;
 cvar_t	*r_lodCurveError;
 
+cvar_t	*r_alphaToCoverageMipBoost;
+
 cvar_t	*r_width;
 cvar_t	*r_height;
 cvar_t	*r_customaspect;
@@ -411,6 +413,7 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_ditherStrength, "r_ditherStrength", "1.0", CVAR_ARCHIVE, CVART_FLOAT, "0.125", "8.0", help_r_ditherStrength },
 	{ &r_transpSort, "r_transpSort", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_transpSort },
 	{ &r_lodCurveError, "r_lodCurveError", "2000", CVAR_ARCHIVE, CVART_FLOAT, "250", "10000", "curved surfaces LOD scale" },
+	{ &r_alphaToCoverageMipBoost, "r_alphaToCoverageMipBoost", "0.125", CVAR_ARCHIVE, CVART_FLOAT, "0", "0.5", "increases the alpha value of higher mip levels" },
 
 	//
 	// temporary variables that can change at any time

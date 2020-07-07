@@ -188,7 +188,7 @@ struct GenericPSData
 	float invGamma;
 	float invBrightness;
 	float noiseScale;
-	float dummy;
+	float alphaBoost;
 };
 
 struct DepthFadeVSData
@@ -735,6 +735,7 @@ static void UploadPendingShaderData()
 		psData.invGamma = 1.0f / r_gamma->value;
 		psData.invBrightness = 1.0f / r_brightness->value;
 		psData.noiseScale = backEnd.projection2D ? 0.0f : r_ditherStrength->value;
+		psData.alphaBoost = r_alphaToCoverageMipBoost->value;
 		ResetShaderData(pipeline->vertexBuffer, &vsData, sizeof(vsData));
 		ResetShaderData(pipeline->pixelBuffer, &psData, sizeof(psData));
 	}

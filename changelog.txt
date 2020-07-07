@@ -4,10 +4,18 @@ See the end of this file for known issues.
 
 DD Mmm 20 - 1.53
 
+add: r_alphaToCoverageMipBoost <0.0 to 0.5> (default: 0.125) boosts the alpha value of higher mip levels
+  with A2C enabled, it prevents alpha-tested surfaces from fading (too much) in the distance
+
+chg: with r_backend GL3, alpha to coverage now requires GLSL 4.00 at a minimum
+
+fix: with alpha to coverage enabled, high r_picmip values should longer cause
+  alpha-tested surfaces to become transparent in the distance (e.g. q3wcp14 corridor floors)
+
 fix: with r_backend GL3, shader uniforms caching could break with fog-only shaders
 
 fix: with r_backend D3D11, partial clears incorrectly affected entire render targets
-  this was creating black views in CPMA multi-view with r_fastsky 1
+  example: black views in CPMA multi-view with r_fastsky 1
 
 
 01 Jun 20 - 1.52

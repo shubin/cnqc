@@ -1051,6 +1051,8 @@ extern	cvar_t	*r_portalOnly;
 extern	cvar_t	*r_subdivisions;
 extern	cvar_t	*r_lodCurveError;
 
+extern	cvar_t	*r_alphaToCoverageMipBoost; // increases the alpha value of higher mip levels
+
 extern	cvar_t	*r_ignoreGLErrors;
 
 extern	cvar_t	*r_brightness;

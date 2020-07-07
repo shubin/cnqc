@@ -66,7 +66,7 @@ cbuffer PixelShaderBuffer
 	float invGamma;
 	float invBrightness;
 	float noiseScale;
-	float dummy;
+	float alphaBoost;
 };
 
 Texture2D texture0 : register(t0);
@@ -101,10 +101,12 @@ float CorrectAlpha(float threshold, float alpha, float2 tc)
 {
 	float w, h;
 	texture0.GetDimensions(w, h);
-	float dx = max(abs(ddx(tc.x * w)), 0.001);
-	float dy = max(abs(ddy(tc.y * h)), 0.001);
-	float dxy = max(dx, dy); // apply the smallest boost
-	float scale = max(1.0 / dxy, 1.0);
+	if(min(w, h) <= 8.0)
+		return alpha >= threshold ? 1.0 : 0.0;
+	alpha *= 1.0 + alphaBoost * texture0.CalculateLevelOfDetail(sampler0, tc);
+	float2 dtc = fwidth(tc * float2(w, h));
+	float recScale = max(0.25 * (dtc.x + dtc.y), 1.0 / 16384.0);
+	float scale = max(1.0 / recScale, 1.0);
 	float ac = threshold + (alpha - threshold) * scale;
 
 	return ac;
@@ -132,10 +134,16 @@ float4 ps_main(VOut input) : SV_Target0
 #endif
 
 #ifdef CNQ3_A2C
+	//       a <  0.5
+	//     - a > -0.5
+	// 1.0 - a >  0.5
+	// 1.0 - a >= NextFloatAbove(0.5)
+	// 1.0 - a >= asfloat(0x3F000001)
+	// asfloat(0x3F000001) is 0.5 * 1.0000001192092896
 	if(alphaTest == 1)
 		r.a = r.a > 0.0 ? 1.0 : 0.0;
 	else if(alphaTest == 2)
-		r.a = CorrectAlpha(0.5, 1.0 - r.a, input.texCoords);
+		r.a = CorrectAlpha(asfloat(0x3F000001), 1.0 - r.a, input.texCoords);
 	else if(alphaTest == 3)
 		r.a = CorrectAlpha(0.5, r.a, input.texCoords);
 #else
