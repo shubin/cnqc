@@ -797,15 +797,16 @@ compared quickly during the qsorting process
 
 the bits are allocated as follows:
 
-18-31 : sorted shader index (14 bits)
-16-17 : cull type (2 bits)
-15-15 : polygon offset (1 bit)
+31-31 : unused (1 bit)
+30-30 : depth fade (1 bit)
+29-29 : polygon offset (1 bit)
+15-28 : sorted shader index (14 bits)
  5-14 : entity index (10 bits)
  0- 4 : fog index (5 bits)
 */
-#define QSORT_SHADERNUM_SHIFT	18
-#define QSORT_CULLTYPE_SHIFT	16
-#define QSORT_POLYOFF_SHIFT		15
+#define QSORT_DEPTHFADE_SHIFT	30
+#define QSORT_POLYOFF_SHIFT		29
+#define QSORT_SHADERNUM_SHIFT	15
 #define QSORT_ENTITYNUM_SHIFT	5
 #define QSORT_FOGNUM_SHIFT		0
 

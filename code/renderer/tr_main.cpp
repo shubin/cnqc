@@ -1073,7 +1073,7 @@ void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int fo
 	// compared quickly during the qsorting process
 	tr.refdef.drawSurfs[index].sort = (shader->sortedIndex << QSORT_SHADERNUM_SHIFT)
 			| tr.shiftedEntityNum | (fogIndex << QSORT_FOGNUM_SHIFT)
-			| (shader->cullType << QSORT_CULLTYPE_SHIFT)
+			| ((shader->dfType != DFT_NONE) << QSORT_DEPTHFADE_SHIFT)
 			| (shader->polygonOffset << QSORT_POLYOFF_SHIFT);
 	tr.refdef.drawSurfs[index].surface = surface;
 	tr.refdef.drawSurfs[index].model = tr.currentModel != NULL ? tr.currentModel->index : 0;
@@ -1089,7 +1089,7 @@ void R_AddLitSurf( const surfaceType_t* surface, const shader_t* shader, int fog
 
 	litsurf->sort = (shader->sortedIndex << QSORT_SHADERNUM_SHIFT)
 			| tr.shiftedEntityNum | (fogIndex << QSORT_FOGNUM_SHIFT)
-			| (shader->cullType << QSORT_CULLTYPE_SHIFT)
+			| ((shader->dfType != DFT_NONE) << QSORT_DEPTHFADE_SHIFT)
 			| (shader->polygonOffset << QSORT_POLYOFF_SHIFT);
 	litsurf->surface = surface;
 
