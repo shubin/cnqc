@@ -35,10 +35,11 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 Current info:
 - OpenGL 3.2 minimum
 - GLSL 1.40 minimum
-- fancy mip-map generations requires:
+- fancy mip-map generation requires:
 	- OpenGL 4.3 (or equivalent extensions)
 	- GLSL 4.30
-- alpha to coverage requires GLSL 4.00
+- alpha to coverage    requires GLSL 4.00
+- depth fade with MSAA requires GLSL 4.00
 
 Vertex and index data streaming notes:
 - everyone: persistent coherent buffer mapping is the best option whenever available
@@ -137,8 +138,8 @@ struct PipelineArrayBuffer
 struct FrameBuffer
 {
 	GLuint fbo;
-	GLuint color;			// texture if MS, buffer if SS
-	GLuint depthStencil;	// texture if MS, buffer if SS
+	GLuint color;
+	GLuint depthStencil;
 	qbool multiSampled;
 	qbool hasDepthStencil;
 	qbool hasColor;
@@ -260,7 +261,6 @@ struct OpenGL3
 	qbool enableAlphaToCoverage;
 
 	FrameBuffer fbMS;
-	FrameBuffer fbSSDepth; // resolved depth/stencil from fbMS
 	FrameBuffer fbSS[2];
 	unsigned int fbReadIndex; // indexes fbSS
 	qbool fbMSEnabled;
@@ -503,7 +503,11 @@ static const char* sprite_vs =
 
 static const char* sprite_fs =
 "uniform sampler2D texture1; // diffuse texture\n"
+"#if CNQ3_MSAA\n"
+"uniform sampler2DMS texture2; // depth texture\n"
+"#else\n"
 "uniform sampler2D texture2; // depth texture\n"
+"#endif\n"
 "\n"
 "uniform uint alphaTest;\n"
 "uniform vec2 distOffset;\n"
@@ -543,7 +547,11 @@ static const char* sprite_fs =
 "		(alphaTest == uint(3) && r.a <  0.5))\n"
 "		discard;\n"
 "\n"
+"#if CNQ3_MSAA\n"
+"	float depthSRaw = texelFetch(texture2, ivec2(gl_FragCoord.xy), gl_SampleID).r;\n"
+"#else\n"
 "	float depthSRaw = texelFetch(texture2, ivec2(gl_FragCoord.xy), 0).r;\n"
+"#endif\n"
 "	float depthS = LinearDepth(depthSRaw * 2.0 - 1.0);\n"
 "	float depthP = depthVS - offset;\n"
 "	float scale = Contrast((depthS - depthP) * distance, 2.0);\n"
@@ -693,46 +701,6 @@ void GL_GetRenderTargetFormat(GLenum* internalFormat, GLenum* format, GLenum* ty
 	}
 }
 
-void GL_CreateColorRenderBufferStorageMS(int* samples)
-{
-	GLenum internalFormat, format, type;
-	GL_GetRenderTargetFormat(&internalFormat, &format, &type, r_rtColorFormat->integer);
-
-	int sampleCount = r_msaa->integer;
-	while(glGetError() != GL_NO_ERROR) {} // clear the error queue
-
-	if(GLEW_VERSION_4_2 || GLEW_ARB_internalformat_query)
-	{
-		GLint maxSampleCount = 0;
-		glGetInternalformativ(GL_RENDERBUFFER, internalFormat, GL_SAMPLES, 1, &maxSampleCount);
-		if(glGetError() == GL_NO_ERROR)
-		{
-			sampleCount = min(sampleCount, (int)maxSampleCount);
-		}
-	}
-
-	GLenum errorCode = GL_NO_ERROR;
-	for(;;)
-	{
-		// @NOTE: when the sample count is invalid, the error code is GL_INVALID_OPERATION
-		glRenderbufferStorageMultisample(GL_RENDERBUFFER, sampleCount, internalFormat, glConfig.vidWidth, glConfig.vidHeight);
-		errorCode = glGetError();
-		if(errorCode == GL_NO_ERROR || sampleCount == 0)
-		{
-			break;
-		}
-
-		--sampleCount;
-	}
-
-	if(errorCode != GL_NO_ERROR)
-	{
-		ri.Error(ERR_FATAL, "Failed to create multi-sampled render buffer storage (error 0x%X)\n", (unsigned int)errorCode);
-	}
-
-	*samples = sampleCount;
-}
-
 #if defined(_WIN32)
 
 static void AllocatePinnedMemory(ArrayBuffer* buffer)
@@ -805,7 +773,8 @@ static const char* GetShaderTypeName(GLenum shaderType)
 
 static qbool CreateShader(GLuint* shaderPtr, PipelineId pipelineId, GLenum shaderType, const char* shaderSource, const char* debugName)
 {
-	// A2C now requires GLSL 4.00 for textureQueryLod
+	// alpha to coverage    now requires GLSL 4.00 for textureQueryLod
+	// depth fade with MSAA now requires GLSL 4.00 for gl_SampleID
 	const qbool enableA2C =
 		pipelineId == PID_GENERIC &&
 		shaderType == GL_FRAGMENT_SHADER &&
@@ -814,12 +783,18 @@ static qbool CreateShader(GLuint* shaderPtr, PipelineId pipelineId, GLenum shade
 		pipelineId == PID_GENERIC &&
 		shaderType == GL_FRAGMENT_SHADER &&
 		r_dither->integer;
-	const char* sourceArray[] =
+	const qbool depthFadeWithMSAA =
+		pipelineId == PID_SOFT_SPRITE &&
+		shaderType == GL_FRAGMENT_SHADER &&
+		glInfo.depthFadeSupport &&
+		gl.fbMSEnabled;
+	const char* const sourceArray[] =
 	{
-		shaderType == GL_COMPUTE_SHADER ? "#version 430\n" : (enableA2C ? "#version 400\n" : "#version 140\n"),
+		shaderType == GL_COMPUTE_SHADER ? "#version 430\n" : (enableA2C || depthFadeWithMSAA ? "#version 400\n" : "#version 140\n"),
 		"\n",
 		enableA2C ? "#define CNQ3_A2C 1\n" : "#define CNQ3_A2C 0\n",
 		enableDithering ? "#define CNQ3_DITHER 1\n" : "#define CNQ3_DITHER 0\n",
+		depthFadeWithMSAA ? "#define CNQ3_MSAA 1\n" : "#define CNQ3_MSAA 0\n",
 		shaderSource
 	};
 
@@ -930,7 +905,44 @@ static qbool CreateComputeProgram(Program* prog, const char* cs, const char* deb
 	return FinalizeProgram(prog, debugName);
 }
 
-extern void GL_GetRenderTargetFormat(GLenum* internalFormat, GLenum* format, GLenum* type, int cnq3Format);
+static void CreateColorTextureStorageMS(int* samples)
+{
+	GLenum internalFormat, format, type;
+	GL_GetRenderTargetFormat(&internalFormat, &format, &type, r_rtColorFormat->integer);
+
+	int sampleCount = r_msaa->integer;
+	while(glGetError() != GL_NO_ERROR) {} // clear the error queue
+
+	if(GLEW_VERSION_4_2 || GLEW_ARB_internalformat_query)
+	{
+		GLint maxSampleCount = 0;
+		glGetInternalformativ(GL_TEXTURE_2D_MULTISAMPLE, internalFormat, GL_SAMPLES, 1, &maxSampleCount);
+		if(glGetError() == GL_NO_ERROR)
+		{
+			sampleCount = min(sampleCount, (int)maxSampleCount);
+		}
+	}
+
+	GLenum errorCode = GL_NO_ERROR;
+	for(;;)
+	{
+		glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, sampleCount, internalFormat, glConfig.vidWidth, glConfig.vidHeight, GL_TRUE);
+		errorCode = glGetError();
+		if(errorCode == GL_NO_ERROR || sampleCount == 0)
+		{
+			break;
+		}
+
+		--sampleCount;
+	}
+
+	if(errorCode != GL_NO_ERROR)
+	{
+		ri.Error(ERR_FATAL, "Failed to create multi-sampled texture storage (error 0x%X)\n", (unsigned int)errorCode);
+	}
+
+	*samples = sampleCount;
+}
 
 static void FBO_CreateSS(FrameBuffer* fb, qbool color, qbool depthStencil, const char* name)
 {
@@ -986,17 +998,17 @@ static void FBO_CreateMS(int* sampleCount, FrameBuffer* fb, const char* name)
 	glGenFramebuffers(1, &fb->fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, fb->fbo);
 
-	glGenRenderbuffers(1, &fb->color);
-	glBindRenderbuffer(GL_RENDERBUFFER, fb->color);
-	GL_CreateColorRenderBufferStorageMS(sampleCount);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, fb->color);
-	SetDebugName(GL_RENDERBUFFER, fb->color, va("%s color attachment 0", name));
+	glGenTextures(1, &fb->color);
+	glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, fb->color);
+	CreateColorTextureStorageMS(sampleCount);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, fb->color, 0);
+	SetDebugName(GL_TEXTURE, fb->color, va("%s color attachment 0", name));
 
-	glGenRenderbuffers(1, &fb->depthStencil);
-	glBindRenderbuffer(GL_RENDERBUFFER, fb->depthStencil);
-	glRenderbufferStorageMultisample(GL_RENDERBUFFER, *sampleCount, GL_DEPTH24_STENCIL8, glConfig.vidWidth, glConfig.vidHeight);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, fb->depthStencil);
-	SetDebugName(GL_RENDERBUFFER, fb->depthStencil, va("%s depth/stencil attachment", name));
+	glGenTextures(1, &fb->depthStencil);
+	glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, fb->depthStencil);
+	glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, *sampleCount, GL_DEPTH24_STENCIL8, glConfig.vidWidth, glConfig.vidHeight, GL_TRUE);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D_MULTISAMPLE, fb->depthStencil, 0);
+	SetDebugName(GL_TEXTURE, fb->depthStencil, va("%s depth/stencil attachment", name));
 
 	const GLenum fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 	if(fboStatus != GL_FRAMEBUFFER_COMPLETE)
@@ -1020,7 +1032,6 @@ static void FBO_Init()
 	if(gl.fbMSEnabled)
 	{
 		FBO_CreateMS(&finalSampleCount, &gl.fbMS, "main");
-		FBO_CreateSS(&gl.fbSSDepth, qfalse, qtrue, "depth resolve");
 		FBO_CreateSS(&gl.fbSS[0], qtrue, qfalse, "post-process #1");
 		FBO_CreateSS(&gl.fbSS[1], qtrue, qfalse, "post-process #2");
 	}
@@ -1115,23 +1126,22 @@ static void FBO_ResolveColor()
 	glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL_COLOR_BUFFER_BIT, GL_LINEAR);
 }
 
-static void FBO_ResolveDepth()
-{
-	const FrameBuffer& r = gl.fbMS;
-	const FrameBuffer& d = gl.fbSSDepth;
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, r.fbo);
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, d.fbo);
-
-	const int w = glConfig.vidWidth;
-	const int h = glConfig.vidHeight;
-	glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, GL_NEAREST);
-}
-
 static void ApplyPipeline(PipelineId pipelineId)
 {
 	if(pipelineId == gl.pipelineId)
 	{
 		return;
+	}
+
+	// The depth fade pipeline is the only one reading from the depth texture
+	// but doesn't write to it.
+	// Any change to that pipeline requires a texture barrier with OpenGL 4.5+
+	// to make sure we get valid data when reading the depth texture.
+	// See "Feedback Loops Between Textures and the Framebuffer" in the specs.
+	if((GLEW_VERSION_4_5 || GLEW_ARB_texture_barrier) &&
+	   pipelineId == PID_SOFT_SPRITE)
+	{
+		glTextureBarrier();
 	}
 
 	gl.pipelineId = pipelineId;
@@ -1154,20 +1164,14 @@ static void ApplyPipeline(PipelineId pipelineId)
 		}
 	}
 
-	if(pipelineId == PID_SOFT_SPRITE && gl.fbMSEnabled)
-	{
-		// This is not how it should be done and will counter the benefits of MSAA.
-		// To do this right, we need to bind the FBO's depth attachment to the shader and for that,
-		// we need multi-sampled textures as FBO attachments instead of multi-sampled render buffers.
-		// We also need the shader to use gl_SampleID, which changes our minimum requirements.
-		// Because of all these changes and lack of testing time,
-		// I'll do the necessary changes after the 1.52 release to avoid problems.
-		FBO_ResolveDepth();
-		FBO_Bind();
-	}
-
 	glUniform1i(pipeline->textureLocations[0], 0);
 	glActiveTexture(GL_TEXTURE1);
+	if(pipelineId == PID_SOFT_SPRITE && gl.fbMSEnabled)
+	{
+		// we don't have a "BindTextureMS" function for caching/tracking MS texture binds
+		// since this is the only one we read from a fragment shader at the moment
+		glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, gl.fbMS.depthStencil);
+	}
 	glUniform1i(pipeline->textureLocations[1], 1);
 	glActiveTexture(GL_TEXTURE0);
 
@@ -1862,6 +1866,7 @@ static void Init()
 	gl.maxTextureSize = maxTextureSize > 0 ? min((int)maxTextureSize, MAX_GPU_TEXTURE_SIZE) : MAX_GPU_TEXTURE_SIZE;
 	glConfig.unused_maxTextureSize = gl.maxTextureSize;
 	glInfo.maxTextureSize = gl.maxTextureSize;
+	glInfo.depthFadeSupport = r_depthFade->integer == 1;
 
 	FBO_Init();
 	if(gl.fbMSEnabled && r_alphaToCoverage->integer)
@@ -1997,8 +2002,6 @@ static void Init()
 		glInfo.mipGenSupport = InitCompute();
 		gl.errorMode = EM_FATAL;
 	}
-
-	glInfo.depthFadeSupport = r_depthFade->integer == 1;
 
 	gl.pipelineId = PID_COUNT;
 	ApplyPipeline(PID_GENERIC);
@@ -2359,6 +2362,13 @@ static void DrawDepthFade()
 	{
 		const shaderStage_t* stage = tess.xstages[i];
 
+		// We have already made sure (in theory) we won't have depth writes enabled
+		// to avoid "feedback loops" on the depth texture, resulting in undefined behavior.
+		// See "Feedback Loops Between Textures and the Framebuffer" in the GL specs.
+		// However, this is not enough for OpenGL 4.5+, where glTextureBarrier is needed too
+		// because caching means a feedback loop can happen across draw calls.
+		assert((stage->stateBits & GLS_DEPTHTEST_DISABLE) == 0);
+
 		ApplyState(stage->stateBits, tess.shader->cullType, tess.shader->polygonOffset);
 
 		UploadVertexArray(VB_TEXCOORD, tess.svars[i].texcoordsptr);
@@ -2372,9 +2382,12 @@ static void DrawDepthFade()
 		}
 
 		BindBundle(0, &stage->bundle);
-		glActiveTexture(GL_TEXTURE1);
-		BindTexture(1, gl.fbMSEnabled ? gl.fbSSDepth.depthStencil : gl.fbSS[gl.fbReadIndex].depthStencil);
-		glActiveTexture(GL_TEXTURE0);
+		if(!gl.fbMSEnabled)
+		{
+			glActiveTexture(GL_TEXTURE1);
+			BindTexture(1, gl.fbSS[gl.fbReadIndex].depthStencil);
+			glActiveTexture(GL_TEXTURE0);
+		}
 
 		DrawElements(tess.numIndexes);
 	}

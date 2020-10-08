@@ -52,7 +52,6 @@ static void GAL_Begin2D();
 static GLint GetTexEnv( texEnv_t texEnv );
 
 void GL_GetRenderTargetFormat( GLenum* internalFormat, GLenum* format, GLenum* type, int cnq3Format );
-void GL_CreateColorRenderBufferStorageMS( int* samples );
 
 
 struct GLSL_Program {
@@ -334,8 +333,8 @@ static const char* dynLightFS =
 
 struct FrameBuffer {
 	GLuint fbo;
-	GLuint color;			// texture if MS, buffer if SS
-	GLuint depthStencil;	// texture if MS, buffer if SS
+	GLuint color;			// texture if SS, renderbuffer if MS
+	GLuint depthStencil;	// texture if SS, renderbuffer if MS
 	qbool multiSampled;
 	qbool hasDepthStencil;
 };
@@ -390,6 +389,41 @@ static void GL2_CheckError( const char* call, const char* function, const char* 
 }
 
 
+static void GL2_CreateColorRenderBufferStorageMS( int* samples )
+{
+	GLenum internalFormat, format, type;
+	GL_GetRenderTargetFormat( &internalFormat, &format, &type, r_rtColorFormat->integer );
+
+	int sampleCount = r_msaa->integer;
+	while ( glGetError() != GL_NO_ERROR ) {} // clear the error queue
+
+	if ( GLEW_VERSION_4_2 || GLEW_ARB_internalformat_query )
+	{
+		GLint maxSampleCount = 0;
+		glGetInternalformativ( GL_RENDERBUFFER, internalFormat, GL_SAMPLES, 1, &maxSampleCount );
+		if ( glGetError() == GL_NO_ERROR )
+			sampleCount = min(sampleCount, (int)maxSampleCount);
+	}
+
+	GLenum errorCode = GL_NO_ERROR;
+	for ( ;; )
+	{
+		// @NOTE: when the sample count is invalid, the error code is GL_INVALID_OPERATION
+		glRenderbufferStorageMultisample( GL_RENDERBUFFER, sampleCount, internalFormat, glConfig.vidWidth, glConfig.vidHeight );
+		errorCode = glGetError();
+		if ( errorCode == GL_NO_ERROR || sampleCount == 0 )
+			break;
+
+		--sampleCount;
+	}
+
+	if ( errorCode != GL_NO_ERROR )
+		ri.Error( ERR_FATAL, "Failed to create multi-sampled render buffer storage (error 0x%X)\n", (unsigned int)errorCode );
+
+	*samples = sampleCount;
+}
+
+
 static qbool GL2_FBO_CreateSS( FrameBuffer& fb, qbool depthStencil )
 {
 	while ( glGetError() != GL_NO_ERROR ) {} // clear the error queue
@@ -441,7 +475,7 @@ static qbool GL2_FBO_CreateMS( int* sampleCount, FrameBuffer& fb )
 
 	GL(glGenRenderbuffers( 1, &fb.color ));
 	GL(glBindRenderbuffer( GL_RENDERBUFFER, fb.color ));
-	GL_CreateColorRenderBufferStorageMS( sampleCount );
+	GL2_CreateColorRenderBufferStorageMS( sampleCount );
 	GL(glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, fb.color ));
 
 	GL(glGenRenderbuffers( 1, &fb.depthStencil ));

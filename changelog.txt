@@ -7,6 +7,9 @@ DD Mmm 20 - 1.53
 add: r_alphaToCoverageMipBoost <0.0 to 0.5> (default: 0.125) boosts the alpha value of higher mip levels
   with A2C enabled, it prevents alpha-tested surfaces from fading (too much) in the distance
 
+chg: with r_backend GL3, depth fade with MSAA now requires GLSL 4.00 at a minimum
+  depth access is now correctly multi-sampled (less aliasing) and performance has improved as well
+
 chg: with r_backend GL3, alpha to coverage now requires GLSL 4.00 at a minimum
 
 fix: with r_backend D3D11, some device reset scenarios caused fatal errors instead of video restarts
@@ -1001,12 +1004,6 @@ cfg: AMD Radeon R7 360 - Windows 7 SP1 x64 - drivers 14.502.0.0
 exp: not confirmed: broken barrier implementation?
 fix: use D3D11 or upgrade drivers
 act: can't fix (root cause unknown)
-
-iss: with GL3, depth faded surfaces break anti-aliasing
-exp: can't fetch from the right sample index because render buffers
-     are used as FBO attachments instead of textures
-fix: use D3D11
-act: will get fixed
 
 iss: strong gamma correction breaks anti-aliasing
 exp: MSAA resolve happens before the post-process pass
