@@ -1037,7 +1037,7 @@ static void ApplyBlendState(D3D11_BLEND srcBlend, D3D11_BLEND dstBlend, qbool ap
 
 static int ComputeDepthStencilStateIndex(int disableDepth, int depthFunc, int maskTrue)
 {
-	return depthFunc + (disableDepth + (maskTrue * 2)) * DF_COUNT;
+	return maskTrue + (depthFunc + (disableDepth * DF_COUNT)) * 2;
 }
 
 static void ApplyDepthStencilState(qbool disableDepth, DepthFunc depthFunc, qbool maskTrue)
@@ -1528,7 +1528,7 @@ static qbool GAL_Init()
 			samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
 			samplerDesc.MaxAnisotropy = textureMode == TM_ANISOTROPIC ? maxAnisotropy : 1;
 			hr = d3ds.device->CreateSamplerState(&samplerDesc, &samplerState);
-			CheckAndName(hr, "CreateSamplerState", samplerState, va("sampler state %d", index));
+			CheckAndName(hr, "CreateSamplerState", samplerState, va("sampler state %03d", index));
 
 			d3d.samplerStates[index] = samplerState;
 		}
@@ -1564,7 +1564,7 @@ static qbool GAL_Init()
 				blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
 				blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 				hr = d3ds.device->CreateBlendState(&blendDesc, &blendState);
-				CheckAndName(hr, "CreateBlendState", blendState, va("blend state %d", index));
+				CheckAndName(hr, "CreateBlendState", blendState, va("blend state %03d", index));
 
 				d3d.blendStates[index] = blendState;
 			}
@@ -1588,7 +1588,7 @@ static qbool GAL_Init()
 				depthDesc.DepthWriteMask = maskTrue ? D3D11_DEPTH_WRITE_MASK_ALL : D3D11_DEPTH_WRITE_MASK_ZERO;
 				depthDesc.StencilEnable = FALSE;
 				hr = d3ds.device->CreateDepthStencilState(&depthDesc, &depthState);
-				CheckAndName(hr, "CreateDepthStencilState", depthState, va("depth/stencil state %d", index));
+				CheckAndName(hr, "CreateDepthStencilState", depthState, va("depth/stencil state %03d", index));
 				
 				d3d.depthStencilStates[index] = depthState;
 			}
@@ -1616,7 +1616,7 @@ static qbool GAL_Init()
 				rasterDesc.DepthBias = polygonOffset ? -1 : 0;
 				rasterDesc.SlopeScaledDepthBias = polygonOffset ? -1.0f : 0.0f;
 				hr = d3ds.device->CreateRasterizerState(&rasterDesc, &rasterState);
-				CheckAndName(hr, "CreateRasterizerState", rasterState, va("raster state %d", index));
+				CheckAndName(hr, "CreateRasterizerState", rasterState, va("raster state %03d", index));
 
 				d3d.rasterStates[index] = rasterState;
 			}
@@ -1930,9 +1930,35 @@ static void GAL_ShutDown(qbool fullShutDown)
 
 	if(fullShutDown)
 	{
+#if defined(_DEBUG)
+		// DXGIGetDebugInterface would be nicer but it requires Windows 8...
+		// It doesn't reference the device, so the device doesn't show up as a false positive.
+		ID3D11Debug* debug = NULL;
+		const HRESULT debugQuery = d3ds.device->QueryInterface(IID_PPV_ARGS(&debug));
+#endif
+
 		d3ds.context->Release();
 		d3ds.device->Release();
 		d3ds.swapChain->Release();
+
+#if defined(_DEBUG)
+		OutputDebugStringA("================================================================\n");
+		if(SUCCEEDED(debugQuery))
+		{
+			OutputDebugStringA("Summary\n");
+			debug->ReportLiveDeviceObjects(D3D11_RLDO_SUMMARY);
+			OutputDebugStringA("================================================================\n");
+			OutputDebugStringA("Details\n");
+			debug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
+			debug->Release();
+		}
+		else
+		{
+			OutputDebugStringA("ID3D11Device::QueryInterface of ID3D11Debug failed!\n");
+			OutputDebugStringA(va("%s\n", GetSystemErrorString(debugQuery)));
+		}
+		OutputDebugStringA("================================================================\n");
+#endif
 
 		if(d3ds.library != NULL)
 			FreeLibrary(d3ds.library);
