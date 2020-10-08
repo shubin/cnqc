@@ -357,6 +357,8 @@ struct Direct3D
 	ID3D11RasterizerState* rasterStates[12];
 	int rasterStateIndex;
 
+	ID3D11ShaderResourceView* pixelShaderResources[2];
+
 	Pipeline pipelines[PID_COUNT];
 	PipelineId pipelineIndex;
 
@@ -797,6 +799,17 @@ static void ApplySamplerState(UINT slot, textureWrap_t textureWrap, TextureMode 
 	d3d.samplerStateIndices[slot] = index;
 }
 
+static void ApplyPixelShaderResource(UINT slot, ID3D11ShaderResourceView* srv)
+{
+	if(srv == d3d.pixelShaderResources[slot])
+	{
+		return;
+	}
+
+	d3ds.context->PSSetShaderResources(slot, 1, &srv);
+	d3d.pixelShaderResources[slot] = srv;
+}
+
 static void DrawIndexed(int indexCount)
 {
 	if(d3d.splitBufferOffsets)
@@ -902,13 +915,13 @@ static void ApplyPipeline(PipelineId index)
 	else if(unfixedIndex == PID_SOFT_SPRITE)
 	{
 		d3ds.context->OMSetRenderTargets(1, &d3d.renderTargetViewMS, NULL);
-		d3ds.context->PSSetShaderResources(1, 1, &d3d.depthStencilShaderView);
+		ApplyPixelShaderResource(1, d3d.depthStencilShaderView);
 		ApplySamplerState(1, TW_CLAMP_TO_EDGE, TM_BILINEAR);
 	}
 	else
 	{
-		d3ds.context->PSSetShaderResources(1, 1, &d3d.textures[0].view); // make sure the depth shader view isn't bound anymore
 		d3ds.context->OMSetRenderTargets(1, &d3d.renderTargetViewMS, d3d.depthStencilView);
+		ApplyPixelShaderResource(1, d3d.textures[0].view); // make sure the depth shader view isn't bound anymore
 	}
 
 	d3d.pipelineIndex = index;
@@ -1095,7 +1108,7 @@ static void ApplyState(unsigned int stateBits, cullType_t cullType, qbool polygo
 static void BindImage(UINT slot, const image_t* image)
 {
 	ID3D11ShaderResourceView* view = d3d.textures[image->texnum].view;
-	d3ds.context->PSSetShaderResources(slot, 1, &view);
+	ApplyPixelShaderResource(slot, view);
 	TextureMode mode = TM_ANISOTROPIC;
 	if(Q_stricmp(r_textureMode->string, "GL_NEAREST") == 0 &&
 	   !backEnd.projection2D &&
@@ -2021,7 +2034,7 @@ static void DrawPostProcess(float vsX, float vsY, float srX, float srY, qbool sc
 	ApplyState(GLS_DEPTHTEST_DISABLE, CT_TWO_SIDED, qfalse);
 	UploadPendingShaderData();
 	BindImage(0, tr.whiteImage);
-	d3ds.context->PSSetShaderResources(0, 1, &d3d.resolveTextureShaderView);
+	ApplyPixelShaderResource(0, d3d.resolveTextureShaderView);
 	ApplySamplerState(0, TW_CLAMP_TO_EDGE, TM_BILINEAR);
 	if(screenshot)
 	{
