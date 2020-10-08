@@ -249,6 +249,7 @@ struct OpenGL3
 	ArrayBuffer indexBuffer;
 
 	GLuint boundTextures[2];
+	int activeTextureSlot;
 	cullType_t cullType;
 	unsigned int srcBlendBits;
 	unsigned int dstBlendBits;
@@ -1126,6 +1127,17 @@ static void FBO_ResolveColor()
 	glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL_COLOR_BUFFER_BIT, GL_LINEAR);
 }
 
+static void ApplyActiveTexture(int slot)
+{
+	if(slot == gl.activeTextureSlot)
+	{
+		return;
+	}
+
+	glActiveTexture(GL_TEXTURE0 + slot);
+	gl.activeTextureSlot = slot;
+}
+
 static void ApplyPipeline(PipelineId pipelineId)
 {
 	if(pipelineId == gl.pipelineId)
@@ -1165,7 +1177,7 @@ static void ApplyPipeline(PipelineId pipelineId)
 	}
 
 	glUniform1i(pipeline->textureLocations[0], 0);
-	glActiveTexture(GL_TEXTURE1);
+	ApplyActiveTexture(1);
 	if(pipelineId == PID_SOFT_SPRITE && gl.fbMSEnabled)
 	{
 		// we don't have a "BindTextureMS" function for caching/tracking MS texture binds
@@ -1173,7 +1185,7 @@ static void ApplyPipeline(PipelineId pipelineId)
 		glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, gl.fbMS.depthStencil);
 	}
 	glUniform1i(pipeline->textureLocations[1], 1);
-	glActiveTexture(GL_TEXTURE0);
+	ApplyActiveTexture(0);
 
 	memset(pipeline->uniformsDirty, 0xFF, sizeof(pipeline->uniformsDirty));
 }
@@ -1213,6 +1225,7 @@ static void BindTexture(int slot, GLuint texture)
 		return;
 	}
 
+	ApplyActiveTexture(slot);
 	glBindTexture(GL_TEXTURE_2D, texture);
 	gl.boundTextures[slot] = texture;
 }
@@ -1740,6 +1753,7 @@ static void SetDefaultState()
 
 	gl.boundTextures[0] = GLuint(-1);
 	gl.boundTextures[1] = GLuint(-1);
+	gl.activeTextureSlot = 0;
 	gl.cullType = CT_TWO_SIDED;
 	gl.srcBlendBits = GLS_SRCBLEND_SRC_ALPHA;
 	gl.dstBlendBits = GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
@@ -2209,7 +2223,6 @@ static void DrawGeneric()
 		UploadVertexArray(VB_COLOR, tess.svars[i].colors);
 
 		BindBundle(0, &stage->bundle);
-		glActiveTexture(GL_TEXTURE1);
 
 		if(stage->mtStages == 0)
 		{
@@ -2225,8 +2238,6 @@ static void DrawGeneric()
 			ApplyTexEnv(stage2->mtEnv);
 			++i;
 		}
-
-		glActiveTexture(GL_TEXTURE0);
 
 		if(pipeline->uniformsDirty[GU_ALPHA_TEX])
 		{
@@ -2246,9 +2257,7 @@ static void DrawGeneric()
 		UploadVertexArray(VB_COLOR, tess.svarsFog.colors);
 
 		BindImage(0, tr.fogImage);
-		glActiveTexture(GL_TEXTURE1);
 		BindImage(1, tr.whiteImage);
-		glActiveTexture(GL_TEXTURE0);
 
 		ApplyTexEnv(TE_DISABLED);
 		if(pipeline->uniformsDirty[GU_ALPHA_TEX])
@@ -2385,9 +2394,7 @@ static void DrawDepthFade()
 		BindBundle(0, &stage->bundle);
 		if(!gl.fbMSEnabled)
 		{
-			glActiveTexture(GL_TEXTURE1);
 			BindTexture(1, gl.fbSS[gl.fbReadIndex].depthStencil);
-			glActiveTexture(GL_TEXTURE0);
 		}
 
 		DrawElements(tess.numIndexes);
