@@ -1986,11 +1986,12 @@ static void Init()
 			{
 				pipeline->uniformLocations[i] = glGetUniformLocation(pipeline->program.program, pipeline->uniformNames[i]);
 #if defined(_DEBUG)
-				if(!(r_dither->integer == 0 && p == PID_GENERIC && i == GU_GAMMA_BRIGHT_NOISE_SEED) &&
-				   !(r_alphaToCoverage->integer == 0 && p == PID_GENERIC && i == GU_A2C_ALPHA_BOOST))
+				if((p == PID_GENERIC && i == GU_GAMMA_BRIGHT_NOISE_SEED && r_dither->integer == 0) ||
+				   (p == PID_GENERIC && i == GU_A2C_ALPHA_BOOST && !glInfo.alphaToCoverageSupport))
 				{
-					assert(pipeline->uniformLocations[i] != -1);
+					continue;
 				}
+				assert(pipeline->uniformLocations[i] != -1);
 #endif
 			}
 		}
