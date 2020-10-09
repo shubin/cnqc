@@ -920,8 +920,10 @@ static void ApplyPipeline(PipelineId index)
 	}
 	else
 	{
+		// keep this call order to make sure the depth buffer isn't bound as a SRV anymore
+		// when we set it as a render target
+		ApplyPixelShaderResource(1, d3d.textures[0].view);
 		d3ds.context->OMSetRenderTargets(1, &d3d.renderTargetViewMS, d3d.depthStencilView);
-		ApplyPixelShaderResource(1, d3d.textures[0].view); // make sure the depth shader view isn't bound anymore
 	}
 
 	d3d.pipelineIndex = index;
