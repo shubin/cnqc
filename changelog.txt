@@ -7,6 +7,9 @@ DD Mmm 20 - 1.53
 add: r_alphaToCoverageMipBoost <0.0 to 0.5> (default: 0.125) boosts the alpha value of higher mip levels
   with A2C enabled, it prevents alpha-tested surfaces from fading (too much) in the distance
 
+chg: the Windows audio output now has a sampling rate of 44.1 kHz
+  with this, /video won't have issues with cl_aviFrameRate 60 anymore
+
 chg: with r_backend GL3, depth fade with MSAA now requires GLSL 4.00 at a minimum
   depth access is now correctly multi-sampled (less aliasing) and performance has improved as well
 

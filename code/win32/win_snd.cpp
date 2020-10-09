@@ -139,7 +139,7 @@ static qbool SNDDMA_InitDS()
 	// create the secondary buffer we'll actually work with
 	dma.channels = 2;
 	dma.samplebits = 16;
-	dma.speed = 22050;
+	dma.speed = 44100;
 
 	memset (&format, 0, sizeof(format));
 	format.wFormatTag = WAVE_FORMAT_PCM;
