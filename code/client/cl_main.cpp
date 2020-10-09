@@ -767,9 +767,7 @@ void CL_Disconnect( qbool showMainMenu ) {
 	FS_ClearPakReferences( FS_CGAME_REF | FS_UI_REF | FS_GENERAL_REF );
 
 	// Stop recording any video
-	if( CL_VideoRecording( ) ) {
-		CL_CloseAVI( );
-	}
+	CL_CloseAVI();
 }
 
 
@@ -1801,9 +1799,7 @@ doesn't know what graphics to reload
 static void CL_Vid_Restart_f()
 {
 	// Settings may have changed so stop recording now
-	if( CL_VideoRecording( ) ) {
-		CL_CloseAVI( );
-	}
+	CL_CloseAVI();
 
 	S_StopAllSounds(); // don't let them loop during the restart
 

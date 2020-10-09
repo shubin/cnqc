@@ -67,12 +67,20 @@ typedef struct aviFileData_s
   byte          *cBuffer, *eBuffer; // capture and encoding buffers
 } aviFileData_t;
 
+typedef enum closeMode_s
+{
+  CM_SEQUENCE_COMPLETE,  //     last in the sequence -> safe to clear sounds etc.
+  CM_SEQUENCE_INCOMPLETE // NOT last in the sequence -> we'll open a new one
+} closeMode_t;
+
 static aviFileData_t afd;
 
 #define MAX_AVI_BUFFER 2048
 
 static byte buffer[ MAX_AVI_BUFFER ];
 static int  bufIndex;
+
+static qbool CloseAVI( closeMode_t closeMode );
 
 /*
 ===============
@@ -334,7 +342,7 @@ qbool CL_OpenAVIForWriting( const char* fileNameNoExt, qbool reOpen )
 	static int  avi_fileNameIndex;
 
 	if ( reOpen )
-		CL_CloseAVI();
+		CloseAVI( CM_SEQUENCE_INCOMPLETE );
 
 	if ( afd.fileOpen )
 		return qfalse;
@@ -578,7 +586,7 @@ CL_CloseAVI
 Closes the AVI file and writes an index chunk
 ===============
 */
-qbool CL_CloseAVI( void )
+static qbool CloseAVI( closeMode_t closeMode )
 {
   int indexRemainder;
   int indexSize = afd.numIndices * 16;
@@ -642,9 +650,15 @@ qbool CL_CloseAVI( void )
 
   Com_Printf( "Wrote %d:%d frames to %s\n", afd.numVideoFrames, afd.numAudioFrames, afd.fileName );
 
-  S_StopAllSounds();
+  if ( closeMode == CM_SEQUENCE_COMPLETE )
+    S_StopAllSounds();
 
   return qtrue;
+}
+
+qbool CL_CloseAVI( void )
+{
+	return CloseAVI( CM_SEQUENCE_COMPLETE );
 }
 
 /*

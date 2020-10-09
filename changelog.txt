@@ -12,6 +12,8 @@ chg: with r_backend GL3, depth fade with MSAA now requires GLSL 4.00 at a minimu
 
 chg: with r_backend GL3, alpha to coverage now requires GLSL 4.00 at a minimum
 
+fix: /video produced .avi files that started with silence when they were not first in the sequence
+
 fix: with r_backend D3D11, some device reset scenarios caused fatal errors instead of video restarts
 
 fix: CVar slots that have been freed (e.g. through unset/cvar_trim/cvar_reset) can now be re-used
