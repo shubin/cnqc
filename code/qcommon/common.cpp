@@ -108,6 +108,7 @@ static char com_errorMessage[MAXPRINTMSG];
 static void Com_WriteConfigToFile( const char* filename );
 static void Com_WriteConfig_f();
 static void Com_CompleteWriteConfig_f( int startArg, int compArg );
+static const char* Com_GetCompilerInfo();
 extern void CIN_CloseAllVideos( void );
 
 //============================================================================
@@ -2295,6 +2296,11 @@ void Com_Init( char *commandLine )
 	const char* s = Q3_VERSION " " PLATFORM_STRING " " __DATE__;
 	com_version = Cvar_Get( "version", s, CVAR_ROM | CVAR_SERVERINFO );
 
+	Cvar_Get( "sys_compiler", Com_GetCompilerInfo(), CVAR_ROM );
+
+	// this is meaningless with cl.exe
+	Cvar_Get( "sys_cplusplus", STRINGIZE(__cplusplus), CVAR_ROM );
+
 	Cvar_Get( "sys_cpustring", "detect", 0 );
 	if ( Com_GetProcessorInfo() ) {
 		Com_Printf( "CPU: %s\n", Cvar_VariableString( "sys_cpustring" ) );
@@ -3523,4 +3529,78 @@ printHelpResult_t Com_PrintHelp( const char* name, printf_t print, qbool printNo
 		print( S_COLOR_HELP "%s\n", help );
 
 	return PHR_HADHELP;
+}
+
+
+static const char* Com_GetCompilerInfo()
+{
+#if defined( _MSC_VER )
+	typedef struct {
+		int mscVer;
+		const char* number;
+		const char* year;
+	} clVersion_t;
+
+#define CL(MacroVersion, RealVersion, Year) { MacroVersion, RealVersion, Year }
+	const clVersion_t clVersions[] = {
+		CL(1200,  "6.0", ""),
+		CL(1300,  "7.0", ".NET 2002"),
+		CL(1310,  "7.1", ".NET 2003"),
+		CL(1400,  "8.0", "2005"),
+		CL(1500,  "9.0", "2005"),
+		CL(1600, "10.0", "2010"),
+		CL(1700, "11.0", "2012"),
+		CL(1800, "12.0", "2013"),
+		CL(1900, "14.0", "2015"),
+		CL(1910, "15.0", "2017 RTW"),
+		CL(1911, "15.3", "2017"),
+		CL(1912, "15.5", "2017"),
+		CL(1913, "15.6", "2017"),
+		CL(1914, "15.7", "2017"),
+		CL(1915, "15.8", "2017"),
+		CL(1916, "15.9", "2017"),
+		CL(1920, "16.0", "2019 RTW"),
+		CL(1921, "16.1", "2019"),
+		CL(1922, "16.2", "2019"),
+		CL(1923, "16.3", "2019"),
+		CL(1924, "16.4", "2019"),
+		CL(1925, "16.5", "2019"),
+		CL(1926, "16.6", "2019"),
+		CL(1927, "16.7", "2019"),
+		CL(1928, "16.8", "2019")
+	};
+#undef CL
+
+	const char* info = "VS version unknown - ";
+	for ( int i = 0; i < ARRAY_LEN(clVersions); ++i ) {
+		if ( clVersions[i].mscVer == _MSC_VER ) {
+			info = va("VS %s (%s) - ", clVersions[i].year, clVersions[i].number);
+			break;
+		}
+	}
+
+	// 15.00.20706.01 <-> _MSC_FULL_VER 150020706 and _MSC_BUILD 1
+	const char* const fullVerStr = STRINGIZE(_MSC_FULL_VER);
+	if ( strlen(fullVerStr) >= 5 ) {
+		info = va( "%scl.exe %c%c.%c%c.%s.%02d",
+				  info,
+				  fullVerStr[0],
+				  fullVerStr[1],
+				  fullVerStr[2],
+				  fullVerStr[3],
+				  fullVerStr + 4,
+				  int(_MSC_BUILD) );
+	} else {
+		info = va( "%scl.exe %s.%02d", fullVerStr, int(_MSC_BUILD) );
+	}
+
+	return info;
+// the Clang check needs to be above the GCC check because Clang also defines __GNUC__
+#elif defined( __clang__ )
+	return va( "Clang %d.%d.%d", __clang_major__, __clang_minor__, __clang_patchlevel__ );
+#elif defined( __GNUC__ )
+	return va( "GCC %d.%d.%d", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__ );
+#else
+	return "Unknown compiler";
+#endif
 }
