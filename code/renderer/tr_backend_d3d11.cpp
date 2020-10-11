@@ -111,9 +111,6 @@ Current info:
 - shader target 4.1 for graphics (SV_VertexID, unsized Texture2DMS)
 - shader target 5.0 for compute  (typed UAVs)
 
-To look at:
-- near clip plane seems to be further in the GL2 back-end in 3D land
-
 Known issues:
 - device re-creation isn't handled by OBS' capture plug-in
 */
@@ -1613,7 +1610,7 @@ static qbool GAL_Init()
 				rasterDesc.CullMode = GetCullMode((cullType_t)cullType);
 				rasterDesc.FrontCounterClockwise = TRUE;
 				rasterDesc.ScissorEnable = TRUE;
-				rasterDesc.DepthClipEnable = FALSE;
+				rasterDesc.DepthClipEnable = TRUE;
 				rasterDesc.DepthBiasClamp = 0.0f;
 				rasterDesc.DepthBias = polygonOffset ? -1 : 0;
 				rasterDesc.SlopeScaledDepthBias = polygonOffset ? -1.0f : 0.0f;

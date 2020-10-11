@@ -419,7 +419,7 @@ static void R_SetupProjection()
 	//
 	// set up projection matrix
 	//
-	zNear	= 4.0f;
+	zNear	= 1.0f;
 	zFar	= tr.viewParms.zFar;
 
 	height = 2.0f * zNear * tan( tr.refdef.fov_y * M_PI / 360.0f );

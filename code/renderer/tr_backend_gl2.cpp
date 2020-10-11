@@ -1424,6 +1424,8 @@ static void GL_SetDefaultState()
 	// The default alignment is 4.
 	// RGB with width 1366 -> not a multiple of 4!
 	glPixelStorei( GL_PACK_ALIGNMENT, 1 );
+
+	glDisable( GL_DEPTH_CLAMP );
 }
 
 
