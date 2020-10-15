@@ -24,7 +24,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "snd_codec.h"
 
 
-#define DEF_COMSOUNDMEGS "8"
+#define DEF_COMSOUNDMEGS "16"
 
 static sndBuffer* sndbuffers = NULL;
 static sndBuffer* freelist = NULL;
@@ -38,6 +38,7 @@ void SND_free( sndBuffer* v )
 	freelist = (sndBuffer*)v;
 	sndmem_avail += sizeof(sndBuffer);
 }
+
 
 sndBuffer* SND_malloc()
 {
@@ -59,11 +60,13 @@ void SND_setup()
 {
 	sndBuffer *p, *q;
 
-	// a sndBuffer is actually 2K+, so this isn't even REMOTELY close to actual megs
+	// a sndBuffer struct is actually a bit over 2048 bytes,
+	// so we're really allocating roughly 2x more than what was asked
 	const cvar_t* cv = Cvar_Get( "com_soundMegs", DEF_COMSOUNDMEGS, CVAR_LATCH | CVAR_ARCHIVE );
 	Cvar_SetRange( "com_soundMegs", CVART_INTEGER, "1", "64" );
-	Cvar_SetHelp( "com_soundMegs", "sound system buffer size [MB]" );
-	int scs = cv->integer * 1024;
+	Cvar_SetHelp( "com_soundMegs", "sound system buffer size [MB]\n"
+				 "It allocates from " S_COLOR_CVAR "com_hunkMegs" S_COLOR_HELP "'s pool." );
+	const int scs = cv->integer * 1024;
 
 	sndbuffers = (sndBuffer*)Hunk_Alloc( scs * sizeof(sndBuffer), h_high );
 	sndmem_avail = scs * sizeof(sndBuffer);
