@@ -859,6 +859,10 @@ const image_t* R_FindImageFile( const char* name, int flags, textureWrap_t glWra
 			if ( strcmp( name, image->name ) )
 				continue;
 
+			// let's not whine about those since we rightfully ignore what the user asks for anyhow
+			if ( image->flags & IMG_EXTLMATLAS )
+				return image;
+
 			if ( !strcmp( name, "*white" ) )
 				return image;
 
