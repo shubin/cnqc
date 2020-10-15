@@ -7,6 +7,8 @@ DD Mmm 20 - 1.53
 add: r_alphaToCoverageMipBoost <0.0 to 0.5> (default: 0.125) boosts the alpha value of higher mip levels
   with A2C enabled, it prevents alpha-tested surfaces from fading (too much) in the distance
 
+chg: sound loads from disk during gameplay print warnings and get denied for looping sounds
+
 chg: com_soundMegs now defaults to 16
 
 chg: all rendering backends use depth clipping, near clip plane distance is 1 instead of 4

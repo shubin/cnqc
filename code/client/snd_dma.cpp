@@ -196,9 +196,33 @@ static sfx_t* S_FindName( const char *name )
 }
 
 
-static void S_memoryLoad( sfx_t* sfx )
+static void S_memoryLoad( sfx_t* sfx, qbool looping = qfalse )
 {
-	if ( !S_LoadSound( sfx ) ) {
+	if ( cls.state == CA_ACTIVE ) {
+		static int64_t lastMessage = -1000;
+		const int64_t currTime = Sys_Milliseconds();
+
+		if ( currTime >= lastMessage + 1000 ) {
+			Com_Printf(
+				"^3WARNING^7: " S_COLOR_CVAR "com_soundMegs " S_COLOR_VAL "%d ^7is too low for this map!\n",
+				Cvar_VariableIntegerValue( "com_soundMegs" ) );
+			if ( looping )
+				Com_Printf( "^1ERROR  ^7: blocked sound load: '%s'\n", sfx->soundName );
+			else
+				Com_Printf( "^3WARNING^7: allowed sound load: '%s'\n", sfx->soundName );
+		}
+		lastMessage = currTime;
+	}
+
+	if ( cls.state == CA_ACTIVE && looping ) {
+		// never load a looping sound on demand when the map is already loaded
+		// this should help prevent performance dropping massively on some maps
+		// with very long ambient sounds, e.g. ct3tourney3
+		// the downside is that some legit stuff can be filtered out (e.g. RG hum)
+		// that should be fine though as we expect the user to take action quickly
+		sfx->defaultSound = qtrue;
+	}
+	else if ( !S_LoadSound( sfx ) ) {
 		//Com_Printf( S_COLOR_YELLOW "WARNING: couldn't load sound: %s\n", sfx->soundName );
 		sfx->defaultSound = qtrue;
 	}
@@ -537,7 +561,7 @@ static void S_Base_AddLoopingSound( int entityNum, const vec3_t origin, sfxHandl
 	sfx_t* sfx = &s_knownSfx[ sfxHandle ];
 
 	if (sfx->inMemory == qfalse) {
-		S_memoryLoad(sfx);
+		S_memoryLoad( sfx, qtrue );
 	}
 
 	if ( !sfx->soundLength ) {
