@@ -1054,7 +1054,7 @@ static void S_UpdateBackgroundTrack()
 }
 
 
-void S_FreeOldestSound()
+qbool S_FreeOldestSound()
 {
 	sfx_t* sfx;
 	int oldest = Com_Milliseconds();
@@ -1067,6 +1067,9 @@ void S_FreeOldestSound()
 			oldest = sfx->lastTimeUsed;
 		}
 	}
+
+	if (slot == 0)
+		return qfalse;
 
 	sfx = &s_knownSfx[slot];
 
@@ -1081,6 +1084,8 @@ void S_FreeOldestSound()
 
 	sfx->inMemory = qfalse;
 	sfx->soundData = NULL;
+
+	return qtrue;
 }
 
 

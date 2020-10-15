@@ -43,7 +43,14 @@ void SND_free( sndBuffer* v )
 sndBuffer* SND_malloc()
 {
 	while (!freelist) {
-		S_FreeOldestSound();
+		if (!S_FreeOldestSound()) {
+			// Throw an error instead of running an infinite loop.
+			// It would be nicer to have a disconnect/drop type of error here,
+			// but sadly that would leave the hunk allocator in a bad state.
+			Com_Error (ERR_FATAL,
+					   "Not enough memory for audio.\n"
+					   "Please increase com_soundMegs accordingly.\n");
+		}
 	}
 
 	sndmem_avail -= sizeof(sndBuffer);
