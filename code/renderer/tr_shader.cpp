@@ -2095,6 +2095,37 @@ static qbool UsesExternalLightmap( const shaderStage_t* stage )
 }
 
 
+static int GetLightmapStageIndex()
+{
+	// look for "real" lightmaps first (straight from the .bsp file itself)
+	for ( int i = 0; i < shader.numStages; ++i ) {
+		if ( UsesInternalLightmap( &stages[i] ) )
+			return i;
+	}
+
+	// look for external lightmaps next
+	for ( int i = 0; i < shader.numStages; ++i ) {
+		if ( UsesExternalLightmap( &stages[i] ) )
+			return i;
+	}
+
+	return -1;
+}
+
+
+static qbool IsReplaceBlendMode( unsigned int stateBits )
+{
+	if ( (stateBits & (GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS)) == 0 )
+		return qtrue;
+
+	if ( (stateBits & GLS_SRCBLEND_BITS) == GLS_SRCBLEND_ONE &&
+		(stateBits & GLS_DSTBLEND_BITS) == GLS_DSTBLEND_ZERO )
+	   return qtrue;
+
+	return qfalse;
+}
+
+
 // returns a freshly allocated shader with info
 // copied from the current global working shader
 
@@ -2246,25 +2277,7 @@ static shader_t* FinishShader()
 		// for decals entirely pressed against opaque surfaces, we could use a keyword ("polygonoffset" or something new)
 		// to know that we should not draw them at all, but we just shouldn't trust level designers
 
-		// look for "real" lightmaps first (straight from the .bsp file itself)
-		int stageIndex = -1;
-		for ( int i = 0; i < shader.numStages; ++i ) {
-			if ( UsesInternalLightmap( &stages[i] ) ) {
-				stageIndex = i;
-				break;
-			}
-		}
-
-		if ( stageIndex == -1 ) {
-			// look for external lightmaps
-			for ( int i = 0; i < shader.numStages; ++i ) {
-				if ( UsesExternalLightmap( &stages[i] ) ) {
-					stageIndex = i;
-					break;
-				}
-			}
-		}
-
+		const int stageIndex = GetLightmapStageIndex();
 		const int stateBits = stages[0].stateBits;
 		if ( stageIndex > 0 )
 			memcpy( stages, stages + stageIndex, sizeof( stages[0] ) );
@@ -2278,6 +2291,34 @@ static shader_t* FinishShader()
 			shader.lightingStages[ST_DIFFUSE] = 0; // for working dynamic lights
 			shader.lightingStages[ST_LIGHTMAP] = 0;
 			shader.numStages = 1;
+		}
+	} else if ( r_lightmap->integer ) {
+		// now we deal with r_lightmap on a non-opaque shader
+		// first    stage must have: alphaFunc, depthWrite, blendFunc replace
+		// lightmap stage must have: depthFunc equal
+		// keep first stage as is, move lightmap stage as second stage, disable all others,
+		// change lightmap stage to enforce blendFunc replace
+
+		const int stageIndex = GetLightmapStageIndex();
+
+		if ( stageIndex > 0 ) {
+			const unsigned int firstBits = stages[0].stateBits;
+			const unsigned int lightBits = stages[stageIndex].stateBits;
+
+			if ( (firstBits & GLS_ATEST_BITS) != 0 &&
+				(firstBits & GLS_DEPTHMASK_TRUE) != 0 &&
+				IsReplaceBlendMode(firstBits) &&
+				(lightBits & GLS_DEPTHFUNC_EQUAL) != 0 &&
+				(lightBits & GLS_DEPTHTEST_DISABLE) == 0 ) {
+				if ( stageIndex > 1 )
+					memcpy( stages + 1, stages + stageIndex, sizeof(stages[0]) );
+
+				stages[1].stateBits &= ~( GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS );
+
+				for ( int i = 2; i < shader.numStages; ++i ) {
+					stages[i].active = qfalse;
+				}
+			}
 		}
 	}
 
