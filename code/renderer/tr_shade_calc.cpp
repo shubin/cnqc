@@ -830,10 +830,11 @@ static void RB_CalcEnvironmentTexCoords( float *st, int firstVertex, int numVert
 }
 
 
-static void RB_CalcTurbulentTexCoords( const waveForm_t *wf, float *st, int numVertexes )
+static void RB_CalcTurbulentTexCoords( const waveForm_t *wf, float *st, int firstVertex, int numVertexes )
 {
 	int i;
 	double now;
+	vec4_t* const v = &tess.xyz[firstVertex];
 
 	now = ( wf->phase + tess.shaderTime * wf->frequency );
 
@@ -842,8 +843,8 @@ static void RB_CalcTurbulentTexCoords( const waveForm_t *wf, float *st, int numV
 		float s = st[0];
 		float t = st[1];
 
-		st[0] = s + tr.sinTable[ ( ( int ) ( ( ( tess.xyz[i][0] + tess.xyz[i][2] )* 1.0/128 * 0.125 + now ) * FUNCTABLE_SIZE ) ) & ( FUNCTABLE_MASK ) ] * wf->amplitude;
-		st[1] = t + tr.sinTable[ ( ( int ) ( ( tess.xyz[i][1] * 1.0/128 * 0.125 + now ) * FUNCTABLE_SIZE ) ) & ( FUNCTABLE_MASK ) ] * wf->amplitude;
+		st[0] = s + tr.sinTable[ ( ( int ) ( ( ( v[i][0] + v[i][2] )* 1.0/128 * 0.125 + now ) * FUNCTABLE_SIZE ) ) & ( FUNCTABLE_MASK ) ] * wf->amplitude;
+		st[1] = t + tr.sinTable[ ( ( int ) ( ( v[i][1] * 1.0/128 * 0.125 + now ) * FUNCTABLE_SIZE ) ) & ( FUNCTABLE_MASK ) ] * wf->amplitude;
 	}
 }
 
@@ -1231,7 +1232,7 @@ void R_ComputeTexCoords( const shaderStage_t* pStage, stageVars_t& svars, int fi
 			break;
 
 		case TMOD_TURBULENT:
-			RB_CalcTurbulentTexCoords( &pStage->texMods[i].wave, (float*)&svars.texcoords[firstVertex], numVertexes );
+			RB_CalcTurbulentTexCoords( &pStage->texMods[i].wave, (float*)&svars.texcoords[firstVertex], firstVertex, numVertexes );
 			break;
 
 		case TMOD_ENTITY_TRANSLATE:
