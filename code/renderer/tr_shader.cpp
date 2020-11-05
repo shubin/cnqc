@@ -1508,6 +1508,22 @@ static qbool ParseShader( const char** text )
 }
 
 
+static int R_CompareShaders( const void* aPtr, const void* bPtr )
+{
+	const shader_t* const a = *(const shader_t**)aPtr;
+	const shader_t* const b = *(const shader_t**)bPtr;
+	if ( a->sort < b->sort )
+		return -1;
+	if ( a->sort > b->sort )
+		return 1;
+
+	if ( a->polygonOffset ^ b->polygonOffset )
+		return a->polygonOffset - b->polygonOffset;
+
+	return a->cullType - b->cullType;
+}
+
+
 /*
 Positions the most recently created shader in the tr.sortedShaders[] array
 such that the shader->sort key is sorted relative to the other shaders.
@@ -1530,6 +1546,12 @@ static void SortNewShader()
 
 	newShader->sortedIndex = i+1;
 	tr.sortedShaders[i+1] = newShader;
+
+	// sort it more aggressively for better performance
+	qsort( tr.sortedShaders, tr.numShaders, sizeof(shader_t*), &R_CompareShaders );
+	for ( i = 0; i < tr.numShaders; ++i ) {
+		tr.sortedShaders[i]->sortedIndex = i;
+	}
 }
 
 

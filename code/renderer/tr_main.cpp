@@ -1072,9 +1072,7 @@ void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int fo
 	// the sort data is packed into a single 32 bit value so it can be
 	// compared quickly during the qsorting process
 	tr.refdef.drawSurfs[index].sort = (shader->sortedIndex << QSORT_SHADERNUM_SHIFT)
-			| tr.shiftedEntityNum | (fogIndex << QSORT_FOGNUM_SHIFT)
-			| ((shader->dfType != DFT_NONE) << QSORT_DEPTHFADE_SHIFT)
-			| (shader->polygonOffset << QSORT_POLYOFF_SHIFT);
+			| tr.shiftedEntityNum | (fogIndex << QSORT_FOGNUM_SHIFT);
 	tr.refdef.drawSurfs[index].surface = surface;
 	tr.refdef.drawSurfs[index].model = tr.currentModel != NULL ? tr.currentModel->index : 0;
 }
@@ -1088,9 +1086,7 @@ void R_AddLitSurf( const surfaceType_t* surface, const shader_t* shader, int fog
 	litSurf_t* litsurf = &tr.refdef.litSurfs[index];
 
 	litsurf->sort = (shader->sortedIndex << QSORT_SHADERNUM_SHIFT)
-			| tr.shiftedEntityNum | (fogIndex << QSORT_FOGNUM_SHIFT)
-			| ((shader->dfType != DFT_NONE) << QSORT_DEPTHFADE_SHIFT)
-			| (shader->polygonOffset << QSORT_POLYOFF_SHIFT);
+			| tr.shiftedEntityNum | (fogIndex << QSORT_FOGNUM_SHIFT);
 	litsurf->surface = surface;
 
 	if (!tr.light->head)
@@ -1210,14 +1206,17 @@ c) What we really want is true order-independent transparency (OIT).
    - Per-pixel fixed-size arrays (there are several methods).
    - Depth peeling (there are also several methods).
 */
-static int R_CompareDrawSurfDepth( const void* aPtr, const void* bPtr )
+static int R_CompareDrawSurf( const void* aPtr, const void* bPtr )
 {
 	const drawSurf_t* a = ( const drawSurf_t* )aPtr;
 	const drawSurf_t* b = ( const drawSurf_t* )bPtr;
+	if ( a->shaderSort < b->shaderSort )
+		return -1;
+	if ( a->shaderSort > b->shaderSort )
+		return 1;
 
 	if ( a->depth > b->depth )
 		return -1;
-
 	if ( a->depth < b->depth )
 		return 1;
 
@@ -1288,10 +1287,21 @@ static void R_SortDrawSurfs( int firstDrawSurf, int firstLitSurf )
 
 		drawSurfs[i].depth = R_ComputeSurfaceDepth( drawSurfs[i].surface, entityNum, drawSurfs[i].model );
 		drawSurfs[i].index = i;
+		drawSurfs[i].shaderSort = shader->sort;
 	}
 
 	// sort transparent surfaces by depth
-	qsort( drawSurfs + numDrawSurfs - numTranspSurfs, numTranspSurfs, sizeof(drawSurf_t), &R_CompareDrawSurfDepth );
+	qsort( drawSurfs + numDrawSurfs - numTranspSurfs, numTranspSurfs, sizeof(drawSurf_t), &R_CompareDrawSurf );
+
+#if defined(_DEBUG)
+	float prevSort = -1.0f;
+	for ( int i = 0; i < numDrawSurfs; ++i )
+	{
+		R_DecomposeSort( (drawSurfs + i)->sort, &entityNum, &shader, &fogNum );
+		assert( shader->sort >= prevSort );
+		prevSort = shader->sort;
+	}
+#endif
 
 	// all the lit surfaces are in a single queue
 	// but each light's surfaces are sorted within its subsection

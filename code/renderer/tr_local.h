@@ -505,8 +505,9 @@ struct drawSurf_t {
 	unsigned				sort;		// bit combination for fast compares
 	float					depth;		// transparent surface's midpoint's depth
 	const surfaceType_t*	surface;	// any of surface*_t
-	int						index;		// transparent surface's registration order
 	qhandle_t				model;		// MD3 model handle
+	int						index;		// transparent surface's registration order
+	float					shaderSort;	// transparent surface's shader sort
 };
 
 extern void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])( const void* );
@@ -797,15 +798,11 @@ compared quickly during the qsorting process
 
 the bits are allocated as follows:
 
-31-31 : unused (1 bit)
-30-30 : depth fade (1 bit)
-29-29 : polygon offset (1 bit)
+29-31 : zero (3 bits)
 15-28 : sorted shader index (14 bits)
  5-14 : entity index (10 bits)
  0- 4 : fog index (5 bits)
 */
-#define QSORT_DEPTHFADE_SHIFT	30
-#define QSORT_POLYOFF_SHIFT		29
 #define QSORT_SHADERNUM_SHIFT	15
 #define QSORT_ENTITYNUM_SHIFT	5
 #define QSORT_FOGNUM_SHIFT		0
