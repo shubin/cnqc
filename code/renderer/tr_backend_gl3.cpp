@@ -1345,12 +1345,6 @@ static void ApplyBlendFunc(unsigned int srcBlendBits, unsigned int dstBlendBits)
 		return;
 	}
 
-	if((srcBlendBits | dstBlendBits) == 0 &&
-	   (gl.srcBlendBits | gl.dstBlendBits) == 0)
-	{
-		return;
-	}
-
 	gl.srcBlendBits = srcBlendBits;
 	gl.dstBlendBits = dstBlendBits;
 	if((srcBlendBits | dstBlendBits) == 0)
