@@ -76,6 +76,8 @@ enum {
 	RB_INDICES,
 	RB_SURFACES,
 	RB_BATCHES,
+	RB_SHADER_CHANGES, // vertex + pixel shader combos, not Q3 shaders
+	RB_DRAW_CALLS,     // dispatched API draw calls
 
 	RB_LIT_VERTICES,
 	RB_LIT_INDICES,

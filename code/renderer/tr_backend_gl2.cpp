@@ -70,6 +70,7 @@ static void GL_Program( const GLSL_Program& prog )
 	if ( prog.p != progCurrent ) {
 		glUseProgram( prog.p );
 		progCurrent = prog.p;
+		backEnd.pc3D[ RB_SHADER_CHANGES ]++;
 	}
 }
 
@@ -78,6 +79,7 @@ static void GL_Program()
 	if ( progCurrent != 0 ) {
 		glUseProgram(0);
 		progCurrent = 0;
+		backEnd.pc3D[ RB_SHADER_CHANGES ]++;
 	}
 }
 
@@ -144,6 +146,7 @@ static void DrawDynamicLight()
 	R_BindAnimatedImage( &pStage->bundle );
 
 	glDrawElements( GL_TRIANGLES, tess.dlNumIndexes, GL_INDEX_TYPE, tess.dlIndexes );
+	backEnd.pc3D[ RB_DRAW_CALLS ]++;
 
 	glUnlockArraysEXT();
 
@@ -168,6 +171,7 @@ static qbool GL2_StageIterator_MultitextureStage( int stage )
 	glTexCoordPointer( 2, GL_FLOAT, 0, tess.svars[stage].texcoordsptr );
 
 	glDrawElements( GL_TRIANGLES, tess.numIndexes, GL_INDEX_TYPE, tess.indexes );
+	backEnd.pc3D[ RB_DRAW_CALLS ]++;
 
 	glDisable( GL_TEXTURE_2D );
 	GL_SelectTexture( 0 );
@@ -215,6 +219,7 @@ static void DrawGeneric()
 		}
 
 		glDrawElements( GL_TRIANGLES, tess.numIndexes, GL_INDEX_TYPE, tess.indexes );
+		backEnd.pc3D[ RB_DRAW_CALLS ]++;
 	}
 
 	if ( tess.drawFog )
@@ -801,6 +806,7 @@ static void GL2_EndFrame()
 static void ID_INLINE R_DrawElements( int numIndexes, const unsigned int* indexes )
 {
 	glDrawElements( GL_TRIANGLES, numIndexes, GL_INDEX_TYPE, indexes );
+	backEnd.pc3D[ RB_DRAW_CALLS ]++;
 }
 
 

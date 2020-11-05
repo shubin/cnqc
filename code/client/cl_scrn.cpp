@@ -415,6 +415,8 @@ static void SCR_PerformanceCounters()
 	SCR_DrawString( x, y, cw, ch, va("Base Tris:  %i", pc3D[RB_INDICES] / 3), qfalse ); y += ch;
 	SCR_DrawString( x, y, cw, ch, va("Base Surfs: %i", pc3D[RB_SURFACES]), qfalse ); y += ch;
 	SCR_DrawString( x, y, cw, ch, va("B Batches:  %i", pc3D[RB_BATCHES]), qfalse ); y += ch;
+	SCR_DrawString( x, y, cw, ch, va("Shdr Chges: %i", pc3D[RB_SHADER_CHANGES]), qfalse ); y += ch;
+	SCR_DrawString( x, y, cw, ch, va("Draw Calls: %i", pc3D[RB_DRAW_CALLS]), qfalse ); y += ch;
 
 	SCR_DrawString( x, y, cw, ch, va("Lit Verts:  %i", pc3D[RB_LIT_VERTICES]), qfalse ); y += ch;
 	SCR_DrawString( x, y, cw, ch, va("Lit Tris:   %i", pc3D[RB_LIT_INDICES] / 3), qfalse ); y += ch;

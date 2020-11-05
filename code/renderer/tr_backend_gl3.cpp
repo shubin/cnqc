@@ -1160,6 +1160,7 @@ static void ApplyPipeline(PipelineId pipelineId)
 
 	Pipeline* const pipeline = &gl.pipelines[pipelineId];
 	glUseProgram(pipeline->program.program);
+	backEnd.pc3D[RB_SHADER_CHANGES]++;
 
 	for(int i = 0; i < VB_COUNT; ++i)
 	{
@@ -1726,6 +1727,7 @@ static void CreateGeometryBufferStorage(ArrayBuffer* buffer)
 static void DrawElements(int indexCount)
 {
 	glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, (const GLvoid*)(GLintptr)(gl.indexBuffer.readIndex * gl.indexBuffer.itemSize));
+	backEnd.pc3D[RB_DRAW_CALLS]++;
 }
 
 static void SetDefaultState()
@@ -2168,6 +2170,7 @@ static void GAL_EndFrame()
 	gl.fbReadIndex ^= 1;
 	FBO_Bind(&gl.fbSS[gl.fbReadIndex]);
 	glDrawArrays(GL_TRIANGLES, 0, 3);
+	backEnd.pc3D[RB_DRAW_CALLS]++;
 
 	ApplyViewportAndScissor(0, 0, glInfo.winWidth, glInfo.winHeight);
 	FBO_BlitToBackBuffer();

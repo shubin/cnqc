@@ -825,6 +825,7 @@ static void DrawIndexed(int indexCount)
 	{
 		d3ds.context->DrawIndexed(indexCount, d3d.indexBuffer.readIndex, d3d.vertexBuffers[VB_POSITION].readIndex);
 	}
+	backEnd.pc3D[RB_DRAW_CALLS]++;
 }
 
 static void ApplyPipeline(PipelineId index)
@@ -891,6 +892,7 @@ static void ApplyPipeline(PipelineId index)
 
 	d3ds.context->VSSetShader(pipeline->vertexShader, NULL, 0);
 	d3ds.context->PSSetShader(pipeline->pixelShader, NULL, 0);
+	backEnd.pc3D[RB_SHADER_CHANGES]++;
 
 	if(pipeline->vertexBuffer)
 	{
@@ -2080,6 +2082,7 @@ static void DrawPostProcess(float vsX, float vsY, float srX, float srY, qbool sc
 		}
 	}
 	d3ds.context->Draw(3, 0);
+	backEnd.pc3D[RB_DRAW_CALLS]++;
 }
 
 static void GAL_EndFrame()
@@ -2684,6 +2687,7 @@ static void ClearViews(qbool shouldClearColor, const FLOAT* clearColor)
 		d3d.clearPSData.color[3] = shouldClearColor ? 1.0f : 0.0f;
 		UploadPendingShaderData();
 		d3ds.context->Draw(3, 0);
+		backEnd.pc3D[RB_DRAW_CALLS]++;
 		ApplyPipeline(PID_GENERIC);
 	}
 }
