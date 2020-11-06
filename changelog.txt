@@ -25,6 +25,10 @@ chg: with r_backend GL3, depth fade with MSAA now requires GLSL 4.00 at a minimu
 
 chg: with r_backend GL3, alpha to coverage now requires GLSL 4.00 at a minimum
 
+fix: with r_backend D3D11, the alpha channel's blend factors now match the original Q3 behavior
+  this affects shaders that use the following blendFunc modes: GL_DST_ALPHA, GL_ONE_MINUS_DST_ALPHA
+  examples: jumppads on cpm3a and cpmctf3, jumppad trims on q3wcp14, shiny walls on q3wcp9
+
 fix: batched surfaces with "tcMod turb" would generate incorrect texture coordinates
 
 fix: throwing a fatal error when com_soundMegs is too low to load a map instead of freezing

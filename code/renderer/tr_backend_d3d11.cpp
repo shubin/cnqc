@@ -655,6 +655,18 @@ static D3D11_BLEND GetDestinationBlend(unsigned int stateBits)
 	}
 }
 
+static D3D11_BLEND GetAlphaBlendFromColorBlend(D3D11_BLEND colorBlend)
+{
+	switch(colorBlend)
+	{
+		case D3D11_BLEND_SRC_COLOR: return D3D11_BLEND_SRC_ALPHA;
+		case D3D11_BLEND_INV_SRC_COLOR: return D3D11_BLEND_INV_SRC_ALPHA;
+		case D3D11_BLEND_DEST_COLOR: return D3D11_BLEND_DEST_ALPHA;
+		case D3D11_BLEND_INV_DEST_COLOR: return D3D11_BLEND_INV_DEST_ALPHA;
+		default: return colorBlend;
+	}
+}
+
 static DXGI_FORMAT GetRenderTargetColorFormat(int format)
 {
 	switch(format)
@@ -1561,8 +1573,8 @@ static qbool GAL_Init()
 				blendDesc.RenderTarget[0].SrcBlend = (D3D11_BLEND)s;
 				blendDesc.RenderTarget[0].DestBlend = (D3D11_BLEND)d;
 				blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
-				blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-				blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+				blendDesc.RenderTarget[0].SrcBlendAlpha = GetAlphaBlendFromColorBlend((D3D11_BLEND)s);
+				blendDesc.RenderTarget[0].DestBlendAlpha = GetAlphaBlendFromColorBlend((D3D11_BLEND)d);
 				blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 				hr = d3ds.device->CreateBlendState(&blendDesc, &blendState);
 				CheckAndName(hr, "CreateBlendState", blendState, va("blend state %03d", index));
