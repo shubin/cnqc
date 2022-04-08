@@ -370,13 +370,18 @@ static void sdl_X11( const XEvent* event )
 
 static void sdl_Event( const SDL_Event* event )
 {
+	// Note that CVar checks are necessary here because event polling
+	// can actually start before the main loop does,
+	// i.e. CVars can be uninitialized by the time we get here.
+
 	switch (event->type) {
 	case SDL_QUIT:
 		Com_Quit(0);
 		break;
 
 	case SDL_KEYDOWN:
-		if (sdl_focused && Sys_Milliseconds() - sdl_focusTime >= in_focusDelay->integer)
+		// the CVar check means we'll ignore all keydown events until the main loop starts
+		if (in_focusDelay != NULL && sdl_focused && Sys_Milliseconds() - sdl_focusTime >= in_focusDelay->integer)
 			sdl_Key(&event->key, qtrue);
 		break;
 
