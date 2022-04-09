@@ -25,6 +25,10 @@ chg: with r_backend GL3, depth fade with MSAA now requires GLSL 4.00 at a minimu
 
 chg: with r_backend GL3, alpha to coverage now requires GLSL 4.00 at a minimum
 
+fix: the nextdemo variable wasn't used to start the playback of a new demo when:
+  - a drop error happened during demo playback
+  - the engine failed to open the current demo file
+
 fix: the Linux/FreeBSD client could crash during start-up
 
 fix: with r_backend D3D11, the alpha channel's blend factors now match the original Q3 behavior

@@ -308,10 +308,10 @@ void QDECL Com_ErrorExt( int code, int module, qbool realError, const char *fmt,
 		const qbool demo = CL_DemoPlaying();
 		CL_Disconnect( qtrue );
 		CL_FlushMemory(); // shuts down the VMs and starts them back up
-		if ( realError )
-			CL_ForwardUIError( code == ERR_DROP ? EXT_ERRLEV_DROP : EXT_ERRLEV_DISC, module, com_errorMessage );
-		else if ( demo )
+		if ( demo && *Cvar_VariableString("nextdemo") != '\0' )
 			CL_NextDemo();
+		else if ( realError )
+			CL_ForwardUIError( code == ERR_DROP ? EXT_ERRLEV_DROP : EXT_ERRLEV_DISC, module, com_errorMessage );
 #endif
 		com_errorEntered = qfalse;
 		longjmp (abortframe, -1);

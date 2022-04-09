@@ -375,6 +375,7 @@ void CL_PlayDemo_f()
 	CL_WalkDemoExt( demoPath, &fh );
 	if ( fh == 0 ) {
 		Com_Printf( "Couldn't open demo %s\n", demoPath );
+		CL_NextDemo();
 		return;
 	}
 
