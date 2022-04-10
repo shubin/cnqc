@@ -1067,35 +1067,43 @@ static void R_SortLitsurfs( dlight_t* dl )
 
 void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int fogIndex )
 {
-	// instead of checking for overflow, we just mask the index so it wraps around
-	const int index = tr.refdef.numDrawSurfs++ & DRAWSURF_MASK;
-	// the sort data is packed into a single 32 bit value so it can be
-	// compared quickly during the qsorting process
-	tr.refdef.drawSurfs[index].sort = (shader->sortedIndex << QSORT_SHADERNUM_SHIFT)
-			| tr.shiftedEntityNum | (fogIndex << QSORT_FOGNUM_SHIFT);
-	tr.refdef.drawSurfs[index].surface = surface;
-	tr.refdef.drawSurfs[index].model = tr.currentModel != NULL ? tr.currentModel->index : 0;
+	if (tr.refdef.numDrawSurfs >= MAX_DRAWSURFS)
+		return;
+
+	drawSurf_t* const drawSurf = &tr.refdef.drawSurfs[tr.refdef.numDrawSurfs++];
+	drawSurf->sort = R_ComposeSort( tr.currentEntityNum, shader, fogIndex );
+	drawSurf->surface = surface;
+	drawSurf->model = tr.currentModel != NULL ? tr.currentModel->index : 0;
 }
 
 
 void R_AddLitSurf( const surfaceType_t* surface, const shader_t* shader, int fogIndex )
 {
+	if (tr.refdef.numLitSurfs >= MAX_DRAWSURFS)
+		return;
+
 	tr.pc[RF_LIT_SURFS]++;
 
-	int index = tr.refdef.numLitSurfs++ & DRAWSURF_MASK;
-	litSurf_t* litsurf = &tr.refdef.litSurfs[index];
-
-	litsurf->sort = (shader->sortedIndex << QSORT_SHADERNUM_SHIFT)
-			| tr.shiftedEntityNum | (fogIndex << QSORT_FOGNUM_SHIFT);
-	litsurf->surface = surface;
+	litSurf_t* const litSurf = &tr.refdef.litSurfs[tr.refdef.numLitSurfs++];
+	litSurf->sort = R_ComposeSort( tr.currentEntityNum, shader, fogIndex );
+	litSurf->surface = surface;
 
 	if (!tr.light->head)
-		tr.light->head = litsurf;
+		tr.light->head = litSurf;
 	if (tr.light->tail)
-		tr.light->tail->next = litsurf;
+		tr.light->tail->next = litSurf;
 
-	tr.light->tail = litsurf;
+	tr.light->tail = litSurf;
 	tr.light->tail->next = 0;
+}
+
+
+unsigned int R_ComposeSort( int entityNum, const shader_t *shader, int fogNum )
+{
+	return
+		(entityNum << QSORT_ENTITYNUM_SHIFT) |
+		(shader->sortedIndex << QSORT_SHADERNUM_SHIFT) |
+		(fogNum << QSORT_FOGNUM_SHIFT);
 }
 
 
@@ -1226,13 +1234,8 @@ static int R_CompareDrawSurf( const void* aPtr, const void* bPtr )
 
 static void R_SortDrawSurfs( int firstDrawSurf, int firstLitSurf )
 {
-	int numDrawSurfs = tr.refdef.numDrawSurfs - firstDrawSurf;
-	drawSurf_t* drawSurfs = tr.refdef.drawSurfs + firstDrawSurf;
-
-	const shader_t* shader;
-	int		fogNum;
-	int		entityNum;
-	int		i;
+	const int numDrawSurfs = tr.refdef.numDrawSurfs - firstDrawSurf;
+	drawSurf_t* const drawSurfs = tr.refdef.drawSurfs + firstDrawSurf;
 
 	// it is possible for some views to not have any surfaces
 	if ( numDrawSurfs < 1 ) {
@@ -1241,19 +1244,15 @@ static void R_SortDrawSurfs( int firstDrawSurf, int firstLitSurf )
 		return;
 	}
 
-	// if we overflowed MAX_DRAWSURFS, the drawsurfs
-	// wrapped around in the buffer and we will be missing
-	// the first surfaces, not the last ones
-	if ( numDrawSurfs > MAX_DRAWSURFS ) {
-		numDrawSurfs = MAX_DRAWSURFS;
-	}
-
 	// sort the drawsurfs by sort type, then shader, then entity, etc
 	R_RadixSort( drawSurfs, numDrawSurfs );
 
+	const shader_t* shader;
+	int fogNum, entityNum;
+
 	// check for any pass through drawing,
 	// which may cause another view to be rendered first
-	for ( i = 0 ; i < numDrawSurfs ; i++ ) {
+	for ( int i = 0 ; i < numDrawSurfs ; i++ ) {
 		R_DecomposeSort( (drawSurfs+i)->sort, &entityNum, &shader, &fogNum );
 
 		if ( shader->sort > SS_PORTAL ) {
@@ -1277,7 +1276,7 @@ static void R_SortDrawSurfs( int firstDrawSurf, int firstLitSurf )
 
 	// compute the average camera depth of all transparent surfaces
 	int numTranspSurfs = 0;
-	for ( i = numDrawSurfs - 1; i >= 0; --i ) {
+	for ( int i = numDrawSurfs - 1; i >= 0; --i ) {
 		R_DecomposeSort( (drawSurfs+i)->sort, &entityNum, &shader, &fogNum );
 
 		if ( shader->sort <= SS_OPAQUE ) {
@@ -1305,7 +1304,7 @@ static void R_SortDrawSurfs( int firstDrawSurf, int firstLitSurf )
 
 	// all the lit surfaces are in a single queue
 	// but each light's surfaces are sorted within its subsection
-	for ( i = 0; i < tr.refdef.num_dlights; ++i ) {
+	for ( int i = 0; i < tr.refdef.num_dlights; ++i ) {
 		dlight_t* dl = &tr.refdef.dlights[i];
 		if (dl->head) {
 			R_SortLitsurfs( dl );
@@ -1330,9 +1329,6 @@ static void R_AddEntitySurfaces()
 
 	for (tr.currentEntityNum = 0; tr.currentEntityNum < tr.refdef.num_entities; ++tr.currentEntityNum) {
 		ent = tr.currentEntity = &tr.refdef.entities[tr.currentEntityNum];
-
-		// preshift the value we are going to OR into the drawsurf sort
-		tr.shiftedEntityNum = tr.currentEntityNum << QSORT_ENTITYNUM_SHIFT;
 
 		//
 		// the weapon model must be handled special --
@@ -1424,8 +1420,8 @@ void R_RenderView( const viewParms_t* parms )
 	tr.viewParms.frameSceneNum = tr.frameSceneNum;
 	tr.viewParms.frameCount = tr.frameCount;
 
-	int firstDrawSurf = tr.refdef.numDrawSurfs;
-	int firstLitSurf = tr.refdef.numLitSurfs;
+	const int firstDrawSurf = tr.refdef.numDrawSurfs;
+	const int firstLitSurf = tr.refdef.numLitSurfs;
 
 	// set viewParms.world
 	re_cameraMatrixTime = Sys_Milliseconds();

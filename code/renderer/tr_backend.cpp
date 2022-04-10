@@ -421,8 +421,8 @@ static void RB_RenderLitSurfList( dlight_t* dl, qbool opaque )
 		RB_BeginSurface( shader, fogNum );
 
 		// stage index is guaranteed valid by R_AddLitSurface
-		const int stageIndex = tess.shader->lightingStages[ST_DIFFUSE];
-		const shaderStage_t* const stage = tess.xstages[stageIndex];
+		const int stageIndex = shader->lightingStages[ST_DIFFUSE];
+		const shaderStage_t* const stage = shader->stages[stageIndex];
 		backEnd.dlIntensity = (shader->contentFlags & liquidFlags) != 0 ? 0.5f : 1.0f;
 		backEnd.dlStateBits =
 			(opaque || (stage->stateBits & GLS_ATEST_BITS) != 0) ?

@@ -790,7 +790,6 @@ extern	refimport_t		ri;
 #define	MAX_SKINS				1024
 
 #define	MAX_DRAWSURFS			0x10000
-#define	DRAWSURF_MASK			(MAX_DRAWSURFS-1)
 
 /*
 the drawsurf sort data is packed into a single 32 bit value so it can be
@@ -887,7 +886,6 @@ typedef struct {
 	trRefEntity_t			*currentEntity;
 	trRefEntity_t			worldEntity;		// point currentEntity at this when rendering world
 	int						currentEntityNum;
-	int						shiftedEntityNum;	// currentEntityNum << QSORT_ENTITYNUM_SHIFT
 	const model_t* currentModel;
 
 	viewParms_t				viewParms;
@@ -1074,6 +1072,7 @@ void R_AddPolygonSurfaces();
 
 void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int fogIndex );
 void R_AddLitSurf( const surfaceType_t* surface, const shader_t* shader, int fogIndex );
+unsigned int R_ComposeSort( int entityNum, const shader_t *shader, int fogNum );
 void R_DecomposeSort( unsigned sort, int *entityNum, const shader_t **shader, int *fogNum );
 
 
