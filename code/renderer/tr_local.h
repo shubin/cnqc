@@ -508,6 +508,7 @@ struct drawSurf_t {
 	qhandle_t				model;		// MD3 model handle
 	int						index;		// transparent surface's registration order
 	float					shaderSort;	// transparent surface's shader sort
+	int						shaderNum;	// unsorted shader index, for when we need to do fix-ups
 };
 
 extern void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])( const void* );
@@ -515,6 +516,7 @@ extern void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])( const void* );
 
 struct litSurf_t {
 	unsigned sort;						// bit combination for fast compares
+	int shaderNum;						// unsorted shader index, for when we need to do fix-ups
 	const surfaceType_t* surface;		// any of surface*_t
 	litSurf_t* next;
 };

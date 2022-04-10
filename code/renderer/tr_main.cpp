@@ -1074,6 +1074,7 @@ void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int fo
 	drawSurf->sort = R_ComposeSort( tr.currentEntityNum, shader, fogIndex );
 	drawSurf->surface = surface;
 	drawSurf->model = tr.currentModel != NULL ? tr.currentModel->index : 0;
+	drawSurf->shaderNum = shader->index;
 }
 
 
@@ -1087,6 +1088,7 @@ void R_AddLitSurf( const surfaceType_t* surface, const shader_t* shader, int fog
 	litSurf_t* const litSurf = &tr.refdef.litSurfs[tr.refdef.numLitSurfs++];
 	litSurf->sort = R_ComposeSort( tr.currentEntityNum, shader, fogIndex );
 	litSurf->surface = surface;
+	litSurf->shaderNum = shader->index;
 
 	if (!tr.light->head)
 		tr.light->head = litSurf;
