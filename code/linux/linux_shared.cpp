@@ -740,3 +740,8 @@ sysEvent_t Sys_GetEvent()
 	ev.evTime = Sys_Milliseconds();
 	return ev;
 }
+
+
+void Sys_DebugPrintf( const char*, ... )
+{
+}

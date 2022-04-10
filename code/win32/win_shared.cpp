@@ -126,3 +126,20 @@ int Sys_GetUptimeSeconds( qbool parent )
 	return seconds;
 }
 
+
+void Sys_DebugPrintf( const char* fmt, ... )
+{
+	char buffer[1024];
+	va_list argptr;
+	va_start(argptr, fmt);
+	const int len = vsprintf(buffer, fmt, argptr);
+	va_end(argptr);
+
+	if (len < 0)
+		return;
+	if (len >= sizeof(buffer))
+		buffer[sizeof(buffer) - 1] = '\0';
+
+	OutputDebugStringA(buffer);
+}
+

@@ -1148,6 +1148,9 @@ void	Sys_Sleep( int ms );
 void	Sys_MicroSleep( int us );
 int64_t	Sys_Microseconds();
 
+// prints text in the debugger's output window
+void	Sys_DebugPrintf( const char* fmt, ... );
+
 #ifndef DEDICATED
 qbool	Sys_IsMinimized();
 #endif
