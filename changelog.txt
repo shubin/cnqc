@@ -9,7 +9,7 @@ add: r_alphaToCoverageMipBoost <0.0 to 0.5> (default: 0.125) boosts the alpha va
 
 chg: r_lightmap 1 now handles most alpha-tested surfaces
 
-chg: sound loads from disk during gameplay print warnings and get denied for looping sounds
+chg: printing warnings when there are excessive sound loads from disk during gameplay
 
 chg: com_soundMegs now defaults to 16
 
