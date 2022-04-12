@@ -34,7 +34,8 @@ typedef struct {
 	int		cursize;
 } cmd_t;
 
-static int		cmd_wait;
+static int		cmd_wait;		// how many more frames to wait for
+static int		cmd_wait_stop;	// the time when the wait ends
 static cmd_t	cmd_text;
 static byte		cmd_text_buf[MAX_CMD_BUFFER];
 
@@ -49,6 +50,19 @@ static void Cmd_Wait_f( void )
 	} else {
 		cmd_wait = 1;
 	}
+}
+
+
+static void Cmd_WaitMS_f( void )
+{
+	const char* const arg0 = Cmd_Argv( 0 );
+	const int duration = atoi( Cmd_Argv( 1 ) );
+	if ( Cmd_Argc() != 2 || duration <= 0 ) {
+		Com_Printf( "usage: %s milliseconds\n", arg0 );
+		return;
+	}
+
+	cmd_wait_stop = Sys_Milliseconds() + duration;
 }
 
 
@@ -162,6 +176,10 @@ void Cbuf_Execute()
 			cmd_wait--;
 			break;
 		}
+
+		if ( cmd_wait_stop > Sys_Milliseconds() )
+			break;
+		cmd_wait_stop = 0;
 
 		// find a \n or ; line break
 		text = (char *)cmd_text.data;
@@ -741,6 +759,7 @@ static const cmdTableItem_t cl_cmds[] =
 	{ "vstr", Cmd_Vstr_f, Cmd_CompleteVstr_f, "executes the string value of a cvar" },
 	{ "echo", Cmd_Echo_f, NULL, "prints the arguments to the console" },
 	{ "wait", Cmd_Wait_f, NULL, "delays command execution by N frames" },
+	{ "waitms", Cmd_WaitMS_f, NULL, "delays command execution by N milliseconds" },
 	{ "help", Cmd_Help_f, Cmd_CompleteHelp_f, "displays the help of a cvar or command" },
 	{ "man", Cmd_Help_f, Cmd_CompleteHelp_f, "displays the help of a cvar or command" },
 	{ "searchhelp", Cmd_SearchHelp_f, NULL, "lists all cvars+cmds whose help matches" }
