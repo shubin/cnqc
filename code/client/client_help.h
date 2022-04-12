@@ -129,3 +129,9 @@ S_COLOR_VAL "    8 " S_COLOR_HELP "= Draws the list of attributes (cvars only)"
 S_COLOR_VAL "    0 " S_COLOR_HELP "= Forced off\n" \
 S_COLOR_VAL "    1 " S_COLOR_HELP "= Forced on\n" \
 S_COLOR_VAL "    2 " S_COLOR_HELP "= On in debug builds only"
+
+#define help_net_proxy \
+"proxy server address\n" \
+"Set this CVar before connecting to a server to join through a proxy.\n" \
+"It works with /" S_COLOR_CMD "connect" S_COLOR_HELP ", /" S_COLOR_CMD "reconnect" S_COLOR_HELP " and the server browser UI.\n" \
+"Set it to an empty string to not use a proxy server."

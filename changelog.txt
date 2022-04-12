@@ -4,6 +4,8 @@ See the end of this file for known issues.
 
 DD Mmm 20 - 1.53
 
+add: net_proxy <ip> (default: "") is the proxy server to use when establishing client connections
+
 add: /waitms <milliseconds> to delay command executions by the specified number of milliseconds
 
 add: r_alphaToCoverageMipBoost <0.0 to 0.5> (default: 0.125) boosts the alpha value of higher mip levels
