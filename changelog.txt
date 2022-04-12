@@ -25,6 +25,8 @@ chg: with r_backend GL3, depth fade with MSAA now requires GLSL 4.00 at a minimu
 
 chg: with r_backend GL3, alpha to coverage now requires GLSL 4.00 at a minimum
 
+fix: r_vertexLight 1 no longer applies to non-lightmapped surfaces
+
 fix: delayed shader loads could lead to incorrect rendering and crashes (mostly with dynamic lights)
 
 fix: the nextdemo variable wasn't used to start the playback of a new demo when:

@@ -2285,7 +2285,7 @@ static shader_t* FinishShader()
 	//
 	// if we are in r_vertexLight mode, never use a lightmap texture
 	//
-	if ( stage > 1 && r_vertexLight->integer && !r_uiFullScreen->integer ) {
+	if ( stage > 1 && r_vertexLight->integer && GetLightmapStageIndex() >= 0 ) {
 		VertexLightingCollapse();
 		stage = 1;
 		hasLightmapStage = qfalse;
@@ -2417,18 +2417,6 @@ static const char* FindShaderInShaderText( const char* shadername )
 }
 
 
-struct vertexLightReplacementShader_t {
-	const char* mapName;
-	const char* shaderName;
-	const char* newShaderName;
-	int shaderNameHash;
-};
-
-static const vertexLightReplacementShader_t g_replacementShaders[] = {
-	{ "pukka3tourney2", "textures/pukka3tourney2/acid_lm", "textures/pukka3tourney2/acid_vertex", 418 }
-};
-
-
 /*
 ===============
 R_FindShader
@@ -2475,22 +2463,6 @@ shader_t* R_FindShader( const char *name, int lightmapIndex, qbool mipRawImage )
 	COM_StripExtension(name, strippedName, sizeof(strippedName));
 
 	hash = Q_FileHash(strippedName, FILE_HASH_SIZE);
-
-	// replace some known shaders with more fit versions for r_vertexLight
-	if (r_vertexLight->integer) {
-		const int replacementCount = ARRAY_LEN(g_replacementShaders);
-		for (int i = 0; i < replacementCount; ++i) {
-			const vertexLightReplacementShader_t* const vlrs = g_replacementShaders + i;
-			if (vlrs->shaderNameHash == hash &&
-				strcmp(vlrs->mapName, R_GetMapName()) == 0 &&
-				strcmp(vlrs->shaderName, name) == 0) {
-				name = vlrs->newShaderName;
-				COM_StripExtension(name, strippedName, sizeof(strippedName));
-				hash = Q_FileHash(strippedName, FILE_HASH_SIZE);
-				break;
-			}
-		}
-	}
 
 	//
 	// see if the shader is already loaded
