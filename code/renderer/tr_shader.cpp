@@ -2339,7 +2339,6 @@ static shader_t* FinishShader()
 			stages[0].mtStages = 0;
 			shader.lightingStages[ST_DIFFUSE] = 0; // for working dynamic lights
 			shader.lightingStages[ST_LIGHTMAP] = 0;
-			shader.numStages = 1;
 		}
 	} else if ( r_lightmap->integer ) {
 		// now we deal with r_lightmap on a non-opaque shader
@@ -2367,6 +2366,9 @@ static shader_t* FinishShader()
 				for ( int i = 2; i < shader.numStages; ++i ) {
 					stages[i].active = qfalse;
 				}
+
+				shader.lightingStages[ST_DIFFUSE] = 0; // for working dynamic lights
+				shader.lightingStages[ST_LIGHTMAP] = 0;
 			}
 		}
 	}

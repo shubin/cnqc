@@ -345,7 +345,7 @@ static void R_AddLitSurface( msurface_t* surf, const dlight_t* light )
 		return; // already in the lit list (or already culled) for this light
 
 	const int stageIndex = surf->shader->lightingStages[ST_DIFFUSE];
-	if ( stageIndex < 0 )
+	if ( stageIndex < 0 || stageIndex >= surf->shader->numStages )
 		return;
 
 	const shaderStage_t* const stage = surf->shader->stages[stageIndex];
