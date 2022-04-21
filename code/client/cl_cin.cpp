@@ -1237,8 +1237,6 @@ static void RoQ_init( void )
 ******************************************************************************/
 
 static void RoQShutdown( void ) {
-	const char *s;
-
 	if (!cinTable[currentHandle].buf) {
 		return;
 	}
@@ -1256,15 +1254,6 @@ static void RoQShutdown( void ) {
 
 	if (cinTable[currentHandle].alterGameState) {
 		cls.state = CA_DISCONNECTED;
-		// we can't just do a vstr nextmap, because
-		// if we are aborting the intro cinematic with
-		// a devmap command, nextmap would be valid by
-		// the time it was referenced
-		s = Cvar_VariableString( "nextmap" );
-		if ( s[0] ) {
-			Cbuf_AddText( va("%s\n", s) );
-			Cvar_Set( "nextmap", "" );
-		}
 		CL_handle = -1;
 	}
 	cinTable[currentHandle].fileName[0] = 0;

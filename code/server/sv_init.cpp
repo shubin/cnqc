@@ -366,11 +366,6 @@ void SV_SpawnServer( const char* mapname )
 	// server has changed
 	svs.snapFlagServerBit ^= SNAPFLAG_SERVERCOUNT;
 
-	// set nextmap to the same map, but it may be overriden
-	// by the game startup or another console command
-	//Cvar_Set( "nextmap", "map_restart 0");
-	Cvar_Set( "nextmap", va("map %s", mapname) );
-
 	for (int i=0 ; i<sv_maxclients->integer ; i++) {
 		// save when the server started for each client already connected
         if (svs.clients[i].state >= CS_CONNECTED) {
@@ -563,7 +558,6 @@ static const cvarTableItem_t sv_cvars[] =
 	{ &sv_fps, "sv_fps", "30", CVAR_TEMP, CVART_INTEGER, "10", "40", "snapshot generation frequency" },
 	{ &sv_timeout, "sv_timeout", "200", CVAR_TEMP, CVART_INTEGER, "0", NULL, "max. seconds allowed without any messages" },
 	{ &sv_zombietime, "sv_zombietime", "2", CVAR_TEMP, CVART_INTEGER, "0", NULL, "seconds to sink messages after disconnect" },
-	{ NULL, "nextmap", "", CVAR_TEMP, CVART_STRING, NULL, NULL, "name of the next map in the rotation" },
 	{ &sv_allowDownload, "sv_allowDownload", "0", CVAR_SERVERINFO, CVART_BOOL, NULL, NULL, "enables slow pk3 downloads directly from the server" },
 	{ &sv_reconnectlimit, "sv_reconnectlimit", "3", 0, CVART_INTEGER, "0", NULL, "min. seconds between connection attempts" },
 	{ &sv_padPackets, "sv_padPackets", "0", 0, CVART_BOOL, NULL, NULL, "add nop bytes to messages" },
