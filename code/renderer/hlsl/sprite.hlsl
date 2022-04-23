@@ -20,6 +20,8 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 */
 // depth sprite vertex and pixel shaders
 
+#include "shared.hlsli"
+
 cbuffer VertexShaderBuffer
 {
     matrix modelViewMatrix;
@@ -64,7 +66,7 @@ cbuffer PixelShaderBuffer
 	uint alphaTest;
 	float distance;
 	float offset;
-	float dummy;
+	float greyscale;
 	float4 colorScale;
 	float4 colorBias;
 };
@@ -115,5 +117,5 @@ float4 ps_main(VOut input, uint sampleIndex : SV_SampleIndex) : SV_TARGET
 	float scale = Contrast((depthS - depthP) * distance, 2.0);
 	float4 r2 = lerp(r * colorScale + colorBias, r, scale);
 
-	return r2;
+	return MakeGreyscale(r2, greyscale);
 }

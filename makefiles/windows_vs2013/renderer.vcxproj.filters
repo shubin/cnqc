@@ -58,6 +58,9 @@
     <None Include="..\..\code\renderer\hlsl\post.hlsl">
       <Filter>hlsl</Filter>
     </None>
+    <None Include="..\..\code\renderer\hlsl\shared.hlsli">
+      <Filter>hlsl</Filter>
+    </None>
     <None Include="..\..\code\renderer\hlsl\sprite.hlsl">
       <Filter>hlsl</Filter>
     </None>

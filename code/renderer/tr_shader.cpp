@@ -2124,6 +2124,153 @@ static void ProcessDepthFade()
 }
 
 
+static void ProcessGreyscale()
+{
+	// maps: q3wcp1/5/9/14/22 ct3ctf1/2 cpmctf1/2 q3w5
+	// I'll thank DEZ here for compiling most of this list
+	const char* names[] =
+	{
+		"textures/ctf_unified/banner01_red",
+		"textures/ctf_unified/bounce_red",
+		"textures/ssctf5/s_xian_dm3padwall_red",
+		"textures/ssctf5/s_red_xian_dm3padwall",
+		"textures/base_light/light1red_2000",
+		"textures/ctf_unified/plaque_shiny_red",
+		"textures/ctf_unified/pointer_right_red",
+		"textures/ssctf5/s_redbase",
+		"textures/ctf_unified/pointer_left_red",
+		"textures/ssctf5/s_bluebase",
+		"textures/ctf_unified/bounce_blue",
+		"textures/base_light/light1blue_5000",
+		"textures/ctf_unified/weapfloor_blue",
+		"textures/ctf_unified/banner01_blue",
+		"textures/ctf_unified/pointer_left_blue",
+		"textures/ctf_unified/pointer_right_blue",
+		"textures/ctf_unified/weapfloor_red",
+		"textures/base_light/light1blue_2000",
+		"textures/ctf_unified/plaque_notshiny_blue",
+		"textures/ctf_unified/direction_blue",
+		"textures/ctf_unified/direction_red",
+		//"textures/ssctf5/s_xian_dm3padwall",
+		"textures/ctf_unified/monologo_noflash_red",
+		"textures/ctf_unified/wall_decal_red",
+		"textures/ssctf3/s_beam_red",
+		"textures/ctf_unified/banner02_red",
+		"textures/ctf_unified/floor_decal_red",
+		"textures/base_light/ceil1_22a_8k",
+		"textures/ssctf3/s_beam_blue",
+		"textures/ctf_unified/monologo_noflash_blue",
+		"textures/ctf_unified/wall_decal_blue",
+		"textures/ctf_unified/banner02_blue",
+		"textures/ctf_unified/floor_decal_blue",
+		"textures/base_light/ceil1_30_8k",
+		"textures/ct3ctf1/jumppad_01_blue",
+		"textures/base_light/ceil1_34",
+		"textures/base_light/ceil1_22a",
+		"textures/ct3ctf1/jumppad_01_red",
+		"textures/base_light/light1red_5000",
+		"textures/ninemil-ctf2/promode_logo_red",
+		"textures/ninemil-ctf2/promode_logo_blue",
+		"textures/ninemil-ctf2/bounce_red",
+		"textures/ninemil-ctf2/bounce_blue",
+		"textures/ninemil-ctf2/promode_logo_blue_large",
+		"textures/ninemil-ctf2/test_blue",
+		"textures/gothic_light/ironcrossltblue_5000",
+		"textures/ninemil-ctf2/ctf_blueflag",
+		"textures/ninemil-ctf2/test_red",
+		"textures/gothic_light/ironcrossltred_5000",
+		"textures/ninemil-ctf2/ctf_redflag",
+		"textures/ninemil-ctf2/promode_logo_red_large",
+		"textures/ninemil-ctf2/weapfloor_red",
+		"textures/ninemil-ctf2/weapfloor_blue",
+		"textures/japanc_q3w/Katana_r",
+		"textures/japanc_q3w/trim_shadow_r",
+		"textures/japanc_q3w/killblock_i2_small_r",
+		"textures/japanc_q3w/pic1_r",
+		"textures/japanc_q3w/drag_r",
+		"textures/ctf_unified/pointer_red",
+		"textures/ctf_unified/pointer_blue",
+		"textures/japanc_q3w/drag_b",
+		"textures/japanc_q3w/killblock_i2_small_b",
+		"textures/japanc_q3w/Katana_b",
+		"textures/japanc_q3w/trim_shadow_b",
+		"textures/japanc_q3w/samurai_b",
+		"textures/japanc_q3w/pic1_b",
+		"textures/japanc_q3w/samurai_r",
+		"textures/cpmctf1/banner2_b2",
+		"textures/cpmctf1/banner2_r2",
+		"textures/cpmctf1/metal_r",
+		"textures/cpmctf1/metal_b",
+		"textures/cpmctf1/trim_b",
+		"textures/cpmctf1/banner1_b2",
+		"textures/ctf/blocks18c_b",
+		"textures/cpmctf1/trim_r",
+		"textures/ctf/blocks18c_r",
+		"textures/cpmctf1/banner1_r2",
+		"textures/medieval/flr_marble1_c3trn_jp",
+		"textures/medieval/flr_marble5_c3trn_jp",
+		"textures/medieval/flr_marble1_c2trn",
+		"textures/medieval/flr_marble5_c2trn",
+		"textures/ssctf4/s_flameanim_blue",
+		"textures/ssctf4/s_flameanim_red",
+		"textures/ctf/ctf_tower_redfin_shiny",
+		"textures/ctf/ctf_tower_bluefin_shiny",
+		"textures/ctf/supportborder_blue",
+		"textures/gothic_trim/supportborder",
+		"textures/ssctf4/s_strucco_arch3",
+		"textures/ctf_unified/banner03_blue",
+		"textures/ssctf4/s_strucco_arch4",
+		"textures/ssctf4/ssctf4_fogblue",
+		"textures/ssctf4/ssctf4_fog",
+		"textures/gothic_trim/baseboard08_ered",
+		"textures/gothic_trim/baseboard08_dblue",
+		"textures/gothic_trim/baseboard09_blue",
+		"textures/gothic_trim/baseboard09_red",
+		"textures/ninemil-ctf2/killblock_i2_r",
+		"textures/ninemil-ctf2/killblock_i2_b",
+		"textures/gothic_trim/baseboard08_ered",
+		"textures/gothic_trim/baseboard08_dblue",
+		"textures/gothic_trim/baseboard09_blue",
+		"textures/gothic_trim/baseboard09_red",
+		"textures/ninemil-ctf2/killblock_i2_r",
+		"textures/ninemil-ctf2/killblock_i2_b",
+		"textures/ctf_unified/plaque_shiny_blue",
+		"textures/japanc_q3w/red_laq1",
+		"textures/japanc_q3w/blue_laq1",
+		"textures/sfx/xmetalfloor_wall_5b",
+		"textures/sfx/xmetalfloor_wall_9b",
+		"textures/sfx/xian_dm3padwall",
+		"textures/crew/redwall",
+		"textures/crew/bluewall",
+		"textures/ctf_unified/monologo_flash_red",
+		"textures/ctf_unified/monologo_flash_blue",
+		"textures/crew/border11cx_r",
+		"textures/crew/border11cx_b",
+		"textures/ct_ct3ctf2/red_arrows_2",
+		"textures/ct_ct3ctf2/blue_arrows_2",
+		"textures/ct_ct3ctf2/jp_01_red",
+		"textures/ct_ct3ctf2/jp_01",
+		"textures/ct_ct3ctf2/red_pipe_liquid",
+		"textures/ct_ct3ctf2/blue_pipe_liquid",
+		"textures/ct_ct3ctf2/light_trim_red",
+		"textures/ct_ct3ctf2/light_trim_blue",
+		"textures/ct_ct3ctf2/red_jumppad_wall",
+		"textures/ct_ct3ctf2/blue_jumppad_wall"
+	};
+
+	// This takes less than 80 us when loading cpm32_b1 on my old 2600K.
+	// So no, we don't need a hash map.
+	for (int i = 0; i < ARRAY_LEN(names); ++i) {
+		if (!Q_stricmp(shader.name, names[i])) {
+			shader.greyscaleCTF = qtrue;
+			return;
+		}
+	}
+
+	shader.greyscaleCTF = qfalse;
+}
+
+
 static qbool UsesInternalLightmap( const shaderStage_t* stage )
 {
 	return
@@ -2389,6 +2536,8 @@ static shader_t* FinishShader()
 	}
 
 	ProcessDepthFade();
+
+	ProcessGreyscale();
 
 	return GeneratePermanentShader();
 }

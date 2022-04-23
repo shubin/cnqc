@@ -68,6 +68,7 @@ static const void* RB_StretchPic( const void* data )
 		}
 		backEnd.currentEntity = &backEnd.entity2D;
 		RB_BeginSurface( shader, 0 );
+		tess.greyscale = 0.0f;
 	}
 
 	RB_CHECKOVERFLOW( 4, 6 );
@@ -135,6 +136,7 @@ static const void* RB_Triangle( const void* data )
 		}
 		backEnd.currentEntity = &backEnd.entity2D;
 		RB_BeginSurface( shader, 0 );
+		tess.greyscale = 0.0f;
 	}
 
 	RB_CHECKOVERFLOW( 3, 3 );
@@ -303,6 +305,7 @@ static void RB_RenderDrawSurfList( const drawSurf_t* drawSurfs, int numDrawSurfs
 				RB_EndSurface();
 			RB_BeginSurface( shader, fogNum );
 			tess.depthFade = shader->dfType;
+			tess.greyscale = drawSurf->greyscale;
 		}
 
 		sort = drawSurf->sort;
@@ -419,6 +422,7 @@ static void RB_RenderLitSurfList( dlight_t* dl, qbool opaque )
 		if (shaderPrev)
 			RB_EndSurface();
 		RB_BeginSurface( shader, fogNum );
+		tess.greyscale = litSurf->greyscale;
 
 		// stage index is guaranteed valid by R_AddLitSurface
 		const int stageIndex = shader->lightingStages[ST_DIFFUSE];

@@ -20,6 +20,8 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 */
 // dynamic light vertex and pixel shaders
 
+#include "shared.hlsli"
+
 cbuffer VertexShaderBuffer
 {
     matrix modelViewMatrix;
@@ -67,7 +69,8 @@ cbuffer PixelShaderBuffer
 	float lightRadius;
 	float opaque;
 	float intensity;
-	float dummy[2];
+	float greyscale;
+	float dummy;
 };
 
 Texture2D texture0 : register(t0);
@@ -80,7 +83,7 @@ float BezierEase(float t)
 
 float4 ps_main(VOut input) : SV_TARGET
 {
-	float4 base = texture0.Sample(sampler0, input.texCoords);
+	float4 base = MakeGreyscale(texture0.Sample(sampler0, input.texCoords), greyscale);
 	float3 nL = normalize(input.osLightVec); // normalized object-space light vector
 	float3 nV = normalize(input.osEyeVec); // normalized object-space view vector
 	float3 nN = input.normal; // normalized object-space normal vector

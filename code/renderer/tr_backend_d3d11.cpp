@@ -181,7 +181,8 @@ struct GenericPSData
 {
 	uint32_t alphaTest; // AlphaTest enum
 	uint32_t texEnv; // texEnv_t enum
-	float seed[2];
+	float seed;
+	float greyscale;
 	float invGamma;
 	float invBrightness;
 	float noiseScale;
@@ -200,7 +201,7 @@ struct DepthFadePSData
 	uint32_t alphaTest; // AlphaTest enum
 	float distance;
 	float offset;
-	float dummy;
+	float greyscale;
 	float scale[4];
 	float bias[4];
 };
@@ -220,7 +221,8 @@ struct DynamicLightPSData
 	float lightRadius;
 	float opaque;
 	float intensity;
-	float dummy[2];
+	float greyscale;
+	float dummy;
 };
 
 struct PostVSData
@@ -332,7 +334,7 @@ struct Direct3D
 	float lightRadius;
 	AlphaTest alphaTest;
 	texEnv_t texEnv;
-	float frameSeed[2];
+	float frameSeed;
 
 	DXGI_FORMAT formatColorRT;
 	DXGI_FORMAT formatDepth;     // float: DXGI_FORMAT_R32_TYPELESS
@@ -740,8 +742,8 @@ static void UploadPendingShaderData()
 		memcpy(vsData.clipPlane, d3d.clipPlane, sizeof(vsData.clipPlane));
 		psData.alphaTest = d3d.alphaTest;
 		psData.texEnv = d3d.texEnv;
-		psData.seed[0] = d3d.frameSeed[0];
-		psData.seed[1] = d3d.frameSeed[1];
+		psData.seed = d3d.frameSeed;
+		psData.greyscale = tess.greyscale;
 		psData.invGamma = 1.0f / r_gamma->value;
 		psData.invBrightness = 1.0f / r_brightness->value;
 		psData.noiseScale = backEnd.projection2D ? 0.0f : r_ditherStrength->value;
@@ -761,6 +763,7 @@ static void UploadPendingShaderData()
 		memcpy(psData.bias, r_depthFadeBias[tess.shader->dfType], sizeof(psData.bias));
 		psData.distance = tess.shader->dfInvDist;
 		psData.offset = tess.shader->dfBias;
+		psData.greyscale = tess.greyscale;
 		ResetShaderData(pipeline->vertexBuffer, &vsData, sizeof(vsData));
 		ResetShaderData(pipeline->pixelBuffer, &psData, sizeof(psData));
 	}
@@ -777,6 +780,7 @@ static void UploadPendingShaderData()
 		psData.lightRadius = d3d.lightRadius;
 		psData.opaque = backEnd.dlOpaque ? 1.0f : 0.0f;
 		psData.intensity = backEnd.dlIntensity;
+		psData.greyscale = tess.greyscale;
 		ResetShaderData(pipeline->vertexBuffer, &vsData, sizeof(vsData));
 		ResetShaderData(pipeline->pixelBuffer, &psData, sizeof(psData));
 	}
@@ -2051,8 +2055,7 @@ static void GAL_BeginFrame()
 {
 	BeginQueries();
 
-	d3d.frameSeed[0] = (float)rand() / (float)RAND_MAX;
-	d3d.frameSeed[1] = (float)rand() / (float)RAND_MAX;
+	d3d.frameSeed = (float)rand() / (float)RAND_MAX;
 
 	const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 	const FLOAT clearColorDebug[4] = { 1.0f, 0.0f, 0.5f, 1.0f };

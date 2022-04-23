@@ -151,6 +151,7 @@ enum GenericUniform
 	GU_PROJECTION,
 	GU_CLIP_PLANE,
 	GU_ALPHA_TEX,
+	GU_GREYSCALE,
 	GU_GAMMA_BRIGHT_NOISE_SEED, // only defined when dithering is enabled
 	GU_A2C_ALPHA_BOOST,         // only defined when alpha to coverage is enabled
 	GU_COUNT
@@ -166,6 +167,7 @@ enum DynamicLightUniform
 	DU_LIGHT_COLOR_RADIUS,
 	DU_OPAQUE,
 	DU_INTENSITY,
+	DU_GREYSCALE,
 	DU_COUNT
 };
 
@@ -178,6 +180,7 @@ enum SoftSpriteUniform
 	SU_DIST_OFFSET,
 	SU_COLOR_SCALE,
 	SU_COLOR_BIAS,
+	SU_GREYSCALE,
 	SU_COUNT
 };
 
@@ -244,6 +247,7 @@ struct OpenGL3
 	float depthFadeBias[4];
 	float depthFadeDist;
 	float depthFadeOffset;
+	float greyscale;
 
 	ArrayBuffer arrayBuffers[VB_COUNT];
 	ArrayBuffer indexBuffer;
@@ -284,6 +288,15 @@ struct OpenGL3
 static OpenGL3 gl;
 
 
+static const char* shared_fs =
+"vec4 MakeGreyscale(vec4 color, float amount)\n"
+"{\n"
+"	float grey = dot(color.rgb, vec3(0.299, 0.587, 0.114));\n"
+"	vec4 result = mix(color, vec4(grey, grey, grey, color.a), amount);\n"
+"	return result;\n"
+"}\n"
+"\n";
+
 static const char* generic_vs =
 // a good way to test warning reports with r_verbose 1
 //"#extension DOESNTEXISTLOL:warn\n"
@@ -318,6 +331,7 @@ static const char* generic_fs =
 "uniform uvec2 alphaTex;\n"
 "#define alphaTest alphaTex.x\n"
 "#define texEnv alphaTex.y\n"
+"uniform float greyscale;\n"
 "#if CNQ3_DITHER\n"
 "uniform vec4 gammaBrightNoiseSeed;\n"
 "#define invGamma gammaBrightNoiseSeed.x\n"
@@ -406,7 +420,7 @@ static const char* generic_fs =
 "		discard;\n"
 "#endif\n"
 "\n"
-"	fragColor = r;\n"
+"	fragColor = MakeGreyscale(r, greyscale);\n"
 "}\n";
 
 static const char* dl_vs =
@@ -442,6 +456,7 @@ static const char* dl_fs =
 "uniform vec4 lightColorRadius;\n"
 "uniform float opaque;\n"
 "uniform float intensity;\n"
+"uniform float greyscale;\n"
 "\n"
 "in vec3 normalFS;\n"
 "in vec2 texCoords1FS;\n"
@@ -457,7 +472,7 @@ static const char* dl_fs =
 "\n"
 "void main()\n"
 "{\n"
-"	vec4 base = texture2D(texture1, texCoords1FS);\n"
+"	vec4 base = MakeGreyscale(texture2D(texture1, texCoords1FS), greyscale);\n"
 "	vec3 nL = normalize(L);\n"
 "	vec3 nV = normalize(V);\n"
 "\n"
@@ -474,7 +489,8 @@ static const char* dl_fs =
 "	vec3 color = (base.rgb * vec3(diffuse) + vec3(spec)) * intens * intensity;\n"
 "	float alpha = mix(opaque, 1.0, base.a);\n"
 "\n"
-"	fragColor = vec4(color.rgb * alpha, alpha);\n"
+"	vec4 r = vec4(color.rgb * alpha, alpha);\n"
+"	fragColor = r;\n"
 "}\n";
 
 static const char* sprite_vs =
@@ -514,6 +530,7 @@ static const char* sprite_fs =
 "uniform vec2 distOffset;\n"
 "uniform vec4 colorScale;\n"
 "uniform vec4 colorBias;\n"
+"uniform float greyscale;\n"
 "#define distance distOffset.x\n"
 "#define offset distOffset.y\n"
 "\n"
@@ -557,7 +574,7 @@ static const char* sprite_fs =
 "	float depthP = depthVS - offset;\n"
 "	float scale = Contrast((depthS - depthP) * distance, 2.0);\n"
 "	vec4 r2 = mix(r * colorScale + colorBias, r, scale);\n"
-"	fragColor = r2;\n"
+"	fragColor = MakeGreyscale(r2, greyscale);\n"
 "}\n";
 
 static const char* post_vs =
@@ -591,9 +608,7 @@ static const char* post_fs =
 "{\n"
 "	vec3 base = texture(texture1, texCoords1FS).rgb;\n"
 "	vec3 gc = pow(base, vec3(gamma)) * brightness;\n"
-"	float grey = 0.299 * gc.r + 0.587 * gc.g + 0.114 * gc.b;\n"
-"	vec3 result = mix(gc, vec3(grey, grey, grey), greyscale);\n"
-"	fragColor = vec4(result.rgb, 1.0);\n"
+"	fragColor = MakeGreyscale(vec4(gc.rgb, 1.0), greyscale);\n"
 "}\n";
 
 static const char* gammaToLinear_cs =
@@ -796,6 +811,7 @@ static qbool CreateShader(GLuint* shaderPtr, PipelineId pipelineId, GLenum shade
 		enableA2C ? "#define CNQ3_A2C 1\n" : "#define CNQ3_A2C 0\n",
 		enableDithering ? "#define CNQ3_DITHER 1\n" : "#define CNQ3_DITHER 0\n",
 		depthFadeWithMSAA ? "#define CNQ3_MSAA 1\n" : "#define CNQ3_MSAA 0\n",
+		shaderType == GL_FRAGMENT_SHADER ? shared_fs : "",
 		shaderSource
 	};
 
@@ -1935,6 +1951,7 @@ static void Init()
 	gl.pipelines[PID_GENERIC].uniformNames[GU_PROJECTION] = "projection";
 	gl.pipelines[PID_GENERIC].uniformNames[GU_CLIP_PLANE] = "clipPlane";
 	gl.pipelines[PID_GENERIC].uniformNames[GU_ALPHA_TEX] = "alphaTex";
+	gl.pipelines[PID_GENERIC].uniformNames[GU_GREYSCALE] = "greyscale";
 	gl.pipelines[PID_GENERIC].uniformNames[GU_GAMMA_BRIGHT_NOISE_SEED] = "gammaBrightNoiseSeed";
 	gl.pipelines[PID_GENERIC].uniformNames[GU_A2C_ALPHA_BOOST] = "alphaBoost";
 
@@ -1952,6 +1969,7 @@ static void Init()
 	gl.pipelines[PID_DYNAMIC_LIGHT].uniformNames[DU_LIGHT_COLOR_RADIUS] = "lightColorRadius";
 	gl.pipelines[PID_DYNAMIC_LIGHT].uniformNames[DU_OPAQUE] = "opaque";
 	gl.pipelines[PID_DYNAMIC_LIGHT].uniformNames[DU_INTENSITY] = "intensity";
+	gl.pipelines[PID_DYNAMIC_LIGHT].uniformNames[DU_GREYSCALE] = "greyscale";
 
 	gl.pipelines[PID_SOFT_SPRITE].arrayBuffers[VB_POSITION].enabled = qtrue;
 	gl.pipelines[PID_SOFT_SPRITE].arrayBuffers[VB_POSITION].attribName = "position";
@@ -1966,6 +1984,7 @@ static void Init()
 	gl.pipelines[PID_SOFT_SPRITE].uniformNames[SU_DIST_OFFSET] = "distOffset";
 	gl.pipelines[PID_SOFT_SPRITE].uniformNames[SU_COLOR_SCALE] = "colorScale";
 	gl.pipelines[PID_SOFT_SPRITE].uniformNames[SU_COLOR_BIAS] = "colorBias";
+	gl.pipelines[PID_SOFT_SPRITE].uniformNames[SU_GREYSCALE] = "greyscale";
 
 	gl.pipelines[PID_POST_PROCESS].uniformNames[PU_BRIGHT_GAMMA_GREY] = "brightGammaGrey";
 
@@ -2208,6 +2227,13 @@ static void DrawGeneric()
 		glUniform1f(pipeline->uniformLocations[GU_A2C_ALPHA_BOOST], r_alphaToCoverageMipBoost->value);
 		pipeline->uniformsDirty[GU_A2C_ALPHA_BOOST] = qfalse;
 	}
+	if(pipeline->uniformsDirty[GU_GREYSCALE] ||
+	   tess.greyscale != gl.greyscale)
+	{
+		glUniform1f(pipeline->uniformLocations[GU_GREYSCALE], tess.greyscale);
+		gl.greyscale = tess.greyscale;
+		pipeline->uniformsDirty[GU_GREYSCALE] = qfalse;
+	}
 
 	UploadVertexArray(VB_POSITION, tess.xyz);
 	UploadIndices(tess.indexes, tess.numIndexes);
@@ -2295,6 +2321,12 @@ static void DrawDynamicLight()
 		pipeline->uniformsDirty[DU_INTENSITY] = qtrue;
 	}
 
+	if(tess.greyscale != gl.greyscale)
+	{
+		gl.greyscale = tess.greyscale;
+		pipeline->uniformsDirty[DU_GREYSCALE] = qtrue;
+	}
+
 	if(pipeline->uniformsDirty[DU_MODELVIEW])
 	{
 		glUniformMatrix4fv(pipeline->uniformLocations[DU_MODELVIEW], 1, GL_FALSE, gl.modelViewMatrix);
@@ -2314,6 +2346,10 @@ static void DrawDynamicLight()
 	if(pipeline->uniformsDirty[DU_INTENSITY])
 	{
 		glUniform1f(pipeline->uniformLocations[DU_INTENSITY], gl.dlIntensity);
+	}
+	if(pipeline->uniformsDirty[DU_GREYSCALE])
+	{
+		glUniform1f(pipeline->uniformLocations[DU_GREYSCALE], tess.greyscale);
 	}
 
 	memset(pipeline->uniformsDirty, 0, sizeof(pipeline->uniformsDirty));
@@ -2362,6 +2398,13 @@ static void DrawDepthFade()
 		gl.depthFadeDist = tess.shader->dfInvDist;
 		gl.depthFadeOffset = tess.shader->dfBias;
 		pipeline->uniformsDirty[SU_DIST_OFFSET] = qfalse;
+	}
+	if(pipeline->uniformsDirty[SU_GREYSCALE] ||
+	   tess.greyscale != gl.greyscale)
+	{
+		glUniform1f(pipeline->uniformLocations[SU_GREYSCALE], tess.greyscale);
+		gl.greyscale = tess.greyscale;
+		pipeline->uniformsDirty[SU_GREYSCALE] = qfalse;
 	}
 
 	UploadVertexArray(VB_POSITION, tess.xyz);

@@ -963,53 +963,54 @@ void RB_CalcSpecularAlpha( unsigned char *alphas, int firstVertex, int numVertex
 
 static void RB_CalcDiffuseColor( unsigned char *colors, int firstVertex, int numVertexes )
 {
-	int				i, j;
-	float			*v, *normal;
-	float			incoming;
-	trRefEntity_t	*ent;
-	int				ambientLightInt;
-	vec3_t			ambientLight;
-	vec3_t			lightDir;
-	vec3_t			directedLight;
-
-	ent = backEnd.currentEntity;
+	trRefEntity_t* const ent = backEnd.currentEntity;
 	if (!ent || !numVertexes)
 		return;
 
-	ambientLightInt = ent->ambientLightInt;
+	int ambientLightInt = ent->ambientLightInt;
+	vec3_t ambientLight, lightDir, directedLight;
 	VectorCopy( ent->ambientLight, ambientLight );
 	VectorCopy( ent->directedLight, directedLight );
 	VectorCopy( ent->lightDir, lightDir );
 
-	v = tess.xyz[firstVertex];
-	normal = tess.normal[firstVertex];
+	float* v = tess.xyz[firstVertex];
+	float* normal = tess.normal[firstVertex];
 	colors += firstVertex * 4;
 
-	for (i = 0 ; i < numVertexes ; i++, v += 4, normal += 4) {
-		incoming = DotProduct (normal, lightDir);
+	const float t = r_mapGreyscale->value;
+	const float ti = 1.0f - t;
+
+	// fix up ambientLightInt for the case where the dot product is 0 or negative
+	vec3_t ambientLightMixed;
+	const float ambientGrey = 0.299f * ambientLight[0] + 0.587f * ambientLight[1] + 0.114f * ambientLight[2];
+	const float ambientGrey_t = ambientGrey * t;
+	ambientLightMixed[0] = ambientLight[0] * ti + ambientGrey_t;
+	ambientLightMixed[1] = ambientLight[1] * ti + ambientGrey_t;
+	ambientLightMixed[2] = ambientLight[2] * ti + ambientGrey_t;
+	((byte*)&ambientLightInt)[0] = ambientLightMixed[0];
+	((byte*)&ambientLightInt)[1] = ambientLightMixed[1];
+	((byte*)&ambientLightInt)[2] = ambientLightMixed[2];
+	((byte*)&ambientLightInt)[3] = 0xFF;
+
+	for (int i = 0 ; i < numVertexes ; i++, v += 4, normal += 4) {
+		const float incoming = DotProduct( normal, lightDir );
 		if ( incoming <= 0 ) {
-			*(int *)&colors[i*4] = ambientLightInt;
+			*(int*)&colors[i * 4] = ambientLightInt;
 			continue;
 		} 
-		j = myftol( ambientLight[0] + incoming * directedLight[0] );
-		if ( j > 255 ) {
-			j = 255;
-		}
-		colors[i*4+0] = j;
 
-		j = myftol( ambientLight[1] + incoming * directedLight[1] );
-		if ( j > 255 ) {
-			j = 255;
-		}
-		colors[i*4+1] = j;
-
-		j = myftol( ambientLight[2] + incoming * directedLight[2] );
-		if ( j > 255 ) {
-			j = 255;
-		}
-		colors[i*4+2] = j;
-
-		colors[i*4+3] = 255;
+		const float inR = ambientLight[0] + incoming * directedLight[0];
+		const float inG = ambientLight[1] + incoming * directedLight[1];
+		const float inB = ambientLight[2] + incoming * directedLight[2];
+		const float grey = 0.299f * inR + 0.587f * inG + 0.114f * inB;
+		const float grey_t = grey * t;
+		const float outR = inR * ti + grey_t;
+		const float outG = inG * ti + grey_t;
+		const float outB = inB * ti + grey_t;
+		colors[i * 4 + 0] = (byte)min( outR, 255.0f );
+		colors[i * 4 + 1] = (byte)min( outG, 255.0f );
+		colors[i * 4 + 2] = (byte)min( outB, 255.0f );
+		colors[i * 4 + 3] = 255;
 	}
 }
 

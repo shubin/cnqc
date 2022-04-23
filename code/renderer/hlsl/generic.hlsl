@@ -20,6 +20,8 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 */
 // generic vertex and pixel shaders
 
+#include "shared.hlsli"
+
 cbuffer VertexShaderBuffer
 {
     matrix modelViewMatrix;
@@ -62,7 +64,8 @@ cbuffer PixelShaderBuffer
 {
 	uint alphaTest;
 	uint texEnv;
-	float2 seed;
+	float seed;
+	float greyscale;
 	float invGamma;
 	float invBrightness;
 	float noiseScale;
@@ -153,5 +156,5 @@ float4 ps_main(VOut input) : SV_Target0
 	   discard;
 #endif
 
-	return r;
+	return MakeGreyscale(r, greyscale);
 }

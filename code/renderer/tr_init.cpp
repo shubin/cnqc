@@ -61,6 +61,8 @@ cvar_t	*r_speeds;
 cvar_t	*r_fullbright;
 cvar_t	*r_lightmap;
 cvar_t	*r_lightmapGreyscale;
+cvar_t	*r_mapGreyscale;
+cvar_t	*r_mapGreyscaleCTF;
 cvar_t	*r_novis;
 cvar_t	*r_nocull;
 cvar_t	*r_nocurves;
@@ -383,7 +385,7 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_subdivisions, "r_subdivisions", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "1", "64", help_r_subdivisions },
 	{ &r_fullbright, "r_fullbright", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_fullbright },
 	{ &r_lightmap, "r_lightmap", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_lightmap },
-	{ &r_lightmapGreyscale, "r_lightmapGreyscale", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "0", "1", "how monochrome the lightmap looks" },
+	{ &r_lightmapGreyscale, "r_lightmapGreyscale", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "0", "1", "how desaturated the lightmap looks" },
 	{ &r_depthFade, "r_depthFade", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_depthFade },
 	{ &r_gpuMipGen, "r_gpuMipGen", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_gpuMipGen },
 	{ &r_alphaToCoverage, "r_alphaToCoverage", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_alphaToCoverage },
@@ -409,11 +411,13 @@ static const cvarTableItem_t r_cvars[] =
 	// r_textureMode's default value can't be an empty string because otherwise, a user-created default can stick (see Cvar_Get)
 	{ &r_textureMode, "r_textureMode", "best", CVAR_ARCHIVE | CVAR_LATCH, CVART_STRING, NULL, NULL, help_r_textureMode },
 	{ &r_gamma, "r_gamma", "1.2", CVAR_ARCHIVE, CVART_FLOAT, "0.5", "3", help_r_gamma },
-	{ &r_greyscale, "r_greyscale", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", "1", "controls how monochrome the final image looks" },
+	{ &r_greyscale, "r_greyscale", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", "1", "how desaturated the final image looks" },
 	{ &r_ditherStrength, "r_ditherStrength", "1.0", CVAR_ARCHIVE, CVART_FLOAT, "0.125", "8.0", help_r_ditherStrength },
 	{ &r_transpSort, "r_transpSort", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_transpSort },
 	{ &r_lodCurveError, "r_lodCurveError", "2000", CVAR_ARCHIVE, CVART_FLOAT, "250", "10000", "curved surfaces LOD scale" },
 	{ &r_alphaToCoverageMipBoost, "r_alphaToCoverageMipBoost", "0.125", CVAR_ARCHIVE, CVART_FLOAT, "0", "0.5", "increases the alpha value of higher mip levels" },
+	{ &r_mapGreyscale, "r_mapGreyscale", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", "1", "how desaturated the map looks" },
+	{ &r_mapGreyscaleCTF, "r_mapGreyscaleCTF", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", "1", help_r_mapGreyscaleCTF },
 
 	//
 	// temporary variables that can change at any time
@@ -455,6 +459,7 @@ static void R_InitGAL()
 {
 	struct gal_t {
 		getGALInterface_t grabInterface;
+		galId_t id;
 		const char* cvarValue;
 		const char* fullName;
 	};
@@ -462,10 +467,10 @@ static void R_InitGAL()
 	// preferred option goes first
 	const gal_t galArray[] = {
 #if defined( _WIN32 )
-		{ &GAL_GetD3D11, "D3D11", "Direct3D 11" },
+		{ &GAL_GetD3D11, GAL_D3D11, "D3D11", "Direct3D 11" },
 #endif
-		{ &GAL_GetGL3, "GL3", "OpenGL 3" },
-		{ &GAL_GetGL2, "GL2", "OpenGL 2" }
+		{ &GAL_GetGL3, GAL_GL3, "GL3", "OpenGL 3" },
+		{ &GAL_GetGL2, GAL_GL2, "GL2", "OpenGL 2" }
 	};
 
 	int galIndex = -1;
@@ -495,6 +500,7 @@ static void R_InitGAL()
 	if ( !gal.Init() )
 		ri.Error( ERR_FATAL, "Failed to initialize the %s back-end\n", galArray[galIndex].fullName );
 
+	gal.id = galArray[galIndex].id;
 	GfxInfo_f();
 }
 

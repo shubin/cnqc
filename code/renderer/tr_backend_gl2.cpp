@@ -74,14 +74,62 @@ static void GL_Program( const GLSL_Program& prog )
 	}
 }
 
-static void GL_Program()
-{
-	if ( progCurrent != 0 ) {
-		glUseProgram(0);
-		progCurrent = 0;
-		backEnd.pc3D[ RB_SHADER_CHANGES ]++;
-	}
-}
+
+static GLSL_Program genericProg;
+
+struct GLSL_GenericProgramAttribs {
+	// pixel shader:
+	GLint texture1;		// 2D texture
+	GLint texture2;		// 2D texture
+	GLint texEnv;		// 1i
+	GLint greyscale;	// 1f
+};
+
+static GLSL_GenericProgramAttribs genericProgAttribs;
+
+static const char* sharedFS =
+"vec4 MakeGreyscale(vec4 color, float amount)\n"
+"{\n"
+"	float grey = dot(color.rgb, vec3(0.299, 0.587, 0.114));\n"
+"	vec4 result = mix(color, vec4(grey, grey, grey, color.a), amount);\n"
+"	return result;\n"
+"}\n"
+"\n";
+
+static const char* genericVS =
+"void main()\n"
+"{\n"
+"	gl_Position = ftransform();\n"
+"	gl_TexCoord[0] = gl_MultiTexCoord0;\n"
+"	gl_TexCoord[1] = gl_MultiTexCoord1;\n"
+"	gl_TexCoord[2] = gl_Color;\n"
+"}\n";
+
+static const char* genericFS =
+"uniform sampler2D texture1;\n"
+"uniform sampler2D texture2;\n"
+"uniform int texEnv;\n"
+"uniform float greyscale;\n"
+"\n"
+"void main()\n"
+"{\n"
+"	vec4 p = texture2D(texture1, gl_TexCoord[0].xy);\n"
+"	vec4 s = texture2D(texture2, gl_TexCoord[1].xy);\n"
+"	vec4 r;\n"
+"	vec4 c = gl_TexCoord[2];"
+"	if(texEnv == 1)\n"
+"		r = c * s * p;\n"
+"	else if(texEnv == 2)\n"
+"		r = s; // use input.color or not?\n"
+"	else if(texEnv == 3)\n"
+"		r = c * vec4(p.rgb * (1.0 - s.a) + s.rgb * s.a, p.a);\n"
+"	else if(texEnv == 4)\n"
+"		r = c * vec4(p.rgb + s.rgb, p.a * s.a);\n"
+"	else // texEnv == 0\n"
+"		r = c * p;\n"
+"\n"
+"	gl_FragColor = MakeGreyscale(r, greyscale);\n"
+"}\n";
 
 
 static GLSL_Program dynLightProg;
@@ -95,6 +143,7 @@ struct GLSL_DynLightProgramAttribs {
 	GLint texture;			// 2D texture
 	GLint lightColorRadius;	// 4f, w = 1 / (r^2)
 	GLint opaqueIntensity;	// 2f
+	GLint greyscale;		// 1f
 };
 
 static GLSL_DynLightProgramAttribs dynLightProgAttribs;
@@ -145,6 +194,8 @@ static void DrawDynamicLight()
 	GL_SelectTexture( 0 );
 	R_BindAnimatedImage( &pStage->bundle );
 
+	glUniform1f( dynLightProgAttribs.greyscale, tess.greyscale );
+
 	glDrawElements( GL_TRIANGLES, tess.dlNumIndexes, GL_INDEX_TYPE, tess.dlIndexes );
 	backEnd.pc3D[ RB_DRAW_CALLS ]++;
 
@@ -182,7 +233,11 @@ static qbool GL2_StageIterator_MultitextureStage( int stage )
 
 static void DrawGeneric()
 {
-	GL_Program();
+	GL_Program( genericProg );
+
+	glUniform1i( genericProgAttribs.texture1, 0 );
+	glUniform1i( genericProgAttribs.texture2, 1 );
+	glUniform1f( genericProgAttribs.greyscale, tess.greyscale );
 
 	GL_Cull( tess.shader->cullType );
 
@@ -212,12 +267,14 @@ static void DrawGeneric()
 		if ( pStage->mtStages ) {
 			// we can't really cope with massive collapses, so
 			assert( pStage->mtStages == 1 );
+			glUniform1i( genericProgAttribs.texEnv, tess.xstages[stage + 1]->mtEnv );
 			if ( GL2_StageIterator_MultitextureStage( stage + 1 ) )
 				break;
 			stage += pStage->mtStages;
 			continue;
 		}
 
+		glUniform1i( genericProgAttribs.texEnv, TE_DISABLED );
 		glDrawElements( GL_TRIANGLES, tess.numIndexes, GL_INDEX_TYPE, tess.indexes );
 		backEnd.pc3D[ RB_DRAW_CALLS ]++;
 	}
@@ -243,8 +300,14 @@ static void GAL_Draw( drawType_t type )
 
 static qbool GL2_CreateShader( GLuint* shaderPtr, GLenum shaderType, const char* shaderSource )
 {
+	const char* const sourceArray[] =
+	{
+		shaderType == GL_FRAGMENT_SHADER ? sharedFS : "",
+		shaderSource
+	};
+
 	GLuint shader = glCreateShader( shaderType );
-	glShaderSource( shader, 1, &shaderSource, NULL );
+	glShaderSource( shader, ARRAY_LEN(sourceArray), sourceArray, NULL );
 	glCompileShader( shader );
 
 	GLint result = GL_FALSE;
@@ -278,7 +341,19 @@ static qbool GL2_CreateProgram( GLSL_Program& prog, const char* vs, const char* 
 	glAttachShader( prog.p, prog.fs );
 	glLinkProgram( prog.p );
 
-	return qtrue;
+	GLint result = GL_FALSE;
+	glGetProgramiv( prog.p, GL_LINK_STATUS, &result );
+	if ( result == GL_TRUE )
+		return qtrue;
+
+	GLint logLength = 0;
+	glGetProgramiv( prog.p, GL_INFO_LOG_LENGTH, &logLength );
+
+	static char log[4096]; // I've seen logs over 3 KB in size.
+	glGetProgramInfoLog( prog.p, sizeof(log), NULL, log );
+	ri.Printf( PRINT_ERROR, "Program link failed: %s\n", log );
+
+	return qfalse;
 }
 
 
@@ -307,6 +382,7 @@ static const char* dynLightFS =
 "uniform sampler2D texture;\n"
 "uniform vec4 lightColorRadius;\n"	// w = 1 / (r^2)
 "uniform vec2 opaqueIntensity;\n"
+"uniform float greyscale;\n"
 "varying vec4 L;\n"		// object-space light vector
 "varying vec4 V;\n"		// object-space view vector
 "varying vec3 nN;\n"	// normalized object-space normal vector
@@ -318,7 +394,7 @@ static const char* dynLightFS =
 "\n"
 "void main()\n"
 "{\n"
-"	vec4 base = texture2D(texture, gl_TexCoord[0].xy);\n"
+"	vec4 base = MakeGreyscale(texture2D(texture, gl_TexCoord[0].xy), greyscale);\n"
 "	vec3 nL = normalize(L.xyz);\n"	// normalized light vector
 "	vec3 nV = normalize(V.xyz);\n"	// normalized view vector
 	// light intensity
@@ -722,9 +798,8 @@ static const char* greyscaleFS =
 "\n"
 "void main()\n"
 "{\n"
-"	vec3 base = texture2D(texture, gl_TexCoord[0].xy).rgb;\n"
-"	vec3 grey = vec3(0.299 * base.r + 0.587 * base.g + 0.114 * base.b);\n"
-"	gl_FragColor = vec4(mix(base, grey, greyscale), 1.0);\n"
+"	vec4 final = MakeGreyscale(texture2D(texture, gl_TexCoord[0].xy), greyscale);\n"
+"	gl_FragColor = vec4(final.rgb, 1.0);\n"
 "}\n"
 "";
 
@@ -736,6 +811,15 @@ static qbool GL2_Init()
 		return qfalse;
 	}
 
+	if ( !GL2_CreateProgram( genericProg, genericVS, genericFS ) ) {
+		ri.Error( PRINT_ERROR, "Failed to compile generic shaders\n" );
+		return qfalse;
+	}
+	genericProgAttribs.texture1 = glGetUniformLocation( genericProg.p, "texture1" );
+	genericProgAttribs.texture2 = glGetUniformLocation( genericProg.p, "texture2" );
+	genericProgAttribs.texEnv = glGetUniformLocation( genericProg.p, "texEnv" );
+	genericProgAttribs.greyscale = glGetUniformLocation( genericProg.p, "greyscale" );
+
 	if ( !GL2_CreateProgram( dynLightProg, dynLightVS, dynLightFS ) ) {
 		ri.Printf( PRINT_ERROR, "Failed to compile dynamic light shaders\n" );
 		return qfalse;
@@ -745,6 +829,7 @@ static qbool GL2_Init()
 	dynLightProgAttribs.texture = glGetUniformLocation( dynLightProg.p, "texture" );
 	dynLightProgAttribs.lightColorRadius = glGetUniformLocation( dynLightProg.p, "lightColorRadius" );
 	dynLightProgAttribs.opaqueIntensity = glGetUniformLocation( dynLightProg.p, "opaqueIntensity" );
+	dynLightProgAttribs.greyscale = glGetUniformLocation( dynLightProg.p, "greyscale" );
 
 	if ( !GL2_CreateProgram( gammaProg, gammaVS, gammaFS ) ) {
 		ri.Printf( PRINT_ERROR, "Failed to compile gamma correction shaders\n" );
@@ -771,8 +856,6 @@ static void GL2_BeginFrame()
 		GL2_FBO_Bind( frameBufferMain );
 	else
 		GL2_FBO_Bind();
-
-	GL_Program();
 }
 
 
@@ -1270,8 +1353,8 @@ static GLenum GL_TextureFormat( textureFormat_t f )
 
 static void GL_CheckErrors()
 {
-	int err = glGetError();
-	if ((err == GL_NO_ERROR) || r_ignoreGLErrors->integer)
+	const int err = glGetError();
+	if (err == GL_NO_ERROR || r_ignoreGLErrors->integer)
 		return;
 
 	char s[64];
@@ -1470,12 +1553,6 @@ static void InitGLInfo()
 }
 
 
-static void InitExtensions()
-{
-	GL2_Init();
-}
-
-
 static void GAL_ReadPixels( int x, int y, int w, int h, int alignment, colorSpace_t colorSpace, void* out )
 {
 	const GLenum format = colorSpace == CS_BGR ? GL_BGR : GL_RGBA;
@@ -1543,7 +1620,7 @@ static qbool GAL_Init()
 			ri.Error( ERR_FATAL, "Need at least OpenGL 3.0 or GL_ARB_framebuffer_object\n" );
 		InitGLConfig();
 		InitGLInfo();
-		InitExtensions();
+		GL2_Init();
 
 		// apply the current V-Sync option after the first rendered frame
 		r_swapInterval->modified = qtrue;
@@ -1551,8 +1628,8 @@ static qbool GAL_Init()
 
 	GL_SetDefaultState();
 
-	int err = glGetError();
-	if (err != GL_NO_ERROR)
+	const int err = glGetError();
+	if (err != GL_NO_ERROR && !r_ignoreGLErrors->integer)
 		ri.Printf( PRINT_ALL, "glGetError() = 0x%x\n", err );
 
 	return qtrue;

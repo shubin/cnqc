@@ -4,6 +4,15 @@ See the end of this file for known issues.
 
 DD Mmm 20 - 1.53
 
+add: r_mapGreyscale <0.0 to 1.0> (default: 0) controls the map's desaturation level
+  r_mapGreyscale 0 = full color (nothing done)
+  r_mapGreyscale 1 = completely monochrome
+
+add: r_mapGreyscaleCTF <0.0 to 1.0> (default: 0) controls the CTF map surfaces' desaturation level
+  r_mapGreyscaleCTF 0 = full color (nothing done)
+  r_mapGreyscaleCTF 1 = completely monochrome
+  it applies to the red/blue color-coded surfaces of popular CTF/NTF maps
+
 add: net_proxy <ip> (default: "") is the proxy server to use when establishing client connections
 
 add: /waitms <milliseconds> to delay command executions by the specified number of milliseconds

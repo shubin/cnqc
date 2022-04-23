@@ -749,6 +749,7 @@ solution "cnq3"
 		end
 		if os.is("windows") then
 			files { string.format("%s/renderer/hlsl/*.hlsl", path_src) }
+			files { string.format("%s/renderer/hlsl/*.hlsli", path_src) }
 		end
 		ApplyLibProjectSettings()
 		filter "action:gmake"

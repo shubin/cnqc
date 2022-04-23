@@ -255,6 +255,7 @@
     <None Include="..\..\code\renderer\hlsl\mip_pass.hlsl" />
     <None Include="..\..\code\renderer\hlsl\mip_start.hlsl" />
     <None Include="..\..\code\renderer\hlsl\post.hlsl" />
+    <None Include="..\..\code\renderer\hlsl\shared.hlsli" />
     <None Include="..\..\code\renderer\hlsl\sprite.hlsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

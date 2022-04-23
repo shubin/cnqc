@@ -20,6 +20,8 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 */
 // post-processing vertex and pixel shaders
 
+#include "shared.hlsli"
+
 // X3571: pow(f, e) won't work if f is negative
 #pragma warning(disable : 3571)
 
@@ -65,8 +67,6 @@ float4 ps_main(VOut input) : SV_TARGET
 {
 	float3 base = texture0.Sample(sampler0, input.texCoords).rgb;
 	float3 gc = pow(base, gamma) * brightness;
-	float grey = 0.299 * gc.r + 0.587 * gc.g + 0.114 * gc.b;
-	float3 result = lerp(gc, float3(grey, grey, grey), greyscale);
 
-	return float4(result.rgb, 1.0);
+	return MakeGreyscale(float4(gc.rgb, 1.0), greyscale);
 }

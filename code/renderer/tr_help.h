@@ -180,3 +180,7 @@ S_COLOR_VAL "    2 " S_COLOR_HELP "= R16G16B16A16"
 #define help_r_colorMipLevels \
 "colorizes textures based on their mip level\n" \
 "This disables MSAA on back-ends that use centroid sampling."
+
+#define help_r_mapGreyscaleCTF \
+"how desaturated CTF map surfaces look\n" \
+"It applies to the red/blue color-coded surfaces of popular CTF/NTF maps."

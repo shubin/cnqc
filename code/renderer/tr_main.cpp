@@ -1065,6 +1065,15 @@ static void R_SortLitsurfs( dlight_t* dl )
 ///////////////////////////////////////////////////////////////
 
 
+static float SurfGreyscaleAmount( const shader_t* shader )
+{
+	if (!tr.worldSurface)
+		return 0.0f;
+
+	return shader->greyscaleCTF ? r_mapGreyscaleCTF->value : r_mapGreyscale->value;
+}
+
+
 void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int fogIndex )
 {
 	if (tr.refdef.numDrawSurfs >= MAX_DRAWSURFS)
@@ -1075,6 +1084,7 @@ void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int fo
 	drawSurf->surface = surface;
 	drawSurf->model = tr.currentModel != NULL ? tr.currentModel->index : 0;
 	drawSurf->shaderNum = shader->index;
+	drawSurf->greyscale = SurfGreyscaleAmount( shader );
 }
 
 
@@ -1089,6 +1099,7 @@ void R_AddLitSurf( const surfaceType_t* surface, const shader_t* shader, int fog
 	litSurf->sort = R_ComposeSort( tr.currentEntityNum, shader, fogIndex );
 	litSurf->surface = surface;
 	litSurf->shaderNum = shader->index;
+	litSurf->greyscale = SurfGreyscaleAmount( shader );
 
 	if (!tr.light->head)
 		tr.light->head = litSurf;
@@ -1370,7 +1381,10 @@ static void R_AddEntitySurfaces()
 					R_AddMD3Surfaces( ent );
 					break;
 				case MOD_BRUSH:
+					// we want doors and lifts to be considered world surfaces too
+					tr.worldSurface = qtrue;
 					R_AddBrushModelSurfaces( ent );
+					tr.worldSurface = qfalse;
 					break;
 				case MOD_BAD:		// null model axis
 					if ( (ent->e.renderfx & RF_THIRD_PERSON) && !tr.viewParms.isPortal)
@@ -1392,7 +1406,9 @@ static void R_AddEntitySurfaces()
 
 static void R_GenerateDrawSurfs()
 {
+	tr.worldSurface = qtrue;
 	R_AddWorldSurfaces();
+	tr.worldSurface = qfalse;
 
 	R_AddPolygonSurfaces();
 

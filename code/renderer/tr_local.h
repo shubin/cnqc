@@ -423,6 +423,8 @@ struct shader_t {
 	float dfInvDist;
 	float dfBias;
 
+	qbool greyscaleCTF;
+
 	shader_t* next;
 };
 
@@ -509,6 +511,7 @@ struct drawSurf_t {
 	int						index;		// transparent surface's registration order
 	float					shaderSort;	// transparent surface's shader sort
 	int						shaderNum;	// unsorted shader index, for when we need to do fix-ups
+	float					greyscale;  // how monochrome to draw all the stages
 };
 
 extern void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])( const void* );
@@ -519,6 +522,7 @@ struct litSurf_t {
 	int shaderNum;						// unsorted shader index, for when we need to do fix-ups
 	const surfaceType_t* surface;		// any of surface*_t
 	litSurf_t* next;
+	float greyscale;
 };
 
 struct dlight_t {
@@ -932,6 +936,8 @@ typedef struct {
 	float		fogTable[FOG_TABLE_SIZE];
 
 	float		mipFilter[4]; // only used by the GPU generators
+
+	qbool		worldSurface; // is the currently added draw surface a world surface?
 } trGlobals_t;
 
 extern backEndState_t	backEnd;
@@ -1011,6 +1017,8 @@ extern cvar_t	*r_ditherStrength;		// the strength of the dithering noise
 extern cvar_t	*r_transpSort;			// transparency sorting mode
 extern cvar_t	*r_lightmap;			// render lightmaps only
 extern cvar_t	*r_lightmapGreyscale;	// how monochrome the lightmap looks
+extern cvar_t	*r_mapGreyscale;		// how monochrome the map looks
+extern cvar_t	*r_mapGreyscaleCTF;		// how monochrome CTF map surfaces look
 extern cvar_t	*r_fullbright;			// avoid lightmap pass
 extern cvar_t	*r_depthFade;			// fades marked shaders based on depth
 extern cvar_t	*r_gpuMipGen;			// uses GPU-side mip-map generation
@@ -1275,6 +1283,9 @@ struct shaderCommands_t
 
 	// use this state vector when drawing the fog pass
 	unsigned int fogStateBits;
+
+	// how to process the colors of the current batch
+	float greyscale;
 };
 
 extern shaderCommands_t tess;
@@ -1529,6 +1540,8 @@ typedef enum {
 } drawType_t;
 
 typedef struct {
+	galId_t	id;
+
 	qbool	(*Init)();
 	void	(*ShutDown)( qbool fullShutDown );
 
