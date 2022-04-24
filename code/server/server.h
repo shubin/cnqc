@@ -317,6 +317,11 @@ void SV_SendMessageToClient( msg_t *msg, client_t *client );
 void SV_SendClientMessages( void );
 void SV_SendClientSnapshot( client_t *client );
 
+// network overhead
+void SV_PrintNetworkOverhead_f();
+void SV_ClearNetworkOverhead_f();
+void SV_InitNetworkOverhead();
+
 //
 // sv_game.c
 //

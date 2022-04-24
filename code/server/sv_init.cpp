@@ -595,6 +595,9 @@ void SV_Init()
 
 	// init the botlib here because we need the pre-compiler in the UI
 	SV_BotInitBotLib();
+
+	// register debugging code to evaluate network overhead
+	SV_InitNetworkOverhead();
 }
 
 

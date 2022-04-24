@@ -756,6 +756,10 @@ static void SV_Uptime_f()
 
 static const cmdTableItem_t sv_cmds[] =
 {
+#if defined(DEBUG) || defined(CNQ3_DEV)
+	{ "net_printoverhead", SV_PrintNetworkOverhead_f, NULL, "prints network overhead stats" },
+	{ "net_clearoverhead", SV_ClearNetworkOverhead_f, NULL, "clears network overhead stats" },
+#endif
 	{ "heartbeat", SV_Heartbeat_f, NULL, "sends a heartbeat to master servers" },
 	{ "kick", SV_Kick_f, NULL, "kicks a player by name" },
 	{ "banUser", SV_Ban_f, NULL, "bans a player by name" },

@@ -23,6 +23,38 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "server.h"
 
 
+struct netSliceOverhead_t
+{
+	uint64_t numBytesSent;
+	uint64_t numBytesWritten;
+	const char* name;
+	qbool (*processCommand_f)( const char* cmd );
+	qbool (*processEntity_f)( const entityState_t* ent );
+};
+
+struct netOverhead_t
+{
+	uint64_t numBytesSent; // total
+	netSliceOverhead_t slices[64];
+	int numSlices;
+};
+
+static netOverhead_t net_overhead;
+
+
+static void SV_TrackEntityOverhead( int offset, const msg_t* msg, const entityState_t* ent )
+{
+	for ( int s = 0; s < net_overhead.numSlices; ++s ) {
+		netSliceOverhead_t* ovh = &net_overhead.slices[s];
+		if ( ovh->processEntity_f != NULL && ovh->processEntity_f( ent ) ) {
+			const int sent = ( msg->bit - offset + 7 ) / 8;
+			ovh->numBytesSent += sent;
+			ovh->numBytesWritten += sent; // don't care enough to track this
+		}
+	}
+}
+
+
 /*
 =============================================================================
 
@@ -74,7 +106,9 @@ static void SV_EmitPacketEntities( const clientSnapshot_t* from, clientSnapshot_
 		if ( newnum == oldnum ) {
 			// delta update from old position: because the force parm is false,
 			// no bytes will be emitted if the entity has not changed at all
+			const int offset = msg->bit;
 			MSG_WriteDeltaEntity( msg, oldent, newent, qfalse );
+			SV_TrackEntityOverhead( offset, msg, newent );
 			oldindex++;
 			newindex++;
 			continue;
@@ -82,7 +116,9 @@ static void SV_EmitPacketEntities( const clientSnapshot_t* from, clientSnapshot_
 
 		if ( newnum < oldnum ) {
 			// this is a new entity, send it from the baseline
+			const int offset = msg->bit;
 			MSG_WriteDeltaEntity( msg, &sv.svEntities[newnum].baseline, newent, qtrue );
+			SV_TrackEntityOverhead( offset, msg, newent );
 			newindex++;
 			continue;
 		}
@@ -201,13 +237,23 @@ SV_UpdateServerCommandsToClient
 ==================
 */
 void SV_UpdateServerCommandsToClient( client_t *client, msg_t *msg ) {
-	int		i;
-
 	// write any unacknowledged serverCommands
-	for ( i = client->reliableAcknowledge + 1 ; i <= client->reliableSequence ; i++ ) {
+	for ( int i = client->reliableAcknowledge + 1 ; i <= client->reliableSequence ; i++ ) {
+		const char* const cmd = client->reliableCommands[i & (MAX_RELIABLE_COMMANDS - 1)];
+		const int offset = msg->bit;
+
 		MSG_WriteByte( msg, svc_serverCommand );
 		MSG_WriteLong( msg, i );
-		MSG_WriteString( msg, client->reliableCommands[ i & (MAX_RELIABLE_COMMANDS-1) ] );
+		MSG_WriteString( msg, cmd );
+
+		for ( int s = 0; s < net_overhead.numSlices; ++s ) {
+			netSliceOverhead_t* ovh = &net_overhead.slices[s];
+			if ( ovh->processCommand_f != NULL && ovh->processCommand_f( cmd ) ) {
+				// don't forget the protocol headers and the string's null-terminator
+				ovh->numBytesSent += ( msg->bit - offset + 7 ) / 8;
+				ovh->numBytesWritten += 5 + strlen( cmd ) + 1;
+			}
+		}
 	}
 	client->reliableSent = client->reliableSequence;
 }
@@ -532,6 +578,8 @@ void SV_SendMessageToClient( msg_t *msg, client_t *client ) {
 	// send the datagram
 	SV_Netchan_Transmit( client, msg );	//msg->cursize, msg->data );
 
+	net_overhead.numBytesSent += msg->cursize;
+
 	// set nextSnapshotTime based on rate and requested number of updates
 
 	// local clients get snapshots every frame
@@ -665,3 +713,72 @@ void SV_SendClientMessages( void ) {
 	}
 }
 
+
+void SV_PrintNetworkOverhead_f()
+{
+	if ( net_overhead.numBytesSent == 0 ) {
+		return;
+	}
+
+	const double sentTotal = net_overhead.numBytesSent;
+
+	double sentAll = 0.0;
+	double writtenAll = 0.0;
+	for ( int i = 0; i < net_overhead.numSlices; ++i ) {
+		const char* name = net_overhead.slices[i].name;
+		const double sent = net_overhead.slices[i].numBytesSent;
+		const double written = net_overhead.slices[i].numBytesWritten;
+		sentAll += sent;
+		writtenAll += written;
+		if ( sent == 0.0 ) {
+			Com_Printf( "%s unused\n", name );
+			continue;
+		}
+
+		const float overhead = sent / sentTotal;
+		const float compression = written / sent;
+		Com_Printf( "%s overhead:    %.2f%%\n", name, overhead * 100.0f );
+		Com_Printf( "%s compression: %.2fx\n", name, compression );
+	}
+
+	if ( sentAll > 0.0 ) {
+		const float overhead = sentAll / sentTotal;
+		const float compression = writtenAll / sentAll;
+		Com_Printf( "total overhead:    %.2f%%\n", overhead * 100.0f );
+		Com_Printf( "total compression: %.2fx\n", compression );
+	}
+}
+
+
+void SV_ClearNetworkOverhead_f()
+{
+	net_overhead.numBytesSent = 0;
+	for ( int i = 0; i < net_overhead.numSlices; ++i ) {
+		net_overhead.slices[i].numBytesSent = 0;
+		net_overhead.slices[i].numBytesWritten = 0;
+	}
+}
+
+
+/*
+// simple example code to get started
+
+static qbool IsTeamInfoCommand( const char* cmd )
+{
+	return Q_stricmpn( cmd, "tinfo ", 6 ) == 0;
+}
+
+void SV_InitNetworkOverhead()
+{
+	net_overhead.slices[0].name = "CPMA Team Info";
+	net_overhead.slices[0].processCommand_f = &IsTeamInfoCommand;
+	net_overhead.numSlices = 1;
+}
+*/
+
+
+void SV_InitNetworkOverhead()
+{
+	// fill in the temp/debug code here
+	// #define CNQ3_DEV to make the console commands available in a release build
+}
