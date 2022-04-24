@@ -83,6 +83,7 @@ cvar_t	*r_ext_max_anisotropy;
 cvar_t	*r_msaa;
 
 cvar_t	*r_ignoreGLErrors;
+cvar_t	*r_ignoreShaderSortKey;
 
 cvar_t	*r_vertexLight;
 cvar_t	*r_uiFullScreen;
@@ -403,6 +404,7 @@ static const cvarTableItem_t r_cvars[] =
 	//
 	{ &r_lodbias, "r_lodbias", "-2", CVAR_ARCHIVE, CVART_INTEGER, "-16", "16", help_r_lodbias },
 	{ &r_ignoreGLErrors, "r_ignoreGLErrors", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "if " S_COLOR_VAL "0" S_COLOR_HELP ", OpenGL errors are fatal" },
+	{ &r_ignoreShaderSortKey, "r_ignoreShaderSortKey", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_ignoreShaderSortKey },
 	{ &r_fastsky, "r_fastsky", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_fastsky },
 	{ &r_noportals, "r_noportals", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_noportals },
 	{ &r_dynamiclight, "r_dynamiclight", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "enables dynamic lights" },

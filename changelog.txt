@@ -4,6 +4,10 @@ See the end of this file for known issues.
 
 DD Mmm 20 - 1.53
 
+add: r_ignoreShaderSortKey <0|1> (default: 0) ignores the shader sort key of transparent surfaces
+  instead, it sorts by depth and original registration order only
+  this is a work-around for broken maps like bones_fkd_b4 (grates drawn in front of simple items)
+
 add: r_mapGreyscale <0.0 to 1.0> (default: 0) controls the map's desaturation level
   r_mapGreyscale 0 = full color (nothing done)
   r_mapGreyscale 1 = completely monochrome

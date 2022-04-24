@@ -184,3 +184,8 @@ S_COLOR_VAL "    2 " S_COLOR_HELP "= R16G16B16A16"
 #define help_r_mapGreyscaleCTF \
 "how desaturated CTF map surfaces look\n" \
 "It applies to the red/blue color-coded surfaces of popular CTF/NTF maps."
+
+#define help_r_ignoreShaderSortKey \
+"ignores the shader sort key of transparent surfaces\n" \
+"Instead, it sorts by depth and original registration order only.\n" \
+"You can use this as a work-around for broken maps like bones_fkd_b4."

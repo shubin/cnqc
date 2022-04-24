@@ -1245,6 +1245,22 @@ static int R_CompareDrawSurf( const void* aPtr, const void* bPtr )
 }
 
 
+// same thing but ignoring the sort key since some maps get this so wrong
+// example: a grate shader in bones_fkd_b4 has a sort key value of 16,
+//          so it will draw in front of pretty much everything else
+static int R_CompareDrawSurfNoKey( const void* aPtr, const void* bPtr )
+{
+	const drawSurf_t* a = ( const drawSurf_t* )aPtr;
+	const drawSurf_t* b = ( const drawSurf_t* )bPtr;
+	if ( a->depth > b->depth )
+		return -1;
+	if ( a->depth < b->depth )
+		return 1;
+
+	return a->index - b->index;
+}
+
+
 static void R_SortDrawSurfs( int firstDrawSurf, int firstLitSurf )
 {
 	const int numDrawSurfs = tr.refdef.numDrawSurfs - firstDrawSurf;
@@ -1303,15 +1319,18 @@ static void R_SortDrawSurfs( int firstDrawSurf, int firstLitSurf )
 	}
 
 	// sort transparent surfaces by depth
-	qsort( drawSurfs + numDrawSurfs - numTranspSurfs, numTranspSurfs, sizeof(drawSurf_t), &R_CompareDrawSurf );
+	typedef int (*sortFunc_t)( const void*, const void* );
+	const sortFunc_t transpSort = r_ignoreShaderSortKey->integer ? &R_CompareDrawSurfNoKey : &R_CompareDrawSurf;
+	qsort( drawSurfs + numDrawSurfs - numTranspSurfs, numTranspSurfs, sizeof(drawSurf_t), transpSort );
 
 #if defined(_DEBUG)
-	float prevSort = -1.0f;
-	for ( int i = 0; i < numDrawSurfs; ++i )
-	{
-		R_DecomposeSort( (drawSurfs + i)->sort, &entityNum, &shader, &fogNum );
-		assert( shader->sort >= prevSort );
-		prevSort = shader->sort;
+	if ( r_ignoreShaderSortKey->integer == 0 ) {
+		float prevSort = -1.0f;
+		for ( int i = 0; i < numDrawSurfs; ++i ) {
+			R_DecomposeSort( (drawSurfs + i)->sort, &entityNum, &shader, &fogNum );
+			assert( shader->sort >= prevSort );
+			prevSort = shader->sort;
+		}
 	}
 #endif
 
