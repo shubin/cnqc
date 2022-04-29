@@ -189,3 +189,18 @@ S_COLOR_VAL "    2 " S_COLOR_HELP "= R16G16B16A16"
 "ignores the shader sort key of transparent surfaces\n" \
 "Instead, it sorts by depth and original registration order only.\n" \
 "You can use this as a work-around for broken maps like bones_fkd_b4."
+
+#define help_r_showtris_bitmask \
+S_COLOR_VAL "     1 " S_COLOR_HELP "= Enables the feature\n" \
+S_COLOR_VAL "     2 " S_COLOR_HELP "= Only draws for visible triangles\n" \
+S_COLOR_VAL "     4 " S_COLOR_HELP "= Draws for backfacing triangles\n" \
+S_COLOR_VAL "     8 " S_COLOR_HELP "= Uses the original vertex color\n" \
+S_COLOR_VAL "    16 " S_COLOR_HELP "= Uses the original vertex alpha as vertex color"
+
+#define help_r_showtris \
+"draws wireframe triangles\n" \
+help_r_showtris_bitmask
+
+#define help_r_shownormals \
+"draws vertex normals\n" \
+help_r_showtris_bitmask

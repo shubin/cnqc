@@ -194,7 +194,8 @@ typedef enum {
 	CGEN_WAVEFORM,			// programmatically generated
 	CGEN_LIGHTING_DIFFUSE,
 	CGEN_FOG,				// standard fog
-	CGEN_CONST				// fixed color
+	CGEN_CONST,				// fixed color
+	CGEN_DEBUG_ALPHA		// debug only: replicate the alpha channel
 } colorGen_t;
 
 typedef enum {
@@ -985,6 +986,14 @@ extern trGlobals_t	tr;
 #define DXGIPM_FLIPDISCARD		1
 #define DXGIPM_MAX				1
 
+// r_showtris + r_shownormals
+#define SHOWTRIS_ENABLE_BIT			1
+#define SHOWTRIS_OCCLUDE_BIT		2
+#define SHOWTRIS_BACKFACE_BIT		4
+#define SHOWTRIS_VERTEX_COLOR_BIT	8
+#define SHOWTRIS_VERTEX_ALPHA_BIT	16
+#define SHOWTRIS_MAX				31
+
 extern cvar_t	*r_backend;
 
 extern cvar_t	*r_verbose;				// used for verbose debug spew
@@ -1046,8 +1055,8 @@ extern	cvar_t	*r_textureMode;
 extern	cvar_t	*r_vertexLight;			// vertex lighting mode for better performance
 extern	cvar_t	*r_uiFullScreen;		// ui is running fullscreen
 
-extern	cvar_t	*r_showtris;			// enables wireframe rendering of the world
 extern	cvar_t	*r_showsky;				// forces sky in front of all surfaces
+extern	cvar_t	*r_showtris;			// draws wireframe triangles
 extern	cvar_t	*r_shownormals;			// draws wireframe normals
 extern	cvar_t	*r_clear;				// clear to violet instead of black for debugging
 

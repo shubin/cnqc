@@ -1093,6 +1093,16 @@ void R_ComputeColors( const shaderStage_t* pStage, stageVars_t& svars, int first
 	case CGEN_ONE_MINUS_ENTITY:
 		RB_CalcColorFromOneMinusEntity( ( unsigned char * ) &svars.colors[firstVertex], numVertexes );
 		break;
+	case CGEN_DEBUG_ALPHA:
+		for ( int i = firstVertex; i < firstVertex + numVertexes; i++ )
+		{
+			const byte alpha = tess.vertexColors[i][3];
+			svars.colors[i][0] = alpha;
+			svars.colors[i][1] = alpha;
+			svars.colors[i][2] = alpha;
+			svars.colors[i][3] = 255;
+		}
+		break;
 	}
 
 	//

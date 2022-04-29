@@ -24,6 +24,13 @@ add: /waitms <milliseconds> to delay command executions by the specified number 
 add: r_alphaToCoverageMipBoost <0.0 to 0.5> (default: 0.125) boosts the alpha value of higher mip levels
   with A2C enabled, it prevents alpha-tested surfaces from fading (too much) in the distance
 
+chg: r_showtris/r_shownormals <bitmask> (default: 0) draws wireframe triangles/vertex normals
+   1 - enables the feature
+   2 - only draws for visible triangles
+   4 - draws for backfacing triangles
+   8 - uses the original vertex color
+  16 - uses the original vertex alpha as vertex color
+
 chg: r_lightmap 1 now handles most alpha-tested surfaces
 
 chg: printing warnings when there are excessive sound loads from disk during gameplay

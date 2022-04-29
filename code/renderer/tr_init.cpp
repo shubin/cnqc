@@ -93,8 +93,8 @@ cvar_t	*r_singleShader;
 cvar_t	*r_roundImagesDown;
 cvar_t	*r_colorMipLevels;
 cvar_t	*r_picmip;
-cvar_t	*r_showtris;
 cvar_t	*r_showsky;
+cvar_t	*r_showtris;
 cvar_t	*r_shownormals;
 cvar_t	*r_finish;
 cvar_t	*r_clear;
@@ -440,9 +440,9 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_speeds, "r_speeds", "0", CVAR_TEMP, CVART_BOOL, NULL, NULL, "draws rendering performance counters" },
 	{ &r_verbose, "r_verbose", "0", CVAR_TEMP, CVART_BOOL, NULL, NULL, "prints additional information" },
 	{ &r_debugSurface, "r_debugSurface", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "draws collision models" },
-	{ &r_showtris, "r_showtris", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "draws wireframe triangles" },
 	{ &r_showsky, "r_showsky", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "forces sky in front of all surfaces" },
-	{ &r_shownormals, "r_shownormals", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "draws wireframe normals" },
+	{ &r_showtris, "r_showtris", "0", CVAR_CHEAT, CVART_BITMASK, "0", XSTRING(SHOWTRIS_MAX), help_r_showtris },
+	{ &r_shownormals, "r_shownormals", "0", CVAR_CHEAT, CVART_BITMASK, "0", XSTRING(SHOWTRIS_MAX), help_r_shownormals },
 	{ &r_clear, "r_clear", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "clears to violet instead of black" },
 	{ &r_lockpvs, "r_lockpvs", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "helps visualize the current PVS' limits" },
 	{ &r_maxpolys, "r_maxpolys", XSTRING(DEFAULT_MAX_POLYS), 0, CVART_INTEGER, XSTRING(DEFAULT_MAX_POLYS), NULL, "maximum polygon count per frame" },

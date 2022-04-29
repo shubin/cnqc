@@ -146,6 +146,53 @@ static void RB_DrawGeneric()
 }
 
 
+static void RB_DrawDebug( const shaderCommands_t* input, qbool drawNormals, int options )
+{
+	if (drawNormals) {
+		// we only draw the normals for the first (SHADER_MAX_VERTEXES / 2 - 1) vertices
+		int nv = tess.numVertexes;
+		if (nv >= SHADER_MAX_VERTEXES / 2)
+			nv = SHADER_MAX_VERTEXES / 2 - 1;
+		for (int i = 0, j = nv; i < nv; ++i, ++j) {
+			VectorMA(input->xyz[i], 2, input->normal[i], tess.xyz[j]);
+		}
+		for (int i = 0, j = 0; i < nv; ++i, j += 3) {
+			tess.indexes[j + 0] = i;
+			tess.indexes[j + 1] = i;
+			tess.indexes[j + 2] = i + nv;
+		}
+		tess.numVertexes = nv * 2;
+		tess.numIndexes = nv * 3;
+	}
+
+	const cullType_t cull = (options & SHOWTRIS_BACKFACE_BIT) ? CT_BACK_SIDED : CT_FRONT_SIDED;
+	RB_PushSingleStageShader(GLS_POLYMODE_LINE | GLS_DEPTHMASK_TRUE, cull);
+
+	shaderStage_t* const stage = tess.shader->stages[0];
+	if (options & SHOWTRIS_VERTEX_COLOR_BIT) {
+		stage->rgbGen = CGEN_EXACT_VERTEX;
+	} else if (options & SHOWTRIS_VERTEX_ALPHA_BIT) {
+		stage->rgbGen = CGEN_DEBUG_ALPHA;
+	} else {
+		stage->rgbGen = CGEN_CONST;
+		stage->constantColor[0] = drawNormals ? 0 : 255;
+		stage->constantColor[1] = drawNormals ? 0 : 255;
+		stage->constantColor[2] = 255;
+		stage->constantColor[3] = 255;
+	}
+	stage->alphaGen = AGEN_SKIP;
+	R_ComputeColors(tess.shader->stages[0], tess.svars[0], 0, tess.numVertexes);
+
+	if ((options & SHOWTRIS_OCCLUDE_BIT) == 0) {
+		gal.SetDepthRange(0, 0);
+	}
+	gal.Draw(DT_GENERIC);
+	gal.SetDepthRange(0, 1);
+
+	RB_PopShader();
+}
+
+
 void RB_EndSurface()
 {
 	shaderCommands_t* input = &tess;
@@ -184,46 +231,17 @@ void RB_EndSurface()
 	}
 
 	// draw debugging stuff
+	const qbool showTris = r_showtris->integer & SHOWTRIS_ENABLE_BIT;
+	const qbool showNormals = r_shownormals->integer & SHOWTRIS_ENABLE_BIT;
 	if (!backEnd.projection2D &&
 		(tess.pass == shaderCommands_t::TP_BASE) &&
 		tess.numIndexes > 0 &&
-		tess.numVertexes > 0) {
-		if (r_showtris->integer) {
-			RB_PushSingleStageShader(GLS_POLYMODE_LINE | GLS_DEPTHMASK_TRUE, CT_FRONT_SIDED);
-			R_ComputeColors(tess.shader->stages[0], tess.svars[0], 0, tess.numVertexes);
-			gal.SetDepthRange(0, 0);
-			gal.Draw(DT_GENERIC);
-			gal.SetDepthRange(0, 1);
-			RB_PopShader();
-		}
-		if (r_shownormals->integer) {
-			// we only draw the normals for the first (SHADER_MAX_VERTEXES / 2 - 1) vertices
-			int nv = tess.numVertexes;
-			if (nv >= SHADER_MAX_VERTEXES / 2)
-				nv = SHADER_MAX_VERTEXES / 2 - 1;
-			for (int i = 0, j = nv; i < nv; ++i, ++j) {
-				VectorMA(input->xyz[i], 2, input->normal[i], tess.xyz[j]);
-			}
-			for (int i = 0, j = 0; i < nv; ++i, j += 3) {
-				tess.indexes[j + 0] = i;
-				tess.indexes[j + 1] = i;
-				tess.indexes[j + 2] = i + nv;
-			}
-			tess.numVertexes = nv * 2;
-			tess.numIndexes = nv * 3;
-			RB_PushSingleStageShader(GLS_POLYMODE_LINE | GLS_DEPTHMASK_TRUE, CT_FRONT_SIDED);
-			shaderStage_t* const stage = tess.shader->stages[0];
-			stage->rgbGen = CGEN_CONST;
-			stage->constantColor[0] = 0;
-			stage->constantColor[1] = 0;
-			stage->constantColor[2] = 255;
-			stage->constantColor[3] = 255;
-			R_ComputeColors(tess.shader->stages[0], tess.svars[0], 0, tess.numVertexes);
-			gal.SetDepthRange(0, 0);
-			gal.Draw(DT_GENERIC);
-			gal.SetDepthRange(0, 1);
-			RB_PopShader();
-		}
+		tess.numVertexes > 0 &&
+		(showTris || showNormals)) {
+		if (showTris)
+			RB_DrawDebug(input, qfalse, r_showtris->integer);
+		if (showNormals)
+			RB_DrawDebug(input, qtrue, r_shownormals->integer);
 	}
 
 	// clear shader so we can tell we don't have any unclosed surfaces
