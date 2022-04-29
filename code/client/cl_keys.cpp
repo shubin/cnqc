@@ -595,6 +595,19 @@ static void Console_Key( int key )
 		return;
 	}
 
+	// ctrl-f begins a new search
+	if ( keys[K_CTRL].down && tolower(key) == 'f' ) {
+		Q_strncpyz( g_consoleField.buffer, "\\searchconsole ", sizeof( g_consoleField.buffer ) );
+		g_consoleField.cursor = strlen( g_consoleField.buffer );
+		return;
+	}
+
+	// (shift-)f3 finds the next (or previous) match
+	if ( key == K_F3 ) {
+		Con_ContinueSearch( !keys[K_SHIFT].down );
+		return;
+	}
+
 	// pass to the normal editline routine
 	Field_KeyDownEvent( &g_consoleField, key );
 }

@@ -135,3 +135,14 @@ S_COLOR_VAL "    2 " S_COLOR_HELP "= On in debug builds only"
 "Set this CVar before connecting to a server to join through a proxy.\n" \
 "It works with /" S_COLOR_CMD "connect" S_COLOR_HELP ", /" S_COLOR_CMD "reconnect" S_COLOR_HELP " and the server browser UI.\n" \
 "Set it to an empty string to not use a proxy server."
+
+#define help_searchconsole \
+"begins a new console search\n" \
+"Press ctrl-F when the console is down to bring up the command.\n" \
+"Press (shift-)F3 to find the next match going up or down.\n" \
+"The star character (*) will match 0, 1 or more characters.\n" \
+"\n" \
+"         Argument   Matches\n" \
+"Example: init       lines starting with 'init'\n" \
+"Example: *init      lines containing 'init'\n" \
+"Example: >*net      lines starting with '>' AND containing 'net'"

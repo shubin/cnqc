@@ -444,6 +444,7 @@ void Con_ScrollPages( int pages ); // positive means down
 void Con_Top();
 void Con_Bottom();
 void Con_Close();
+void Con_ContinueSearch( qbool forward );
 const float* ConsoleColorFromChar( char ccode );
 
 

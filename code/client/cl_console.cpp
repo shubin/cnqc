@@ -42,6 +42,7 @@ static cvar_t* con_drawHelp;
 	X(Cmd,		"4FA7BD",	qfalse,	"RGB color of command names") \
 	X(Value,	"E5BC39",	qfalse,	"RGB color of variable values") \
 	X(Help,		"ABC1C6",	qfalse,	"RGB color of help text") \
+	X(Search,	"FFFF00",	qfalse,	"RGB color of search result marker") \
 	X(HL,		"303033FF",	qtrue,	help_con_colHL)
 
 #define COLOR_LIST_ITEM( Name, Default, HasAlpha, Help ) \
@@ -93,6 +94,10 @@ struct console_t {
 	int				helpLines;	// line count
 	qbool			helpDraw;
 	float			helpXAdjust;
+
+	char	searchPattern[256];
+	qbool	searchLineIndex;
+	qbool	searchStarted;
 };
 
 static console_t con;
@@ -103,6 +108,8 @@ static console_t con;
 
 int g_console_field_width = CONSOLE_WIDTH;
 
+
+static void Con_BeginSearch_f();
 
 static qbool IsValidHexChar( char c )
 {
@@ -411,7 +418,8 @@ static const cmdTableItem_t con_cmds[] =
 	{ "messagemode3", Con_MessageMode3_f, NULL, "chat with the player being aimed at" },
 	{ "messagemode4", Con_MessageMode4_f, NULL, "chat with the last attacker" },
 	{ "clear", Con_Clear_f, NULL, "clears the console" },
-	{ "condump", Con_Dump_f, NULL, "dumps console history to a text file" }
+	{ "condump", Con_Dump_f, NULL, "dumps console history to a text file" },
+	{ "searchconsole", Con_BeginSearch_f, NULL, help_searchconsole }
 };
 
 
@@ -805,6 +813,11 @@ static void Con_DrawSolidConsole( float frac )
 			SCR_DrawChar( 1 + con.xadjust + j * con.cw, 1 + y, con.cw, con.ch, (text[j] & 0xFF) );
 		}
 
+		if ((row % con.totallines) == con.searchLineIndex) {
+			re.SetColor( colSearch );
+			SCR_DrawChar( con.xadjust - con.cw, y, con.cw, con.ch, 141 );
+		}
+
 		re.SetColor( colText );
 		for (int j = 0; j < con.linewidth; ++j) {
 			if ((text[j] >> 8) != color) {
@@ -939,4 +952,73 @@ void Con_Close()
 	cls.keyCatchers &= ~KEYCATCH_CONSOLE;
 	con.finalFrac = 0;				// none visible
 	con.displayFrac = 0;
+}
+
+
+static void Con_BeginSearch_f()
+{
+	if ( Cmd_Argc() != 2 ) {
+		Com_Printf( "usage: %s search_pattern\n", Cmd_Argv(0) );
+		return;
+	}
+
+	Q_strncpyz( con.searchPattern, Cmd_Argv(1), sizeof(con.searchPattern) );
+	con.searchLineIndex = con.current;
+	con.searchStarted = qtrue;
+	Con_ContinueSearch( qtrue );
+}
+
+
+void Con_ContinueSearch( qbool forward )
+{
+	if ( !con.searchStarted )
+		return;
+
+	// end is 1 past the end
+	int incr, start, end;
+	if ( forward ) {
+		// bottom-up
+		incr = -1;
+		start = con.searchLineIndex + con.totallines - 1;
+		end = start - con.totallines;
+	} else {
+		// top-down
+		incr = 1;
+		start = con.searchLineIndex + 1;
+		end = start + con.totallines;
+	}
+
+	char rawText[256];
+	assert( sizeof(rawText) > con.linewidth );
+	rawText[con.linewidth] = '\0';
+	for ( int l = start; l != end; l += incr ) {
+		const int line = l % con.totallines;
+		const short* const coloredText = &con.text[line * con.linewidth];
+
+		for ( int i = 0; i < con.linewidth; i++ ) {
+			rawText[i] = coloredText[i] & 0xFF;
+		}
+		for ( int x = con.linewidth - 1; x >= 0; x-- ) {
+			if ( rawText[x] == ' ' ) {
+				rawText[x] = '\0';
+			} else {
+				break;
+			}
+		}
+
+		// ignore all "searchconsole" calls
+		if ( rawText[0] == ']' &&
+			(rawText[1] == '/' || rawText[1] == '\\') &&
+			Q_strncmp(rawText + 2, "searchconsole ", 14) == 0) {
+			continue;
+		}
+
+		if ( Com_Filter( con.searchPattern, rawText ) ) {
+			con.searchLineIndex = line;
+			const int display = con.searchLineIndex + con.totallines + 1;
+			if ( display > con.display || display <= con.display - con.rowsVisible )
+				con.display = display;
+			return;
+		}
+	}
 }
