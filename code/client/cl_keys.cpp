@@ -213,7 +213,7 @@ EDIT FIELDS
 // handles horizontal scrolling and cursor blinking
 // position and char sizes are in pixels
 
-void Field_Draw( field_t* edit, int x, int y, int cw, int ch, qbool extColors )
+void Field_Draw( field_t* edit, int x, int y, int cw, int ch, qbool extColors, qbool drawCaret )
 {
 	int		len;
 	int		drawLen;
@@ -263,8 +263,8 @@ void Field_Draw( field_t* edit, int x, int y, int cw, int ch, qbool extColors )
 	firstColor = extColors ? ConsoleColorFromChar( colorCode ) : ColorFromChar( colorCode );
 	SCR_DrawStringEx( x, y, cw, ch, str, extColors ? DSC_CONSOLE : DSC_NORMAL, qtrue, firstColor );
 
-	if ( (int)( cls.realtime >> 8 ) & 1 ) {
-		return;		// off blink
+	if ( !drawCaret || Sys_Milliseconds() % 500 < 250 ) {
+		return;
 	}
 
 	if ( key_overstrikeMode ) {
@@ -469,6 +469,10 @@ CONSOLE LINE EDITING
 
 static void Console_Key( int key )
 {
+	if ( Con_HandleMarkMode( keys[K_CTRL].down, keys[K_SHIFT].down, key ) ) {
+		return;
+	}
+
 	// clear auto-completion buffer when not pressing tab
 	if ( key != K_TAB )
 		g_consoleField.acOffset = 0;
@@ -1227,7 +1231,10 @@ void CL_CharEvent( int key ) {
 	// distribute the key down event to the appropriate handler
 	if ( cls.keyCatchers & KEYCATCH_CONSOLE )
 	{
-		Field_CharEvent( &g_consoleField, key );
+		if ( !Con_IsInMarkMode() )
+		{
+			Field_CharEvent( &g_consoleField, key );
+		}
 	}
 	else if ( cls.keyCatchers & KEYCATCH_UI )
 	{

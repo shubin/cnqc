@@ -37,7 +37,10 @@ static cvar_t* con_drawHelp;
 	X(Border,	"4778B2FF",	qtrue,	"RGBA color of the border") \
 	X(Arrow,	"4778B2FF",	qtrue,	"RGBA color of backscroll arrows") \
 	X(Shadow,	"000000FF",	qtrue,	"RGBA color of text shadows") \
+	X(MkBG,		"BFBFBFFF",	qtrue,	"RGBA color of the mark background") \
+	X(MkShadow,	"FFFFFF00",	qtrue,	"RGBA color of the mark text shadows") \
 	X(Text,		"E2E2E2",	qfalse,	"RGB color of text") \
+	X(MkText,	"000000",	qfalse,	"RGB color of mark text") \
 	X(CVar,		"4778B2",	qfalse,	"RGB color of variable names") \
 	X(Cmd,		"4FA7BD",	qfalse,	"RGB color of command names") \
 	X(Value,	"E5BC39",	qfalse,	"RGB color of variable values") \
@@ -54,6 +57,11 @@ COLOR_LIST( COLOR_LIST_ITEM )
 #define CON_NOTIFYLINES	4
 
 #define CON_TEXTSIZE	(256*1024)
+
+#define COLOR_INVALID	'\xFF'
+#define COLOR_MKTEXT	'\xFE'
+#define COLOR_MKSHAD	'\xFD'
+#define COLOR_SHAD		'\xFC'
 
 // con_drawHelp flags
 #define DRAWHELP_ENABLE_BIT		1
@@ -87,17 +95,24 @@ struct console_t {
 
 	qbool	wasActive;		// was active before Con_PushConsoleInvisible was called?
 
-	char			helpText[MAXPRINTMSG];
-	int				helpX;		// char index
-	float			helpY;		// top coordinate
-	int				helpWidth;	// char count of the longest line
-	int				helpLines;	// line count
-	qbool			helpDraw;
-	float			helpXAdjust;
+	char	helpText[MAXPRINTMSG];
+	int		helpX;		// char index
+	float	helpY;		// top coordinate
+	int		helpWidth;	// char count of the longest line
+	int		helpLines;	// line count
+	qbool	helpDraw;
+	float	helpXAdjust;
 
 	char	searchPattern[256];
 	qbool	searchLineIndex;
 	qbool	searchStarted;
+
+	qbool	markMode;
+	int		markX; // cursor X: offset in the row
+	int		markY; // cursor Y: row index
+	int		markStartX;
+	int		markStartY;
+	char	markText[CON_TEXTSIZE + CON_TEXTSIZE / 100]; // some extra for line endings and the final newline
 };
 
 static console_t con;
@@ -175,6 +190,12 @@ const float* ConsoleColorFromChar( char ccode )
 		return colValue;
 	if ( ccode == COLOR_HELP )
 		return colHelp;
+	if ( ccode == COLOR_MKTEXT )
+		return colMkText;
+	if ( ccode == COLOR_MKSHAD )
+		return colMkShadow;
+	if ( ccode == COLOR_SHAD )
+		return colShadow;
 
 	return ColorFromChar( ccode );
 }
@@ -201,6 +222,7 @@ void Con_ToggleConsole_f()
 
 	Con_ClearNotify();
 	cls.keyCatchers ^= KEYCATCH_CONSOLE;
+	con.markMode = qfalse;
 }
 
 /*
@@ -561,7 +583,7 @@ static void Con_DrawInput()
 	re.SetColor( colText );
 	SCR_DrawChar( con.xadjust, y, con.cw, con.ch, ']' );
 
-	Field_Draw( &g_consoleField, con.xadjust + con.cw, y, con.cw, con.ch, qtrue );
+	Field_Draw( &g_consoleField, con.xadjust + con.cw, y, con.cw, con.ch, qtrue, !Con_IsInMarkMode() );
 }
 
 
@@ -768,20 +790,23 @@ static void Con_DrawSolidConsole( float frac )
 		SCR_DrawChar( x, scanlines - (SMALLCHAR_HEIGHT * 1.5), SMALLCHAR_WIDTH, SMALLCHAR_HEIGHT, Q3_VERSION[i] );
 	}
 
+	const int cw = (int)ceilf( con.cw );
+	const int ch = (int)ceilf( con.ch );
+
 	re.SetColor( NULL );
-	rows = (scanlines - con.ch) / con.ch;
+	rows = (scanlines - ch) / ch;
 	con.y = scanlines;
 
-	y = scanlines - (con.ch * 3);
+	y = scanlines - (ch * 3);
 
 	// draw the console text from the bottom up
 	if (con.display != con.current) {
 		// draw arrows to show the buffer is backscrolled
-		const int xEnd = ( cls.glconfig.vidWidth - con.xadjust ) / con.cw;
+		const int xEnd = ( cls.glconfig.vidWidth - con.xadjust ) / cw;
 		re.SetColor( colArrow );
 		for (x = 0; x < xEnd; x += 4)
-			SCR_DrawChar( con.xadjust + x * con.cw, y, con.cw, con.ch, '^' );
-		y -= con.ch;
+			SCR_DrawChar( con.xadjust + x * cw, y, cw, ch, '^' );
+		y -= ch;
 		--rows;
 	}
 
@@ -790,11 +815,29 @@ static void Con_DrawSolidConsole( float frac )
 		row--;
 	}
 
-	char color = COLOR_WHITE;
-	re.SetColor( ConsoleColorFromChar( color ) );
+	const int markStartX = min( con.markStartX, con.markX );
+	const int markStartY = min( con.markStartY, con.markY );
+	const int markEndX = max( con.markStartX, con.markX );
+	const int markEndY = max( con.markStartY, con.markY );
+	qbool drawMark = qfalse;
+	if (con.markMode) {
+		// draw the mark area background, if any
+		const float mhu = ( markEndY - markStartY + 1 ) * ch; // unclipped
+		const float mh = min( mhu, (float)(con.display - markStartY) * ch );
+		drawMark =
+			markEndX != markStartX ||
+			markEndY != markStartY ||
+			Sys_Milliseconds() % 1000 < 500;
+		if (drawMark && mh > 0.0f) {
+			const float mx = con.xadjust + markStartX * cw;
+			const float my = y - ( con.display - markStartY - 1 ) * ch;
+			const float mw = ( markEndX - markStartX + 1 ) * cw;
+			Con_FillRect( mx, my, mw, mh, colMkBG );
+		}
+	}
 
 	con.rowsVisible = 0;
-	for (i = 0; i < rows; ++i, --row, y -= con.ch )
+	for (i = 0; i < rows; ++i, --row, y -= ch )
 	{
 		if (row < 0)
 			break;
@@ -806,25 +849,36 @@ static void Con_DrawSolidConsole( float frac )
 		if (y >= 0)
 			con.rowsVisible++;
 
-		const short* text = con.text + (row % con.totallines)*con.linewidth;
+		const short* const text = con.text + (row % con.totallines)*con.linewidth;
+		const qbool markRow = drawMark && row >= markStartY && row <= markEndY;
 
-		re.SetColor( colShadow );
+		char color = COLOR_INVALID;
 		for (int j = 0; j < con.linewidth; ++j) {
-			SCR_DrawChar( 1 + con.xadjust + j * con.cw, 1 + y, con.cw, con.ch, (text[j] & 0xFF) );
+			char newColor = COLOR_SHAD;
+			if (markRow && j >= markStartX && j <= markEndX)
+				newColor = COLOR_MKSHAD;
+			if (newColor != color) {
+				color = newColor;
+				re.SetColor( ConsoleColorFromChar( color ) );
+			}
+			SCR_DrawChar( 1 + con.xadjust + j * cw, 1 + y, cw, ch, (text[j] & 0xFF) );
 		}
 
 		if ((row % con.totallines) == con.searchLineIndex) {
 			re.SetColor( colSearch );
 			SCR_DrawChar( con.xadjust - con.cw, y, con.cw, con.ch, 141 );
 		}
-
-		re.SetColor( colText );
+		
+		color = COLOR_INVALID;
 		for (int j = 0; j < con.linewidth; ++j) {
-			if ((text[j] >> 8) != color) {
-				color = (text[j] >> 8);
+			char newColor = text[j] >> 8;
+			if (markRow && j >= markStartX && j <= markEndX)
+				newColor = COLOR_MKTEXT;
+			if (newColor != color) {
+				color = newColor;
 				re.SetColor( ConsoleColorFromChar( color ) );
 			}
-			SCR_DrawChar( con.xadjust + j * con.cw, y, con.cw, con.ch, (text[j] & 0xFF) );
+			SCR_DrawChar( con.xadjust + j * cw, y, cw, ch, (text[j] & 0xFF) );
 		}
 	}
 
@@ -1021,4 +1075,152 @@ void Con_ContinueSearch( qbool forward )
 			return;
 		}
 	}
+}
+
+
+static void Con_AutoScrollMarkPosition()
+{
+	if (con.markY >= con.display) {
+		con.display = con.markY + 1;
+	} else if (con.markY < con.display - con.rowsVisible) {
+		// we need to jump past 1 more line when we're all the way at the bottom
+		const int extra = con.display == con.current ? 1 : 0;
+		con.display += con.markY - ( con.display - con.rowsVisible ) - extra;
+	}
+}
+
+
+qbool Con_HandleMarkMode( qbool ctrlDown, qbool shiftDown, int key )
+{
+	// ctrl-m = toggle mark mode
+	if ( ctrlDown && tolower(key) == 'm' ) {
+		con.markMode = !con.markMode;
+		if (con.markMode) {
+			con.markX = 0;
+			con.markY = con.display - 1;
+			con.markStartX = 0;
+			con.markStartY = con.display - 1;
+		}
+		return qtrue;
+	}
+
+	if (!con.markMode) {
+		return qfalse;
+	}
+
+	if (key == K_HOME) {
+		if (ctrlDown)
+			return qfalse;
+		con.markX = 0;
+		if (!shiftDown) {
+			con.markStartX = con.markX;
+			con.markStartY = con.markY;
+		}
+		Con_AutoScrollMarkPosition();
+		return qtrue;
+	}
+
+	if(key == K_END) {
+		if (ctrlDown)
+			return qfalse;
+		con.markX = con.linewidth - 1;
+		if (!shiftDown) {
+			con.markStartX = con.markX;
+			con.markStartY = con.markY;
+		}
+		Con_AutoScrollMarkPosition();
+		return qtrue;
+	}
+
+	if (key == K_LEFTARROW) {
+		con.markX = max( con.markX - 1, 0 );
+		if (!shiftDown) {
+			con.markStartX = con.markX;
+			con.markStartY = con.markY;
+		}
+		Con_AutoScrollMarkPosition();
+		return qtrue;
+	}
+
+	if (key == K_RIGHTARROW) {
+		con.markX = min( con.markX + 1, con.linewidth );
+		if (!shiftDown) {
+			con.markStartX = con.markX;
+			con.markStartY = con.markY;
+		}
+		Con_AutoScrollMarkPosition();
+		return qtrue;
+	}
+
+	if (key == K_UPARROW) {
+		con.markY = max( con.markY - 1, con.totallines - 1 );
+		if (!shiftDown) {
+			con.markStartX = con.markX;
+			con.markStartY = con.markY;
+		}
+		Con_AutoScrollMarkPosition();
+		return qtrue;
+	}
+
+	if (key == K_DOWNARROW) {
+		con.markY = min( con.markY + 1, con.current - 1 );
+		if (!shiftDown) {
+			con.markStartX = con.markX;
+			con.markStartY = con.markY;
+		}
+		Con_AutoScrollMarkPosition();
+		return qtrue;
+	}
+
+	if (shiftDown && key == K_PGUP) {
+		con.markY = max( con.markY - 6, con.totallines - 1 );
+		Con_AutoScrollMarkPosition();
+		return qtrue;
+	}
+
+	if (shiftDown && key == K_PGDN) {
+		con.markY = min( con.markY + 6, con.current - 1 );
+		Con_AutoScrollMarkPosition();
+		return qtrue;
+	}
+
+	if ((ctrlDown && tolower(key) == 'c') || key == K_ENTER) {
+		const int markStartX = min( con.markStartX, con.markX );
+		const int markStartY = min( con.markStartY, con.markY );
+		const int markEndX = max( con.markStartX, con.markX );
+		const int markEndY = max( con.markStartY, con.markY );
+		char* dst = con.markText;
+
+		for (int y = markStartY; y <= markEndY; ++y) {
+			if (y > markStartY) {
+				*dst++ = '\r';
+				*dst++ = '\n';
+			}
+			const int row = y % con.totallines;
+			const short* const text = con.text + row * con.linewidth;
+			for (int x = markStartX; x <= markEndX; ++x) {
+				*dst++ = text[x] & 0xFF;
+			}
+		}
+		*dst++ = '\0';
+
+		Sys_SetClipboardData( con.markText );
+		con.markMode = qfalse;
+		return qtrue;
+	}
+
+	// let the original scrolling code run...
+	if (key == K_PGDN || key == K_PGUP ||
+		key == K_MWHEELDOWN || key == K_MWHEELUP) {
+		return qfalse;
+	}
+
+	// ...but block everything else
+	return qtrue;
+}
+
+
+qbool Con_IsInMarkMode()
+{
+	return con.markMode;
 }

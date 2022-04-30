@@ -339,6 +339,26 @@ char *Sys_GetClipboardData( void )
 }
 
 
+void Sys_SetClipboardData( const char* text )
+{
+	if ( OpenClipboard( NULL ) ) {
+		const int l = strlen( text );
+		const HGLOBAL hMemory = GlobalAlloc( GMEM_MOVEABLE, l + 1 );
+		if ( hMemory ) {
+			void* const dstMemory = GlobalLock( hMemory );
+			if ( dstMemory ) {
+				strcpy( (char*)dstMemory, text );
+				GlobalUnlock( hMemory );
+				EmptyClipboard();
+				SetClipboardData( CF_TEXT, hMemory );
+			}
+			GlobalFree( hMemory );
+		}
+		CloseClipboard();
+	}
+}
+
+
 /*
 ========================================================================
 

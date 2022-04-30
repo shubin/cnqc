@@ -445,6 +445,8 @@ void Con_Top();
 void Con_Bottom();
 void Con_Close();
 void Con_ContinueSearch( qbool forward );
+qbool Con_HandleMarkMode( qbool ctrlDown, qbool shiftDown, int key );
+qbool Con_IsInMarkMode();
 const float* ConsoleColorFromChar( char ccode );
 
 

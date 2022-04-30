@@ -4,6 +4,10 @@ See the end of this file for known issues.
 
 DD Mmm 20 - 1.53
 
+add: console mark mode (selection mode) can be toggled with Ctrl-M
+  use arrow keys, home/end or page up/down to move the cursor or extend the area when pressing shift
+  Ctrl-C/enter copies the selected text to the clipboard without color codes and exits mark mode
+
 add: /searchconsole begins a new console search
   press ctrl-F when the console is down to bring up the command
   press (shift-)F3 to find the next match going up or down

@@ -1107,6 +1107,7 @@ void QDECL	Sys_Error( const char *error, ...);
 // if it succeeds, returns memory allocated by Z_Malloc
 // note that this isn't journaled
 char	*Sys_GetClipboardData( void );
+void	Sys_SetClipboardData( const char* text );
 
 void	Sys_Print( const char *msg );
 

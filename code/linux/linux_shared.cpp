@@ -194,10 +194,16 @@ void* QDECL Sys_LoadDll( const char* name, dllSyscall_t *entryPoint, dllSyscall_
 }
 
 #ifdef DEDICATED
-char *Sys_GetClipboardData(void)
+
+char* Sys_GetClipboardData()
 {
-  return NULL;
+	return NULL;
 }
+
+void Sys_SetClipboardData( const char* )
+{
+}
+
 #endif
 
 void Sys_Init()

@@ -608,6 +608,12 @@ char* Sys_GetClipboardData()
 }
 
 
+void Sys_SetClipboardData( const char* text )
+{
+	SDL_SetClipboardText(text);
+}
+
+
 void Lin_MatchStartAlert()
 {
 	const int alerts = cl_matchAlerts->integer;
