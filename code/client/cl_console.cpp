@@ -104,7 +104,7 @@ struct console_t {
 	float	helpXAdjust;
 
 	char	searchPattern[256];
-	qbool	searchLineIndex;
+	int		searchLineIndex;
 	qbool	searchStarted;
 
 	qbool	markMode;
@@ -289,15 +289,14 @@ void Con_MessageMode4_f (void) {
 
 static void Con_Clear_f( void )
 {
-	int i;
-
-	for ( i = 0 ; i < CON_TEXTSIZE ; i++ ) {
+	for ( int i = 0 ; i < CON_TEXTSIZE ; i++ ) {
 		con.text[i] = (COLOR_WHITE << 8) | ' ';
 	}
 
 	con.current = con.totallines - 1;
-
 	Con_Bottom();
+
+	con.searchLineIndex = INT_MIN;
 }
 
 
