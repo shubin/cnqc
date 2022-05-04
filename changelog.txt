@@ -33,6 +33,8 @@ add: /waitms <milliseconds> to delay command executions by the specified number 
 add: r_alphaToCoverageMipBoost <0.0 to 0.5> (default: 0.125) boosts the alpha value of higher mip levels
   with A2C enabled, it prevents alpha-tested surfaces from fading (too much) in the distance
 
+chg: updated icon courtesy of deft
+
 chg: r_showtris/r_shownormals <bitmask> (default: 0) draws wireframe triangles/vertex normals
    1 - enables the feature
    2 - only draws for visible triangles
