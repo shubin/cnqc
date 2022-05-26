@@ -29,8 +29,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <sys/stat.h>
 #include <sys/types.h>
 
+// empty struct size being 0 or 1 byte
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wextern-c-compat"
 #define UNW_LOCAL_ONLY
 #include "../libunwind/libunwind.h"
+#pragma clang diagnostic pop
 
 #include "../qcommon/q_shared.h"
 #include "../qcommon/qcommon.h"
