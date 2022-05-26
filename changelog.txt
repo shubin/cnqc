@@ -60,6 +60,8 @@ chg: with r_backend GL3, depth fade with MSAA now requires GLSL 4.00 at a minimu
 
 chg: with r_backend GL3, alpha to coverage now requires GLSL 4.00 at a minimum
 
+fix: /systeminfo /serverinfo /clientinfo /dumpuser would crash when tokens were too long
+
 fix: with r_lightmap 1 and r_dynamiclight 1, lighting transparent surfaces could crash
 
 fix: r_vertexLight 1 no longer applies to non-lightmapped surfaces

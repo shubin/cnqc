@@ -490,46 +490,35 @@ static qbool Com_AddStartupCommands()
 
 //============================================================================
 
-void Info_Print( const char *s ) {
-	char	key[512];
-	char	value[512];
-	char	*o;
-	int		l;
+void Info_Print( const char* string )
+{
+	char key[BIG_INFO_KEY];
+	char value[BIG_INFO_VALUE];
+	const char* const valueMissing = "missing value";
 
-	if (*s == '\\')
-		s++;
-	while (*s)
-	{
-		o = key;
-		while (*s && *s != '\\')
-			*o++ = *s++;
-
-		l = o - key;
-		if (l < 20)
-		{
-			Com_Memset (o, ' ', 20-l);
-			key[20] = 0;
-		}
-		else
-			*o = 0;
-		Com_Printf ("%s", key);
-
-		if (!*s)
-		{
-			Com_Printf ("MISSING VALUE\n");
-			return;
+	const char* s = string;
+	int width = 0;
+	while (*s != '\0') {
+		Info_NextPair(&s, key, value);
+		if (key[0] == '\0') {
+			break;
 		}
 
-		o = value;
-		s++;
-		while (*s && *s != '\\')
-			*o++ = *s++;
-		*o = 0;
+		const int l = strlen(key);
+		width = max(width, l);
+	};
+	width += 2;
 
-		if (*s)
-			s++;
-		Com_Printf ("%s\n", value);
-	}
+	s = string;
+	while (*s != '\0') {
+		Info_NextPair(&s, key, value);
+		if (key[0] == '\0') {
+			break;
+		}
+
+		const char* const valuePtr = value[0] != '\0' ? value : valueMissing;
+		Com_Printf(S_COLOR_CVAR "%-*s " S_COLOR_VAL "%s\n", width, key, valuePtr);
+	};
 }
 
 
