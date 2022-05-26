@@ -401,11 +401,10 @@ void CL_ServerInfoPacket( netadr_t from, msg_t *msg ) {
 	cls.localServers[i].punkbuster = 0;
 
 	Q_strncpyz( info, MSG_ReadString( msg ), MAX_INFO_STRING );
-	if (info[0]) {
-		if (info[strlen(info)-1] != '\n') {
-			strncat(info, "\n", sizeof(info));
-		}
-		Com_Printf( "%s: %s", NET_AdrToString( from ), info );
+	const int infoLength = strlen( info );
+	if ( infoLength > 0 ) {
+		const qbool hasLineFeed = info[infoLength - 1] == '\n';
+		Com_Printf( "%s: %s%s", NET_AdrToString( from ), info, hasLineFeed ? "" : "\n" );
 	}
 }
 
