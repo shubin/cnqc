@@ -177,9 +177,9 @@ static qbool R_LightCullSurface( const surfaceType_t* surface, const dlight_t* d
 		const srfTriangles_t* tris = (const srfTriangles_t*)surface;
 		return R_LightCullBounds( dl, tris->bounds[0], tris->bounds[1] );
 		}
+	default:
+		return qfalse;
 	}
-
-	return qfalse;
 }
 
 
