@@ -272,7 +272,14 @@ local function ApplyProjectSettings(outputExe)
 
 	filter "action:gmake"
 		symbols "On"
-		buildoptions { "-Wno-unused-parameter -Wno-write-strings" }
+		buildoptions
+		{
+			"-Wno-unused-parameter",
+			"-Wno-write-strings",
+			"-Wno-parentheses",
+			"-Wno-parentheses-equality",
+			"-Wno-vexing-parse"
+		}
 		linkoptions { "" }
 
 	filter { "action:gmake", "configurations:debug" }
