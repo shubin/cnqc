@@ -68,8 +68,8 @@ static void RB_DrawDynamicLight()
 		VectorSubtract(dl->transformed, tess.xyz[i], dist);
 
 		const float dp = DotProduct(dist, tess.normal[i]);
-		if (cullType == CT_FRONT_SIDED && dp <= 0.0f ||
-			cullType == CT_BACK_SIDED  && dp >= 0.0f) {
+		if ((cullType == CT_FRONT_SIDED && dp <= 0.0f) ||
+			(cullType == CT_BACK_SIDED  && dp >= 0.0f)) {
 			clipBits[i] = byte(-1);
 			continue;
 		}
