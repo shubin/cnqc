@@ -1127,8 +1127,7 @@ void CL_MapDownload_Cancel()
 // negative if nothing's going on
 static float CL_MapDownload_Progress()
 {
-	if (!CL_MapDownload_Active() || !cl_mapDL.fromCommand || 
-		cl_mapDL.bytesTotal < 1 || cl_mapDL.bytesDownloaded < 0)
+	if (!CL_MapDownload_Active() || !cl_mapDL.fromCommand || cl_mapDL.bytesTotal < 1)
 		return -1;
 
 	const uint64_t t = (uint64_t)cl_mapDL.bytesTotal;
@@ -1143,8 +1142,7 @@ static float CL_MapDownload_Progress()
 // bytes/s, negative if nothing's going on
 static int CL_MapDownload_Speed()
 {
-	if (!CL_MapDownload_Active() || !cl_mapDL.fromCommand ||
-		cl_mapDL.bytesTotal < 1 || cl_mapDL.bytesDownloaded < 0)
+	if (!CL_MapDownload_Active() || !cl_mapDL.fromCommand || cl_mapDL.bytesTotal < 1)
 		return -1;
 
 	const int startMS = cl_mapDL.startTimeMS;
