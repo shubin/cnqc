@@ -657,7 +657,7 @@ fileHandle_t	FS_FOpenFileWrite( const char *qpath );
 fileHandle_t FS_SV_FOpenFileWrite( const char *filename );
 int		FS_SV_FOpenFileRead( const char *filename, fileHandle_t *fp );
 void	FS_SV_Rename( const char *from, const char *to );
-int		FS_FOpenFileRead( const char *qpath, fileHandle_t *file, qbool uniqueFILE );
+int		FS_FOpenFileRead( const char *qpath, fileHandle_t *file, qbool uniqueFILE, int *pakChecksum = NULL );
 // if uniqueFILE is qtrue, then a new FILE will be fopened even if the file
 // is found in an already open pak file.  If uniqueFILE is qfalse, you must call
 // FS_FCloseFile instead of fclose, otherwise the pak FILE would be improperly closed
@@ -676,6 +676,7 @@ void	FS_FCloseFile( fileHandle_t f );
 // note: you can't just fclose from another DLL, due to MS libc issues
 
 int		FS_ReadFile( const char *qpath, void **buffer );
+int		FS_ReadFilePak( const char *qpath, void **buffer, int *pakChecksum );
 // returns the length of the file
 // a null buffer will just return the file length without loading
 // as a quick check for existance. -1 length == not present
@@ -749,6 +750,8 @@ void FS_HomeRemove( const char *homePath );
 
 void FS_FilenameCompletion( const char *dir, const char *ext, qbool stripExt,
 							void (*callback)(const char *s), int filters );
+
+qbool FS_GetPakPath( char *name, int nameSize, int pakChecksum );
 
 
 /*

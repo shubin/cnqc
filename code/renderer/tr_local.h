@@ -426,6 +426,10 @@ struct shader_t {
 
 	qbool greyscaleCTF;
 
+	// extra info for /shaderinfo
+	int fileIndex;
+	const char* text;
+
 	shader_t* next;
 };
 
@@ -1200,6 +1204,8 @@ shader_t	*R_FindShader( const char *name, int lightmapIndex, qbool mipRawImage )
 const shader_t* R_GetShaderByHandle( qhandle_t hShader );
 void		R_InitShaders();
 void		R_ShaderList_f( void );
+void		R_ShaderInfo_f();
+void		R_CompleteShaderName_f( int startArg, int compArg );
 
 /*
 ====================================================================

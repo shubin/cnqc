@@ -1797,10 +1797,12 @@ static void CL_InitRef()
 	ri.Hunk_FreeTempMemory = Hunk_FreeTempMemory;
 	ri.CM_DrawDebugSurface = CM_DrawDebugSurface;
 	ri.FS_ReadFile = FS_ReadFile;
+	ri.FS_ReadFilePak = FS_ReadFilePak;
 	ri.FS_FreeFile = FS_FreeFile;
 	ri.FS_WriteFile = FS_WriteFile;
 	ri.FS_FreeFileList = FS_FreeFileList;
 	ri.FS_ListFiles = FS_ListFiles;
+	ri.FS_GetPakPath = FS_GetPakPath;
 	ri.Cvar_Get = Cvar_Get;
 	ri.Cvar_SetHelp = Cvar_SetHelp;
 	ri.Cvar_Set = Cvar_Set;

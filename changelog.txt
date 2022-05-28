@@ -4,6 +4,8 @@ See the end of this file for known issues.
 
 DD Mmm 20 - 1.53
 
+add: /shaderinfo <shadername> [code] prints where the shader was loaded from and optionally the code
+
 add: console mark mode (selection mode) can be toggled with Ctrl-M
   use arrow keys, home/end or page up/down to move the cursor or extend the area when pressing shift
   Ctrl-C/enter copies the selected text to the clipboard without color codes and exits mark mode

@@ -44,6 +44,11 @@ const float r_depthFadeBias[DFT_COUNT][4] =
 };
 
 static char* s_shaderText = 0;
+static int s_numShaderFiles = 0;
+static char* s_shaderFileNames = 0;
+static int* s_shaderFileOffsets = 0;
+static int* s_shaderFileNameOffsets = 0;
+static int* s_shaderPakChecksums = 0;
 
 // the shader is parsed into these global variables, then copied into
 // dynamically allocated memory if it is valid.
@@ -2638,11 +2643,23 @@ shader_t* R_FindShader( const char *name, int lightmapIndex, qbool mipRawImage )
 #if 0 // enable this when building a pak file to get a global list of all explicit shaders
 		ri.Printf( PRINT_ALL, "*SHADER* %s\n", name );
 #endif
+
+		const int textOffset = (int)( shaderText - s_shaderText );
 		if ( !ParseShader( &shaderText ) ) {
 			// had errors, so use default shader
 			shader.defaultShader = qtrue;
 		}
 		sh = FinishShader();
+
+		int fileIndex = -1;
+		for ( int i = 0; i < s_numShaderFiles; ++i ) {
+			if ( textOffset >= s_shaderFileOffsets[i] ) {
+				fileIndex = i;
+			}
+		}
+		sh->fileIndex = fileIndex;
+		sh->text = s_shaderText + textOffset;
+
 		return sh;
 	}
 
@@ -2852,6 +2869,100 @@ void R_ShaderList_f( void )
 }
 
 
+static void AutoCompleteShaderName( fieldCallback_t callback )
+{
+	for ( int i = 0; i < tr.numShaders; i++ ) {
+		callback( tr.shaders[i]->name );
+	}
+}
+
+
+void R_CompleteShaderName_f( int startArg, int compArg )
+{
+	if ( startArg + 1 == compArg )
+		Field_AutoCompleteCustom( startArg, compArg, &AutoCompleteShaderName );
+}
+
+
+void R_ShaderInfo_f()
+{
+	if ( Cmd_Argc() <= 1 ) {
+		ri.Printf( PRINT_ALL, "usage: %s <shadername> [code]\n", Cmd_Argv(0) );
+		return;
+	}
+
+	const char* const name = Cmd_Argv(1);
+	const shader_t* shader = NULL;
+	for ( int i = 0; i < tr.numShaders; i++ ) {
+		if ( !Q_stricmp( tr.shaders[i]->name, name ) ) {
+			shader = tr.shaders[i];
+			break;
+		}
+	}
+
+	if ( shader == NULL ) {
+		ri.Printf( PRINT_ALL, "shader not found\n" );
+		return;
+	}
+
+	if ( shader->text == NULL ) {
+		const char* type;
+		switch ( shader->lightmapIndex ) {
+			case LIGHTMAP_BROKEN:    type = "broken lit surface"; break;
+			case LIGHTMAP_2D:        type = "UI element";         break;
+			case LIGHTMAP_BY_VERTEX: type = "vertex-lit surface"; break;
+			case LIGHTMAP_NONE:      type = "opaque surface";     break;
+			default:                 type = "lit surface";        break;
+		}
+		ri.Printf( PRINT_ALL, "shader has no code (type: %s)\n", type );
+		return;
+	}
+
+	const int fileIndex = shader->fileIndex;
+	if ( fileIndex >= 0 && fileIndex < s_numShaderFiles ) {
+		const int nameOffset = s_shaderFileNameOffsets[fileIndex];
+		const char* const fileName = s_shaderFileNames + nameOffset;
+		ri.Printf( PRINT_ALL, "File: scripts/%s\n", fileName );
+
+		char pakName[256];
+		const int pakChecksum = s_shaderPakChecksums[fileIndex];
+		if( FS_GetPakPath( pakName, sizeof(pakName), pakChecksum ) ) {
+			ri.Printf( PRINT_ALL, "Pak : %s\n", pakName );
+		}
+	}
+
+	if ( Q_stricmp( Cmd_Argv(2), "code" ) ) {
+		return;
+	}
+
+	const char* s = shader->text;
+	int tabs = 0;
+	for ( ;; ) {
+		const char c0 = s[0];
+		const char c1 = s[1];
+		if ( c0 == '{' ) {
+			tabs++;
+			ri.Printf( PRINT_ALL, "{" );
+		} else if ( c0 == '\n' ) {
+			ri.Printf( PRINT_ALL, "\n" );
+			if ( c1 == '}' ) {
+				tabs--;
+				if ( tabs == 0 ) {
+					ri.Printf( PRINT_ALL, "}\n" );
+					return;
+				}
+			}
+			for( int i = 0; i < tabs; i++ ) {
+				ri.Printf( PRINT_ALL, "    " );
+			}
+		} else {
+			ri.Printf( PRINT_ALL, "%c", c0 );
+		}
+		s++;
+	}
+}
+
+
 // finds and loads all .shader files, combining them into
 // a single large text block that can be scanned for shader names
 // note that this does a lot of things very badly, e.g. still loads superceded shaders
@@ -2865,46 +2976,64 @@ static void ScanAndLoadShaderFiles()
 	int i;
 	char* p;
 
-	int numShaders;
-	char** shaderFiles = ri.FS_ListFiles( "scripts", ".shader", &numShaders );
+	int numShaderFiles;
+	char** shaderFileNames = ri.FS_ListFiles( "scripts", ".shader", &numShaderFiles );
 
-	if ( !shaderFiles || !numShaders )
+	if ( !shaderFileNames || !numShaderFiles )
 	{
 		ri.Printf( PRINT_WARNING, "WARNING: no shader files found\n" );
 		return;
 	}
 
-	if ( numShaders > MAX_SHADER_FILES )
+	if ( numShaderFiles > MAX_SHADER_FILES )
 		ri.Error( ERR_DROP, "Shader file limit exceeded" );
 
+	s_shaderFileOffsets = RI_New<int>( numShaderFiles );
+	s_shaderFileNameOffsets = RI_New<int>( numShaderFiles );
+	s_shaderPakChecksums = RI_New<int>( numShaderFiles );
+	s_numShaderFiles = numShaderFiles;
+
 	long sum = 0;
+	long sumNames = 0;
 	// load and parse shader files
-	for ( i = 0; i < numShaders; i++ )
+	for ( i = 0; i < numShaderFiles; i++ )
 	{
 		char filename[MAX_QPATH];
-		Com_sprintf( filename, sizeof( filename ), "scripts/%s", shaderFiles[i] );
-		ri.FS_ReadFile( filename, (void **)&buffers[i] );
+		Com_sprintf( filename, sizeof( filename ), "scripts/%s", shaderFileNames[i] );
+		ri.FS_ReadFilePak( filename, (void **)&buffers[i], &s_shaderPakChecksums[i] );
 		if ( !buffers[i] )
 			ri.Error( ERR_DROP, "Couldn't load %s", filename );
 		len[i] = COM_Compress( buffers[i] );
 		sum += len[i];
+		sumNames += strlen( shaderFileNames[i] );
 	}
 
-	s_shaderText = RI_New<char>( sum + numShaders + 1 );
+	s_shaderText = RI_New<char>( sum + numShaderFiles + 1 );
+	s_shaderFileNames = RI_New<char>( sumNames );
 
-	char* s = s_shaderText;
-	for ( i = 0; i < numShaders; i++ ) {
+	char* s = s_shaderFileNames;
+	for ( i = 0; i < numShaderFiles; i++ ) {
+		s_shaderFileNameOffsets[i] = (int)( s - s_shaderFileNames );
+		const int l = strlen( shaderFileNames[i] );
+		Com_Memcpy( s, shaderFileNames[i], l );
+		s += l;
+		*s++ = '\0';
+	}
+
+	s = s_shaderText;
+	for ( i = 0; i < numShaderFiles; i++ ) {
+		s_shaderFileOffsets[i] = (int)( s - s_shaderText );
 		Com_Memcpy( s, buffers[i], len[i] );
 		s += len[i];
 		*s++ = '\n';
 	}
-	*s = 0;
+	*s = '\0';
 
 	// the files have to be freed backwards because the hunk isn't a real MM
-	for (i = numShaders - 1; i >= 0; --i)
+	for (i = numShaderFiles - 1; i >= 0; --i)
 		ri.FS_FreeFile( buffers[i] );
 
-	ri.FS_FreeFileList( shaderFiles );
+	ri.FS_FreeFileList( shaderFileNames );
 
 	int shaderTextHashTableSizes[MAX_SHADERTEXT_HASH];
 	Com_Memset(shaderTextHashTableSizes, 0, sizeof(shaderTextHashTableSizes));

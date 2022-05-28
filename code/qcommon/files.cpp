@@ -868,7 +868,7 @@ separate file or a ZIP file.
 */
 extern qbool		com_fullyInitialized;
 
-int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qbool uniqueFILE ) {
+int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qbool uniqueFILE, int *pakChecksum ) {
 	searchpath_t	*search;
 	char			*netpath;
 	pack_t			*pak;
@@ -881,6 +881,9 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qbool uniqueFILE
 	char			demoExt[16];
 
 	hash = 0;
+	if ( pakChecksum ) {
+		*pakChecksum = 0;
+	}
 
 	if ( !fs_searchpaths ) {
 		Com_Error( ERR_FATAL, "Filesystem call made without initialization\n" );
@@ -902,6 +905,9 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qbool uniqueFILE
 					// case and separator insensitive comparisons
 					if ( !FS_FilenameCompare( pakFile->name, filename ) ) {
 						// found it!
+						if ( pakChecksum ) {
+							*pakChecksum = pak->checksum;
+						}
 						return qtrue;
 					}
 					pakFile = pakFile->next;
@@ -1023,6 +1029,10 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qbool uniqueFILE
 					// open the file in the zip
 					unzOpenCurrentFile( fsh[*file].handleFiles.file.z );
 					fsh[*file].zipFilePos = pakFile->pos;
+
+					if ( pakChecksum ) {
+						*pakChecksum = pak->checksum;
+					}
 
 					if ( fs_debug->integer ) {
 						Com_Printf( "FS_FOpenFileRead: %s (found in '%s')\n", 
@@ -1359,7 +1369,7 @@ Filename are relative to the quake search path
 a null buffer will just return the file length without loading
 ============
 */
-int FS_ReadFile( const char *qpath, void **buffer ) {
+int FS_ReadFilePak( const char *qpath, void **buffer, int *pakChecksum ) {
 	fileHandle_t	h;
 	byte*			buf;
 	qbool		isConfig;
@@ -1374,6 +1384,9 @@ int FS_ReadFile( const char *qpath, void **buffer ) {
 	}
 
 	buf = NULL;	// quiet compiler warning
+	if ( pakChecksum ) {
+		*pakChecksum = 0;
+	}
 
 	// if this is a .cfg file and we are playing back a journal, read
 	// it from the journal file
@@ -1421,7 +1434,7 @@ int FS_ReadFile( const char *qpath, void **buffer ) {
 	}
 
 	// look for it in the filesystem or pack files
-	len = FS_FOpenFileRead( qpath, &h, qfalse );
+	len = FS_FOpenFileRead( qpath, &h, qfalse, pakChecksum );
 	if ( h == 0 ) {
 		if ( buffer ) {
 			*buffer = NULL;
@@ -1466,6 +1479,10 @@ int FS_ReadFile( const char *qpath, void **buffer ) {
 		FS_Flush( com_journalDataFile );
 	}
 	return len;
+}
+
+int FS_ReadFile( const char *qpath, void **buffer ) {
+	return FS_ReadFilePak( qpath, buffer, NULL );
 }
 
 /*
@@ -3228,4 +3245,15 @@ void FS_FilenameCompletion( const char *dir, const char *ext, qbool stripExt,
 		callback( filename );
 	}
 	FS_FreeFileList( filenames );
+}
+
+qbool FS_GetPakPath( char *name, int nameSize, int pakChecksum ) {
+	for ( searchpath_t *search = fs_searchpaths; search; search = search->next ) {
+		if ( search->pack && search->pack->checksum == pakChecksum ) {
+			Com_sprintf( name, nameSize, "%s/%s.pk3", search->pack->pakGamename, search->pack->pakBasename );
+			return qtrue;
+		}
+	}
+
+	return qfalse;
 }

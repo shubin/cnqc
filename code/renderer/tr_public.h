@@ -222,10 +222,12 @@ typedef struct {
 	// a -1 return means the file does not exist
 	// NULL can be passed for buf to just determine existance
 	int		(*FS_ReadFile)( const char *name, void **buf );
+	int		(*FS_ReadFilePak)( const char *name, void **buf, int* pakChecksum );
 	void	(*FS_FreeFile)( void *buf );
 	char**	(*FS_ListFiles)( const char *name, const char *extension, int *numfilesfound );
 	void	(*FS_FreeFileList)( char **filelist );
 	void	(*FS_WriteFile)( const char *qpath, const void *buffer, int size );
+	qbool	(*FS_GetPakPath)( char *name, int nameSize, int pakChecksum );
 
 	// cinematic stuff
 	qbool	(*CIN_GrabCinematic)( int handle, int* w, int* h, const byte** data, int* client, qbool* dirty );

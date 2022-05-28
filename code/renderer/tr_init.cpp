@@ -339,6 +339,7 @@ static const cmdTableItem_t r_cmds[] =
 	{ "gfxinfo", GfxInfo_f, NULL, "prints display mode info" },
 	{ "imagelist", R_ImageList_f, NULL, "prints loaded images" },
 	{ "shaderlist", R_ShaderList_f, NULL, "prints loaded shaders" },
+	{ "shaderinfo", R_ShaderInfo_f, R_CompleteShaderName_f, "prints info for a specific shader" },
 	{ "skinlist", R_SkinList_f, NULL, "prints loaded skins" },
 	{ "modellist", R_Modellist_f, NULL, "prints loaded models" },
 	{ "screenshot", R_ScreenShotTGA_f, NULL, "takes a TARGA (.tga) screenshot" },
