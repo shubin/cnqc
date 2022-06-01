@@ -386,7 +386,7 @@ static intStats_t usecGPU;
 
 static void SCR_PerformanceCounters()
 {
-	qbool Sys_V_IsVSynced();
+	extern qbool Sys_V_IsVSynced();
 
 	float x, y, cw = 8, ch = 12;
 	SCR_AdjustFrom640( 0, 0, &cw, &ch );

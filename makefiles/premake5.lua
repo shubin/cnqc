@@ -264,7 +264,7 @@ local function ApplyProjectSettings(outputExe)
 		buildoptions { "/wd4267" }
 
 	--
-	-- GCC
+	-- GCC / Clang
 	--
 
 	-- "-g1" is the minimum amount of debug information
@@ -277,8 +277,7 @@ local function ApplyProjectSettings(outputExe)
 			"-Wno-unused-parameter",
 			"-Wno-write-strings",
 			"-Wno-parentheses",
-			"-Wno-parentheses-equality",
-			"-Wno-vexing-parse"
+			"-Wno-parentheses-equality"
 		}
 		linkoptions { "" }
 
