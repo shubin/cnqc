@@ -92,6 +92,8 @@ enum textureWrap_t {
 
 typedef unsigned int textureHandle_t; // what this number actually means is up to the GAL
 
+#define MAX_TEXTURE_SIZE 2048
+
 
 struct image_t {
 	image_t* next;

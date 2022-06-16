@@ -1,6 +1,6 @@
 /*
 ===========================================================================
-Copyright (C) 2017 Gian 'myT' Schellenbaum
+Copyright (C) 2017-2022 Gian 'myT' Schellenbaum
 
 This file is part of Challenge Quake 3 (CNQ3).
 
@@ -31,20 +31,13 @@ static void*	q_malloc( size_t );
 static void		q_free( void* );
 static void*	q_realloc_sized( void*, size_t, size_t );
 
-// we only support png and tga
-#define STBI_MALLOC			q_malloc
-#define STBI_REALLOC_SIZED	q_realloc_sized
-#define STBI_FREE			q_free
+#define STBI_MALLOC				q_malloc
+#define STBI_REALLOC_SIZED		q_realloc_sized
+#define STBI_FREE				q_free
+#define STBI_MAX_DIMENSIONS		MAX_TEXTURE_SIZE
 #define STBI_NO_STDIO
 #define STBI_FAILURE_USERMSG
-#define STBI_NO_JPEG
-#define STBI_NO_TGA
-#define STBI_NO_BMP
-#define STBI_NO_PSD
-#define STBI_NO_GIF
-#define STBI_NO_HDR
-#define STBI_NO_PIC
-#define STBI_NO_PNM
+#define STBI_ONLY_PNG
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
