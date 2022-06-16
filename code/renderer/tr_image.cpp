@@ -464,6 +464,28 @@ image_t* R_CreateImage( const char* name, byte* pic, int width, int height, text
 }
 
 
+static qbool ValidateImageResolution( int w, int h, const char* fileName )
+{
+	const int dim[2] = { w, h };
+	const char* const dimNames[2] = { "width", "height" };
+
+	for (int i = 0; i < 2; ++i) {
+		if (dim[i] <= 0) {
+			ri.Printf( PRINT_WARNING, "%s: %s (%d) is too small\n", fileName, dimNames[i], dim[i] );
+			return qfalse;
+		}
+
+		if (dim[i] > MAX_TEXTURE_SIZE) {
+			ri.Printf( PRINT_WARNING, "%s: %s (%d) is too large (max. %d)\n",
+			           fileName, dimNames[i], dim[i], MAX_TEXTURE_SIZE );
+			return qfalse;
+		}
+	}
+
+	return qtrue;
+}
+
+
 static qbool LoadTGA( const char* fileName, byte* buffer, int len, byte** pic, int* w, int* h, textureFormat_t* format )
 {
 	*pic = NULL;
@@ -485,25 +507,37 @@ static qbool LoadTGA( const char* fileName, byte* buffer, int len, byte** pic, i
 	if (targa_header.id_length != 0)
 		p += targa_header.id_length;
 
-	if (targa_header.image_type != 2 && targa_header.image_type != 10 && targa_header.image_type != 3)
-		ri.Error( ERR_DROP, "LoadTGA %s: Only type 2, 10 and 3 images supported\n", fileName );
+#define ERROR(Msg, ...) ri.Printf(PRINT_WARNING, Msg "\n", ##__VA_ARGS__); return qfalse
 
-	if (targa_header.colormap_type)
-		ri.Error( ERR_DROP, "LoadTGA %s: Colormaps are not supported\n", fileName );
+	if (targa_header.image_type != 2 && targa_header.image_type != 10 && targa_header.image_type != 3) {
+		ERROR( "LoadTGA %s: Only type 2, 10 and 3 images supported", fileName );
+	}
 
-	if (targa_header.image_type != 3 && targa_header.pixel_size != 32 && targa_header.pixel_size != 24)
-		ri.Error( ERR_DROP, "LoadTGA %s: Only 32-bit and 24-bit color images are supported\n", fileName );
+	if (targa_header.colormap_type) {
+		ERROR( "LoadTGA %s: Colormaps are not supported", fileName );
+	}
 
-	if (targa_header.image_type == 3 && targa_header.pixel_size != 8)
-		ri.Error( ERR_DROP, "LoadTGA %s: Only 8-bit greyscale images are supported\n", fileName );
+	if (targa_header.image_type != 3 && targa_header.pixel_size != 32 && targa_header.pixel_size != 24) {
+		ERROR( "LoadTGA %s: Only 32-bit and 24-bit color images are supported", fileName );
+	}
+
+	if (targa_header.image_type == 3 && targa_header.pixel_size != 8) {
+		ERROR( "LoadTGA %s: Only 8-bit greyscale images are supported", fileName );
+	}
 
 	const int bpp = targa_header.pixel_size / 8;
 	const int width = targa_header.width;
 	const int height = targa_header.height;
 	const unsigned numBytes = width * height * 4;
 
-	if (width <= 0 || height <= 0 || numBytes > 0x7FFFFFFF || numBytes / (width * 4) != height)
-		ri.Error( ERR_DROP, "LoadTGA %s: Invalid image size\n", fileName );
+	if (!ValidateImageResolution( width, height, fileName ))
+		return qfalse;
+
+	if (numBytes / (width * 4) != height) {
+		ERROR( "LoadTGA %s: Invalid image size", fileName );
+	}
+
+#undef ERROR
 
 	*pic = (byte*)ri.Malloc( numBytes );
 	*w = width;
@@ -512,7 +546,7 @@ static qbool LoadTGA( const char* fileName, byte* buffer, int len, byte** pic, i
 
 #define UNMUNGE_PIXEL       { dst[2] = pixel[0]; dst[1] = pixel[1]; dst[0] = pixel[2]; dst[3] = pixel[3]; dst += 4; }
 #define WRAP_ROW            if ((++x == width) && y--) { x = 0; dst = *pic + y*width*4; }
-#define RANGE_CHECK(Bytes)  if (p + (Bytes) > pEnd) { ri.Error( ERR_DROP, "LoadTGA %s: Truncated file\n", fileName ); }
+#define RANGE_CHECK(Bytes)  if (p + (Bytes) > pEnd) { ri.Printf( PRINT_WARNING, "LoadTGA %s: Truncated file\n", fileName ); ri.Free( *pic ); *pic = NULL; return qfalse; }
 
 	// uncompressed luminance
 	if (targa_header.image_type == 3) {
@@ -657,8 +691,16 @@ static qbool LoadJPG( const char* fileName, byte* buffer, int len, byte** pic, i
 	jpeg_error_mgr jerr;
 	engineJPEGInfo_t extra;
 
-	if (setjmp(extra.jumpBuffer))
+	*pic = NULL;
+
+	if (setjmp( extra.jumpBuffer )) {
+		jpeg_destroy_decompress( &cinfo );
+		if (*pic != NULL) {
+			ri.Free( *pic );
+			*pic = NULL;
+		}
 		return qfalse;
+	}
 
 	extra.load = qtrue;
 	extra.fileName = fileName;
@@ -672,6 +714,9 @@ static qbool LoadJPG( const char* fileName, byte* buffer, int len, byte** pic, i
 
 	jpeg_read_header( &cinfo, TRUE );
 	jpeg_start_decompress( &cinfo );
+	if (!ValidateImageResolution( cinfo.output_width, cinfo.output_height, fileName )) {
+		longjmp( extra.jumpBuffer, -1 );
+	}
 
 	const unsigned numBytes = cinfo.output_width * cinfo.output_height * 4;
 	*pic = (byte*)ri.Malloc(numBytes);
@@ -712,8 +757,10 @@ int SaveJPGToBuffer( byte* out, int quality, int image_width, int image_height, 
 	jpeg_error_mgr jerr;
 	engineJPEGInfo_t extra;
 
-	if (setjmp(extra.jumpBuffer))
+	if (setjmp( extra.jumpBuffer )) {
+		jpeg_destroy_compress( &cinfo );
 		return qfalse;
+	}
 
 	extra.load = qfalse;
 	extra.fileName = fileName;
