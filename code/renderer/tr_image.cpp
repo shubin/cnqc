@@ -136,58 +136,6 @@ void R_ImageList_f( void )
 
 ///////////////////////////////////////////////////////////////
 
-/*
-================
-Used to resample images in a more general than quartering fashion.
-
-This will only be filtered properly if the resampled size
-is greater than half the original size.
-
-If a larger shrinking is needed, use the mipmap function
-before or after.
-================
-*/
-static void ResampleTexture( unsigned *in, int inwidth, int inheight, unsigned *out,
-							int outwidth, int outheight ) {
-	int		i, j;
-	unsigned	*inrow, *inrow2;
-	unsigned	frac, fracstep;
-	unsigned	p1[2048], p2[2048];
-	byte		*pix1, *pix2, *pix3, *pix4;
-
-	if (outwidth>2048)
-		ri.Error(ERR_DROP, "ResampleTexture: max width");
-
-	fracstep = inwidth*0x10000/outwidth;
-
-	frac = fracstep>>2;
-	for ( i=0 ; i<outwidth ; i++ ) {
-		p1[i] = 4*(frac>>16);
-		frac += fracstep;
-	}
-	frac = 3*(fracstep>>2);
-	for ( i=0 ; i<outwidth ; i++ ) {
-		p2[i] = 4*(frac>>16);
-		frac += fracstep;
-	}
-
-	for (i=0 ; i<outheight ; i++, out += outwidth) {
-		inrow = in + inwidth*(int)((i+0.25)*inheight/outheight);
-		inrow2 = in + inwidth*(int)((i+0.75)*inheight/outheight);
-		frac = fracstep >> 1;
-		for (j=0 ; j<outwidth ; j++) {
-			pix1 = (byte *)inrow + p1[j];
-			pix2 = (byte *)inrow + p2[j];
-			pix3 = (byte *)inrow2 + p1[j];
-			pix4 = (byte *)inrow2 + p2[j];
-			((byte *)(out+j))[0] = (pix1[0] + pix2[0] + pix3[0] + pix4[0])>>2;
-			((byte *)(out+j))[1] = (pix1[1] + pix2[1] + pix3[1] + pix4[1])>>2;
-			((byte *)(out+j))[2] = (pix1[2] + pix2[2] + pix3[2] + pix4[2])>>2;
-			((byte *)(out+j))[3] = (pix1[3] + pix2[3] + pix3[3] + pix4[3])>>2;
-		}
-	}
-}
-
 
 // scale up the pixel values in a texture to increase the lighting range
 
@@ -200,55 +148,6 @@ static void R_LightScaleTexture( byte* p, int width, int height )
 		p[2] = s_intensitytable[p[2]];
 		p += 4;
 	}
-}
-
-
-// operates in place, quartering the size of the texture - proper linear filter
-
-static void R_MipMap( unsigned* in, int inWidth, int inHeight )
-{
-	int			i, j, k;
-	byte		*outpix;
-	int			total;
-
-	int outWidth = inWidth >> 1;
-	int outHeight = inHeight >> 1;
-	unsigned* temp = (unsigned*)ri.Hunk_AllocateTempMemory( outWidth * outHeight * 4 );
-
-	int inWidthMask = inWidth - 1;
-	int inHeightMask = inHeight - 1;
-
-	for ( i = 0 ; i < outHeight ; i++ ) {
-		for ( j = 0 ; j < outWidth ; j++ ) {
-			outpix = (byte *) ( temp + i * outWidth + j );
-			for ( k = 0 ; k < 4 ; k++ ) {
-				total =
-					1 * ((byte *)&in[ ((i*2-1)&inHeightMask)*inWidth + ((j*2-1)&inWidthMask) ])[k] +
-					2 * ((byte *)&in[ ((i*2-1)&inHeightMask)*inWidth + ((j*2)&inWidthMask) ])[k] +
-					2 * ((byte *)&in[ ((i*2-1)&inHeightMask)*inWidth + ((j*2+1)&inWidthMask) ])[k] +
-					1 * ((byte *)&in[ ((i*2-1)&inHeightMask)*inWidth + ((j*2+2)&inWidthMask) ])[k] +
-
-					2 * ((byte *)&in[ ((i*2)&inHeightMask)*inWidth + ((j*2-1)&inWidthMask) ])[k] +
-					4 * ((byte *)&in[ ((i*2)&inHeightMask)*inWidth + ((j*2)&inWidthMask) ])[k] +
-					4 * ((byte *)&in[ ((i*2)&inHeightMask)*inWidth + ((j*2+1)&inWidthMask) ])[k] +
-					2 * ((byte *)&in[ ((i*2)&inHeightMask)*inWidth + ((j*2+2)&inWidthMask) ])[k] +
-
-					2 * ((byte *)&in[ ((i*2+1)&inHeightMask)*inWidth + ((j*2-1)&inWidthMask) ])[k] +
-					4 * ((byte *)&in[ ((i*2+1)&inHeightMask)*inWidth + ((j*2)&inWidthMask) ])[k] +
-					4 * ((byte *)&in[ ((i*2+1)&inHeightMask)*inWidth + ((j*2+1)&inWidthMask) ])[k] +
-					2 * ((byte *)&in[ ((i*2+1)&inHeightMask)*inWidth + ((j*2+2)&inWidthMask) ])[k] +
-
-					1 * ((byte *)&in[ ((i*2+2)&inHeightMask)*inWidth + ((j*2-1)&inWidthMask) ])[k] +
-					2 * ((byte *)&in[ ((i*2+2)&inHeightMask)*inWidth + ((j*2)&inWidthMask) ])[k] +
-					2 * ((byte *)&in[ ((i*2+2)&inHeightMask)*inWidth + ((j*2+1)&inWidthMask) ])[k] +
-					1 * ((byte *)&in[ ((i*2+2)&inHeightMask)*inWidth + ((j*2+2)&inWidthMask) ])[k];
-				outpix[k] = total / 36;
-			}
-		}
-	}
-
-	Com_Memcpy( in, temp, outWidth * outHeight * 4 );
-	ri.Hunk_FreeTempMemory( temp );
 }
 
 
@@ -327,11 +226,10 @@ static void Upload32( image_t* image, unsigned int* data )
 	if ( r_roundImagesDown->integer && scaled_height > image->height )
 		scaled_height >>= 1;
 
-	RI_AutoPtr pResampled;
 	if ( scaled_width != image->width || scaled_height != image->height ) {
-		pResampled.Alloc( scaled_width * scaled_height * 4 );
-		ResampleTexture( data, image->width, image->height, pResampled.Get<unsigned int>(), scaled_width, scaled_height );
-		data = pResampled.Get<unsigned int>();
+		byte* resampled;
+		R_ResampleImage( &resampled, scaled_width, scaled_height, (const byte*)data, image->width, image->height, image->wrapClampMode );
+		data = (unsigned int*)resampled;
 		image->width = scaled_width;
 		image->height = scaled_height;
 		ri.Printf( PRINT_DEVELOPER, "^3WARNING: ^7'%s' doesn't have PoT dimensions.\n", image->name );
@@ -384,7 +282,9 @@ static void Upload32( image_t* image, unsigned int* data )
 	{
 		// use the normal mip-mapping function to go down from here
 		while ( image->width > scaled_width || image->height > scaled_height ) {
-			R_MipMap( (unsigned*)data, image->width, image->height );
+			byte* resampled;
+			R_MipMap( &resampled, (const byte*)data, image->width, image->height, image->wrapClampMode );
+			data = (unsigned int*)resampled;
 			image->width = max( image->width >> 1, 1 );
 			image->height = max( image->height >> 1, 1 );
 		}
@@ -400,18 +300,22 @@ static void Upload32( image_t* image, unsigned int* data )
 
 	if ( !(image->flags & IMG_NOMIPMAP) )
 	{
+		byte* imageData = pScaled.Get<byte>();
+
 		int miplevel = 0;
 		while (scaled_width > 1 || scaled_height > 1)
 		{
-			R_MipMap( pScaled.Get<unsigned>(), scaled_width, scaled_height );
+			byte* resampled;
+			R_MipMap( &resampled, imageData, scaled_width, scaled_height, image->wrapClampMode );
+			imageData = resampled;
 			scaled_width = max( scaled_width >> 1, 1 );
 			scaled_height = max( scaled_height >> 1, 1 );
 			++miplevel;
 
 			if ( r_colorMipLevels->integer )
-				R_BlendOverTexture( pScaled, scaled_width * scaled_height, mipBlendColors[miplevel] );
+				R_BlendOverTexture( imageData, scaled_width * scaled_height, mipBlendColors[miplevel] );
 
-			gal.UpdateTexture( image, miplevel, 0, 0, scaled_width, scaled_height, pScaled );
+			gal.UpdateTexture( image, miplevel, 0, 0, scaled_width, scaled_height, imageData );
 		}
 	}	
 }
@@ -1224,4 +1128,3 @@ void R_SkinList_f( void )
 	ri.Printf( PRINT_ALL, "%i skins found\n", skinCount );
 	ri.Printf( PRINT_ALL, "------------------\n" );
 }
-

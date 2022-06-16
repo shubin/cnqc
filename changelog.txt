@@ -35,6 +35,10 @@ add: /waitms <milliseconds> to delay command executions by the specified number 
 add: r_alphaToCoverageMipBoost <0.0 to 0.5> (default: 0.125) boosts the alpha value of higher mip levels
   with A2C enabled, it prevents alpha-tested surfaces from fading (too much) in the distance
 
+chg: r_gpuMipGen 0 now respects r_mipGenFilter but not r_mipGenGamma (gamma 2 is used)
+	the new code will slow down map loads in general but produces higher quality results
+	r_mipGenFilter BL is a special case without gamma correction that's much faster than before
+
 chg: image load/save errors now print warnings instead of triggering drop errors
 
 chg: the maximum texture resolution of 2048 is now enforced in all image loads

@@ -21,6 +21,7 @@
     <ClCompile Include="..\..\code\renderer\tr_cmds.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_curve.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_image.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_image_scale.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_init.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_light.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_main.cpp" />

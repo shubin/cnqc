@@ -1196,6 +1196,12 @@ const void *RB_TakeVideoFrameCmd( const void *data );
 extern const vec4_t r_mipBlendColors[16];
 
 //
+// tr_image_scale.cpp
+//
+void R_ResampleImage( byte** outD, int outW, int outH, const byte* inD, int inW, int inH, textureWrap_t tw );
+void R_MipMap( byte** outD, const byte* inD, int inW, int inH, textureWrap_t tw );
+
+//
 // tr_shader.c
 //
 qhandle_t RE_RegisterShader( const char* name );

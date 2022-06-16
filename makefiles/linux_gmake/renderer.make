@@ -74,6 +74,7 @@ OBJECTS := \
 	$(OBJDIR)/tr_cmds.o \
 	$(OBJDIR)/tr_curve.o \
 	$(OBJDIR)/tr_image.o \
+	$(OBJDIR)/tr_image_scale.o \
 	$(OBJDIR)/tr_init.o \
 	$(OBJDIR)/tr_light.o \
 	$(OBJDIR)/tr_main.o \
@@ -170,6 +171,9 @@ $(OBJDIR)/tr_curve.o: ../../code/renderer/tr_curve.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/tr_image.o: ../../code/renderer/tr_image.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/tr_image_scale.o: ../../code/renderer/tr_image_scale.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/tr_init.o: ../../code/renderer/tr_init.cpp
