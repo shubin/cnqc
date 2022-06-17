@@ -419,13 +419,15 @@ static void RB_RenderLitSurfList( dlight_t* dl, qbool opaque )
 		if (!opaque && shader->sort <= SS_OPAQUE)
 			continue;
 
+		const int stageIndex = shader->lightingStages[ST_DIFFUSE];
+		if (stageIndex < 0 || stageIndex >= shader->numStages)
+			continue;
+
 		if (shaderPrev)
 			RB_EndSurface();
 		RB_BeginSurface( shader, fogNum );
 		tess.greyscale = litSurf->greyscale;
 
-		// stage index is guaranteed valid by R_AddLitSurface
-		const int stageIndex = shader->lightingStages[ST_DIFFUSE];
 		const shaderStage_t* const stage = shader->stages[stageIndex];
 		backEnd.dlIntensity = (shader->contentFlags & liquidFlags) != 0 ? 0.5f : 1.0f;
 		backEnd.dlStateBits =
