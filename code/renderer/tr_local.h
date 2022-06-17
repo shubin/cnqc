@@ -43,14 +43,6 @@ typedef struct {
 #pragma pack(pop)
 
 
-// fast float to int conversion
-//if id386 && !defined(__GNUC__)
-//long myftol( float f );
-//else
-#define	myftol(x) ((int)(x))
-//endif
-
-
 // a trRefEntity_t has all the information passed in by the cgame
 // as well as some locally derived info
 

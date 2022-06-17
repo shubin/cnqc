@@ -297,9 +297,9 @@ void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent ) {
 	}
 
 	// save out the byte-packed version
-	((byte *)&ent->ambientLightInt)[0] = myftol( ent->ambientLight[0] );
-	((byte *)&ent->ambientLightInt)[1] = myftol( ent->ambientLight[1] );
-	((byte *)&ent->ambientLightInt)[2] = myftol( ent->ambientLight[2] );
+	((byte *)&ent->ambientLightInt)[0] = (byte)( ent->ambientLight[0] );
+	((byte *)&ent->ambientLightInt)[1] = (byte)( ent->ambientLight[1] );
+	((byte *)&ent->ambientLightInt)[2] = (byte)( ent->ambientLight[2] );
 	((byte *)&ent->ambientLightInt)[3] = 0xff;
 	
 	// transform the direction to local space

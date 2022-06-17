@@ -627,7 +627,7 @@ static void RB_CalcWaveColor( const waveForm_t *wf, unsigned char *dstColors, in
 		glow = 1;
 	}
 
-	v = myftol( 255 * glow );
+	v = (int)( 255 * glow );
 	color[0] = color[1] = color[2] = v;
 	color[3] = 255;
 	v = *(int *)color;

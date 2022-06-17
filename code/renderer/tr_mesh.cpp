@@ -185,7 +185,7 @@ static int R_ComputeLOD( const trRefEntity_t* ent )
 		}
 
 		flod *= tr.currentModel->numLods;
-		lod = myftol( flod );
+		lod = (int)flod;
 
 		if ( lod < 0 )
 		{
