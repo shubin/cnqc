@@ -134,7 +134,7 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>..\..\.bin\debug_x64\</OutDir>
     <IntDir>..\..\.build\debug_x64\cnq3\</IntDir>
-    <TargetName>cnq3-x64</TargetName>
+    <TargetName>cnqc-debug-x64</TargetName>
     <TargetExt>.exe</TargetExt>
     <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
@@ -150,7 +150,7 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>..\..\..\..\workdir</OutDir>
     <IntDir>..\..\.build\debug_x32\cnq3\</IntDir>
-    <TargetName>cnqc-x86</TargetName>
+    <TargetName>cnqc-debug-x86</TargetName>
     <TargetExt>.exe</TargetExt>
     <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
@@ -166,7 +166,7 @@
     <LinkIncremental>false</LinkIncremental>
     <OutDir>..\..\.bin\release_x64\</OutDir>
     <IntDir>..\..\.build\release_x64\cnq3\</IntDir>
-    <TargetName>cnq3-x64</TargetName>
+    <TargetName>cnqc-x64</TargetName>
     <TargetExt>.exe</TargetExt>
     <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
@@ -219,7 +219,7 @@ copy "..\..\.bin\debug_x64\cnq3-x64.pdb" "$(QUAKE3DIR)"</Command>
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
-      <PreprocessorDefinitions>GLEW_STATIC;DEBUG;_DEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GLEW_STATIC;DEBUG;_DEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;QC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\code\glew\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
@@ -298,8 +298,8 @@ copy "..\..\.bin\debug_x32\cnq3-x86.pdb" "$(QUAKE3DIR)"</Command>
       <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>copy "..\..\.bin\debug_x32\cnq3-x86.exe" "$(QUAKE3DIR)"
-copy "..\..\.bin\debug_x32\cnq3-x86.pdb" "$(QUAKE3DIR)"</Command>
+      <Command>copy "..\..\.bin\debug_x32\cnqc-x86.exe" "$(QUAKE3DIR)"
+copy "..\..\.bin\debug_x32\cnqc-x86.pdb" "$(QUAKE3DIR)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release|x64'">
