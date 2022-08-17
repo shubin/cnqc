@@ -31,7 +31,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define CONSOLE_WINDOW_TITLE	"CNQ3 Console"
 
 #define BASEGAME			"baseq3"
+#if defined( QC )
+#define APEXGAME			"qc"
+#else
 #define APEXGAME			"cpma"
+#endif
 
 
 #if defined(_DEBUG)

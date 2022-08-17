@@ -3058,6 +3058,11 @@ void FS_InitFilesystem()
 	// we have to handle this specially, because normal command
 	// line variable sets don't happen until after the filesystem
 	// has already been initialized
+
+#if defined( QC )
+	Sys_FindHomePath();
+#endif
+
 	Com_StartupVariable( "fs_basepath" );
 	Com_StartupVariable( "fs_homepath" );
 	Com_StartupVariable( "fs_game" );

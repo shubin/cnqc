@@ -3314,6 +3314,10 @@ void History_LoadFromFile( history_t* history )
 
 void History_SaveToFile( const history_t* history )
 {
+#if defined( QC )
+	if ( !con_history )
+		return;
+#endif
 	if ( con_history->integer == 0 )
 		return;
 

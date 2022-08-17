@@ -1200,5 +1200,8 @@ typedef enum {
 
 printHelpResult_t Com_PrintHelp( const char* name, printf_t print, qbool printNotFound, qbool printModules, qbool printFlags );
 
+#if defined( QC )
+void Sys_FindHomePath( void );
+#endif
 
 #endif // _QCOMMON_H_

@@ -242,6 +242,7 @@ copy "..\..\.bin\debug_x64\cnq3-x64.pdb" "$(QUAKE3DIR)"</Command>
     <PostBuildEvent>
       <Command>copy "..\..\.bin\debug_x64\cnqc-debug-x64.exe" "..\..\..\workdir"
 
+
 copy "..\..\.bin\debug_x64\cnqc-debug-x64.pdb" "..\..\..\workdir"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -300,6 +301,7 @@ copy "..\..\.bin\debug_x32\cnq3-x86.pdb" "$(QUAKE3DIR)"</Command>
     </PreBuildEvent>
     <PostBuildEvent>
       <Command>copy "..\..\.bin\debug_x32\cnqc-debug-x86.exe" "..\..\..\workdir"
+
 
 copy "..\..\.bin\debug_x32\cnqc-debug-x86.pdb" "..\..\..\workdir"</Command>
     </PostBuildEvent>
@@ -589,6 +591,7 @@ copy "..\..\.bin\release_x32\cnqc-x86.pdb" "..\..\..\..\workdir"</Command>
     <ClCompile Include="..\..\code\server\sv_snapshot.cpp" />
     <ClCompile Include="..\..\code\server\sv_world.cpp" />
     <ClCompile Include="..\..\code\win32\win_exception.cpp" />
+    <ClCompile Include="..\..\code\win32\win_files.cpp" />
     <ClCompile Include="..\..\code\win32\win_glimp.cpp" />
     <ClCompile Include="..\..\code\win32\win_input.cpp" />
     <ClCompile Include="..\..\code\win32\win_main.cpp" />
