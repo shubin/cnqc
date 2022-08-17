@@ -6,6 +6,9 @@
 *.ncb
 *.pdb
 *.idb
+*.ipch
+*.db
+*.vcxproj.user
 code/qcommon/git.h
 code/win32/winquake.res
 code/renderer/hlsl/*.h
