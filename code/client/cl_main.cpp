@@ -2165,6 +2165,8 @@ static const cvarTableItem_t cl_cvars[] =
 	{ &cl_matchAlerts, "cl_matchAlerts", "7", CVAR_ARCHIVE, CVART_BITMASK, "0", XSTRING(MAF_MAX), help_cl_matchAlerts },
 	{ &net_proxy, "net_proxy", "", CVAR_TEMP, CVART_STRING, NULL, NULL, help_net_proxy },
 	{ &r_khr_debug, "r_khr_debug", "2", CVAR_ARCHIVE, CVART_INTEGER, "0", "2", help_r_khr_debug },
+	{ &cl_demoPlayer, "cl_demoPlayer", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_cl_demoPlayer },
+	{ &cl_escapeAbortsDemo, "cl_escapeAbortsDemo", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "pressing escape aborts demo playback" },
 #if defined( QC )
 	{ NULL, "champion", "ranger", CVAR_USERINFO | CVAR_ARCHIVE, CVART_STRING },
 	{ NULL, "starting_weapon", "mg", CVAR_USERINFO | CVAR_ARCHIVE, CVART_STRING },

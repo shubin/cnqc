@@ -635,6 +635,19 @@ static intptr_t CL_CgameSystemCalls( intptr_t *args )
 	case CG_R_INPVS:
 		return re.inPVS( VMA(1), VMA(2) );
 
+#if defined( QC )
+	case CG_GET_ADVERTISEMENTS:
+		re.GetAdvertisements( VMA(1), VMA(2), VMA(3) );
+		return 0;
+		
+	case CG_R_DRAWQUAD:
+		re.DrawQuad( 
+			VMF(1), VMF(2), VMF(3), VMF(4), VMF(5), VMF(6), VMF(7), VMF(8), 
+			VMF(9), VMF(10), VMF(11), VMF(12), VMF(13), VMF(14), VMF(15), VMF(16), 
+			args[17] );
+		return 0;
+#endif
+
 	// engine extensions
 
 	case CG_EXT_GETVALUE:

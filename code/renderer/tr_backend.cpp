@@ -717,11 +717,6 @@ void RB_ExecuteRenderCommands( const void *data )
 		case RC_STRETCH_PIC:
 			data = RB_StretchPic( data );
 			break;
-#if defined( QC )
-		case RC_DRAW_QUAD:
-			data = RB_DrawQuad( data );
-			break;
-#endif
 		case RC_TRIANGLE:
 			data = RB_Triangle( data );
 			break;
