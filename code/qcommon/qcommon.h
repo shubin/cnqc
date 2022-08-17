@@ -1167,6 +1167,11 @@ qbool	Sys_IsDebuggerAttached();
 qbool	Sys_IsMinimized();
 #endif
 
+#if defined( QC )
+void Sys_FindQ3APath( void );
+qboolean Sys_LocateQ3APath( void );
+#endif
+
 // huffman.cpp - id's original code
 // used for out-of-band (OOB) datagrams with dynamically created trees
 void	DynHuff_Compress( msg_t* buf, int offset );
@@ -1212,8 +1217,5 @@ printHelpResult_t Com_PrintHelp( const char* name, printf_t print, qbool printNo
 #define Q_assert(Cond)
 #endif
 
-#if defined( QC )
-void Sys_FindQ3APath( void );
-qboolean Sys_LocateQ3APath( void );
 
 #endif // _QCOMMON_H_
