@@ -58,6 +58,9 @@ void* R_FindRenderCommand( renderCommand_t type )
 		case RC_STRETCH_PIC:
 			data = (char*)data + sizeof(stretchPicCommand_t);
 			break;
+#if defined( QC )
+			data = (char*)data + sizeof(drawQuadCommand_t);
+#endif
 		case RC_TRIANGLE:
 			data = (char*)data + sizeof(triangleCommand_t);
 			break;
@@ -182,6 +185,23 @@ void RE_StretchPic( float x, float y, float w, float h, float s1, float t1, floa
 	cmd->t2 = t2;
 }
 
+#if defined( QC )
+void RE_DrawQuad( 
+	float x0, float y0, float s0, float t0,
+	float x1, float y1, float s1, float t1,
+	float x2, float y2, float s2, float t2,
+	float x3, float y3, float s3, float t3,
+	qhandle_t hShader ) 
+{
+	R_CMD_RET( drawQuadCommand_t, RC_DRAW_QUAD );
+
+	cmd->shader = R_GetShaderByHandle( hShader );
+	cmd->x0 = x0; cmd->y0 = y0; cmd->s0 = s0; cmd->t0 = t0;
+	cmd->x1 = x1; cmd->y1 = y1; cmd->s1 = s1; cmd->t1 = t1;
+	cmd->x2 = x2; cmd->y2 = y2; cmd->s2 = s2; cmd->t2 = t2;
+	cmd->x3 = x3; cmd->y3 = y3; cmd->s3 = s3; cmd->t3 = t3;
+}
+#endif
 
 void RE_DrawTriangle( float x0, float y0, float x1, float y1, float x2, float y2, float s0, float t0, float s1, float t1, float s2, float t2, qhandle_t hShader )
 {
@@ -294,3 +314,9 @@ void RE_TakeVideoFrame( int width, int height, byte *captureBuffer, byte *encode
 	cmd->encodeBuffer = encodeBuffer;
 	cmd->motionJpeg = motionJpeg;
 }
+
+#if defined( QC )
+void RE_GetAdvertisements( int *num, float *verts, void *shaders ) {
+	*num = 0;
+}
+#endif

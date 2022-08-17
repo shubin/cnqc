@@ -1411,6 +1411,13 @@ static qbool ParseShader( const char** text )
 			shader.imgflags |= IMG_NOPICMIP;
 			continue;
 		}
+#if defined( QC )
+		else if ( !Q_stricmp( token, "novlcollapse" ) )
+		{
+			shader.noVLCollapse = qtrue;
+			continue;
+		}
+#endif
 		// polygonOffset
 		else if ( !Q_stricmp( token, "polygonOffset" ) )
 		{
@@ -2429,7 +2436,11 @@ static shader_t* FinishShader()
 	//
 	// if we are in r_vertexLight mode, never use a lightmap texture
 	//
+#if defined( QC )
+	if ( stage > 1 && r_vertexLight->integer && GetLightmapStageIndex() >= 0 && !shader.noVLCollapse ) {
+#else
 	if ( stage > 1 && r_vertexLight->integer && GetLightmapStageIndex() >= 0 ) {
+#endif
 		VertexLightingCollapse();
 		stage = 1;
 		hasLightmapStage = qfalse;

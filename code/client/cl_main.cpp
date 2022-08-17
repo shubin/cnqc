@@ -1896,6 +1896,23 @@ static void CL_Snd_Restart_f()
 }
 
 
+//===========================================================================================
+
+#if defined( QC )
+void CL_SetChampion_f( void ) {
+	const char	*arg;
+	char	name[256];
+
+	arg = Cmd_Argv( 1 );
+	if ( arg[0] ) {
+		Cvar_Set( "champion", arg );
+	} else {
+		Cvar_VariableStringBuffer( "champion", name, sizeof(name) );
+		Com_Printf("champion is set to %s\n", name);
+	}
+}
+#endif
+
 ///////////////////////////////////////////////////////////////
 
 
@@ -2107,6 +2124,10 @@ static const cvarTableItem_t cl_cvars[] =
 	{ NULL, "password", "", CVAR_USERINFO, CVART_STRING, NULL, NULL, "used by /" S_COLOR_CMD "connect" },
 	{ &cl_matchAlerts, "cl_matchAlerts", "7", CVAR_ARCHIVE, CVART_BITMASK, "0", XSTRING(MAF_MAX), help_cl_matchAlerts },
 	{ &net_proxy, "net_proxy", "", CVAR_TEMP, CVART_STRING, NULL, NULL, help_net_proxy },
+#if defined( QC )
+	{ NULL, "champion", "ranger", CVAR_USERINFO | CVAR_ARCHIVE, CVART_STRING },
+	{ NULL, "starting_weapon", "mg", CVAR_USERINFO | CVAR_ARCHIVE, CVART_STRING },
+#endif
 	{ &r_khr_debug, "r_khr_debug", "2", CVAR_ARCHIVE, CVART_INTEGER, "0", "2", help_r_khr_debug }
 };
 
@@ -2138,6 +2159,9 @@ static const cmdTableItem_t cl_cmds[] =
 	{ "dlmap", CL_DownloadMap_f, NULL, "starts a pk3 download by map name if not existing" },
 	{ "dlmapf", CL_ForceDownloadMap_f, NULL, "start a pk3 download by map name" },
 	{ "dlstop", CL_CancelDownload_f, NULL, "stops the current pk3 download" },
+#if defined( QC )
+	{ "champion", CL_SetChampion_f, NULL, "changes the selected champion" },
+#endif
 };
 
 

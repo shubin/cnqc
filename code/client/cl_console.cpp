@@ -225,6 +225,25 @@ void Con_ToggleConsole_f()
 	con.markMode = qfalse;
 }
 
+#if defined( QC )
+/*
+===================
+Con_ToggleMenu_f
+===================
+*/
+void Con_ToggleMenu_f( void ) {
+	int menu = -1;
+	if ( Cmd_Argc() == 1 ) {
+		CL_KeyEvent( K_ESCAPE, qtrue, Sys_Milliseconds() );
+		CL_KeyEvent( K_ESCAPE, qfalse, Sys_Milliseconds() );
+	}
+	menu = atoi( Cmd_Argv(1) );
+	if ( menu >= 0 ) {
+		VM_Call( uivm, UI_SET_ACTIVE_MENU, menu );
+	}
+}
+#endif
+
 /*
 ================
 Con_MessageMode_f

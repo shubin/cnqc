@@ -892,6 +892,24 @@ typedef struct playerState_s {
 	int			weapon;			// copied to entityState_t->weapon
 	int			weaponstate;
 
+#if defined( QC )
+	int			weaponFiringState; // for complex weapon behaviors (like tribolt)
+	int			champion;		// selected champion
+	int			baseHealth;
+	int			baseArmor;
+
+	int			jumpTime;
+	int			landTime;
+	int			walljumps;
+	int			crouchSlideTime;
+
+	int			ab_time;		// ability timer, semantic depends on the flags
+	int			ab_misctime;	// additional timer for various purposes (i.e. grenade timing for Keel)
+	int			ab_num;			// id of the entity associated with the champion (orb for Ranger)
+	int			ab_flags;		// some bits to know whats happening with ability progressing
+	qboolean	overbounce;		// overbounce bug handling
+#endif
+
 	vec3_t		viewangles;		// for fixed views
 	int			viewheight;
 
@@ -915,6 +933,12 @@ typedef struct playerState_s {
 	int			pmove_framecount;	// FIXME: don't transmit over the network
 	int			jumppad_frame;
 	int			entityEventSequence;
+#if defined( QC )
+	int			airTime;
+	int			attackerNum;
+	int			attackerTime;
+	int			ringoutKiller;
+#endif
 } playerState_t;
 
 
@@ -943,7 +967,13 @@ typedef struct playerState_s {
 #define BUTTON_PATROL		512
 #define BUTTON_FOLLOWME		1024
 
-#define BUTTON_ANY			2048			// any key whatsoever
+#if defined( QC )
+#define BUTTON_ABILITY		2048
+#define BUTTON_ZOOM			4096
+#define BUTTON_ANY			8192		// any key whatsoever
+#else
+#define	BUTTON_ANY			2048		// any key whatsoever
+#endif
 
 // usercmd_t is sent to the server each client frame
 typedef struct usercmd_s {
@@ -976,6 +1006,9 @@ typedef struct {
 	int		trDuration;			// if non 0, trTime + trDuration = stop time
 	vec3_t	trBase;
 	vec3_t	trDelta;			// velocity, etc
+#if defined( QC )
+	int		trGravity;
+#endif
 } trajectory_t;
 
 // entityState_t is the information conveyed from the server

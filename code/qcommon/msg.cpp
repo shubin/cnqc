@@ -562,6 +562,9 @@ static const netField_t entityStateFields[] =
 { ESF(pos.trBase[1]), 0 },
 { ESF(pos.trDelta[0]), 0 },
 { ESF(pos.trDelta[1]), 0 },
+#if defined( QC )
+{ ESF(pos.trGravity), 0 },
+#endif
 { ESF(pos.trBase[2]), 0 },
 { ESF(apos.trBase[1]), 0 },
 { ESF(pos.trDelta[2]), 0 },
@@ -602,6 +605,9 @@ static const netField_t entityStateFields[] =
 { ESF(apos.trDelta[0]), 0 },
 { ESF(apos.trDelta[1]), 0 },
 { ESF(apos.trDelta[2]), 0 },
+#if defined( QC )
+{ ESF(apos.trGravity), 0 },
+#endif
 { ESF(time2), 32 },
 { ESF(angles[2]), 0 },
 { ESF(angles2[0]), 0 },
@@ -884,7 +890,11 @@ static const netField_t playerStateFields[] =
 { PSF(events[0]), 8 },
 { PSF(legsAnim), 8 },
 { PSF(events[1]), 8 },
+#if defined( QC )
+{ PSF(pm_flags), 20 },
+#else
 { PSF(pm_flags), 16 },
+#endif
 { PSF(groundEntityNum), GENTITYNUM_BITS },
 { PSF(weaponstate), 4 },
 { PSF(eFlags), 16 },
@@ -912,7 +922,18 @@ static const netField_t playerStateFields[] =
 { PSF(grapplePoint[1]), 0 },
 { PSF(grapplePoint[2]), 0 },
 { PSF(jumppad_ent), 10 },
-{ PSF(loopSound), 16 }
+{ PSF(loopSound), 16 },
+#if defined( QC )
+{ PSF(weaponFiringState), 8 },
+{ PSF(champion), 5 },
+{ PSF(ab_time), 6 }, // up to 64 seconds to recharge an ability
+{ PSF(ab_misctime), 8 }, // up to 25.6 seconds to count
+{ PSF(ab_flags), 8 },
+{ PSF(ab_num), 32 },
+{ PSF(overbounce), 1 },
+{ PSF(baseHealth), 8 }, // base health can't exceed 256
+{ PSF(baseArmor), 8 }, // base armor can't exceed 256
+#endif
 };
 
 static const int numPSF = sizeof(playerStateFields) / sizeof(playerStateFields[0]);

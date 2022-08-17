@@ -245,7 +245,7 @@ qbool Sys_GetPacket( netadr_t* net_from, msg_t* net_message )
 		int err = socketError;
 		if (err == EAGAIN || err == ECONNRESET)
 			return qfalse;
-		Com_Printf( "NET_GetPacket: %s\n", NET_ErrorString() );
+		//Com_Printf( "NET_GetPacket: %s\n", NET_ErrorString() );
 		return qfalse;
 	}
 
