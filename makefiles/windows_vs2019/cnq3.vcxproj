@@ -240,8 +240,9 @@ copy "..\..\.bin\debug_x64\cnq3-x64.pdb" "$(QUAKE3DIR)"</Command>
       <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>copy "..\..\.bin\debug_x64\cnqc-debug-x64.exe" "..\..\..\..\workdir"
-copy "..\..\.bin\debug_x64\cnqc-debug-x64.pdb" "..\..\..\..\workdir"</Command>
+      <Command>copy "..\..\.bin\debug_x64\cnqc-debug-x64.exe" "..\..\..\workdir"
+
+copy "..\..\.bin\debug_x64\cnqc-debug-x64.pdb" "..\..\..\workdir"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">
@@ -298,8 +299,9 @@ copy "..\..\.bin\debug_x32\cnq3-x86.pdb" "$(QUAKE3DIR)"</Command>
       <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>copy "..\..\.bin\debug_x32\cnqc-debug-x86.exe" "..\..\..\..\workdir"
-copy "..\..\.bin\debug_x32\cnqc-debug-x86.pdb" "..\..\..\..\workdir"</Command>
+      <Command>copy "..\..\.bin\debug_x32\cnqc-debug-x86.exe" "..\..\..\workdir"
+
+copy "..\..\.bin\debug_x32\cnqc-debug-x86.pdb" "..\..\..\workdir"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release|x64'">
