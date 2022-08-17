@@ -17,6 +17,14 @@
       <Configuration>debug</Configuration>
       <Platform>Win32</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="release qc|Win32">
+      <Configuration>release qc</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="release qc|x64">
+      <Configuration>release qc</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="release|x64">
       <Configuration>release</Configuration>
       <Platform>x64</Platform>
@@ -65,7 +73,21 @@
     <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='release qc|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
@@ -90,7 +112,13 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='release qc|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
@@ -129,7 +157,21 @@
     <TargetExt>.lib</TargetExt>
     <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">
+    <OutDir>..\..\.build\release_x64\</OutDir>
+    <IntDir>..\..\.build\release_x64\libjpeg-turbo\</IntDir>
+    <TargetName>libjpeg-turbo</TargetName>
+    <TargetExt>.lib</TargetExt>
+    <GenerateManifest>false</GenerateManifest>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='release|Win32'">
+    <OutDir>..\..\.build\release_x32\</OutDir>
+    <IntDir>..\..\.build\release_x32\libjpeg-turbo\</IntDir>
+    <TargetName>libjpeg-turbo</TargetName>
+    <TargetExt>.lib</TargetExt>
+    <GenerateManifest>false</GenerateManifest>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">
     <OutDir>..\..\.build\release_x32\</OutDir>
     <IntDir>..\..\.build\release_x32\libjpeg-turbo\</IntDir>
     <TargetName>libjpeg-turbo</TargetName>
@@ -261,12 +303,79 @@
       <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
     </Lib>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <PreprocessorDefinitions>WITH_SIMD;SIZEOF_SIZE_T=8;NDEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\code\libjpeg-turbo;..\..\code\libjpeg-turbo\simd;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <Optimization>MinSpace</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <OmitFramePointers>true</OmitFramePointers>
+      <StringPooling>true</StringPooling>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <ExceptionHandling>false</ExceptionHandling>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <AdditionalOptions>/GL /wd4267 %(AdditionalOptions)</AdditionalOptions>
+      <CompileAs>CompileAsC</CompileAs>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+    <Lib>
+      <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release|Win32'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <PreprocessorDefinitions>WITH_SIMD;SIZEOF_SIZE_T=4;NDEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\code\libjpeg-turbo;..\..\code\libjpeg-turbo\simd;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <Optimization>MinSpace</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <OmitFramePointers>true</OmitFramePointers>
+      <StringPooling>true</StringPooling>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <ExceptionHandling>false</ExceptionHandling>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <AdditionalOptions>/GL /arch:SSE2 %(AdditionalOptions)</AdditionalOptions>
+      <CompileAs>CompileAsC</CompileAs>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+    <Lib>
+      <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <PreprocessorDefinitions>WITH_SIMD;SIZEOF_SIZE_T=4;NDEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;QC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\code\libjpeg-turbo;..\..\code\libjpeg-turbo\simd;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>MinSpace</Optimization>
@@ -345,11 +454,13 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug qc|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\..\code\libjpeg-turbo\simd\jsimd_x86_64.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">true</ExcludedFromBuild>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -362,8 +473,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jccolor-sse2-64.asm">
       <FileType>Document</FileType>
@@ -374,8 +488,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|x64'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|x64'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|x64'">nasm -o$(IntDir)\%(Filename).obj -fwin64 -DWIN64 -D__x86_64__ -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">nasm -o$(IntDir)\%(Filename).obj -fwin64 -DWIN64 -D__x86_64__ -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|x64'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|x64'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jccolor-sse2.asm">
       <FileType>Document</FileType>
@@ -386,8 +503,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jcgray-mmx.asm">
       <FileType>Document</FileType>
@@ -398,8 +518,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jcgray-sse2-64.asm">
       <FileType>Document</FileType>
@@ -410,8 +533,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|x64'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|x64'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|x64'">nasm -o$(IntDir)\%(Filename).obj -fwin64 -DWIN64 -D__x86_64__ -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">nasm -o$(IntDir)\%(Filename).obj -fwin64 -DWIN64 -D__x86_64__ -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|x64'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|x64'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jcgray-sse2.asm">
       <FileType>Document</FileType>
@@ -422,8 +548,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jchuff-sse2-64.asm">
       <FileType>Document</FileType>
@@ -434,8 +563,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|x64'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|x64'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|x64'">nasm -o$(IntDir)\%(Filename).obj -fwin64 -DWIN64 -D__x86_64__ -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">nasm -o$(IntDir)\%(Filename).obj -fwin64 -DWIN64 -D__x86_64__ -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|x64'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|x64'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jchuff-sse2.asm">
       <FileType>Document</FileType>
@@ -446,8 +578,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jcsample-mmx.asm">
       <FileType>Document</FileType>
@@ -458,8 +593,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jcsample-sse2-64.asm">
       <FileType>Document</FileType>
@@ -470,8 +608,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|x64'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|x64'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|x64'">nasm -o$(IntDir)\%(Filename).obj -fwin64 -DWIN64 -D__x86_64__ -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">nasm -o$(IntDir)\%(Filename).obj -fwin64 -DWIN64 -D__x86_64__ -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|x64'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|x64'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jcsample-sse2.asm">
       <FileType>Document</FileType>
@@ -482,8 +623,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jdcolor-mmx.asm">
       <FileType>Document</FileType>
@@ -494,8 +638,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jdcolor-sse2-64.asm">
       <FileType>Document</FileType>
@@ -506,8 +653,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|x64'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|x64'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|x64'">nasm -o$(IntDir)\%(Filename).obj -fwin64 -DWIN64 -D__x86_64__ -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">nasm -o$(IntDir)\%(Filename).obj -fwin64 -DWIN64 -D__x86_64__ -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|x64'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|x64'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jdcolor-sse2.asm">
       <FileType>Document</FileType>
@@ -518,8 +668,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jdmerge-mmx.asm">
       <FileType>Document</FileType>
@@ -530,8 +683,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jdmerge-sse2-64.asm">
       <FileType>Document</FileType>
@@ -542,8 +698,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|x64'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|x64'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|x64'">nasm -o$(IntDir)\%(Filename).obj -fwin64 -DWIN64 -D__x86_64__ -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">nasm -o$(IntDir)\%(Filename).obj -fwin64 -DWIN64 -D__x86_64__ -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|x64'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|x64'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jdmerge-sse2.asm">
       <FileType>Document</FileType>
@@ -554,8 +713,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jdsample-mmx.asm">
       <FileType>Document</FileType>
@@ -566,8 +728,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jdsample-sse2-64.asm">
       <FileType>Document</FileType>
@@ -578,8 +743,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|x64'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|x64'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|x64'">nasm -o$(IntDir)\%(Filename).obj -fwin64 -DWIN64 -D__x86_64__ -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">nasm -o$(IntDir)\%(Filename).obj -fwin64 -DWIN64 -D__x86_64__ -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|x64'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|x64'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jdsample-sse2.asm">
       <FileType>Document</FileType>
@@ -590,8 +758,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jfdctflt-3dn.asm">
       <FileType>Document</FileType>
@@ -602,8 +773,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jfdctflt-sse-64.asm">
       <FileType>Document</FileType>
@@ -614,8 +788,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|x64'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|x64'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|x64'">nasm -o$(IntDir)\%(Filename).obj -fwin64 -DWIN64 -D__x86_64__ -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">nasm -o$(IntDir)\%(Filename).obj -fwin64 -DWIN64 -D__x86_64__ -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|x64'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|x64'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jfdctflt-sse.asm">
       <FileType>Document</FileType>
@@ -626,8 +803,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jfdctfst-mmx.asm">
       <FileType>Document</FileType>
@@ -638,8 +818,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jfdctfst-sse2-64.asm">
       <FileType>Document</FileType>
@@ -650,8 +833,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|x64'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|x64'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|x64'">nasm -o$(IntDir)\%(Filename).obj -fwin64 -DWIN64 -D__x86_64__ -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">nasm -o$(IntDir)\%(Filename).obj -fwin64 -DWIN64 -D__x86_64__ -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|x64'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|x64'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jfdctfst-sse2.asm">
       <FileType>Document</FileType>
@@ -662,8 +848,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jfdctint-mmx.asm">
       <FileType>Document</FileType>
@@ -674,8 +863,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jfdctint-sse2-64.asm">
       <FileType>Document</FileType>
@@ -686,8 +878,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|x64'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|x64'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|x64'">nasm -o$(IntDir)\%(Filename).obj -fwin64 -DWIN64 -D__x86_64__ -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">nasm -o$(IntDir)\%(Filename).obj -fwin64 -DWIN64 -D__x86_64__ -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|x64'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|x64'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jfdctint-sse2.asm">
       <FileType>Document</FileType>
@@ -698,8 +893,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jidctflt-3dn.asm">
       <FileType>Document</FileType>
@@ -710,8 +908,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jidctflt-sse.asm">
       <FileType>Document</FileType>
@@ -722,8 +923,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jidctflt-sse2-64.asm">
       <FileType>Document</FileType>
@@ -734,8 +938,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|x64'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|x64'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|x64'">nasm -o$(IntDir)\%(Filename).obj -fwin64 -DWIN64 -D__x86_64__ -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">nasm -o$(IntDir)\%(Filename).obj -fwin64 -DWIN64 -D__x86_64__ -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|x64'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|x64'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jidctflt-sse2.asm">
       <FileType>Document</FileType>
@@ -746,8 +953,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jidctfst-mmx.asm">
       <FileType>Document</FileType>
@@ -758,8 +968,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jidctfst-sse2-64.asm">
       <FileType>Document</FileType>
@@ -770,8 +983,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|x64'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|x64'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|x64'">nasm -o$(IntDir)\%(Filename).obj -fwin64 -DWIN64 -D__x86_64__ -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">nasm -o$(IntDir)\%(Filename).obj -fwin64 -DWIN64 -D__x86_64__ -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|x64'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|x64'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jidctfst-sse2.asm">
       <FileType>Document</FileType>
@@ -782,8 +998,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jidctint-mmx.asm">
       <FileType>Document</FileType>
@@ -794,8 +1013,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jidctint-sse2-64.asm">
       <FileType>Document</FileType>
@@ -806,8 +1028,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|x64'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|x64'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|x64'">nasm -o$(IntDir)\%(Filename).obj -fwin64 -DWIN64 -D__x86_64__ -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">nasm -o$(IntDir)\%(Filename).obj -fwin64 -DWIN64 -D__x86_64__ -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|x64'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|x64'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jidctint-sse2.asm">
       <FileType>Document</FileType>
@@ -818,8 +1043,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jidctred-mmx.asm">
       <FileType>Document</FileType>
@@ -830,8 +1058,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jidctred-sse2-64.asm">
       <FileType>Document</FileType>
@@ -842,8 +1073,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|x64'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|x64'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|x64'">nasm -o$(IntDir)\%(Filename).obj -fwin64 -DWIN64 -D__x86_64__ -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">nasm -o$(IntDir)\%(Filename).obj -fwin64 -DWIN64 -D__x86_64__ -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|x64'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|x64'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jidctred-sse2.asm">
       <FileType>Document</FileType>
@@ -854,8 +1088,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jquant-3dn.asm">
       <FileType>Document</FileType>
@@ -866,8 +1103,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jquant-mmx.asm">
       <FileType>Document</FileType>
@@ -878,8 +1118,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jquant-sse.asm">
       <FileType>Document</FileType>
@@ -890,8 +1133,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jquantf-sse2-64.asm">
       <FileType>Document</FileType>
@@ -902,8 +1148,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|x64'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|x64'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|x64'">nasm -o$(IntDir)\%(Filename).obj -fwin64 -DWIN64 -D__x86_64__ -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">nasm -o$(IntDir)\%(Filename).obj -fwin64 -DWIN64 -D__x86_64__ -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|x64'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|x64'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jquantf-sse2.asm">
       <FileType>Document</FileType>
@@ -914,8 +1163,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jquanti-sse2-64.asm">
       <FileType>Document</FileType>
@@ -926,8 +1178,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|x64'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|x64'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|x64'">nasm -o$(IntDir)\%(Filename).obj -fwin64 -DWIN64 -D__x86_64__ -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">nasm -o$(IntDir)\%(Filename).obj -fwin64 -DWIN64 -D__x86_64__ -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|x64'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|x64'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jquanti-sse2.asm">
       <FileType>Document</FileType>
@@ -938,8 +1193,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
     <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jsimdcpu.asm">
       <FileType>Document</FileType>
@@ -950,8 +1208,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">%(Filename).asm</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">%(Filename).asm</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='release|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">nasm -o$(IntDir)\%(Filename).obj -fwin32 -DWIN32 -I..\..\code\libjpeg-turbo\ -I..\..\code\libjpeg-turbo\win\ -I..\..\code\libjpeg-turbo\simd\ %(Identity)</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='release|Win32'">$(IntDir)/%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">$(IntDir)/%(Filename).obj</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='release|Win32'">%(Filename).asm</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">%(Filename).asm</Message>
     </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
