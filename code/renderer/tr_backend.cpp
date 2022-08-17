@@ -128,7 +128,7 @@ RB_DrawQuad
 =============
 */
 static const void *RB_DrawQuad( const void *data ) {
-	const stretchPicCommand_t* cmd = (const stretchPicCommand_t*)data;
+	const drawQuadCommand_t* cmd = (const drawQuadCommand_t*)data;
 
 	if ( !backEnd.projection2D )
 		RB_Set2D();
@@ -162,33 +162,33 @@ static const void *RB_DrawQuad( const void *data ) {
 		*(int *)tess.vertexColors[ numVerts + 2 ] =
 		*(int *)tess.vertexColors[ numVerts + 3 ] = *(int *)backEnd.color2D;
 
-	tess.xyz[ numVerts ][0] = cmd->x;
-	tess.xyz[ numVerts ][1] = cmd->y;
-	tess.xyz[ numVerts ][2] = 0;
+	tess.xyz[ numVerts + 0 ][0] = cmd->x0;
+	tess.xyz[ numVerts + 0 ][1] = cmd->y0;
+	tess.xyz[ numVerts + 0 ][2] = 0;
+	
+	tess.texCoords[ numVerts + 0 ][0] = cmd->s0;
+	tess.texCoords[ numVerts + 0 ][1] = cmd->t0;
 
-	tess.texCoords[ numVerts ][0] = cmd->s1;
-	tess.texCoords[ numVerts ][1] = cmd->t1;
-
-	tess.xyz[ numVerts + 1 ][0] = cmd->x + cmd->w;
-	tess.xyz[ numVerts + 1 ][1] = cmd->y;
+	tess.xyz[ numVerts + 1 ][0] = cmd->x1;
+	tess.xyz[ numVerts + 1 ][1] = cmd->y1;
 	tess.xyz[ numVerts + 1 ][2] = 0;
-
-	tess.texCoords[ numVerts + 1 ][0] = cmd->s2;
+	
+	tess.texCoords[ numVerts + 1 ][0] = cmd->s1;
 	tess.texCoords[ numVerts + 1 ][1] = cmd->t1;
 
-	tess.xyz[ numVerts + 2 ][0] = cmd->x + cmd->w;
-	tess.xyz[ numVerts + 2 ][1] = cmd->y + cmd->h;
+	tess.xyz[ numVerts + 2 ][0] = cmd->x2;
+	tess.xyz[ numVerts + 2 ][1] = cmd->y2;
 	tess.xyz[ numVerts + 2 ][2] = 0;
-
+	
 	tess.texCoords[ numVerts + 2 ][0] = cmd->s2;
 	tess.texCoords[ numVerts + 2 ][1] = cmd->t2;
 
-	tess.xyz[ numVerts + 3 ][0] = cmd->x;
-	tess.xyz[ numVerts + 3 ][1] = cmd->y + cmd->h;
+	tess.xyz[ numVerts + 3 ][0] = cmd->x3;
+	tess.xyz[ numVerts + 3 ][1] = cmd->y3;
 	tess.xyz[ numVerts + 3 ][2] = 0;
-
-	tess.texCoords[ numVerts + 3 ][0] = cmd->s1;
-	tess.texCoords[ numVerts + 3 ][1] = cmd->t2;
+	
+	tess.texCoords[ numVerts + 3 ][0] = cmd->s3;
+	tess.texCoords[ numVerts + 3 ][1] = cmd->t3;
 
 	return (const void *)(cmd + 1);}
 #endif

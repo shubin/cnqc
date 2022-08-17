@@ -473,6 +473,9 @@ void CL_ConInit()
 	Con_ClearNotify();
 
 	Cmd_RegisterArray( con_cmds, MODULE_CONSOLE );
+#if defined( QC )
+	Cmd_AddCommand( "togglemenu", Con_ToggleMenu_f );
+#endif
 }
 
 
