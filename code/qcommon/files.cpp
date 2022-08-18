@@ -2776,8 +2776,16 @@ static void FS_CheckPaks()
 				break;
 			}
 		}
+#if defined( QC )
+		if ( Sys_LocateHomePath() ) {
+			Com_Error( ERR_FATAL, "Please restart the game" );
+		} else {
+			Com_Error( ERR_FATAL, "Please install Quake III Arena and restart the game" );
+		}
+#else
 		Com_Error( ERR_FATAL, "pak%d.pk3 is missing or unreadable! Check that CNQ3 is in the correct place "
 				  "and that every file in the %s directory is present and readable.", firstMissing, BASEGAME );
+#endif
 		return;
 	}
 

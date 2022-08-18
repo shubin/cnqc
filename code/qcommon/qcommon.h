@@ -1202,6 +1202,7 @@ printHelpResult_t Com_PrintHelp( const char* name, printf_t print, qbool printNo
 
 #if defined( QC )
 void Sys_FindHomePath( void );
+qboolean Sys_LocateHomePath( void );
 #endif
 
 #endif // _QCOMMON_H_
