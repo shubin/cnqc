@@ -189,7 +189,6 @@ static qboolean Sys_SetConfigurationValue( const char *key, const char *value ) 
 
 static const char *s_locateDirInitialFolder = NULL;
 
-//static int CALLBACK BrowseNotify( HWND hWnd, UINT iMessage, long wParam, LPARAM lParam )
 static int CALLBACK BrowseNotify(HWND hWnd, UINT uMsg, LPARAM lParam, LPARAM lpData)
 {
 	if ( uMsg == BFFM_INITIALIZED ) {
