@@ -155,7 +155,6 @@ char* Sys_MicrosoftStorePath(void)
 static const char *Sys_GetConfigurationValue( const char *key, const char *defaultValue ) {
 	HKEY hKey;
 	DWORD pathLen = MAX_OSPATH;
-	qboolean finishPath = qfalse;
 	static char buffer[MAX_OSPATH];
 	static char *result = buffer;
 
@@ -172,7 +171,6 @@ static const char *Sys_GetConfigurationValue( const char *key, const char *defau
 static qboolean Sys_SetConfigurationValue( const char *key, const char *value ) {
 	HKEY hKey;
 	DWORD count = MAX_OSPATH, dontCare;
-	qboolean finishPath = qfalse;
 	static char buffer[MAX_OSPATH];
 	qboolean result = qtrue;
 

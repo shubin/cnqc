@@ -2178,7 +2178,12 @@ static const cmdTableItem_t com_cmds[] =
 
 static const cvarTableItem_t com_cvars[] =
 {
+#if defined( QC )
+	// we use pmove_float so I guess higher FPS are possible as well
+	{ &com_maxfps, "com_maxfps", "125", CVAR_ARCHIVE, CVART_INTEGER, "60", "500", help_com_maxfps },
+#else
 	{ &com_maxfps, "com_maxfps", "125", CVAR_ARCHIVE, CVART_INTEGER, "60", "250", help_com_maxfps },
+#endif
 	{ &com_developer, "developer", "0", CVAR_TEMP, CVART_BOOL, NULL, NULL, "enables detailed logging" },
 	{ &com_logfile, "logfile", "0", CVAR_TEMP, CVART_INTEGER, "0", "2", help_com_logfile },
 	{ &com_timescale, "timescale", "1", CVAR_CHEAT | CVAR_SYSTEMINFO, CVART_FLOAT, "0", "100", "game time to real time ratio" },
