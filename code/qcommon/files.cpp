@@ -2776,7 +2776,7 @@ static void FS_CheckPaks()
 				break;
 			}
 		}
-#if defined( QC )
+#if defined( QC ) && !defined( DEDICATED )
 		if ( Sys_LocateHomePath() ) {
 			Com_Error( ERR_FATAL, "Please restart the game" );
 		} else {
