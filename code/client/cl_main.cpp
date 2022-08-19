@@ -579,9 +579,11 @@ static void CL_CheckForResend()
 	switch ( cls.state ) {
 	case CA_CONNECTING:
 		// requesting a challenge
+#if !defined( QC )
 		if ( !Sys_IsLANAddress( clc.serverAddress ) ) {
 			CL_RequestAuthorization();
 		}
+#endif
 		NET_OutOfBandPrint(NS_CLIENT, clc.serverAddress, "getchallenge");
 		break;
 

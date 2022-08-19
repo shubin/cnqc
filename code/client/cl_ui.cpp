@@ -845,6 +845,12 @@ static intptr_t CL_UISystemCalls( intptr_t* args )
 
 	case UI_CMD_EXECUTETEXT:
 		Cbuf_AddText( VMA(2) );
+#if defined( QC )
+		// ping should be executed as quick as possible otherwise server browser wouldn't work
+		if ( Q_strncmp("ping ", (char*)VMA(2), 5) == 0 ) {
+			Cbuf_Execute();
+		}
+#endif
 		return 0;
 
 	case UI_FS_FOPENFILE:

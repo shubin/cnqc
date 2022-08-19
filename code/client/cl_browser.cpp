@@ -119,7 +119,7 @@ void CL_ServersResponsePacket( const netadr_t& from, msg_t *msg )
 				addresses[numservers].ip[1],
 				addresses[numservers].ip[2],
 				addresses[numservers].ip[3],
-				addresses[numservers].port );
+				BigShort( addresses[numservers].port ) );
 
 		numservers++;
 		if (numservers >= MAX_SERVERSPERPACKET) {
@@ -584,7 +584,11 @@ void CL_GlobalServers_f( void ) {
 	to.type = NA_IP;
 	to.port = BigShort(PORT_MASTER);
 
+#if defined( QC )
+	sprintf( command, "getservers Quake3Champions %s", Cmd_Argv(2) );
+#else
 	sprintf( command, "getservers %s", Cmd_Argv(2) );
+#endif
 
 	// tack on keywords
 	buffptr = command + strlen( command );
