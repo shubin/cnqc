@@ -294,7 +294,7 @@ copy "..\..\.bin\debug_x32\cnq3-x86.pdb" "$(QUAKE3DIR)"</Command>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>Winmm.lib;ws2_32.lib;Version.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\..\.build\debug_x32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalOptions> ..\..\code\win32\winquake.res /STACK:8388608 /MANIFEST:EMBED /MANIFESTINPUT:..\..\code\win32\client.manifest %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/STACK:8388608 /MANIFEST:EMBED /MANIFESTINPUT:..\..\code\win32\client.manifest %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
       <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
@@ -454,7 +454,7 @@ copy "..\..\.bin\release_x32\cnq3-x86.pdb" "$(QUAKE3DIR)"</Command>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>Winmm.lib;ws2_32.lib;Version.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\..\.build\release_x32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalOptions> ..\..\code\win32\winquake.res /STACK:8388608 /MANIFEST:EMBED /MANIFESTINPUT:..\..\code\win32\client.manifest /OPT:REF /OPT:ICF %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/STACK:8388608 /MANIFEST:EMBED /MANIFESTINPUT:..\..\code\win32\client.manifest /OPT:REF /OPT:ICF %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
       <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
@@ -616,6 +616,12 @@ copy "..\..\.bin\release_x32\cnqc-x86.pdb" "..\..\..\..\workdir"</Command>
     <ProjectReference Include="libjpeg-turbo.vcxproj">
       <Project>{DB56484D-4717-C483-1052-0D017CD10860}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\..\code\win32\winquake.rc">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">_UNICODE;UNICODE;QC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">_UNICODE;UNICODE;QC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

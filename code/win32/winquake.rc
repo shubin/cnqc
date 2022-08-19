@@ -55,10 +55,18 @@ END
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
+#if defined( QC )
+#ifndef __MINGW32__
+IDI_ICON1               ICON    DISCARDABLE     "qc.ico"
+#else
+IDI_ICON1               ICON    DISCARDABLE     "code/win32/qc.ico"
+#endif
+#else
 #ifndef __MINGW32__
 IDI_ICON1               ICON    DISCARDABLE     "cpma.ico"
 #else
 IDI_ICON1               ICON    DISCARDABLE     "code/win32/cpma.ico"
+#endif
 #endif
 
 /////////////////////////////////////////////////////////////////////////////
