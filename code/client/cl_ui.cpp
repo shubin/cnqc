@@ -1187,7 +1187,11 @@ void CL_ShutdownUI()
 void CL_InitUI()
 {
 	// if sv_pure is set we only allow qvms to be loaded
+#if defined( QC )
+	vmInterpret_t interpret = VMI_NATIVE;
+#else
 	vmInterpret_t interpret = cl_connectedToPureServer ? VMI_COMPILED : (vmInterpret_t)Cvar_VariableIntegerValue("vm_ui");
+#endif
 
 	uivm = VM_Create( VM_UI, CL_UISystemCalls, interpret );
 	if ( !uivm )

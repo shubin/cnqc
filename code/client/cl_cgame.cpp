@@ -714,7 +714,11 @@ void CL_InitCGame()
 	Com_sprintf( cl.mapname, sizeof( cl.mapname ), "maps/%s.bsp", mapname );
 
 	// if sv_pure is set we only allow qvms to be loaded
+#if defined( QC )
+	const vmInterpret_t interpret = VMI_NATIVE;
+#else
 	const vmInterpret_t interpret = cl_connectedToPureServer ? VMI_COMPILED : (vmInterpret_t)Cvar_VariableIntegerValue( "vm_cgame" );
+#endif
 
 	cgvm = VM_Create( VM_CGAME, CL_CgameSystemCalls, interpret );
 	if ( !cgvm ) {
