@@ -227,7 +227,7 @@ const char *Sys_LocateDir( const char *title, const char *initialDir ) {
 	return result;
 }
 
-qboolean Sys_LocateHomePath( void ) {
+qboolean Sys_LocateQ3APath( void ) {
 	int result;
 	
 	result = MessageBoxA( g_wv.hWnd, 
@@ -247,30 +247,30 @@ qboolean Sys_LocateHomePath( void ) {
 	return qfalse;
 }
 
-void Sys_FindHomePath( void ) {
+void Sys_FindQ3APath( void ) {
 	const char* quake3path;
 
 	quake3path = Sys_GetConfigurationValue( "QuakeIIIArenaPath", "" );
 	if ( quake3path[0] ) {
-		Cvar_Set( "fs_homepath", quake3path );
+		Cvar_Set( "fs_q3apath", quake3path );
 		Com_Printf( "Quake III Arena is found at %s\n", quake3path );
 		return;
 	}
 	quake3path = Sys_SteamPath();
 	if ( quake3path[0] ) {
-		Cvar_Set( "fs_homepath", quake3path );
+		Cvar_Set( "fs_q3apath", quake3path );
 		Com_Printf( "Steam version of Quake III Arena is found at %s\n", quake3path );
 		return;
 	}
 	quake3path = Sys_GogPath();
 	if ( quake3path[0] ) {
-		Cvar_Set( "fs_homepath", quake3path );
+		Cvar_Set( "fs_q3apath", quake3path );
 		Com_Printf( "GOG version of Quake III Arena is found at %s\n", quake3path );
 		return;
 	}
 	quake3path = Sys_MicrosoftStorePath();
 	if ( quake3path[0] ) {
-		Cvar_Set( "fs_homepath", quake3path );
+		Cvar_Set( "fs_q3apath", quake3path );
 		Com_Printf( "Microsoft Store version of Quake III Arena is found at %s\n", quake3path );
 		return;
 	}

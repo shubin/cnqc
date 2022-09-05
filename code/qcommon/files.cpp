@@ -209,6 +209,9 @@ static char fs_gamedir[MAX_OSPATH]; // this will be a single file name with no s
 static cvar_t* fs_debug;
 static cvar_t* fs_homepath;
 static cvar_t* fs_basepath;
+#if defined( QC )
+static cvar_t* fs_q3apath;
+#endif
 static cvar_t* fs_basegame;
 static cvar_t* fs_gamedirvar;
 static searchpath_t* fs_searchpaths;
@@ -2649,6 +2652,9 @@ static void FS_Startup( const char *gameName )
 	Cvar_SetHelp( "fs_debug", "prints file open/write accesses" );
 	fs_basepath = Cvar_Get ("fs_basepath", Sys_Cwd(), CVAR_INIT );
 	fs_basegame = Cvar_Get ("fs_basegame", "", CVAR_INIT );
+#if defined( QC )
+	fs_q3apath = Cvar_Get ("fs_q3apath", "", CVAR_INIT);
+#endif
 	fs_gamedirvar = Cvar_Get ("fs_game", APEXGAME, CVAR_INIT | CVAR_SYSTEMINFO );
 	Cvar_SetHelp( "fs_game", "name of the mod folder" );
 	const char* homePath = Sys_DefaultHomePath();
@@ -2660,6 +2666,11 @@ static void FS_Startup( const char *gameName )
 	if (fs_basepath->string[0]) {
 		FS_AddGameDirectory( fs_basepath->string, gameName );
 	}
+#if defined( QC )
+	if (fs_q3apath->string[0] && Q_stricmp(fs_q3apath->string,fs_basepath->string)) {
+		FS_AddGameDirectory ( fs_q3apath->string, gameName );
+	}
+#endif
 	// fs_homepath is somewhat particular to *nix systems, only add if relevant
 	// NOTE: same filtering below for mods and basegame
 	if (fs_basepath->string[0] && Q_stricmp(fs_homepath->string,fs_basepath->string)) {
@@ -2777,7 +2788,7 @@ static void FS_CheckPaks()
 			}
 		}
 #if defined( QC ) && !defined( DEDICATED )
-		if ( Sys_LocateHomePath() ) {
+		if ( Sys_LocateQ3APath() ) {
 			Com_Error( ERR_FATAL, "Please restart the game" );
 		} else {
 			Com_Error( ERR_FATAL, "Please install Quake III Arena and restart the game" );
@@ -3068,12 +3079,15 @@ void FS_InitFilesystem()
 	// has already been initialized
 
 #if defined( QC )
-	Sys_FindHomePath();
+	Sys_FindQ3APath();
 #endif
 
 	Com_StartupVariable( "fs_basepath" );
 	Com_StartupVariable( "fs_homepath" );
 	Com_StartupVariable( "fs_game" );
+#if defined( QC )
+	Com_StartupVariable( "fs_q3apath" );
+#endif
 
 #if defined( _WIN32 )
 	// MSDN: "The limit of 512 open files at the stdio level can be increased to a maximum of 2,048 by means of the _setmaxstdio function."
