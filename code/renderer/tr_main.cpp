@@ -438,8 +438,13 @@ static void R_SetupProjection()
 
 	tr.viewParms.projectionMatrix[2] = 0;
 	tr.viewParms.projectionMatrix[6] = 0;
-	tr.viewParms.projectionMatrix[10] = -( zFar + zNear ) / depth;
-	tr.viewParms.projectionMatrix[14] = -2 * zFar * zNear / depth;
+	if ( gal.id == GAL_D3D11 ) {
+		tr.viewParms.projectionMatrix[10] = -zFar / depth;
+		tr.viewParms.projectionMatrix[14] = -zFar * zNear / depth;
+	} else {
+		tr.viewParms.projectionMatrix[10] = -( zFar + zNear ) / depth;
+		tr.viewParms.projectionMatrix[14] = -2 * zFar * zNear / depth;
+	}
 
 	tr.viewParms.projectionMatrix[3] = 0;
 	tr.viewParms.projectionMatrix[7] = 0;
