@@ -2787,7 +2787,7 @@ static void FS_CheckPaks()
 				break;
 			}
 		}
-#if defined( QC ) && !defined( DEDICATED )
+#if defined( QC ) && !defined( DEDICATED ) && defined( WIN32 )
 		if ( Sys_LocateQ3APath() ) {
 			Com_Error( ERR_FATAL, "Please restart the game" );
 		} else {
@@ -3078,7 +3078,7 @@ void FS_InitFilesystem()
 	// line variable sets don't happen until after the filesystem
 	// has already been initialized
 
-#if defined( QC )
+#if defined( QC ) && defined ( WIN32 )
 	Sys_FindQ3APath();
 #endif
 

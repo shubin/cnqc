@@ -689,6 +689,8 @@ end
 
 solution "cnq3"
 
+	defines { "QC=1" }
+
 	if os.is("windows") then
 		platforms { "x64", "x32" }
 	else
@@ -732,7 +734,7 @@ solution "cnq3"
 			buildoptions { "-std=c++98" }
 
 	project "glew"
-	
+
 		kind "StaticLib"
 		language "C"
 		defines { "GLEW_STATIC" }
