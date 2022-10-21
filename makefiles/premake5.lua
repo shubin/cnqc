@@ -95,6 +95,12 @@ local function AddSourcesAndHeaders(dirPath)
 		path_src.."/"..dirPath.."/*.h",
 	}
 
+	filter { "system:macosx" }
+		files
+		{
+			path_src.."/"..dirPath.."/*.mm"
+		}
+	filter {}
 end
 
 local function AddSources(dirPath)

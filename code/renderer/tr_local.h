@@ -1221,6 +1221,7 @@ enum galId_t {
 	GAL_GL2,
 	GAL_GL3,
 	GAL_D3D11,
+	GAL_METAL,
 	GAL_COUNT
 };
 
@@ -1633,6 +1634,8 @@ typedef qbool ( *getGALInterface_t )( graphicsAPILayer_t* );
 qbool GAL_GetGL2( graphicsAPILayer_t* rb );
 qbool GAL_GetGL3( graphicsAPILayer_t* rb );
 qbool GAL_GetD3D11( graphicsAPILayer_t* rb );
+qbool GAL_GetMetal( graphicsAPILayer_t* rb );
+
 
 void RB_ExecuteRenderCommands( const void *data );
 void RB_PushSingleStageShader( int stateBits, cullType_t cullType );

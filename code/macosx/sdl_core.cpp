@@ -432,7 +432,6 @@ qbool sdl_Init()
 #endif
 	SDL_LogSetAllPriority(SDL_LOG_PRIORITY_CRITICAL);
 	SDL_StartTextInput();	// enables SDL_TEXTINPUT events
-	SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
 
 	return qtrue;
 }

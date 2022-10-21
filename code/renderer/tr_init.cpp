@@ -155,7 +155,7 @@ void R_ConfigureVideoMode( int desktopWidth, int desktopHeight )
 		glInfo.winHeight = desktopHeight;
 		return;
 	}
-		
+
 	glConfig.vidWidth = r_width->integer;
 	glConfig.vidHeight = r_height->integer;
 	glConfig.windowAspect = (float)glConfig.vidWidth / (float)glConfig.vidHeight;
@@ -471,6 +471,9 @@ static void R_InitGAL()
 	const gal_t galArray[] = {
 #if defined( _WIN32 )
 		{ &GAL_GetD3D11, GAL_D3D11, "D3D11", "Direct3D 11" },
+#endif
+#if defined(__APPLE__)
+		{ &GAL_GetMetal, GAL_METAL, "Metal", "Metal" },
 #endif
 		{ &GAL_GetGL3, GAL_GL3, "GL3", "OpenGL 3" },
 		{ &GAL_GetGL2, GAL_GL2, "GL2", "OpenGL 2" }
