@@ -330,48 +330,29 @@ static void sdl_Window( const SDL_WindowEvent* event )
 		case SDL_WINDOWEVENT_MAXIMIZED:
 		case SDL_WINDOWEVENT_RESTORED:
 		case SDL_WINDOWEVENT_FOCUS_GAINED:
+		{
 			// these mean the user reacted to the alert and
 			// it can now be stopped
 			sdl_forceUnmute = qfalse;
+
+			if (event->event == SDL_WINDOWEVENT_FOCUS_GAINED)
+			{
+				sdl_focusTime = Sys_Milliseconds();
+				sdl_focused = qtrue;
+			}
 			break;
-
-		default:
-			break;
-	}
-}
-
-#if defined(__APPLE__)
-typedef struct XEvent XEvent;
-#endif
-
-static void sdl_X11( const XEvent* event )
-{
-#if !defined(__APPLE__)
-	switch (event->type) {
-		case FocusIn:
-			// see in_focusDelay explanation at the top
-			sdl_focusTime = Sys_Milliseconds();
-			sdl_focused = qtrue;
-			break;
-
-		case FocusOut:
-			// set modifier keys as released to prevent
-			// accidental combos such alt+enter right after
-			// getting focus
-			// e.g. alt gets "stuck", pressing only enter
-			// does a video restart as if pressing alt+enter
-			Mac_QueEvent(0, SE_KEY, K_ALT,   qfalse, 0, NULL);
-			Mac_QueEvent(0, SE_KEY, K_CTRL,  qfalse, 0, NULL);
-			Mac_QueEvent(0, SE_KEY, K_SHIFT, qfalse, 0, NULL);
+		}
+		case SDL_WINDOWEVENT_FOCUS_LOST:
+		{
 			sdl_focused = qfalse;
 			break;
-
+		}
 		default:
+		{
 			break;
+		}
 	}
-#endif
 }
-
 
 static void sdl_Event( const SDL_Event* event )
 {
@@ -423,15 +404,6 @@ static void sdl_Event( const SDL_Event* event )
 	case SDL_WINDOWEVENT:
 		sdl_Window(&event->window);
 		break;
-
-	case SDL_SYSWMEVENT:
-		{
-#if !defined(__APPLE__)
-		const SDL_SysWMmsg* msg = event->syswm.msg;
-		if (msg->subsystem == SDL_SYSWM_X11)
-			sdl_X11(&msg->msg.x11.event);
-#endif
-	} break;
 
 	default:
 		break;
