@@ -626,8 +626,8 @@ int Q_PrintStroff( const char *string, int charOffset );
 char *Q_CleanStr( char *string );
 
 typedef intptr_t ( *syscall_t )( intptr_t *parms );
-typedef intptr_t ( QDECL *dllSyscall_t )( intptr_t callNum, ... );
-typedef void ( QDECL *dllEntry_t )( dllSyscall_t syscallptr );
+typedef intptr_t ( QDECL *dllSyscall_t )( intptr_t callNum, int arg0, int arg1, int arg2, int arg3, int arg4, int arg5, int arg6, int arg7, int arg8, int arg9, int arg10, int arg11);
+typedef void ( QDECL *dllEntry_t )( intptr_t (*syscallptr)(intptr_t, ...)  );
 
 
 //

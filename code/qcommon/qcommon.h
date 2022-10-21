@@ -1104,7 +1104,7 @@ void	Sys_InitInput();
 void	Sys_ShutdownInput();
 
 // general development dll loading for virtual machine testing
-void* QDECL	Sys_LoadDll( const char* name, dllSyscall_t *entryPoint, dllSyscall_t systemcalls );
+void* QDECL	Sys_LoadDll( const char* name, dllSyscall_t *entryPoint, intptr_t (*systemcalls)(intptr_t, ...) );
 void		Sys_UnloadDll( void* dllHandle );
 
 void QDECL	Sys_Error( const char *error, ...);
