@@ -39,7 +39,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define id386 0
 #endif
 
-#if (defined _M_AMD64 || defined _M_X64 || defined __amd64__ || defined __amd64 || defined __x86_64__ || defined __x86_64) && !defined(C_ONLY)
+#if (defined _M_AMD64 || defined _M_X64 || defined __amd64__ || defined __amd64 || defined __x86_64__ || defined __x86_64 || defined __arm64) && !defined(C_ONLY)
 #define idx64 1
 #else
 #define idx64 0
@@ -113,6 +113,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define Q3_BIG_ENDIAN
 #elif defined __i386__
 #define ARCH_STRING "i386"
+#define Q3_LITTLE_ENDIAN
+#elif defined __arm64__
+#define ARCH_STRING "arm64"
 #define Q3_LITTLE_ENDIAN
 #endif
 

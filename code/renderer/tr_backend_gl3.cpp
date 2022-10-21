@@ -472,7 +472,7 @@ static const char* dl_fs =
 "\n"
 "void main()\n"
 "{\n"
-"	vec4 base = MakeGreyscale(texture2D(texture1, texCoords1FS), greyscale);\n"
+"	vec4 base = MakeGreyscale(texture(texture1, texCoords1FS), greyscale);\n"
 "	vec3 nL = normalize(L);\n"
 "	vec3 nV = normalize(V);\n"
 "\n"

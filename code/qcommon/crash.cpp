@@ -139,7 +139,7 @@ static void PrintQVMInfo(vmIndex_t vmIndex)
 			callStack[0] = '\0';
 			for (int i = 0; i < d; i++) {
 				Q_strcat(callStack, sizeof(callStack), Q_itohex(vmp->callStack[i], qtrue, qtrue));
-				if (i - 1 < d) 
+				if (i - 1 < d)
 					Q_strcat(callStack, sizeof(callStack), " ");
 			}
 			JSONW_StringValue("call_stack", callStack);
@@ -240,7 +240,7 @@ void Crash_PrintToFile(const char* engineFilePath)
 }
 
 
-#if defined(__linux__) || defined(__FreeBSD__)
+#if defined(__linux__) || defined(__FreeBSD__) || defined (__APPLE__)
 
 #include <unistd.h>
 
@@ -279,9 +279,9 @@ static void PrintVMStackTrace(int fd, vmIndex_t vmIndex)
 	if (d > 0) {
 		for (int i = 0; i < d; i++) {
 			Print(fd, Q_itohex(vm->callStack[i], qtrue, qtrue));
-			if (i - 1 < d) 
+			if (i - 1 < d)
 				Print(fd, " ");
-		}		
+		}
 	}
 	Print(fd, "\r\n");
 }
@@ -293,7 +293,7 @@ void Crash_PrintVMStackTracesASS(int fd)
 		Print(fd, crash.modName);
 		Print(fd, " ");
 		Print(fd, crash.modVersion);
-		Print(fd, "\r\n");	
+		Print(fd, "\r\n");
 	}
 
 	for (int i = 0; i < VM_COUNT; i++) {

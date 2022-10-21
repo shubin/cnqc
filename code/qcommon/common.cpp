@@ -33,7 +33,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #if (_MSC_VER >= 1400) // Visual C++ 2005 or later
 #define MSVC_CPUID 1
 #include <intrin.h>
-#elif (__GNUC__)
+#elif (__GNUC__) && !defined(__arm64__)
 #define GCC_CPUID 1
 #include <cpuid.h>
 #endif

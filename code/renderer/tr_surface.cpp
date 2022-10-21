@@ -23,7 +23,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_local.h"
 
 #if idSSE2
+#if !defined(__arm64__)
 #include <emmintrin.h>
+#else
+#include "sse2neon.h"
+#endif
 #include <stddef.h> // offsetof macro
 static byte check_srfVertTC[(offsetof(srfVert_t, st2) == offsetof(srfVert_t, st) + 8) ? 1 : -1];
 static byte check_drawVertTC[(offsetof(drawVert_t, lightmap) == offsetof(drawVert_t, st) + 8) ? 1 : -1];
@@ -115,7 +119,7 @@ void RB_AddQuadStampExt( vec3_t origin, vec3_t left, vec3_t up, byte *color, flo
 	tess.normal[ndx][0] = tess.normal[ndx+1][0] = tess.normal[ndx+2][0] = tess.normal[ndx+3][0] = normal[0];
 	tess.normal[ndx][1] = tess.normal[ndx+1][1] = tess.normal[ndx+2][1] = tess.normal[ndx+3][1] = normal[1];
 	tess.normal[ndx][2] = tess.normal[ndx+1][2] = tess.normal[ndx+2][2] = tess.normal[ndx+3][2] = normal[2];
-	
+
 	// standard square texture coordinates
 	tess.texCoords[ndx][0] = tess.texCoords2[ndx][0] = s1;
 	tess.texCoords[ndx][1] = tess.texCoords2[ndx][1] = t1;
@@ -131,10 +135,10 @@ void RB_AddQuadStampExt( vec3_t origin, vec3_t left, vec3_t up, byte *color, flo
 
 	// constant color all the way around
 	// should this be identity and let the shader specify from entity?
-	* ( unsigned int * ) &tess.vertexColors[ndx] = 
-	* ( unsigned int * ) &tess.vertexColors[ndx+1] = 
-	* ( unsigned int * ) &tess.vertexColors[ndx+2] = 
-	* ( unsigned int * ) &tess.vertexColors[ndx+3] = 
+	* ( unsigned int * ) &tess.vertexColors[ndx] =
+	* ( unsigned int * ) &tess.vertexColors[ndx+1] =
+	* ( unsigned int * ) &tess.vertexColors[ndx+2] =
+	* ( unsigned int * ) &tess.vertexColors[ndx+3] =
 		* ( unsigned int * )color;
 
 
@@ -327,13 +331,13 @@ static void RB_SurfaceLightningBolt()
 static void VectorArrayNormalize(vec4_t *normals, unsigned int count)
 {
 //    assert(count);
-        
+
 #if idppc
     {
         register float half = 0.5;
         register float one  = 1.0;
         float *components = (float *)normals;
-        
+
         // Vanilla PPC code, but since PPC has a reciprocal square root estimate instruction,
         // runs *much* faster than calling sqrt().  We'll use a single Newton-Raphson
         // refinement step to get a little more precision.  This seems to yeild results
@@ -342,14 +346,14 @@ static void VectorArrayNormalize(vec4_t *normals, unsigned int count)
         do {
             float x, y, z;
             float B, y0, y1;
-            
+
             x = components[0];
             y = components[1];
             z = components[2];
             components += 4;
             B = x*x + y*y + z*z;
 
-#ifdef __GNUC__            
+#ifdef __GNUC__
             asm("frsqrte %0,%1" : "=f" (y0) : "f" (B));
 #else
 			y0 = __frsqrte(B);
@@ -403,7 +407,7 @@ static void LerpMeshVertexes( md3Surface_t* surf, float backlerp )
 		//
 		for (vertNum=0 ; vertNum < numVerts ; vertNum++,
 			newXyz += 4, newNormals += 4,
-			outXyz += 4, outNormal += 4) 
+			outXyz += 4, outNormal += 4)
 		{
 
 			outXyz[0] = newXyz[0] * newXyzScale;
@@ -436,7 +440,7 @@ static void LerpMeshVertexes( md3Surface_t* surf, float backlerp )
 
 		for (vertNum=0 ; vertNum < numVerts ; vertNum++,
 			oldXyz += 4, newXyz += 4, oldNormals += 4, newNormals += 4,
-			outXyz += 4, outNormal += 4) 
+			outXyz += 4, outNormal += 4)
 		{
 			vec3_t uncompressedOldNormal, uncompressedNewNormal;
 
@@ -704,7 +708,7 @@ void RB_SurfaceGrid( srfGridMesh_t *cv ) {
 				break;
 			}
 		} while ( 1 );
-		
+
 		rows = irows;
 		if ( vrows < irows + 1 ) {
 			rows = vrows - 1;
@@ -779,7 +783,7 @@ void RB_SurfaceGrid( srfGridMesh_t *cv ) {
 			for (i = 0 ; i < h ; i++) {
 				for (j = 0 ; j < w ; j++) {
 					int		v1, v2, v3, v4;
-			
+
 					// vertex order to be reckognized as tristrips
 					v1 = numVertexes + i*lodWidth + j + 1;
 					v2 = v1 - 1;
@@ -789,7 +793,7 @@ void RB_SurfaceGrid( srfGridMesh_t *cv ) {
 					tess.indexes[numIndexes] = v2;
 					tess.indexes[numIndexes+1] = v3;
 					tess.indexes[numIndexes+2] = v1;
-					
+
 					tess.indexes[numIndexes+3] = v1;
 					tess.indexes[numIndexes+4] = v3;
 					tess.indexes[numIndexes+5] = v4;

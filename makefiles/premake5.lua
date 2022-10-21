@@ -362,6 +362,14 @@ local function ApplyExeProjectSettings(exeName, server)
 		"linux/linux_tty.cpp"
 	}
 
+	local server_sources_macosx =
+	{
+		"macosx/macosx_main.cpp",
+		"macosx/macosx_shared.cpp",
+		"macosx/macosx_signals.cpp",
+		"macosx/macosx_tty.cpp"
+	}
+
 	local client_sources =
 	{
 		"client/cl_avi.cpp",
@@ -442,6 +450,17 @@ local function ApplyExeProjectSettings(exeName, server)
 		"linux/sdl_snd.cpp"
 	}
 
+	local client_sources_macosx =
+	{
+		"macosx/macosx_main.cpp",
+		"macosx/macosx_shared.cpp",
+		"macosx/macosx_signals.cpp",
+		"macosx/macosx_tty.cpp",
+		"macosx/sdl_core.cpp",
+		"macosx/sdl_glimp.cpp",
+		"macosx/sdl_snd.cpp"
+	}
+
 	AddHeaders("botlib")
 	AddHeaders("qcommon")
 	AddHeaders("server")
@@ -468,7 +487,7 @@ local function ApplyExeProjectSettings(exeName, server)
 		end
 		AddHeaders("win32")
 
-	filter { "system:not windows" }
+	filter { "system:linux" }
 		if (server == 1) then
 			AddSourcesFromArray(".", server_sources_linux)
 		else
@@ -479,6 +498,16 @@ local function ApplyExeProjectSettings(exeName, server)
 	-- copy the binaries over to the test q3 install
 	-- it seems that "filter" doesn't work with "prebuildcommands", "postbuildcommands"
 	filter { }
+
+	filter { "system:macosx" }
+		if (server == 1) then
+			AddSourcesFromArray(".", server_sources_macosx)
+		else
+			AddSourcesFromArray(".", client_sources_macosx)
+		end
+
+	filter { }
+
 	if os.is("windows") then
 		prebuildcommands { path.translate(CreateGitPreBuildCommand(".cmd"), "\\") }
 		postbuildcommands
@@ -509,10 +538,30 @@ local function ApplyExeProjectSettings(exeName, server)
 			links { "opengl32" }
 		end
 
-	filter "system:not windows"
+	filter "system:linux"
 		links { "dl", "m" }
 		if (server == 0) then
 			links { "SDL2", "GL" }
+		end
+
+	filter "system:macosx"
+		links { "dl", "m" }
+		if (server == 0) then
+			links {
+				"SDL2",
+				"OpenGL.framework",
+				"CoreAudio.framework",
+				"CoreHaptics.framework",
+				"ForceFeedback.framework",
+				"GameController.framework",
+				"AudioToolbox.framework",
+				"IOKit.framework",
+				"Metal.framework",
+				"Cocoa.framework",
+				"Carbon.framework",
+				"QuartzCore.framework",
+				"iconv"
+			}
 		end
 
 	filter "system:bsd"
@@ -647,6 +696,7 @@ local function ApplyLibJpegTurboProjectSettings()
 
 	AddSourcesFromArray("libjpeg-turbo", jpeg_sources)
 	includedirs { path_src.."/libjpeg-turbo", path_src.."/libjpeg-turbo/simd" }
+
 	defines { "WITH_SIMD" }
 
 	filter "platforms:x32"
@@ -655,9 +705,16 @@ local function ApplyLibJpegTurboProjectSettings()
 		defines { "SIZEOF_SIZE_T=4" }
 
 	filter "platforms:x64"
+		defines { "WITH_SIMD" }
 		AddAssemblerSourcesFromArray("libjpeg-turbo/simd", jpeg_asm_sources_x64)
 		files { path_src.."/libjpeg-turbo/simd/jsimd_x86_64.c" }
 		defines { "SIZEOF_SIZE_T=8" }
+	filter {}
+
+	filter "platforms:arm64"
+		files { path_src.."/libjpeg-turbo/jsimd_none.c" }
+		defines { "SIZEOF_SIZE_T=8" }
+	filter {}
 
 	local asm_inc_path = GetMakePath(path_src.."/libjpeg-turbo")
 	local nasm_flags = GetLibJpegTurboNasmFlags()
@@ -691,11 +748,7 @@ solution "cnq3"
 
 	defines { "QC=1" }
 
-	if os.is("windows") then
-		platforms { "x64", "x32" }
-	else
-		platforms { "x64" }
-	end
+	platforms { "arm64", "x64", "x32" }
 
 	location ( string.format("%s/%s_%s", path_make, os.get(), _ACTION) )
 	configurations { "debug", "release" }
@@ -706,6 +759,15 @@ solution "cnq3"
 		language "C++"
 		defines { "GLEW_STATIC" }
 		includedirs { path_src.."/glew/include" }
+
+		filter { "system:macosx" }
+			sysincludedirs { path_src.."/libsdl2/include/" }
+		filter {}
+
+		filter { "system:macosx", "platforms:arm64" }
+			syslibdirs { path_src.."/libsdl2/macosx_arm64" }
+		filter {}
+
 		if os.is("bsd") then
 			includedirs { "/usr/local/include" }
 			libdirs { "/usr/local/lib" }

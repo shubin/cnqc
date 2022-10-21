@@ -22,7 +22,11 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 
 #include "tr_local.h"
 
+#if !defined(__arm64__)
 #include <emmintrin.h>
+#else
+#include "sse2neon.h"
+#endif
 
 
 #if !idSSE2
