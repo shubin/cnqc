@@ -1514,7 +1514,10 @@ static void GL_SetDefaultState()
 	// RGB with width 1366 -> not a multiple of 4!
 	glPixelStorei( GL_PACK_ALIGNMENT, 1 );
 
-	glDisable( GL_DEPTH_CLAMP );
+	if ( r_depthClamp->integer )
+		glEnable( GL_DEPTH_CLAMP );
+	else
+		glDisable( GL_DEPTH_CLAMP );
 }
 
 

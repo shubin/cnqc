@@ -71,6 +71,7 @@ cvar_t	*r_gpuMipGen;
 cvar_t	*r_alphaToCoverage;
 cvar_t	*r_dither;
 cvar_t	*r_rtColorFormat;
+cvar_t	*r_depthClamp;
 
 cvar_t	*r_mipGenFilter;
 cvar_t	*r_mipGenGamma;
@@ -393,6 +394,7 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_alphaToCoverage, "r_alphaToCoverage", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_alphaToCoverage },
 	{ &r_dither, "r_dither", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_dither },
 	{ &r_rtColorFormat, "r_rtColorFormat", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", XSTRING(RTCF_MAX), help_r_rtColorFormat },
+	{ &r_depthClamp, "r_depthClamp", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_depthClamp },
 
 	//
 	// latched variables that can only change over a restart
@@ -689,6 +691,12 @@ static qbool RE_IsFrameSleepNeeded()
 }
 
 
+static qbool RE_IsDepthClampEnabled()
+{
+	return r_depthClamp->integer != 0;
+}
+
+
 const refexport_t* GetRefAPI( const refimport_t* rimp )
 {
 	static refexport_t re;
@@ -743,6 +751,7 @@ const refexport_t* GetRefAPI( const refimport_t* rimp )
 
 	re.ShouldSleep = RE_IsFrameSleepNeeded;
 
+	re.DepthClamp = RE_IsDepthClampEnabled;
 #if defined( QC )
 	re.GetAdvertisements = RE_GetAdvertisements;
 #endif

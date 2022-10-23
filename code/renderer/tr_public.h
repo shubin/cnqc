@@ -175,6 +175,10 @@ typedef struct {
 
 	// do we need to sleep this frame to maintain the frame-rate cap?
 	qbool	(*ShouldSleep)();
+
+	// is depth clamping enabled?
+	qbool	(*DepthClamp)();
+
 #if defined( QC )
 	void (*GetAdvertisements)(int *num, float *verts, void *shaders);
 #endif

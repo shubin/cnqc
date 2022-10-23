@@ -1,6 +1,6 @@
 /*
 ===========================================================================
-Copyright (C) 2019-2020 Gian 'myT' Schellenbaum
+Copyright (C) 2019-2022 Gian 'myT' Schellenbaum
 
 This file is part of Challenge Quake 3 (CNQ3).
 
@@ -1762,7 +1762,14 @@ static void SetDefaultState()
 	glDisable(GL_CLIP_DISTANCE0);
 	glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);
 	glPixelStorei(GL_PACK_ALIGNMENT, 1);
-	glDisable(GL_DEPTH_CLAMP);
+	if(r_depthClamp->integer)
+	{
+		glEnable(GL_DEPTH_CLAMP);
+	}
+	else
+	{
+		glDisable(GL_DEPTH_CLAMP);
+	}
 
 	gl.boundTextures[0] = GLuint(-1);
 	gl.boundTextures[1] = GLuint(-1);
