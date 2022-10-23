@@ -662,7 +662,9 @@ default values.
 #define CVAR_CHEAT			512	// can not be changed if cheats are disabled
 #define CVAR_NORESTART		1024	// do not clear when a cvar_restart is issued
 
-#define CVAR_SERVER_CREATED	2048	// cvar was created by a server the client connected to.
+#define CVAR_SERVER_CREATED		2048	// cvar was created by a server the client connected to
+#define CVAR_CMDLINE_CREATED	4096	// cvar was created through the command-line (+set)
+
 #define CVAR_NONEXISTENT	0xFFFFFFFF	// Cvar doesn't exist.
 
 #define	MAX_CVAR_VALUE_STRING	256

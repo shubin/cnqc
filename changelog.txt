@@ -77,6 +77,8 @@ chg: with r_backend GL3, depth fade with MSAA now requires GLSL 4.00 at a minimu
 
 chg: with r_backend GL3, alpha to coverage now requires GLSL 4.00 at a minimum
 
+fix: registration of a read-only CVar would keep the existing value
+
 fix: the Direct3D projection transform didn't perfectly match the OpenGL version
 
 fix: /video was writing incorrect audio stream lengths to the .avi file headers

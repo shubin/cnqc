@@ -422,7 +422,10 @@ cvar_t* Cvar_Get( const char *var_name, const char *var_value, int flags )
 			cvar_modifiedFlags |= flags;
 		}
 
+		const qbool cmdLineCreated = (var->flags & CVAR_CMDLINE_CREATED) != 0;
 		var->flags |= flags;
+		var->flags &= ~CVAR_CMDLINE_CREATED;
+
 		// only allow one non-empty reset string without a warning
 		// KHB 071110  no, that's wrong for several reasons, notably vm changes caused by pure
 		if ((flags & CVAR_ROM) || !var->resetString[0]) {
@@ -443,6 +446,12 @@ cvar_t* Cvar_Get( const char *var_name, const char *var_value, int flags )
 			Z_Free( s );
 		}
 
+		// CVAR_INIT doesn't allow CVar registration to override the command-line value
+		// (even if CVAR_ROM is also set)
+		if (cmdLineCreated && (flags & CVAR_INIT) != 0) {
+			return var;
+		}
+
 /* KHB  note that this is #if 0'd in the 132 code, but is actually REQUIRED for correctness
 	consider a cgame that sets a CVAR_ROM client version:
 	you connect to a v1 server, load the v1 cgame, and set the ROM version to v1
@@ -452,11 +461,13 @@ cvar_t* Cvar_Get( const char *var_name, const char *var_value, int flags )
 i'm preserving this incorrect behavior FOR NOW for compatability, because
 game\ai_main.c(1352): trap_Cvar_Register( &mapname, "mapname", "", CVAR_SERVERINFO | CVAR_ROM );
 breaks every single mod except CPMA otherwise, but it IS wrong, and critically so
+myT: we don't care about other mods and keeping it broken is not acceptable at all
+*/
 		// CVAR_ROM always overrides
 		if (flags & CVAR_ROM) {
 			Cvar_Set2( var_name, var_value, qtrue );
 		}
-*/
+
 		return var;
 	}
 
