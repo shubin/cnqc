@@ -452,7 +452,7 @@ void Com_StartupVariable( const char *match )
 		if ( !match || !strcmp( s, match ) ) {
 			Cvar_Set( s, Cmd_Argv(2) );
 			cvar_t* cv = Cvar_Get( s, "", 0 );
-			cv->flags |= CVAR_USER_CREATED;
+			cv->flags |= CVAR_USER_CREATED | CVAR_CMDLINE_CREATED;
 		}
 	}
 }
