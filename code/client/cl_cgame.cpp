@@ -343,8 +343,14 @@ static qbool CL_CG_GetValue( char* value, int valueSize, const char* key )
 		{ "cap_ExtraColorCodes", 1 }
 	};
 
+	if ( Q_stricmp(key, "cap_DepthClamp") == 0 ) {
+		value[0] = re.DepthClamp() ? '1' : '0';
+		value[1] = '\0';
+		return qtrue;
+	}
+
 	for ( int i = 0; i < ARRAY_LEN( syscalls ); ++i ) {
-		if( Q_stricmp(key, syscalls[i].name) == 0 ) {
+		if ( Q_stricmp(key, syscalls[i].name) == 0 ) {
 			Com_sprintf( value, valueSize, "%d", syscalls[i].number );
 			return qtrue;
 		}

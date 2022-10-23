@@ -1,6 +1,6 @@
 /*
 ===========================================================================
-Copyright (C) 2019-2020 Gian 'myT' Schellenbaum
+Copyright (C) 2019-2022 Gian 'myT' Schellenbaum
 
 This file is part of Challenge Quake 3 (CNQ3).
 
@@ -1628,7 +1628,7 @@ static qbool GAL_Init()
 				rasterDesc.CullMode = GetCullMode((cullType_t)cullType);
 				rasterDesc.FrontCounterClockwise = TRUE;
 				rasterDesc.ScissorEnable = TRUE;
-				rasterDesc.DepthClipEnable = TRUE;
+				rasterDesc.DepthClipEnable = r_depthClamp->integer ? FALSE : TRUE;
 				rasterDesc.DepthBiasClamp = 0.0f;
 				rasterDesc.DepthBias = polygonOffset ? -1 : 0;
 				rasterDesc.SlopeScaledDepthBias = polygonOffset ? -1.0f : 0.0f;

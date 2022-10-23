@@ -1032,6 +1032,7 @@ extern cvar_t	*r_gpuMipGen;			// uses GPU-side mip-map generation
 extern cvar_t	*r_alphaToCoverage;		// enables A2C on alpha-tested surfaces
 extern cvar_t	*r_dither;				// enables dithering
 extern cvar_t	*r_rtColorFormat;		// color render target format, see RTCF_*
+extern cvar_t	*r_depthClamp;			// disables clipping vertices against the near and far clip planes
 
 extern cvar_t	*r_mipGenFilter;			// if the string is invalid, Lanczos 4 is used
 extern cvar_t	*r_mipGenGamma;				// what gamma-space do we consider the textures to be in

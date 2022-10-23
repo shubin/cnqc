@@ -177,6 +177,16 @@ S_COLOR_VAL "    0 " S_COLOR_HELP "= R8G8B8A8\n" \
 S_COLOR_VAL "    1 " S_COLOR_HELP "= R10G10B10A2\n" \
 S_COLOR_VAL "    2 " S_COLOR_HELP "= R16G16B16A16"
 
+#define help_r_depthClamp \
+"enables depth clamping\n" \
+"Enable this if you want " S_COLOR_CVAR "cg_fov " S_COLOR_HELP "to be higher than " S_COLOR_VAL "130" S_COLOR_HELP ".\n" \
+"Vertices don't get clipped against the near and far clip planes.\n" \
+"It turns the view frustum into a pyramid and prevents any vertex between\n" \
+"the near clip plane and the camera's position from getting clipped\n" \
+"(but will still clip anything behind the camera),\n" \
+"preventing solid objects too close to the camera from being see-through.\n" \
+"Because depth values are clamped, improper depth ordering can occur."
+
 #define help_r_colorMipLevels \
 "colorizes textures based on their mip level\n" \
 "This disables MSAA on back-ends that use centroid sampling."

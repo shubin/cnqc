@@ -167,6 +167,9 @@ typedef struct {
 
 	// do we need to sleep this frame to maintain the frame-rate cap?
 	qbool	(*ShouldSleep)();
+
+	// is depth clamping enabled?
+	qbool	(*DepthClamp)();
 } refexport_t;
 
 //
