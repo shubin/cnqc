@@ -24,15 +24,13 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 
 #define MAX_MONITOR_COUNT 16
 
-
 struct monitor_t {
 	SDL_Rect		rect;
 	int				sdlIndex;
 };
 
-struct glImp_t {
+struct wsi_t {
 	SDL_Window*		window;
-	SDL_GLContext	glContext;
 
 	monitor_t		monitors[MAX_MONITOR_COUNT];
 	int				monitorCount;
@@ -40,4 +38,4 @@ struct glImp_t {
 };
 
 
-extern glImp_t glimp;
+extern wsi_t wsi;

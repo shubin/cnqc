@@ -463,7 +463,7 @@ local function ApplyExeProjectSettings(exeName, server)
 		"macosx/macosx_signals.cpp",
 		"macosx/macosx_tty.cpp",
 		"macosx/sdl_core.cpp",
-		"macosx/sdl_glimp.cpp",
+		"macosx/sdl_wsi.cpp",
 		"macosx/sdl_snd.cpp"
 	}
 

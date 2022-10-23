@@ -79,7 +79,7 @@ static qbool sdl_Version_AtLeast( int major, int minor, int patch )
 
 static void Minimize_f()
 {
-	SDL_MinimizeWindow(glimp.window);
+	SDL_MinimizeWindow(wsi.window);
 }
 
 
@@ -458,10 +458,10 @@ static qbool sdl_IsInputActive()
 		return qfalse;
 
 	const qbool isConsoleDown = (cls.keyCatchers & KEYCATCH_CONSOLE) != 0;
-	if (isConsoleDown && glimp.monitorCount >= 2)
+	if (isConsoleDown && wsi.monitorCount >= 2)
 		return qfalse;
 
-	const qbool hasFocus = (SDL_GetWindowFlags(glimp.window) & SDL_WINDOW_INPUT_FOCUS) != 0;
+	const qbool hasFocus = (SDL_GetWindowFlags(wsi.window) & SDL_WINDOW_INPUT_FOCUS) != 0;
 	if (!hasFocus)
 		return qfalse;
 
@@ -482,11 +482,11 @@ static void S_Frame()
 
 	qbool mute = qfalse;
 	if (s_autoMute->integer == AMM_UNFOCUSED) {
-		const qbool hasFocus = (SDL_GetWindowFlags(glimp.window) & SDL_WINDOW_INPUT_FOCUS) != 0;
+		const qbool hasFocus = (SDL_GetWindowFlags(wsi.window) & SDL_WINDOW_INPUT_FOCUS) != 0;
 		mute = !hasFocus;
 	} else if (s_autoMute->integer == AMM_MINIMIZED) {
 		const Uint32 hidingFlags = SDL_WINDOW_HIDDEN | SDL_WINDOW_MINIMIZED;
-		const qbool hidden = (SDL_GetWindowFlags(glimp.window) & hidingFlags) != 0;
+		const qbool hidden = (SDL_GetWindowFlags(wsi.window) & hidingFlags) != 0;
 		mute = hidden;
 	}
 	sdl_MuteAudio(mute);
@@ -499,7 +499,7 @@ void sdl_Frame()
 	sdl_PollEvents();
 
 	SDL_SetRelativeMouseMode((sdl_inputActive && m_relative->integer) ? SDL_TRUE : SDL_FALSE);
-	SDL_SetWindowGrab(glimp.window, sdl_inputActive ? SDL_TRUE : SDL_FALSE);
+	SDL_SetWindowGrab(wsi.window, sdl_inputActive ? SDL_TRUE : SDL_FALSE);
 	SDL_ShowCursor(sdl_inputActive ? SDL_DISABLE : SDL_ENABLE);
 	// @NOTE: SDL_WarpMouseInWindow generates a motion event
 
@@ -599,9 +599,9 @@ void Mac_MatchStartAlert()
 		return;
 
 	const qbool unfocusedBit = (alerts & MAF_UNFOCUSED) != 0;
-	const qbool hasFocus = (SDL_GetWindowFlags(glimp.window) & SDL_WINDOW_INPUT_FOCUS) != 0;
+	const qbool hasFocus = (SDL_GetWindowFlags(wsi.window) & SDL_WINDOW_INPUT_FOCUS) != 0;
 	const Uint32 hidingFlags = SDL_WINDOW_HIDDEN | SDL_WINDOW_MINIMIZED;
-	const qbool hidden = (SDL_GetWindowFlags(glimp.window) & hidingFlags) != 0;
+	const qbool hidden = (SDL_GetWindowFlags(wsi.window) & hidingFlags) != 0;
 	if (hidden || (unfocusedBit && !hasFocus))
 		sdl_forceUnmute = qtrue;
 }
@@ -624,5 +624,5 @@ void Sys_MatchAlert( sysMatchAlertEvent_t event )
 
 qbool Sys_IsMinimized()
 {
-	return (glimp.window != NULL) && (SDL_GetWindowFlags(glimp.window) & SDL_WINDOW_MINIMIZED) != 0;
+	return (wsi.window != NULL) && (SDL_GetWindowFlags(wsi.window) & SDL_WINDOW_MINIMIZED) != 0;
 }

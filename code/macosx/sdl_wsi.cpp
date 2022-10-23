@@ -21,19 +21,23 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 // Linux video using SDL 2
 
 #include "macosx_local.h"
-#include "macosx_help.h"
+#include "macosx_public.h"
 #include "../renderer/tr_local.h"
 
 #include <SDL.h>
 #include "sdl_local.h"
-#include "GL/glew.h"
 
-
-glImp_t glimp;
-
+wsi_t wsi;
+mtl_imp_t mtl_imp;
 
 cvar_t* r_fullscreen;
 static cvar_t* r_monitor;
+
+#define help_r_monitor \
+"0-based monitor index\n" \
+"Use /" S_COLOR_CMD "monitorlist " S_COLOR_HELP "to print the list of detected monitors.\n" \
+"The monitors are ordered top-to-bottom and left-to-right.\n" \
+"This means " S_COLOR_VAL "0 " S_COLOR_HELP "specifies the top-left monitor."
 
 static const cvarTableItem_t glimp_cvars[] = {
 	{ &r_fullscreen, "r_fullscreen", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, "full-screen mode" },
@@ -49,8 +53,8 @@ static const cmdTableItem_t glimp_cmds[] = {
 
 static qbool sdl_IsMonitorListValid()
 {
-	const int count = glimp.monitorCount;
-	const int curr = glimp.monitor;
+	const int count = wsi.monitorCount;
+	const int curr = wsi.monitor;
 
 	return
 		count >= 1 && count <= MAX_MONITOR_COUNT &&
@@ -72,7 +76,7 @@ static int sdl_CompareMonitors( const void* aPtr, const void* bPtr )
 
 static void sdl_CreateMonitorList()
 {
-	glimp.monitorCount = 0;
+	wsi.monitorCount = 0;
 
 	const int count = SDL_GetNumVideoDisplays();
 	if (count <= 0)
@@ -82,46 +86,46 @@ static void sdl_CreateMonitorList()
 	for (int si = 0; si < count; ++si) {
 		if (gi >= MAX_MONITOR_COUNT)
 			break;
-		if (SDL_GetDisplayBounds(si, &glimp.monitors[gi].rect) == 0) {
-			glimp.monitors[gi].sdlIndex = si;
+		if (SDL_GetDisplayBounds(si, &wsi.monitors[gi].rect) == 0) {
+			wsi.monitors[gi].sdlIndex = si;
 			++gi;
 		}
 	}
-	glimp.monitorCount = gi;
+	wsi.monitorCount = gi;
 
 	if (sdl_IsMonitorListValid())
-		qsort(glimp.monitors, (size_t)glimp.monitorCount, sizeof(glimp.monitors[0]), &sdl_CompareMonitors);
+		qsort(wsi.monitors, (size_t)wsi.monitorCount, sizeof(wsi.monitors[0]), &sdl_CompareMonitors);
 	else
-		glimp.monitorCount = 0;
+		wsi.monitorCount = 0;
 }
 
 
 // call this before creating the window
 static void sdl_UpdateMonitorIndexFromCvar()
 {
-	if (glimp.monitorCount <= 0 || glimp.monitorCount >= MAX_MONITOR_COUNT)
+	if (wsi.monitorCount <= 0 || wsi.monitorCount >= MAX_MONITOR_COUNT)
 		return;
 
 	const int monitor = Cvar_Get("r_monitor", "0", CVAR_ARCHIVE | CVAR_LATCH)->integer;
-	if (monitor < 0 || monitor >= glimp.monitorCount) {
-		glimp.monitor = 0;
+	if (monitor < 0 || monitor >= wsi.monitorCount) {
+		wsi.monitor = 0;
 		return;
 	}
-	glimp.monitor = monitor;
+	wsi.monitor = monitor;
 }
 
 
 // call this after the window has been moved
 void sdl_UpdateMonitorIndexFromWindow()
 {
-	if (glimp.monitorCount <= 0)
+	if (wsi.monitorCount <= 0)
 		return;
 
 	// try to find the glimp index and update data accordingly
-	const int sdlIndex = SDL_GetWindowDisplayIndex(glimp.window);
-	for (int i = 0; i < glimp.monitorCount; ++i) {
-		if (glimp.monitors[i].sdlIndex == sdlIndex) {
-			glimp.monitor = i;
+	const int sdlIndex = SDL_GetWindowDisplayIndex(wsi.window);
+	for (int i = 0; i < wsi.monitorCount; ++i) {
+		if (wsi.monitors[i].sdlIndex == sdlIndex) {
+			wsi.monitor = i;
 			Cvar_Set("r_monitor", va("%d", i));
 			break;
 		}
@@ -138,13 +142,13 @@ static void sdl_GetSafeDesktopRect( SDL_Rect* rect )
 		rect->h = 720;
 	}
 
-	*rect = glimp.monitors[glimp.monitor].rect;
+	*rect = wsi.monitors[wsi.monitor].rect;
 }
 
 
 static void sdl_PrintMonitorList()
 {
-	const int count = glimp.monitorCount;
+	const int count = wsi.monitorCount;
 	if (count <= 0) {
 		Com_Printf("No monitor detected.\n");
 		return;
@@ -152,7 +156,7 @@ static void sdl_PrintMonitorList()
 
 	Com_Printf("Monitors detected (left is " S_COLOR_CVAR "r_monitor ^7value):\n");
 	for (int i = 0; i < count; ++i) {
-		const SDL_Rect rect = glimp.monitors[i].rect;
+		const SDL_Rect rect = wsi.monitors[i].rect;
 		Com_Printf(S_COLOR_VAL "%d ^7%dx%d at %d,%d\n", i, rect.w, rect.h, rect.x, rect.y);
 	}
 }
@@ -168,7 +172,7 @@ static void sdl_MonitorList_f()
 
 void Sys_V_Init( galId_t type )
 {
-	if (glimp.window != NULL)
+	if (wsi.window != NULL)
 		return;
 
 	Cvar_RegisterArray(glimp_cvars, MODULE_CLIENT);
@@ -187,7 +191,7 @@ void Sys_V_Init( galId_t type )
 	sdl_GetSafeDesktopRect(&deskropRect);
 	R_ConfigureVideoMode(deskropRect.w, deskropRect.h);
 
-	Uint32 windowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN;
+	Uint32 windowFlags = SDL_WINDOW_METAL | SDL_WINDOW_SHOWN;
 	if (glInfo.winFullscreen) {
 		if (glInfo.vidFullscreen)
 			windowFlags |= SDL_WINDOW_FULLSCREEN;
@@ -195,87 +199,39 @@ void Sys_V_Init( galId_t type )
 			windowFlags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
 	}
 
-	// SDL docs: "All three attributes must be set prior to creating the first window"
-	const int debugFlags = CL_GL_WantDebug() ? SDL_GL_CONTEXT_DEBUG_FLAG : 0;
-	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
-	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
-	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
-	SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
-	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 0);
-	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 0);
-	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
-	if (type == GAL_GL3)
-	{
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, debugFlags);
-	}
-	else
-	{
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, debugFlags);
-	}
-
-	// @TODO: make a cvar defaulting to an empty string for this? e.g. value: "libGL.so.1"
-	if (SDL_GL_LoadLibrary(NULL) < 0)
-		ri.Error(ERR_FATAL, "Sys_V_Init - SDL_GL_LoadLibrary failed: %s\n", SDL_GetError());
-
-	glimp.window = SDL_CreateWindow("CNQ3", deskropRect.x, deskropRect.y, glConfig.vidWidth, glConfig.vidHeight, windowFlags);
-	if (glimp.window == NULL)
+	wsi.window = SDL_CreateWindow("CNQ3", deskropRect.x, deskropRect.y, glConfig.vidWidth, glConfig.vidHeight, windowFlags);
+	if (wsi.window == NULL)
 		ri.Error(ERR_FATAL, "Sys_V_Init - SDL_CreateWindow failed: %s\n", SDL_GetError());
 
-	glimp.glContext = SDL_GL_CreateContext(glimp.window);
-	if (glimp.glContext == NULL)
-		ri.Error(ERR_FATAL, "Sys_V_Init - SDL_GL_CreateContext failed: %s\n", SDL_GetError());
 	glConfig.colorBits = 32;
 	glConfig.depthBits = 24;
 	glConfig.stencilBits = 8;
 
-	if (SDL_GL_MakeCurrent(glimp.window, glimp.glContext) < 0)
-		ri.Error(ERR_FATAL, "Sys_V_Init - SDL_GL_MakeCurrent failed: %s\n", SDL_GetError());
-
-	const GLenum glewErrorCode = glewInit();
-	if (glewErrorCode != GLEW_OK)
-		ri.Error(ERR_FATAL, "Sys_V_Init - glewInit failed: %s\n", glewGetErrorString(glewErrorCode));
-
-	CL_GL_Init();
+	mtl_imp.view = SDL_Metal_CreateView(wsi.window);
+	mtl_imp.layer = SDL_Metal_GetLayer(mtl_imp.view);
 }
 
 
 void Sys_V_Shutdown()
 {
-	if (glimp.glContext != NULL) {
-		SDL_GL_DeleteContext(glimp.glContext);
-		glimp.glContext = NULL;
+	if (mtl_imp.view != NULL) {
+		mtl_imp.layer = NULL;
+		SDL_Metal_DestroyView(mtl_imp.view);
 	}
 
-	if (glimp.window != NULL) {
-		SDL_DestroyWindow(glimp.window);
-		glimp.window = NULL;
+	if (wsi.window != NULL) {
+		SDL_DestroyWindow(wsi.window);
+		wsi.window = NULL;
 	}
-
-	SDL_GL_UnloadLibrary();
 }
 
 
 void Sys_V_EndFrame()
 {
-	if (r_swapInterval->modified) {
-		r_swapInterval->modified = qfalse;
-		SDL_GL_SetSwapInterval(r_swapInterval->integer);
-	}
-
-	SDL_GL_SwapWindow(glimp.window);
 }
 
 
 qbool Sys_V_IsVSynced()
 {
-	return SDL_GL_GetSwapInterval() != 0;
+	return false;
 }
