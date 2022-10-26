@@ -512,6 +512,7 @@ local function ApplyExeProjectSettings(exeName, server)
 			AddSourcesFromArray(".", client_sources_macosx)
 		end
 
+		buildoptions { "-fobjc-arc" }
 	filter { }
 
 	if os.is("windows") then
@@ -855,6 +856,9 @@ solution "cnq3"
 				-- we generate a full single-line batch command to get around that in the saddest way...
 				prebuildcommands { table.concat(commands, " && ") }
 		end
+
+		filter { "system:macosx" }
+			buildoptions { "-fobjc-arc" }
 
 	project "libjpeg-turbo"
 

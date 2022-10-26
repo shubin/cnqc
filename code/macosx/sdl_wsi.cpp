@@ -233,5 +233,5 @@ void Sys_V_EndFrame()
 
 qbool Sys_V_IsVSynced()
 {
-	return false;
+	return true;
 }
