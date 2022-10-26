@@ -67,9 +67,6 @@ typedef enum {
 	UI_R_RENDERSCENE,
 	UI_R_SETCOLOR,
 	UI_R_DRAWSTRETCHPIC,
-#if defined( QC )
-	UI_R_DRAWQUAD,
-#endif
 	UI_UPDATESCREEN,
 	UI_CM_LERPTAG,
 	UI_CM_LOADMODEL,
@@ -131,6 +128,11 @@ typedef enum {
 	// 1.32
 	UI_FS_SEEK,
 	UI_SET_PBCLSTATUS,
+
+#if defined(QC)
+	UI_R_DRAWQUAD,
+#endif
+
 
 	UI_MEMSET = 100,
 	UI_MEMCPY,

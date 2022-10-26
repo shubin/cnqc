@@ -129,7 +129,7 @@ static const char *vmName[ VM_COUNT ] = {
 };
 
 
-#if !defined( QC )
+#if !defined( QC ) || 1
 static const cvarTableItem_t vm_cvars[] =
 {
 	{ NULL, "vm_cgame", "2", CVAR_ARCHIVE, CVART_INTEGER, "0", "2", "how to load the cgame VM" help_vm_load },
@@ -932,7 +932,7 @@ vm_t *VM_Create( vmIndex_t index, syscall_t systemCalls, vmInterpret_t interpret
 	vm->index = index;
 	vm->systemCall = systemCalls;
 
-#if !defined( QC )
+#if !defined( QC ) || 1
 	// never allow dll loading with a demo
 	if ( interpret == VMI_NATIVE ) {
 		if ( Cvar_VariableValue( "fs_restrict" ) ) {
@@ -950,13 +950,13 @@ vm_t *VM_Create( vmIndex_t index, syscall_t systemCalls, vmInterpret_t interpret
 		}
 
 		Com_Printf( "Failed to load dll, looking for qvm.\n" );
-#if defined( QC )
+#if defined( QC ) && 0
 		return NULL;
 #else
 		interpret = VMI_COMPILED;
 #endif
 	}
-#if defined( QC )
+#if defined( QC ) && 0
 	return NULL;
 #else
 

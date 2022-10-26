@@ -189,9 +189,10 @@ static qboolean Sys_SetConfigurationValue( const char *key, const char *value ) 
 
 static const char *s_locateDirInitialFolder = NULL;
 
-static int FAR PASCAL BrowseNotify( HWND hWnd, UINT iMessage, long wParam, LPARAM lParam )
+//static int CALLBACK BrowseNotify( HWND hWnd, UINT iMessage, long wParam, LPARAM lParam )
+static int CALLBACK BrowseNotify(HWND hWnd, UINT uMsg, LPARAM lParam, LPARAM lpData)
 {
-	if ( iMessage == BFFM_INITIALIZED ) {
+	if ( uMsg == BFFM_INITIALIZED ) {
 		if ( s_locateDirInitialFolder != NULL ) {
 			SendMessage( hWnd, BFFM_SETSELECTION, 1, ( LPARAM )s_locateDirInitialFolder );
 		}
@@ -227,6 +228,36 @@ const char *Sys_LocateDir( const char *title, const char *initialDir ) {
 	return result;
 }
 
+struct FileChecksum {
+	const char* filename;
+	unsigned int checksum;
+};
+
+static FileChecksum s_pakChecksum[] = {
+	"pak0.pk3", 0xc6554342,
+	"pak1.pk3", 0x6181a134,
+	"pak2.pk3", 0x7fad00a1,
+	"pak3.pk3", 0x28ab3fc4,
+	"pak4.pk3", 0xf5327c65,
+	"pak5.pk3", 0x2331ccda,
+	"pak6.pk3", 0x0dce205d,
+	"pak7.pk3", 0xda616bca,
+	"pak8.pk3", 0x08215426,
+};
+
+unsigned int CRC32_HashFile(const char* filePath);
+
+qboolean Sys_VerifyChecksums( const char *quake3path ) {
+	char buf[MAX_PATH];
+	for ( int i = 0; i < ARRAY_LEN( s_pakChecksum ); i++ ) {
+		sprintf( buf, "%s/baseq3/%s", quake3path, s_pakChecksum[i].filename );
+		if ( CRC32_HashFile(buf) != s_pakChecksum[i].checksum ) {
+			return qfalse;
+		}
+	}
+	return qtrue;
+}
+
 qboolean Sys_LocateQ3APath( void ) {
 	int result;
 	
@@ -238,9 +269,20 @@ qboolean Sys_LocateQ3APath( void ) {
 	"Would you like to choose Quake III Arena installation directory?",
 	"Information", MB_YESNO | MB_ICONEXCLAMATION );
 	if ( result == IDYES ) {
+		choosedir:
 		const char *quake3path = Sys_GetConfigurationValue( "QuakeIIIArenaPath", NULL );
 		const char *selectedPath = Sys_LocateDir( "Please choose your Quake III Arena installation path", quake3path );
 		Sys_SetConfigurationValue( "QuakeIIIArenaPath", selectedPath );
+		if ( !Sys_VerifyChecksums( selectedPath ) ) {
+			result = MessageBoxA( g_wv.hWnd, 
+				"The path specified is not a correct Quake III Arena installation path.\n" 
+				"Please check that pak0-8.pk3 files are presented and not corrupted.\n"
+				"Would you like to choose another directory?",
+				"Information", MB_YESNO | MB_ICONEXCLAMATION );
+			if ( result == IDYES ) {
+				goto choosedir;
+			}
+		}
 		MessageBoxA( g_wv.hWnd, "Please restart the game", PRODUCT_NAME, MB_ICONINFORMATION | MB_OK );
 		return qtrue;
 	}

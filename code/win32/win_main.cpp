@@ -41,6 +41,37 @@ WinVars_t g_wv;
 
 static qbool win_timePeriodActive = qfalse;
 
+#if defined( QC )
+/*
+==================
+SetTimerResolution
+
+Try to set lower timer period
+==================
+*/
+static void SetTimerResolution(void)
+{
+	typedef HRESULT(WINAPI * pfnNtQueryTimerResolution)(PULONG MinRes, PULONG MaxRes, PULONG CurRes);
+	typedef HRESULT(WINAPI * pfnNtSetTimerResolution)(ULONG NewRes, BOOLEAN SetRes, PULONG CurRes);
+	pfnNtQueryTimerResolution pNtQueryTimerResolution;
+	pfnNtSetTimerResolution pNtSetTimerResolution;
+	ULONG curr, minr, maxr;
+	HMODULE dll;
+
+	dll = LoadLibraryA("ntdll");
+	if (dll) {
+		pNtQueryTimerResolution = (pfnNtQueryTimerResolution)GetProcAddress(dll, "NtQueryTimerResolution");
+		pNtSetTimerResolution = (pfnNtSetTimerResolution)GetProcAddress(dll, "NtSetTimerResolution");
+		if (pNtQueryTimerResolution && pNtSetTimerResolution) {
+			pNtQueryTimerResolution(&minr, &maxr, &curr);
+			if (maxr < 5000) // well, we don't need less than 0.5ms periods for select()
+				maxr = 5000;
+			pNtSetTimerResolution(maxr, TRUE, &curr);
+		}
+		FreeLibrary(dll);
+	}
+}
+#endif
 
 static void WIN_BeginTimePeriod()
 {
@@ -48,6 +79,9 @@ static void WIN_BeginTimePeriod()
 		return;
 
 	timeBeginPeriod( 1 );
+#if defined( QC )
+	//SetTimerResolution();
+#endif
 	win_timePeriodActive = qtrue;
 }
 
@@ -384,12 +418,21 @@ void Sys_UnloadDll( void *dllHandle )
 void* QDECL Sys_LoadDll( const char* name, dllSyscall_t *entryPoint, dllSyscall_t systemcalls )
 {
 	char filename[MAX_QPATH];
+#if defined( QC )
+#if defined(_M_X64 )
+	Com_sprintf(filename, sizeof(filename), "%sx86_64.dll", name);
+#else
+	Com_sprintf(filename, sizeof(filename), "%sx86.dll", name);
+#endif
+#else
 	Com_sprintf( filename, sizeof( filename ), "%sx86.dll", name );
+#endif
 
 	const char* basepath = Cvar_VariableString( "fs_basepath" );
 	const char* gamedir = Cvar_VariableString( "fs_game" );
 	const char* fn = FS_BuildOSPath( basepath, gamedir, filename );
 
+#if !defined( QC )
 #ifdef NDEBUG
 	static int lastWarning = 0;
 	int timestamp = Sys_Milliseconds();
@@ -407,6 +450,7 @@ void* QDECL Sys_LoadDll( const char* name, dllSyscall_t *entryPoint, dllSyscall_
 				return NULL;
 		}
 	}
+#endif
 #endif
 
 	HINSTANCE libHandle = LoadLibrary( fn );

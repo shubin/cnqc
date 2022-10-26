@@ -158,8 +158,10 @@ static qbool IsAnyVMLoaded()
 
 	return qfalse;
 }
-
-static unsigned int CRC32_HashFile(const char* filePath)
+#if !defined( QC ) // I use it to verify pak?.pk3 in win_files.cpp
+static 
+#endif
+unsigned int CRC32_HashFile(const char* filePath)
 {
 	enum { BUFFER_SIZE = 16 << 10 }; // 16 KB
 	static byte buffer[BUFFER_SIZE];

@@ -623,6 +623,7 @@ copy "..\..\.bin\release_x32\cnqc-x86.pdb" "..\..\..\..\workdir"</Command>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">_UNICODE;UNICODE;QC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug qc|x64'">true</ExcludedFromBuild>
     </ResourceCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
