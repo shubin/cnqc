@@ -1156,6 +1156,22 @@ static void gal_update_texture(image_t* image, int mip, int x, int y, int w, int
 
 static void gal_update_scratch(image_t* image, int w, int h, const void* data, qbool dirty)
 {
+	if (image->texnum <= 0 || image->texnum > ARRAY_LEN(mtl.textures))
+	{
+		return;
+	}
+
+	if (w != image->width || h != image->height)
+	{
+		image->width = w;
+		image->height = h;
+		mtl.textures[image->texnum] = create_image2(image, 1, w, h);
+		gal_update_texture(image, 0, 0, 0, w, h, data);
+	}
+	else if (dirty)
+	{
+		gal_update_texture(image, 0, 0, 0, w, h, data);
+	}
 }
 
 static void gal_create_texture_ex(image_t* image, int mip_count, int mip_offset, int w, int h, const void* mip0)
