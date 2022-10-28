@@ -17,7 +17,7 @@
 #define FRAME_COUNT   2
 #define SAMPLER_COUNT TW_COUNT * 3
 
-#define MAX_DRAWS_PER_FRAME 500
+#define MAX_DRAWS_PER_FRAME 1000
 
 #define MTL_DEBUG 1
 
