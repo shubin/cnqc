@@ -307,11 +307,7 @@ int			trap_GetCurrentCmdNumber( void ) {
 }
 
 qboolean	trap_GetUserCmd( int cmdNumber, usercmd_t *ucmd ) {
-	const qboolean result = syscall( CG_GETUSERCMD, cmdNumber, ucmd );
-	ucmd->forwardmove	= max( ucmd->forwardmove,	-127 );
-	ucmd->rightmove		= max( ucmd->rightmove,		-127 );
-	ucmd->upmove		= max( ucmd->upmove,		-127 );
-	return result;
+	return syscall( CG_GETUSERCMD, cmdNumber, ucmd );
 }
 
 void		trap_SetUserCmdValue( int stateValue, float sensitivityScale ) {
