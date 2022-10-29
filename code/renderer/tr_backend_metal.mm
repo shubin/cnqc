@@ -14,14 +14,14 @@
 // this is the highest maximum we'll ever report
 #define MAX_GPU_TEXTURE_SIZE 2048
 
-#define FRAME_COUNT   2
-#define SAMPLER_COUNT TW_COUNT * 3
+#define PIPELINE_COUNT    10
+#define FRAME_COUNT       2
+#define SAMPLER_COUNT     TW_COUNT * 3
+#define DEPTH_STATE_COUNT (MTLCompareFunctionAlways + 1) * 2
 
 #define MAX_DRAWS_PER_FRAME 1000
 
 #define MTL_DEBUG 1
-
-#define MAX_PIPELINES 10
 
 enum VertexBufferId
 {
@@ -139,19 +139,23 @@ struct Pipeline
 	uint32_t polygon_offset;
 };
 
-struct Metal
+struct MetalStatic
 {
 	CAMetalLayer* layer;
 	id<MTLDevice> device;
+	uint32_t pipeline_count;
+	id<MTLRenderPipelineState> pipelines[PIPELINE_COUNT];
+	id<MTLSamplerState> samplers[SAMPLER_COUNT];
+	id<MTLDepthStencilState> depth_states[DEPTH_STATE_COUNT];
+};
+
+struct Metal
+{
 	struct Frame frames[FRAME_COUNT];
 	uint32_t current_frame_index;
 	id<CAMetalDrawable> drawable;
-	id<MTLSamplerState> samplers[SAMPLER_COUNT];
 	uint32_t texture_count;
 	id<MTLTexture> textures[MAX_DRAWIMAGES];
-	uint32_t pipeline_count;
-	id<MTLRenderPipelineState> pipelines[MAX_PIPELINES];
-	id<MTLDepthStencilState> depth_states[(MTLCompareFunctionAlways + 1) * 2];
 	AlphaTest alpha_test;
 	float frame_seed;
 	RenderArea render_area;
@@ -161,6 +165,7 @@ struct Metal
 	struct Pipeline current_pipeline;
 };
 
+static MetalStatic mtls;
 static Metal mtl;
 
 static inline MTLPixelFormat to_mtl_format(textureFormat_t f)
@@ -174,91 +179,112 @@ static inline MTLPixelFormat to_mtl_format(textureFormat_t f)
 
 static inline id<MTLTexture> create_image(MTLPixelFormat format)
 {
-	MTLTextureDescriptor* info = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:format width:glConfig.vidWidth height:glConfig.vidHeight mipmapped:NO];
-	info.sampleCount = 1;
-	info.storageMode = MTLStorageModePrivate;
-	info.textureType = MTLTextureType2D;
-	info.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
-	id<MTLTexture> image = [mtl.device newTextureWithDescriptor:info];
-	info = nil;
-	return image;
+	@autoreleasepool
+	{
+		MTLTextureDescriptor* info = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:format width:glConfig.vidWidth height:glConfig.vidHeight mipmapped:NO];
+		info.sampleCount = 1;
+		info.storageMode = MTLStorageModePrivate;
+		info.textureType = MTLTextureType2D;
+		info.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
+		id<MTLTexture> image = [mtls.device newTextureWithDescriptor:info];
+		info = nil;
+		return image;
+	}
 }
 
 static inline id<MTLTexture> create_image2(image_t* _image, int mip_count, int w, int h)
 {
-	MTLTextureDescriptor* info = [MTLTextureDescriptor new];
-	info.arrayLength = 1;
-	info.storageMode = MTLStorageModeShared;
-	info.usage = MTLTextureUsageShaderRead;
-	info.pixelFormat = to_mtl_format(_image->format);
-	info.width = w;
-	info.height = h;
-	info.depth = 1;
-	info.mipmapLevelCount = mip_count;
-	info.sampleCount = 1;
-	info.textureType = MTLTextureType2D;
+	@autoreleasepool
+	{
+		MTLTextureDescriptor* info = [MTLTextureDescriptor new];
+		info.arrayLength = 1;
+		info.storageMode = MTLStorageModeShared;
+		info.usage = MTLTextureUsageShaderRead;
+		info.pixelFormat = to_mtl_format(_image->format);
+		info.width = w;
+		info.height = h;
+		info.depth = 1;
+		info.mipmapLevelCount = mip_count;
+		info.sampleCount = 1;
+		info.textureType = MTLTextureType2D;
 
-	id<MTLTexture> image = [mtl.device newTextureWithDescriptor:info];
-	info = nil;
-	return image;
+		id<MTLTexture> image = [mtls.device newTextureWithDescriptor:info];
+		info = nil;
+		return image;
+	}
 }
 
 static inline void update_generic_ubo()
 {
-	Frame* f = &mtl.frames[mtl.current_frame_index];
-	assert(f->generic_ubo.write_offset + sizeof(GenericVSData) <= MAX_DRAWS_PER_FRAME * sizeof(GenericVSData));
-	memcpy(f->generic_ubo.mapped_data + f->generic_ubo.write_offset, &mtl.generic_vs_data, sizeof(GenericVSData));
-	f->generic_ubo.read_offset = f->generic_ubo.write_offset;
-	f->generic_ubo.write_offset += sizeof(GenericVSData);
+	@autoreleasepool
+	{
+		Frame* f = &mtl.frames[mtl.current_frame_index];
+		assert(f->generic_ubo.write_offset + sizeof(GenericVSData) <= MAX_DRAWS_PER_FRAME * sizeof(GenericVSData));
+		memcpy(f->generic_ubo.mapped_data + f->generic_ubo.write_offset, &mtl.generic_vs_data, sizeof(GenericVSData));
+		f->generic_ubo.read_offset = f->generic_ubo.write_offset;
+		f->generic_ubo.write_offset += sizeof(GenericVSData);
+	}
 }
 
 static inline void upload_geometry(VertexBufferId id, const void* data)
 {
-	struct Frame* f = &mtl.frames[mtl.current_frame_index];
-	Buffer* buffer = &f->vertex_buffers[id];
-	memcpy(buffer->mapped_data + buffer->write_offset, data, tess.numVertexes * buffer->item_size);
-	[f->encoder setVertexBufferOffset:buffer->write_offset atIndex:id];
-	buffer->read_offset = buffer->write_offset;
-	buffer->write_offset += tess.numVertexes * buffer->item_size;
+	@autoreleasepool
+	{
+		struct Frame* f = &mtl.frames[mtl.current_frame_index];
+		Buffer* buffer = &f->vertex_buffers[id];
+		memcpy(buffer->mapped_data + buffer->write_offset, data, tess.numVertexes * buffer->item_size);
+		[f->encoder setVertexBufferOffset:buffer->write_offset atIndex:id];
+		buffer->read_offset = buffer->write_offset;
+		buffer->write_offset += tess.numVertexes * buffer->item_size;
+	}
 }
 
 static inline void upload_indices(const void* data, uint32_t index_count)
 {
-	struct Frame* f = &mtl.frames[mtl.current_frame_index];
-	Buffer* buffer = &f->index_buffer;
-	memcpy(buffer->mapped_data + buffer->write_offset * buffer->item_size, data, tess.numIndexes * buffer->item_size);
-	buffer->read_offset = buffer->write_offset * buffer->item_size;
-	buffer->write_offset += index_count;
+	@autoreleasepool
+	{
+		struct Frame* f = &mtl.frames[mtl.current_frame_index];
+		Buffer* buffer = &f->index_buffer;
+		memcpy(buffer->mapped_data + buffer->write_offset * buffer->item_size, data, tess.numIndexes * buffer->item_size);
+		buffer->read_offset = buffer->write_offset * buffer->item_size;
+		buffer->write_offset += index_count;
+	}
 }
 
 static inline void draw_elements(int index_count)
 {
-	struct Frame* f = &mtl.frames[mtl.current_frame_index];
+	@autoreleasepool
+	{
+		struct Frame* f = &mtl.frames[mtl.current_frame_index];
 
-	[f->encoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle indexCount:index_count indexType:MTLIndexTypeUInt32 indexBuffer:f->index_buffer.buffer indexBufferOffset:f->index_buffer.read_offset];
-	backEnd.pc3D[RB_DRAW_CALLS]++;
+		[f->encoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle indexCount:index_count indexType:MTLIndexTypeUInt32 indexBuffer:f->index_buffer.buffer indexBufferOffset:f->index_buffer.read_offset];
+		backEnd.pc3D[RB_DRAW_CALLS]++;
+	}
 }
 
 static inline void set_viewport_and_scissor(int x, int y, int w, int h, int th)
 {
-	struct Frame* f = &mtl.frames[mtl.current_frame_index];
+	@autoreleasepool
+	{
+		struct Frame* f = &mtl.frames[mtl.current_frame_index];
 
-	MTLViewport viewport;
-	viewport.originX = x;
-	viewport.originY = th - y - h;
-	viewport.width = w;
-	viewport.height = h;
-	viewport.znear = mtl.render_area.znear;
-	viewport.zfar = mtl.render_area.zfar;
+		MTLViewport viewport;
+		viewport.originX = x;
+		viewport.originY = th - y - h;
+		viewport.width = w;
+		viewport.height = h;
+		viewport.znear = mtl.render_area.znear;
+		viewport.zfar = mtl.render_area.zfar;
 
-	MTLScissorRect scissor;
-	scissor.x = x;
-	scissor.y = th - y - h;
-	scissor.width = x + w;
-	scissor.height = th - y;
+		MTLScissorRect scissor;
+		scissor.x = x;
+		scissor.y = th - y - h;
+		scissor.width = x + w;
+		scissor.height = th - y;
 
-	[f->encoder setViewport:viewport];
-	[f->encoder setScissorRect:scissor];
+		[f->encoder setViewport:viewport];
+		[f->encoder setScissorRect:scissor];
+	}
 }
 
 static inline AlphaTest get_alpha_test(unsigned int bits)
@@ -274,38 +300,44 @@ static inline AlphaTest get_alpha_test(unsigned int bits)
 
 static inline void bind_image(uint32_t idx, const image_t* image)
 {
-	struct Frame* f = &mtl.frames[mtl.current_frame_index];
-
-	TextureMode mode = TM_ANISOTROPIC;
-	if (Q_stricmp(r_textureMode->string, "GL_NEAREST") == 0 &&
-	    !backEnd.projection2D &&
-	    (image->flags & (IMG_LMATLAS | IMG_EXTLMATLAS | IMG_NOPICMIP)) == 0)
+	@autoreleasepool
 	{
-		mode = TM_NEAREST;
-	}
-	else if ((image->flags & IMG_NOAF) != 0)
-	{
-		mode = TM_BILINEAR;
-	}
+		struct Frame* f = &mtl.frames[mtl.current_frame_index];
 
-	[f->encoder setFragmentSamplerState:mtl.samplers[mode + image->wrapClampMode * TM_COUNT] atIndex:idx];
-	[f->encoder setFragmentTexture:mtl.textures[image->texnum] atIndex:idx];
+		TextureMode mode = TM_ANISOTROPIC;
+		if (Q_stricmp(r_textureMode->string, "GL_NEAREST") == 0 &&
+		    !backEnd.projection2D &&
+		    (image->flags & (IMG_LMATLAS | IMG_EXTLMATLAS | IMG_NOPICMIP)) == 0)
+		{
+			mode = TM_NEAREST;
+		}
+		else if ((image->flags & IMG_NOAF) != 0)
+		{
+			mode = TM_BILINEAR;
+		}
+
+		[f->encoder setFragmentSamplerState:mtls.samplers[mode + image->wrapClampMode * TM_COUNT] atIndex:idx];
+		[f->encoder setFragmentTexture:mtl.textures[image->texnum] atIndex:idx];
+	}
 }
 
 static void gal_update_texture(image_t* image, int mip, int x, int y, int w, int h, const void* data);
 
 static void update_animated_image(image_t* image, int w, int h, const byte* data, qbool dirty)
 {
-	if (w != image->width || h != image->height)
+	@autoreleasepool
 	{
-		image->width = w;
-		image->height = h;
-		mtl.textures[image->texnum] = create_image2(image, 1, w, h);
-		gal_update_texture(image, 0, 0, 0, w, h, data);
-	}
-	else if (dirty)
-	{
-		gal_update_texture(image, 0, 0, 0, w, h, data);
+		if (w != image->width || h != image->height)
+		{
+			image->width = w;
+			image->height = h;
+			mtl.textures[image->texnum] = create_image2(image, 1, w, h);
+			gal_update_texture(image, 0, 0, 0, w, h, data);
+		}
+		else if (dirty)
+		{
+			gal_update_texture(image, 0, 0, 0, w, h, data);
+		}
 	}
 }
 
@@ -451,58 +483,64 @@ static inline MTLBlendFactor to_mtl_blend_factor(uint32_t blend_bits)
 
 static inline void create_pipeline(Shader* shader, PipelineId id, uint32_t state_bits)
 {
-	NSError* error = nil;
-
-	MTLRenderPipelineDescriptor* info = [[MTLRenderPipelineDescriptor alloc] init];
-	info.vertexFunction = shader->vertex;
-	info.fragmentFunction = shader->fragment;
-	info.inputPrimitiveTopology = MTLPrimitiveTopologyClassTriangle;
-	info.colorAttachments[0].pixelFormat = MTLPixelFormatRGBA8Unorm;
-
-	info.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
-
-	if (id == PID_POST_PROCESS)
+	@autoreleasepool
 	{
-		info.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm; // FIXME
-		info.depthAttachmentPixelFormat = MTLPixelFormatInvalid;
+		NSError* error = nil;
+
+		MTLRenderPipelineDescriptor* info = [[MTLRenderPipelineDescriptor alloc] init];
+		info.vertexFunction = shader->vertex;
+		info.fragmentFunction = shader->fragment;
+		info.inputPrimitiveTopology = MTLPrimitiveTopologyClassTriangle;
+		info.colorAttachments[0].pixelFormat = MTLPixelFormatRGBA8Unorm;
+
+		info.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
+
+		if (id == PID_POST_PROCESS)
+		{
+			info.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm; // FIXME
+			info.depthAttachmentPixelFormat = MTLPixelFormatInvalid;
+		}
+
+		MTLRenderPipelineColorAttachmentDescriptor* att = info.colorAttachments[0];
+		att.blendingEnabled = NO;
+
+		if (state_bits & (GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS))
+		{
+			MTLBlendFactor src_factor = to_mtl_blend_factor(state_bits & GLS_SRCBLEND_BITS);
+			MTLBlendFactor dst_factor = to_mtl_blend_factor(state_bits & GLS_DSTBLEND_BITS);
+			att.blendingEnabled = YES;
+			att.sourceRGBBlendFactor = src_factor;
+			att.sourceAlphaBlendFactor = src_factor;
+			att.destinationRGBBlendFactor = dst_factor;
+			att.destinationAlphaBlendFactor = dst_factor;
+			att.rgbBlendOperation = MTLBlendOperationAdd;
+			att.alphaBlendOperation = MTLBlendOperationAdd;
+			att.writeMask = MTLColorWriteMaskAll;
+		}
+
+		info.sampleCount = 1;
+		info.vertexDescriptor = get_vertex_descriptor(id);
+
+		mtls.pipelines[mtls.pipeline_count++] = [mtls.device
+		    newRenderPipelineStateWithDescriptor:info
+		                                   error:&error];
 	}
-
-	MTLRenderPipelineColorAttachmentDescriptor* att = info.colorAttachments[0];
-	att.blendingEnabled = NO;
-
-	if (state_bits & (GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS))
-	{
-		MTLBlendFactor src_factor = to_mtl_blend_factor(state_bits & GLS_SRCBLEND_BITS);
-		MTLBlendFactor dst_factor = to_mtl_blend_factor(state_bits & GLS_DSTBLEND_BITS);
-		att.blendingEnabled = YES;
-		att.sourceRGBBlendFactor = src_factor;
-		att.sourceAlphaBlendFactor = src_factor;
-		att.destinationRGBBlendFactor = dst_factor;
-		att.destinationAlphaBlendFactor = dst_factor;
-		att.rgbBlendOperation = MTLBlendOperationAdd;
-		att.alphaBlendOperation = MTLBlendOperationAdd;
-		att.writeMask = MTLColorWriteMaskAll;
-	}
-
-	info.sampleCount = 1;
-	info.vertexDescriptor = get_vertex_descriptor(id);
-
-	mtl.pipelines[mtl.pipeline_count++] = [mtl.device
-	    newRenderPipelineStateWithDescriptor:info
-	                                   error:&error];
 }
 
 static inline void create_shader(NSString* path, NSString* ext, struct Shader* shader)
 {
-	NSError* library_error = NULL;
-	NSString* library_file = [[NSBundle mainBundle] pathForResource:path ofType:ext];
-	shader->library = [mtl.device newLibraryWithFile:library_file error:&library_error];
-	if (!shader->library)
+	@autoreleasepool
 	{
-		NSLog(@"Library error: %@", library_error.localizedDescription);
+		NSError* library_error = NULL;
+		NSString* library_file = [[NSBundle mainBundle] pathForResource:path ofType:ext];
+		shader->library = [mtls.device newLibraryWithFile:library_file error:&library_error];
+		if (!shader->library)
+		{
+			NSLog(@"Library error: %@", library_error.localizedDescription);
+		}
+		shader->vertex = [shader->library newFunctionWithName:@"v_main"];
+		shader->fragment = [shader->library newFunctionWithName:@"f_main"];
 	}
-	shader->vertex = [shader->library newFunctionWithName:@"v_main"];
-	shader->fragment = [shader->library newFunctionWithName:@"f_main"];
 }
 
 static inline void create_pipelines(void)
@@ -580,187 +618,208 @@ static inline uint32_t get_pipeline_index(PipelineId id, uint32_t state_bits)
 
 static inline void create_depth_states(void)
 {
-#define CMP_FUNC_COUNT MTLCompareFunctionAlways + 1
-	for (uint32_t function = 0; function < CMP_FUNC_COUNT; ++function)
+	@autoreleasepool
 	{
-		for (uint32_t write = 0; write < 2; write++)
+#define CMP_FUNC_COUNT MTLCompareFunctionAlways + 1
+		for (uint32_t function = 0; function < CMP_FUNC_COUNT; ++function)
 		{
-			MTLDepthStencilDescriptor* info = [MTLDepthStencilDescriptor new];
-			info.depthCompareFunction = MTLCompareFunctionLessEqual;
-			info.depthWriteEnabled = uint32_t(write);
-			mtl.depth_states[write + function * 2] = [mtl.device newDepthStencilStateWithDescriptor:info];
+			for (uint32_t write = 0; write < 2; write++)
+			{
+				MTLDepthStencilDescriptor* info = [MTLDepthStencilDescriptor new];
+				info.depthCompareFunction = MTLCompareFunctionLessEqual;
+				info.depthWriteEnabled = uint32_t(write);
+				mtls.depth_states[write + function * 2] = [mtls.device newDepthStencilStateWithDescriptor:info];
+			}
 		}
 	}
 }
 
 static inline void init_frame(struct Frame* f)
 {
-	f->queue = [mtl.device newCommandQueue];
-
-	f->color_image = create_image(MTLPixelFormatRGBA8Unorm);
-	f->depth_image = create_image(MTLPixelFormatDepth32Float);
-
-	struct Buffer* vb = f->vertex_buffers;
-	vb[VB_POSITION].item_size = sizeof(tess.xyz[0]);
-	vb[VB_NORMAL].item_size = sizeof(tess.normal[0]);
-	vb[VB_TEXCOORD].item_size = sizeof(tess.svars[0].texcoords[0]);
-	vb[VB_TEXCOORD2].item_size = sizeof(tess.svars[0].texcoords[0]);
-	vb[VB_COLOR].item_size = sizeof(tess.svars[0].colors[0]);
-
-	for (uint32_t i = 0; i < ARRAY_LEN(f->vertex_buffers); ++i)
+	@autoreleasepool
 	{
-		vb[i].capacity = LARGEBUFFER_MAX_VERTEXES;
-		vb[i].buffer = [mtl.device newBufferWithLength:vb[i].capacity * vb[i].item_size
+		f->queue = [mtls.device newCommandQueue];
+
+		f->color_image = create_image(MTLPixelFormatRGBA8Unorm);
+		f->depth_image = create_image(MTLPixelFormatDepth32Float);
+
+		struct Buffer* vb = f->vertex_buffers;
+		vb[VB_POSITION].item_size = sizeof(tess.xyz[0]);
+		vb[VB_NORMAL].item_size = sizeof(tess.normal[0]);
+		vb[VB_TEXCOORD].item_size = sizeof(tess.svars[0].texcoords[0]);
+		vb[VB_TEXCOORD2].item_size = sizeof(tess.svars[0].texcoords[0]);
+		vb[VB_COLOR].item_size = sizeof(tess.svars[0].colors[0]);
+
+		for (uint32_t i = 0; i < ARRAY_LEN(f->vertex_buffers); ++i)
+		{
+			vb[i].capacity = LARGEBUFFER_MAX_VERTEXES;
+			vb[i].buffer = [mtls.device newBufferWithLength:vb[i].capacity * vb[i].item_size
+			                                        options:MTLResourceCPUCacheModeDefaultCache];
+			vb[i].mapped_data = (byte*)([vb[i].buffer contents]);
+			assert(vb[i].mapped_data != NULL);
+		}
+
+		struct Buffer* ib = &f->index_buffer;
+		ib->item_size = sizeof(tess.indexes[0]);
+		ib->capacity = LARGEBUFFER_MAX_INDEXES;
+		ib->buffer = [mtls.device newBufferWithLength:ib->capacity * ib->item_size
+		                                      options:MTLResourceCPUCacheModeDefaultCache];
+		ib->mapped_data = (byte*)([ib->buffer contents]);
+		assert(ib->mapped_data != NULL);
+
+		struct Buffer* ubo = &f->generic_ubo;
+		ubo->item_size = sizeof(GenericVSData);
+		ubo->capacity = MAX_DRAWS_PER_FRAME;
+		ubo->buffer = [mtls.device newBufferWithLength:ubo->capacity * ubo->item_size
 		                                       options:MTLResourceCPUCacheModeDefaultCache];
-		vb[i].mapped_data = (byte*)([vb[i].buffer contents]);
-		assert(vb[i].mapped_data != NULL);
+		ubo->mapped_data = (byte*)([ubo->buffer contents]);
+		assert(ubo->mapped_data != NULL);
+
+		struct Buffer* dl_ubo = &f->dl_ubo;
+		dl_ubo->item_size = sizeof(DLVSData);
+		dl_ubo->capacity = MAX_DRAWS_PER_FRAME;
+		dl_ubo->buffer = [mtls.device newBufferWithLength:dl_ubo->capacity * dl_ubo->item_size
+		                                          options:MTLResourceCPUCacheModeDefaultCache];
+		dl_ubo->mapped_data = (byte*)([dl_ubo->buffer contents]);
+		assert(dl_ubo->mapped_data != NULL);
 	}
-
-	struct Buffer* ib = &f->index_buffer;
-	ib->item_size = sizeof(tess.indexes[0]);
-	ib->capacity = LARGEBUFFER_MAX_INDEXES;
-	ib->buffer = [mtl.device newBufferWithLength:ib->capacity * ib->item_size
-	                                     options:MTLResourceCPUCacheModeDefaultCache];
-	ib->mapped_data = (byte*)([ib->buffer contents]);
-	assert(ib->mapped_data != NULL);
-
-	struct Buffer* ubo = &f->generic_ubo;
-	ubo->item_size = sizeof(GenericVSData);
-	ubo->capacity = MAX_DRAWS_PER_FRAME;
-	ubo->buffer = [mtl.device newBufferWithLength:ubo->capacity * ubo->item_size
-	                                      options:MTLResourceCPUCacheModeDefaultCache];
-	ubo->mapped_data = (byte*)([ubo->buffer contents]);
-	assert(ubo->mapped_data != NULL);
-
-	struct Buffer* dl_ubo = &f->dl_ubo;
-	dl_ubo->item_size = sizeof(DLVSData);
-	dl_ubo->capacity = MAX_DRAWS_PER_FRAME;
-	dl_ubo->buffer = [mtl.device newBufferWithLength:dl_ubo->capacity * dl_ubo->item_size
-	                                         options:MTLResourceCPUCacheModeDefaultCache];
-	dl_ubo->mapped_data = (byte*)([dl_ubo->buffer contents]);
-	assert(dl_ubo->mapped_data != NULL);
 }
 
 static inline void init_metal(void)
 {
-	memset(&mtl, 0, sizeof(mtl));
-
-	mtl.device = MTLCreateSystemDefaultDevice();
-	mtl.layer = ((__bridge CAMetalLayer*)mtl_imp.layer);
-	mtl.layer.device = mtl.device;
-	mtl.layer.maximumDrawableCount = FRAME_COUNT;
-
-	for (uint32_t i = 0; i < FRAME_COUNT; ++i)
+	@autoreleasepool
 	{
-		struct Frame* frame = &mtl.frames[i];
-		init_frame(frame);
-	}
-
-	create_pipelines();
-	create_depth_states();
-
-	for (int texture_mode = 0; texture_mode < TM_COUNT; ++texture_mode)
-	{
-		for (int wrap_mode = 0; wrap_mode < TW_COUNT; ++wrap_mode)
+		if (mtls.device == nil)
 		{
-			const int index = texture_mode + wrap_mode * TM_COUNT;
-			// TODO:
-			const int max_anisotropy = 16;
+			mtls.device = MTLCreateSystemDefaultDevice();
+			mtls.layer = ((__bridge CAMetalLayer*)mtl_imp.layer);
+			mtls.layer.device = mtls.device;
 
-			MTLSamplerDescriptor* info = [MTLSamplerDescriptor new];
-			info.minFilter = MTLSamplerMinMagFilterNearest;
-			info.magFilter = MTLSamplerMinMagFilterLinear;
-			info.mipFilter = MTLSamplerMipFilterLinear;
+			create_pipelines();
+			create_depth_states();
 
-			if (texture_mode == TM_NEAREST)
+			for (int texture_mode = 0; texture_mode < TM_COUNT; ++texture_mode)
 			{
-				info.minFilter = MTLSamplerMinMagFilterNearest;
-				info.magFilter = MTLSamplerMinMagFilterNearest;
-				info.mipFilter = MTLSamplerMipFilterNearest;
-			}
-			else if (texture_mode == TM_BILINEAR)
-			{
-				info.minFilter = MTLSamplerMinMagFilterLinear;
-				info.magFilter = MTLSamplerMinMagFilterLinear;
-				info.mipFilter = MTLSamplerMipFilterLinear;
-			}
+				for (int wrap_mode = 0; wrap_mode < TW_COUNT; ++wrap_mode)
+				{
+					const int index = texture_mode + wrap_mode * TM_COUNT;
+					// TODO:
+					const int max_anisotropy = 16;
 
-			MTLSamplerAddressMode mode = MTLSamplerAddressModeRepeat;
-			if (wrap_mode == TW_CLAMP_TO_EDGE)
-			{
-				mode = MTLSamplerAddressModeClampToEdge;
-			}
-			info.sAddressMode = mode;
-			info.tAddressMode = mode;
-			info.rAddressMode = mode;
-			info.maxAnisotropy = max_anisotropy;
-			info.lodMinClamp = 0;
-			info.lodMaxClamp = 16;
+					MTLSamplerDescriptor* info = [MTLSamplerDescriptor new];
+					info.minFilter = MTLSamplerMinMagFilterNearest;
+					info.magFilter = MTLSamplerMinMagFilterLinear;
+					info.mipFilter = MTLSamplerMipFilterLinear;
 
-			mtl.samplers[index] = [mtl.device newSamplerStateWithDescriptor:info];
-			info = nil;
+					if (texture_mode == TM_NEAREST)
+					{
+						info.minFilter = MTLSamplerMinMagFilterNearest;
+						info.magFilter = MTLSamplerMinMagFilterNearest;
+						info.mipFilter = MTLSamplerMipFilterNearest;
+					}
+					else if (texture_mode == TM_BILINEAR)
+					{
+						info.minFilter = MTLSamplerMinMagFilterLinear;
+						info.magFilter = MTLSamplerMinMagFilterLinear;
+						info.mipFilter = MTLSamplerMipFilterLinear;
+					}
+
+					MTLSamplerAddressMode mode = MTLSamplerAddressModeRepeat;
+					if (wrap_mode == TW_CLAMP_TO_EDGE)
+					{
+						mode = MTLSamplerAddressModeClampToEdge;
+					}
+					info.sAddressMode = mode;
+					info.tAddressMode = mode;
+					info.rAddressMode = mode;
+					info.maxAnisotropy = max_anisotropy;
+					info.lodMinClamp = 0;
+					info.lodMaxClamp = 16;
+
+					mtls.samplers[index] = [mtls.device newSamplerStateWithDescriptor:info];
+					info = nil;
+				}
+			}
+		}
+
+		mtls.layer.maximumDrawableCount = FRAME_COUNT;
+
+		memset(&mtl, 0, sizeof(mtl));
+
+		for (uint32_t i = 0; i < FRAME_COUNT; ++i)
+		{
+			struct Frame* frame = &mtl.frames[i];
+			init_frame(frame);
 		}
 	}
 }
 
 static qbool gal_init(void)
 {
-	if (glConfig.vidWidth == 0)
-	{
-		// the order of these calls can not be changed
-		Sys_V_Init(GAL_METAL);
-		init_gl_config();
-		init_metal();
-		// apply the current V-Sync option after the first rendered frame
-		r_swapInterval->modified = qtrue;
-	}
-
-	// SetDefaultState();
-
+	Sys_V_Init(GAL_METAL);
+	init_gl_config();
+	init_metal();
 	return qtrue;
 }
 
 static void gal_shutdown(qbool full_shutdown)
 {
-	if (!full_shutdown)
-		return;
-
-	for (uint32_t i = 0; i < mtl.texture_count; ++i)
+	@autoreleasepool
 	{
-		mtl.textures[i] = nil;
-	}
-
-	tr.numImages = 0;
-	memset(tr.images, 0, sizeof(tr.images));
-
-	for (uint32_t i = 0; i < ARRAY_LEN(mtl.samplers); ++i)
-	{
-		mtl.samplers[i] = nil;
-	}
-
-	for (uint32_t i = 0; i < FRAME_COUNT; ++i)
-	{
-		struct Frame* f = &mtl.frames[i];
-
-		f->dl_ubo.buffer = nil;
-		f->generic_ubo.buffer = nil;
-		f->index_buffer.buffer = nil;
-
-		for (uint32_t ii = 0; ii < ARRAY_LEN(f->vertex_buffers); ++ii)
+		for (uint32_t i = 0; i < mtl.texture_count; ++i)
 		{
-			Buffer* vb = f->vertex_buffers;
-			vb[ii].buffer = nil;
+			mtl.textures[i] = nil;
 		}
 
-		f->color_image = nil;
-		f->depth_image = nil;
+		tr.numImages = 0;
+		memset(tr.images, 0, sizeof(tr.images));
 
-		f->queue = nil;
+		for (uint32_t i = 0; i < FRAME_COUNT; ++i)
+		{
+			struct Frame* f = &mtl.frames[i];
+
+			f->dl_ubo.buffer = nil;
+			f->generic_ubo.buffer = nil;
+			f->index_buffer.buffer = nil;
+
+			for (uint32_t ii = 0; ii < ARRAY_LEN(f->vertex_buffers); ++ii)
+			{
+				Buffer* vb = f->vertex_buffers;
+				vb[ii].buffer = nil;
+			}
+
+			f->color_image = nil;
+			f->depth_image = nil;
+
+			f->queue = nil;
+		}
+
+		memset(&mtl, 0, sizeof(mtl));
+
+		if (!full_shutdown)
+		{
+			return;
+		}
+
+		for (uint32_t i = 0; i < PIPELINE_COUNT; ++i)
+		{
+			mtls.pipelines[i] = nil;
+		}
+
+		for (uint32_t i = 0; i < SAMPLER_COUNT; ++i)
+		{
+			mtls.samplers[i] = nil;
+		}
+
+		for (uint32_t i = 0; i < DEPTH_STATE_COUNT; ++i)
+		{
+			mtls.depth_states[i] = nil;
+		}
+
+		mtls.device = nil;
+		mtls.layer = nil;
+		memset(&mtls, 0, sizeof(mtls));
 	}
-
-	mtl.device = nil;
-
-	memset(&mtl, 0, sizeof(mtl));
 }
 
 static void gal_begin_frame(void)
@@ -794,53 +853,61 @@ static void gal_begin_frame(void)
 		mtl.current_pipeline.depth_state_index = -1;
 		mtl.current_pipeline.cull_mode = -1;
 		mtl.current_pipeline.polygon_offset = -1;
+
+		if (r_swapInterval->modified)
+		{
+			mtls.layer.displaySyncEnabled = abs(r_swapInterval->integer) > 0;
+		}
 	}
 }
 
 static inline void set_pipeline(struct Frame* f, PipelineId id, uint32_t state_bits, cullType_t cull_type, qbool polygon_offset)
 {
-	struct Pipeline* p = &mtl.current_pipeline;
-	uint32_t pipeline_index = get_pipeline_index(id, state_bits);
-	if (p->pipeline_index != pipeline_index)
+	@autoreleasepool
 	{
-		[f->encoder setRenderPipelineState:mtl.pipelines[pipeline_index]];
-	}
+		struct Pipeline* p = &mtl.current_pipeline;
+		uint32_t pipeline_index = get_pipeline_index(id, state_bits);
+		if (p->pipeline_index != pipeline_index)
+		{
+			[f->encoder setRenderPipelineState:mtls.pipelines[pipeline_index]];
+		}
 
-	uint32_t write = (state_bits & GLS_DEPTHMASK_TRUE) != 0;
-	uint32_t test = MTLCompareFunctionAlways;
-	if (state_bits & GLS_DEPTHFUNC_EQUAL)
-	{
-		test = MTLCompareFunctionEqual;
-	}
-	uint32_t depth_state_index = write + test * 2;
-	if (p->depth_state_index != depth_state_index)
-	{
-		[f->encoder setDepthStencilState:mtl.depth_states[write + test * 2]];
-	}
+		uint32_t write = (state_bits & GLS_DEPTHMASK_TRUE) != 0;
+		uint32_t test = MTLCompareFunctionAlways;
+		if (state_bits & GLS_DEPTHFUNC_EQUAL)
+		{
+			test = MTLCompareFunctionEqual;
+		}
+		uint32_t depth_state_index = write + test * 2;
+		if (p->depth_state_index != depth_state_index)
+		{
+			[f->encoder setDepthStencilState:mtls.depth_states[write + test * 2]];
+		}
 
-	if (p->polygon_offset != uint32_t(polygon_offset))
-	{
-		[f->encoder setDepthBias:float(polygon_offset) slopeScale:polygon_offset ? -1.0f : 0.0f clamp:1.0f];
-	}
-	MTLCullMode cull_mode = MTLCullModeNone;
-	switch (cull_type)
-	{
-	case CT_FRONT_SIDED:
-		cull_mode = MTLCullModeFront;
-		break;
-	case CT_BACK_SIDED:
-		cull_mode = MTLCullModeBack;
-		break;
-	case CT_TWO_SIDED:
-		cull_mode = MTLCullModeNone;
-		break;
-	default:
-		assert(false);
-		break;
-	}
-	if (p->cull_mode != cull_mode)
-	{
-		[f->encoder setCullMode:cull_mode];
+		if (p->polygon_offset != uint32_t(polygon_offset))
+		{
+			[f->encoder setDepthBias:float(polygon_offset) slopeScale:polygon_offset ? -1.0f : 0.0f clamp:1.0f];
+		}
+		MTLCullMode cull_mode = MTLCullModeNone;
+		switch (cull_type)
+		{
+		case CT_FRONT_SIDED:
+			cull_mode = MTLCullModeFront;
+			break;
+		case CT_BACK_SIDED:
+			cull_mode = MTLCullModeBack;
+			break;
+		case CT_TWO_SIDED:
+			cull_mode = MTLCullModeNone;
+			break;
+		default:
+			assert(false);
+			break;
+		}
+		if (p->cull_mode != cull_mode)
+		{
+			[f->encoder setCullMode:cull_mode];
+		}
 	}
 }
 
@@ -922,34 +989,37 @@ static inline void draw_generic(void)
 
 static inline void draw_dynamic_light(void)
 {
-	struct Frame* f = &mtl.frames[mtl.current_frame_index];
-	set_pipeline(f, PID_DYNAMIC_LIGHT, backEnd.dlStateBits, tess.shader->cullType, tess.shader->polygonOffset);
+	@autoreleasepool
+	{
+		struct Frame* f = &mtl.frames[mtl.current_frame_index];
+		set_pipeline(f, PID_DYNAMIC_LIGHT, backEnd.dlStateBits, tess.shader->cullType, tess.shader->polygonOffset);
 
-	const int stage_index = tess.shader->lightingStages[ST_DIFFUSE];
-	const shaderStage_t* stage = tess.xstages[stage_index];
+		const int stage_index = tess.shader->lightingStages[ST_DIFFUSE];
+		const shaderStage_t* stage = tess.xstages[stage_index];
 
-	upload_geometry(VB_POSITION, tess.xyz);
-	upload_geometry(VB_NORMAL, tess.normal);
-	upload_geometry(VB_TEXCOORD, tess.svars[stage_index].texcoordsptr);
-	upload_indices(tess.dlIndexes, tess.dlNumIndexes);
+		upload_geometry(VB_POSITION, tess.xyz);
+		upload_geometry(VB_NORMAL, tess.normal);
+		upload_geometry(VB_TEXCOORD, tess.svars[stage_index].texcoordsptr);
+		upload_indices(tess.dlIndexes, tess.dlNumIndexes);
 
-	mtl.dl_pc.opaque = backEnd.dlOpaque ? 1.0f : 0.0f;
-	mtl.dl_pc.intensity = backEnd.dlIntensity;
-	mtl.dl_pc.greyscale = tess.greyscale;
-	mtl.dl_pc.ubo_index = f->dl_ubo.write_offset / sizeof(mtl.dl_vs_data);
+		mtl.dl_pc.opaque = backEnd.dlOpaque ? 1.0f : 0.0f;
+		mtl.dl_pc.intensity = backEnd.dlIntensity;
+		mtl.dl_pc.greyscale = tess.greyscale;
+		mtl.dl_pc.ubo_index = f->dl_ubo.write_offset / sizeof(mtl.dl_vs_data);
 
-	assert(f->dl_ubo.write_offset + sizeof(mtl.dl_vs_data) <= MAX_DRAWS_PER_FRAME * sizeof(mtl.dl_vs_data));
-	memcpy(f->dl_ubo.mapped_data + f->dl_ubo.write_offset, &mtl.dl_vs_data, sizeof(mtl.dl_vs_data));
-	f->dl_ubo.write_offset += sizeof(DLVSData);
+		assert(f->dl_ubo.write_offset + sizeof(mtl.dl_vs_data) <= MAX_DRAWS_PER_FRAME * sizeof(mtl.dl_vs_data));
+		memcpy(f->dl_ubo.mapped_data + f->dl_ubo.write_offset, &mtl.dl_vs_data, sizeof(mtl.dl_vs_data));
+		f->dl_ubo.write_offset += sizeof(DLVSData);
 
-	set_viewport_and_scissor(mtl.render_area.x, mtl.render_area.y, mtl.render_area.w, mtl.render_area.h, mtl.render_area.th);
+		set_viewport_and_scissor(mtl.render_area.x, mtl.render_area.y, mtl.render_area.w, mtl.render_area.h, mtl.render_area.th);
 
-	[f->encoder setVertexBytes:&mtl.dl_pc length:sizeof(mtl.dl_pc) atIndex:5];
-	[f->encoder setFragmentBytes:&mtl.dl_pc length:sizeof(mtl.dl_pc) atIndex:5];
+		[f->encoder setVertexBytes:&mtl.dl_pc length:sizeof(mtl.dl_pc) atIndex:5];
+		[f->encoder setFragmentBytes:&mtl.dl_pc length:sizeof(mtl.dl_pc) atIndex:5];
 
-	bind_image(0, get_bundle_image(&stage->bundle));
+		bind_image(0, get_bundle_image(&stage->bundle));
 
-	draw_elements(tess.dlNumIndexes);
+		draw_elements(tess.dlNumIndexes);
+	}
 }
 
 static inline void draw_depth_fade(void)
@@ -1008,8 +1078,8 @@ static inline void execute_postprocess(struct Frame* f)
 		id<MTLRenderCommandEncoder> e = [f->cmd renderCommandEncoderWithDescriptor:pass_info];
 		pass_info = nil;
 
-		[e setRenderPipelineState:mtl.pipelines[get_pipeline_index(PID_POST_PROCESS, 0)]];
-		[e setFragmentSamplerState:mtl.samplers[0] atIndex:0];
+		[e setRenderPipelineState:mtls.pipelines[get_pipeline_index(PID_POST_PROCESS, 0)]];
+		[e setFragmentSamplerState:mtls.samplers[0] atIndex:0];
 		[e setFragmentTexture:f->color_image atIndex:0];
 		[e setVertexBytes:&pc length:sizeof(pc) atIndex:0];
 		[e setFragmentBytes:&pc length:sizeof(pc) atIndex:0];
@@ -1029,7 +1099,7 @@ static void gal_end_frame(void)
 		[f->encoder endEncoding];
 		f->encoder = nil;
 
-		mtl.drawable = [mtl.layer nextDrawable];
+		mtl.drawable = [mtls.layer nextDrawable];
 
 		execute_postprocess(f);
 
@@ -1150,27 +1220,29 @@ static void gal_create_texture(image_t* image, int mip_count, int w, int h)
 static void gal_update_texture(image_t* image, int mip, int x, int y, int w, int h, const void* data)
 {
 	MTLRegion region = MTLRegionMake2D(x, y, w, h);
-	// FIXME: bytesPerRow
 	[mtl.textures[image->texnum] replaceRegion:region mipmapLevel:mip withBytes:data bytesPerRow:w * 4];
 }
 
 static void gal_update_scratch(image_t* image, int w, int h, const void* data, qbool dirty)
 {
-	if (image->texnum <= 0 || image->texnum > ARRAY_LEN(mtl.textures))
+	@autoreleasepool
 	{
-		return;
-	}
+		if (image->texnum <= 0 || image->texnum > ARRAY_LEN(mtl.textures))
+		{
+			return;
+		}
 
-	if (w != image->width || h != image->height)
-	{
-		image->width = w;
-		image->height = h;
-		mtl.textures[image->texnum] = create_image2(image, 1, w, h);
-		gal_update_texture(image, 0, 0, 0, w, h, data);
-	}
-	else if (dirty)
-	{
-		gal_update_texture(image, 0, 0, 0, w, h, data);
+		if (w != image->width || h != image->height)
+		{
+			image->width = w;
+			image->height = h;
+			mtl.textures[image->texnum] = create_image2(image, 1, w, h);
+			gal_update_texture(image, 0, 0, 0, w, h, data);
+		}
+		else if (dirty)
+		{
+			gal_update_texture(image, 0, 0, 0, w, h, data);
+		}
 	}
 }
 
