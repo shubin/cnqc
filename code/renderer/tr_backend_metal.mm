@@ -14,10 +14,13 @@
 // this is the highest maximum we'll ever report
 #define MAX_GPU_TEXTURE_SIZE 2048
 
-#define PIPELINE_COUNT    10
+#define SRC_BLEND_COUNT   9
+#define DST_BLEND_COUNT   8
+#define PIPELINE_COUNT    (SRC_BLEND_COUNT * DST_BLEND_COUNT + 1) + 2
 #define FRAME_COUNT       2
 #define SAMPLER_COUNT     TW_COUNT * 3
 #define DEPTH_STATE_COUNT (MTLCompareFunctionAlways + 1) * 2
+
 
 #define MAX_DRAWS_PER_FRAME 1000
 
@@ -543,20 +546,86 @@ static inline void create_shader(NSString* path, NSString* ext, struct Shader* s
 	}
 }
 
+static inline uint32_t get_src_blend_idx(uint32_t blend_bit)
+{
+	switch (blend_bit)
+	{
+	case GLS_SRCBLEND_ZERO:
+		return 0;
+	case GLS_SRCBLEND_ONE:
+		return 1;
+	case GLS_SRCBLEND_DST_COLOR:
+		return 2;
+	case GLS_SRCBLEND_ONE_MINUS_DST_COLOR:
+		return 3;
+	case GLS_SRCBLEND_SRC_ALPHA: return 4;
+	case GLS_SRCBLEND_ONE_MINUS_SRC_ALPHA: return 5;
+	case GLS_SRCBLEND_DST_ALPHA: return 6;
+	case GLS_SRCBLEND_ONE_MINUS_DST_ALPHA: return 7;
+	case GLS_SRCBLEND_ALPHA_SATURATE: return 8;
+	}
+	return 0;
+}
+
+static inline uint32_t get_dst_blend_idx(uint32_t blend_bit)
+{
+	switch (blend_bit)
+	{
+	case GLS_DSTBLEND_ZERO:
+		return 0;
+	case GLS_DSTBLEND_ONE:
+		return 1;
+	case GLS_DSTBLEND_SRC_COLOR:
+		return 2;
+	case GLS_DSTBLEND_ONE_MINUS_SRC_COLOR:
+		return 3;
+	case GLS_DSTBLEND_SRC_ALPHA: return 4;
+	case GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA: return 5;
+	case GLS_DSTBLEND_DST_ALPHA: return 6;
+	case GLS_DSTBLEND_ONE_MINUS_DST_ALPHA: return 7;
+	}
+	return 0;
+}
+
 static inline void create_pipelines(void)
 {
 	@autoreleasepool
 	{
 		Shader shader;
 		create_shader(@"generic", @"metallib", &shader);
+
+		uint32_t src_blend_modes[SRC_BLEND_COUNT] = {
+			GLS_SRCBLEND_ZERO,
+			GLS_SRCBLEND_ONE,
+			GLS_SRCBLEND_DST_COLOR,
+			GLS_SRCBLEND_ONE_MINUS_DST_COLOR,
+			GLS_SRCBLEND_SRC_ALPHA,
+			GLS_SRCBLEND_ONE_MINUS_SRC_ALPHA,
+			GLS_SRCBLEND_DST_ALPHA,
+			GLS_SRCBLEND_ONE_MINUS_DST_ALPHA,
+			GLS_SRCBLEND_ALPHA_SATURATE,
+		};
+
+		uint32_t dst_blend_modes[DST_BLEND_COUNT] = {
+			GLS_DSTBLEND_ZERO,
+			GLS_DSTBLEND_ONE,
+			GLS_DSTBLEND_SRC_COLOR,
+			GLS_DSTBLEND_ONE_MINUS_SRC_COLOR,
+			GLS_DSTBLEND_SRC_ALPHA,
+			GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA,
+			GLS_DSTBLEND_DST_ALPHA,
+			GLS_DSTBLEND_ONE_MINUS_DST_ALPHA,
+		};
+
 		create_pipeline(&shader, PID_GENERIC, 0);
-		create_pipeline(&shader, PID_GENERIC, GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE);
-		create_pipeline(&shader, PID_GENERIC, GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_SRC_COLOR);
-		create_pipeline(&shader, PID_GENERIC, GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO);
-		create_pipeline(&shader, PID_GENERIC, GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE_MINUS_SRC_COLOR);
-		create_pipeline(&shader, PID_GENERIC, GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE_MINUS_SRC_COLOR);
-		create_pipeline(&shader, PID_GENERIC, GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA);
-		create_pipeline(&shader, PID_GENERIC, GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ONE_MINUS_DST_ALPHA);
+		for (uint32_t src = 0; src < SRC_BLEND_COUNT; ++src)
+		{
+			for (uint32_t dst = 0; dst < DST_BLEND_COUNT; ++dst)
+			{
+				create_pipeline(&shader, PID_GENERIC, src_blend_modes[src] | dst_blend_modes[dst]);
+			}
+		}
+
 		shader.vertex = nil;
 		shader.fragment = nil;
 
@@ -578,35 +647,16 @@ static inline uint32_t get_pipeline_index(PipelineId id, uint32_t state_bits)
 	{
 	case PID_GENERIC:
 	{
-		switch (state_bits & (GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS))
-		{
-		case 0:
-			return 0;
-		case GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE:
-			return 1;
-		case GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_SRC_COLOR:
-			return 2;
-		case GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO:
-			return 3;
-		case GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE_MINUS_SRC_COLOR:
-			return 4;
-		case GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE_MINUS_SRC_COLOR:
-			return 5;
-		case GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA:
-			return 6;
-		case GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ONE_MINUS_DST_ALPHA:
-			return 7;
-		}
-		break;
+		return (get_dst_blend_idx(state_bits & GLS_DSTBLEND_BITS) + get_src_blend_idx(state_bits & GLS_SRCBLEND_BITS) * DST_BLEND_COUNT) + ((state_bits & (GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS)) != 0);
 	}
 	case PID_DYNAMIC_LIGHT:
 	{
 		assert((state_bits & (GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS)) == (GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE));
-		return 8;
+		return SRC_BLEND_COUNT * DST_BLEND_COUNT + 1;
 	}
 	case PID_POST_PROCESS:
 	{
-		return 9;
+		return SRC_BLEND_COUNT * DST_BLEND_COUNT + 2;
 	}
 	default:
 		break;
