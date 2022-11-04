@@ -143,3 +143,9 @@ void Sys_DebugPrintf( const char* fmt, ... )
 	OutputDebugStringA(buffer);
 }
 
+
+qbool Sys_IsDebuggerAttached()
+{
+	return IsDebuggerPresent();
+}
+

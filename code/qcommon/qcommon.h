@@ -1154,6 +1154,7 @@ int64_t	Sys_Microseconds();
 
 // prints text in the debugger's output window
 void	Sys_DebugPrintf( const char* fmt, ... );
+qbool	Sys_IsDebuggerAttached();
 
 #ifndef DEDICATED
 qbool	Sys_IsMinimized();
@@ -1196,6 +1197,13 @@ typedef enum {
 } printHelpResult_t;
 
 printHelpResult_t Com_PrintHelp( const char* name, printf_t print, qbool printNotFound, qbool printModules, qbool printFlags );
+
+
+#if defined(_MSC_VER) && defined(_DEBUG)
+#define Q_assert(Cond) do { if(!(Cond)) { if(Sys_IsDebuggerAttached()) __debugbreak(); else assert((Cond)); } } while(0)
+#else
+#define Q_assert(Cond)
+#endif
 
 
 #endif // _QCOMMON_H_
