@@ -274,9 +274,9 @@ void QDECL Com_ErrorExt( int code, int module, qbool realError, const char *fmt,
 	vsprintf( com_errorMessage, fmt, argptr );
 	va_end( argptr );
 
-#if defined(_WIN32) && defined(_DEBUG)
+#if defined(_MSC_VER) && defined(_DEBUG)
 	if ( code != ERR_DISCONNECT && code != ERR_NEED_CD ) {
-		if ( realError && (!com_noErrorInterrupt || !com_noErrorInterrupt->integer) && IsDebuggerPresent() )
+		if ( realError && (!com_noErrorInterrupt || !com_noErrorInterrupt->integer) && Sys_IsDebuggerAttached() )
 			__debugbreak();
 	}
 #endif

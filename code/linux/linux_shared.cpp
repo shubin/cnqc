@@ -751,3 +751,9 @@ sysEvent_t Sys_GetEvent()
 void Sys_DebugPrintf( const char*, ... )
 {
 }
+
+
+qbool Sys_IsDebuggerAttached()
+{
+	return qfalse;
+}
