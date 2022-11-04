@@ -1118,7 +1118,7 @@ void CL_KeyEvent( int key, qbool down, unsigned time )
 		if ( cls.state == CA_ACTIVE && !clc.demoplaying ) {
 			VM_Call( uivm, UI_SET_ACTIVE_MENU, UIMENU_INGAME );
 		}
-		else {
+		else if ( !clc.demoplaying || cl_escapeAbortsDemo->integer ) {
 			CL_Disconnect_f();
 			S_StopAllSounds();
 			VM_Call( uivm, UI_SET_ACTIVE_MENU, UIMENU_MAIN );

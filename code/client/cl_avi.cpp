@@ -648,7 +648,7 @@ static qbool CloseAVI( closeMode_t closeMode )
   Z_Free( afd.eBuffer );
   FS_FCloseFile( afd.f );
 
-  Com_Printf( "Wrote %d:%d frames to %s\n", afd.numVideoFrames, afd.numAudioFrames, afd.fileName );
+  Com_Printf( "Wrote %d:%d V:A frames to %s\n", afd.numVideoFrames, afd.numAudioFrames, afd.fileName );
 
   if ( closeMode == CM_SEQUENCE_COMPLETE )
     S_StopAllSounds();

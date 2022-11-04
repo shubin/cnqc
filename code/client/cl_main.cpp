@@ -46,6 +46,9 @@ cvar_t	*cl_allowDownload;
 cvar_t	*cl_inGameVideo;
 
 cvar_t	*cl_matchAlerts;
+cvar_t	*cl_demoPlayer;
+cvar_t	*cl_escapeAbortsDemo;
+
 cvar_t	*net_proxy;
 
 cvar_t	*r_khr_debug;
@@ -89,7 +92,9 @@ not have future usercmd_t executed before it is executed
 ======================
 */
 void CL_AddReliableCommand( const char *cmd ) {
-	int		index;
+	if ( clc.demoplaying ) {
+		return;
+	}
 
 	// if we would be losing an old command that hasn't been acknowledged,
 	// we must drop the connection
@@ -97,7 +102,7 @@ void CL_AddReliableCommand( const char *cmd ) {
 		Com_Error( ERR_DROP, "Client command overflow" );
 	}
 	clc.reliableSequence++;
-	index = clc.reliableSequence & ( MAX_RELIABLE_COMMANDS - 1 );
+	const int index = clc.reliableSequence & ( MAX_RELIABLE_COMMANDS - 1 );
 	Q_strncpyz( clc.reliableCommands[ index ], cmd, sizeof( clc.reliableCommands[ index ] ) );
 }
 
@@ -364,7 +369,7 @@ static void CL_WalkDemoExt( const char* path, fileHandle_t* fh )
 }
 
 
-void CL_PlayDemo_f()
+static void CL_PlayDemo( qbool videoRestart )
 {
 	if (Cmd_Argc() != 2) {
 		Com_Printf( "demo <demoname>\n" );
@@ -394,6 +399,14 @@ void CL_PlayDemo_f()
 	cls.state = CA_CONNECTED;
 	clc.demoplaying = qtrue;
 	Q_strncpyz( cls.servername, shortPath, sizeof( cls.servername ) );
+
+	if ( cl_demoPlayer->integer ) {
+		while ( CL_MapDownload_Active() ) {
+			Sys_Sleep( 50 );
+		}
+		CL_NDP_PlayDemo( videoRestart );
+		return;
+	}
 
 	// read demo messages until connected
 	while ( cls.state >= CA_CONNECTED && cls.state < CA_PRIMED && !CL_MapDownload_Active() ) {
@@ -730,6 +743,7 @@ void CL_Disconnect( qbool showMainMenu ) {
 		FS_FCloseFile( clc.demofile );
 		clc.demofile = 0;
 	}
+	clc.demoplaying = qfalse;
 
 	if ( uivm && showMainMenu ) {
 		VM_Call( uivm, UI_SET_ACTIVE_MENU, UIMENU_NONE );
@@ -1874,8 +1888,14 @@ static void CL_Vid_Restart_f()
 	// startup all the client stuff
 	CL_StartHunkUsers();
 
+	// we don't really technically need to run everything again,
+	// but trying to optimize parts out is very likely to lead to nasty bugs
+	if ( clc.demoplaying && clc.newDemoPlayer ) {
+		Cmd_TokenizeString( va("demo %s", clc.demoName) );
+		CL_PlayDemo( qtrue );
+	}
 	// start the cgame if connected
-	if ( cls.state > CA_CONNECTED && cls.state != CA_CINEMATIC ) {
+	else if ( cls.state > CA_CONNECTED && cls.state != CA_CINEMATIC ) {
 		cls.cgameStarted = qtrue;
 		CL_InitCGame();
 		// send pure checksums
@@ -1903,30 +1923,42 @@ static void CL_Video_f()
 {
 	char s[ MAX_OSPATH ];
 
-	if( !clc.demoplaying )
+	if( !clc.demoplaying || clc.newDemoPlayer )
 	{
-		Com_Printf( "ERROR: ^7/video is only enabled during demo playback\n" );
+		Com_Printf( "^3ERROR: ^7/%s is only enabled in the old demo player\n", Cmd_Argv( 0 ) );
 		return;
 	}
 
 	if( Cmd_Argc( ) == 2 )
 	{
-		Com_sprintf( s, MAX_OSPATH, "videos/%s", Cmd_Argv( 1 ) );
+		Q_strncpyz( s, Cmd_Argv( 1 ), sizeof( s ) );
 	}
 	else
 	{
 		qtime_t t;
 		Com_RealTime( &t );
-		Com_sprintf( s, sizeof(s), "videos/%d_%02d_%02d-%02d_%02d_%02d",
+		Com_sprintf( s, sizeof( s ), "%d_%02d_%02d-%02d_%02d_%02d",
 				1900+t.tm_year, 1+t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec );
 	}
 
-	CL_OpenAVIForWriting( s, qfalse );
+	CL_OpenAVIForWriting( va( "videos/%s", s ), qfalse );
 }
 
 
 static void CL_StopVideo_f()
 {
+	if( !clc.demoplaying || clc.newDemoPlayer )
+	{
+		Com_Printf( "^3ERROR: ^7/%s is only enabled in the old demo player\n", Cmd_Argv( 0 ) );
+		return;
+	}
+
+	if( !CL_VideoRecording() )
+	{
+		Com_Printf( "No video is being recorded\n" );
+		return;
+	}
+
 	CL_CloseAVI();
 }
 
@@ -2083,6 +2115,12 @@ static void CL_CancelDownload_f()
 }
 
 
+static void CL_PlayDemo_f()
+{
+	CL_PlayDemo( qfalse );
+}
+
+
 static const cvarTableItem_t cl_cvars[] =
 {
 	{ &cl_timeout, "cl_timeout", "200", 0, CVART_INTEGER, "30", "300", "connection time-out, in seconds" },
@@ -2107,7 +2145,9 @@ static const cvarTableItem_t cl_cvars[] =
 	{ NULL, "password", "", CVAR_USERINFO, CVART_STRING, NULL, NULL, "used by /" S_COLOR_CMD "connect" },
 	{ &cl_matchAlerts, "cl_matchAlerts", "7", CVAR_ARCHIVE, CVART_BITMASK, "0", XSTRING(MAF_MAX), help_cl_matchAlerts },
 	{ &net_proxy, "net_proxy", "", CVAR_TEMP, CVART_STRING, NULL, NULL, help_net_proxy },
-	{ &r_khr_debug, "r_khr_debug", "2", CVAR_ARCHIVE, CVART_INTEGER, "0", "2", help_r_khr_debug }
+	{ &r_khr_debug, "r_khr_debug", "2", CVAR_ARCHIVE, CVART_INTEGER, "0", "2", help_r_khr_debug },
+	{ &cl_demoPlayer, "cl_demoPlayer", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_cl_demoPlayer },
+	{ &cl_escapeAbortsDemo, "cl_escapeAbortsDemo", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "pressing escape aborts demo playback" },
 };
 
 

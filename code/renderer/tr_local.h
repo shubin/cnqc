@@ -623,23 +623,10 @@ struct srfTriangles_t {
 // trRefdef_t holds everything that comes in refdef_t,
 // as well as the locally generated scene information
 
-typedef struct {
-	int			x, y, width, height;
-	float		fov_x, fov_y;
-	vec3_t		vieworg;
-	vec3_t		viewaxis[3];		// transformation matrix
-
-	int			time;				// time in milliseconds for shader effects and other time dependent rendering issues
-	int			rdflags;			// RDF_NOWORLDMODEL, etc
-
-	// 1 bits will prevent the associated area from rendering at all
-	byte		areamask[MAX_MAP_AREA_BYTES];
+struct trRefdef_t : public refdef_t {
 	qbool		areamaskModified;	// qtrue if areamask changed since last scene
-
+	int			microSeconds;		// [0;999] micro-seconds to add to the timestamp
 	double		floatTime;			// tr.refdef.time / 1000.0
-
-	// text messages for deform text shaders
-	char		text[MAX_RENDER_STRINGS][MAX_RENDER_STRING_LENGTH];
 
 	int			num_entities;
 	trRefEntity_t	*entities;
@@ -655,8 +642,7 @@ typedef struct {
 
 	int numLitSurfs;
 	litSurf_t* litSurfs;
-
-} trRefdef_t;
+};
 
 
 /*
@@ -1399,7 +1385,7 @@ void RE_ClearScene();
 void RE_AddRefEntityToScene( const refEntity_t *ent, qbool intShaderTime );
 void RE_AddPolyToScene( qhandle_t hShader , int numVerts, const polyVert_t *verts, int num );
 void RE_AddLightToScene( const vec3_t org, float radius, float r, float g, float b );
-void RE_RenderScene( const refdef_t *fd );
+void RE_RenderScene( const refdef_t *fd, int us );
 
 
 /*

@@ -314,6 +314,7 @@ copy "..\..\.bin\release_x32\cnq3-x86.pdb" "$(QUAKE3DIR)"</Command>
     <ClCompile Include="..\..\code\client\cl_cgame.cpp" />
     <ClCompile Include="..\..\code\client\cl_cin.cpp" />
     <ClCompile Include="..\..\code\client\cl_console.cpp" />
+    <ClCompile Include="..\..\code\client\cl_demo.cpp" />
     <ClCompile Include="..\..\code\client\cl_download.cpp" />
     <ClCompile Include="..\..\code\client\cl_gl.cpp" />
     <ClCompile Include="..\..\code\client\cl_input.cpp" />

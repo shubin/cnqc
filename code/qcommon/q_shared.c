@@ -672,9 +672,9 @@ FIXME: make this buffer size safe someday
 */
 const char* QDECL va( const char* format, ... )
 {
-	static char string[2][32000];	// in case va is called by nested functions
+	static char string[4][32000];	// in case va is called by nested functions
 	static int index = 0;
-	char* buf = string[index++ & 1];
+	char* buf = string[index++ & 3];
 	va_list argptr;
 
 	va_start( argptr, format );

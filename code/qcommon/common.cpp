@@ -250,6 +250,14 @@ void QDECL Com_ErrorExt( int code, int module, qbool realError, const char *fmt,
 	static int	lastErrorTime;
 	static int	errorCount;
 
+	if ( code == ERR_DROP_NDP ) {
+#if !defined(DEDICATED)
+		void CL_NDP_HandleError();
+		CL_NDP_HandleError();
+#endif
+		code = ERR_DROP;
+	}
+
 	// make sure we can get at our local stuff
 	FS_PureServerSetLoadedPaks( "" );
 
@@ -3592,4 +3600,20 @@ static const char* Com_GetCompilerInfo()
 #else
 	return "Unknown compiler";
 #endif
+}
+
+
+const char* Com_FormatBytes( int numBytes )
+{
+	const char* units[] = { "bytes", "KB", "MB", "GB" };
+	const float dividers[] = { 1.0f, float(1 << 10), float(1 << 20), float(1 << 30) };
+
+	int unit = 0;
+	for ( int vi = numBytes; vi >= 1024; vi >>= 10 ) {
+		unit++;
+	}
+
+	const float vf = (float)numBytes / dividers[unit];
+
+	return va( "%.3f %s", vf, units[unit] );
 }

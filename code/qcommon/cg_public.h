@@ -196,7 +196,13 @@ typedef enum {
 	CG_EXT_CMD_SETHELP,
 	CG_EXT_MATCHALERTEVENT,
 	CG_EXT_ERROR2,
-	CG_EXT_ISRECORDINGDEMO
+	CG_EXT_ISRECORDINGDEMO,
+	CG_EXT_NDP_ENABLE,
+	CG_EXT_NDP_SEEK,
+	CG_EXT_NDP_READUNTIL,
+	CG_EXT_NDP_STARTVIDEO,
+	CG_EXT_NDP_STOPVIDEO,
+	CG_EXT_R_RENDERSCENE
 } cgameImport_t;
 
 
@@ -427,6 +433,7 @@ typedef enum {
 
 	CG_MOUSE_EVENT,
 //	void	(*CG_MouseEvent)( int dx, int dy );
+
 	CG_EVENT_HANDLING
 //	void (*CG_EventHandling)(int type);
 } cgameExport_t;

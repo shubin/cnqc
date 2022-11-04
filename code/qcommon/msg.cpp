@@ -180,7 +180,7 @@ int MSG_ReadBits( msg_t *msg, int bits ) {
 			msg->readcount += 4;
 			msg->bit += 32;
 		} else {
-			Com_Error(ERR_DROP, "can't read %d bits\n", bits);
+			Com_Error(ERR_DROP_NDP, "can't read %d bits\n", bits);
 		}
 	} else {
 		nbits = 0;
@@ -741,7 +741,7 @@ void MSG_ReadDeltaEntity( msg_t* msg, const entityState_t* from, entityState_t* 
 	int			startBit, endBit;
 
 	if ( number < 0 || number >= MAX_GENTITIES ) {
-		Com_Error( ERR_DROP, "Bad delta entity number: %i", number );
+		Com_Error( ERR_DROP_NDP, "Bad delta entity number: %i", number );
 	}
 
 	if ( msg->bit == 0 ) {
@@ -771,7 +771,7 @@ void MSG_ReadDeltaEntity( msg_t* msg, const entityState_t* from, entityState_t* 
 
 	lc = MSG_ReadByte(msg);
 	if ( lc < 0 || lc > ARRAY_LEN(entityStateFields) ) {
-		Com_Error( ERR_DROP, "invalid entityState_t field count %d (max: %d)\n", lc, ARRAY_LEN(entityStateFields) );
+		Com_Error( ERR_DROP_NDP, "invalid entityState_t field count %d (max: %d)\n", lc, ARRAY_LEN(entityStateFields) );
 	}
 
 	// shownet 2/3 will interleave with other printed info, -1 will
@@ -1095,7 +1095,7 @@ void MSG_ReadDeltaPlayerstate( msg_t* msg, const playerState_t* from, playerStat
 
 	lc = MSG_ReadByte(msg);
 	if ( lc < 0 || lc > ARRAY_LEN(playerStateFields) ) {
-		Com_Error( ERR_DROP, "invalid playerState_t field count %d (max: %d)\n", lc, ARRAY_LEN(playerStateFields) );
+		Com_Error( ERR_DROP_NDP, "invalid playerState_t field count %d (max: %d)\n", lc, ARRAY_LEN(playerStateFields) );
 	}
 
 	const netField_t* field;

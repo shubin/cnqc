@@ -1294,6 +1294,16 @@ int FS_Seek( fileHandle_t f, long offset, int origin )
 }
 
 
+qbool FS_IsZipFile( fileHandle_t f )
+{
+	if ( f < 0 || f >= MAX_FILE_HANDLES ) {
+		Com_Error( ERR_DROP, "FS_IsZipFile: out of range" );
+	}
+
+	return fsh[f].zipFile;
+}
+
+
 /*
 ======================================================================================
 
