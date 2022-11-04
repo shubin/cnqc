@@ -141,7 +141,8 @@ typedef enum {
 	GF_TRIANGLE,
 	GF_SAWTOOTH,
 	GF_INVERSE_SAWTOOTH,
-	GF_NOISE
+	GF_NOISE,
+	GF_COUNT
 } genFunc_t;
 
 typedef enum {
@@ -913,11 +914,6 @@ typedef struct {
 	int			numSkins;
 	skin_t*		skins[MAX_SKINS];
 
-	float		sinTable[FUNCTABLE_SIZE];
-	float		squareTable[FUNCTABLE_SIZE];
-	float		triangleTable[FUNCTABLE_SIZE];
-	float		sawToothTable[FUNCTABLE_SIZE];
-	float		inverseSawToothTable[FUNCTABLE_SIZE];
 	float		fogTable[FOG_TABLE_SIZE];
 
 	float		mipFilter[4]; // only used by the GPU generators

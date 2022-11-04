@@ -319,7 +319,7 @@ static void RB_RenderDrawSurfList( const drawSurf_t* drawSurfs, int numDrawSurfs
 			if ( entityNum != ENTITYNUM_WORLD ) {
 				backEnd.currentEntity = &backEnd.refdef.entities[entityNum];
 				if (backEnd.currentEntity->intShaderTime)
-				    backEnd.refdef.floatTime = originalTime - (double)(backEnd.currentEntity->e.shaderTime.iShaderTime) / 1000.0;
+					backEnd.refdef.floatTime = originalTime - (double)backEnd.currentEntity->e.shaderTime.iShaderTime / 1000.0;
 				else
 				    backEnd.refdef.floatTime = originalTime - backEnd.currentEntity->e.shaderTime.fShaderTime;
 				// we have to reset the shaderTime as well otherwise image animations start
@@ -446,7 +446,7 @@ static void RB_RenderLitSurfList( dlight_t* dl, qbool opaque )
 			if ( entityNum != ENTITYNUM_WORLD ) {
 				backEnd.currentEntity = &backEnd.refdef.entities[entityNum];
 				if (backEnd.currentEntity->intShaderTime)
-				    backEnd.refdef.floatTime = originalTime - (double)backEnd.currentEntity->e.shaderTime.iShaderTime;
+					backEnd.refdef.floatTime = originalTime - (double)backEnd.currentEntity->e.shaderTime.iShaderTime / 1000.0;
 				else
                     backEnd.refdef.floatTime = originalTime - backEnd.currentEntity->e.shaderTime.fShaderTime;
 				// we have to reset the shaderTime as well otherwise image animations start

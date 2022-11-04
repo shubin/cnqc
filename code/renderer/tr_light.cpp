@@ -111,7 +111,6 @@ static void R_SetupEntityLightingGrid( trRefEntity_t *ent ) {
 	for ( i = 0 ; i < 8 ; i++ ) {
 		float	factor;
 		byte	*data;
-		int		lat, lng;
 		vec3_t	normal;
 		#if idppc
 		float d0, d1, d2, d3, d4, d5;
@@ -151,18 +150,16 @@ static void R_SetupEntityLightingGrid( trRefEntity_t *ent ) {
 		ent->directedLight[1] += factor * data[4];
 		ent->directedLight[2] += factor * data[5];
 		#endif
-		lat = data[7];
-		lng = data[6];
-		lat *= (FUNCTABLE_SIZE/256);
-		lng *= (FUNCTABLE_SIZE/256);
 
-		// decode X as cos( lat ) * sin( long )
-		// decode Y as sin( lat ) * sin( long )
-		// decode Z as cos( long )
-
-		normal[0] = tr.sinTable[(lat+(FUNCTABLE_SIZE/4))&FUNCTABLE_MASK] * tr.sinTable[lng];
-		normal[1] = tr.sinTable[lat] * tr.sinTable[lng];
-		normal[2] = tr.sinTable[(lng+(FUNCTABLE_SIZE/4))&FUNCTABLE_MASK];
+		const float lat = (float)data[7] * (2.0f * M_PI / 256.0f);
+		const float lon = (float)data[6] * (2.0f * M_PI / 256.0f);
+		const float cosLat = cos( lat );
+		const float sinLat = sin( lat );
+		const float cosLon = cos( lon );
+		const float sinLon = sin( lon );
+		normal[0] = cosLat * sinLon;
+		normal[1] = sinLat * sinLon;
+		normal[2] = cosLon;
 
 		VectorMA( direction, factor, normal, direction );
 	}
