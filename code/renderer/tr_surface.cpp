@@ -375,6 +375,20 @@ static void VectorArrayNormalize(vec4_t *normals, unsigned int count)
 }
 
 
+static void DecompressNormalVector( vec3_t output, const short* input )
+{
+	const float lat = ((input[0] >> 8) & 0xFF) * ((2.0f * M_PI) / 256.0f);
+	const float lon = ( input[0]       & 0xFF) * ((2.0f * M_PI) / 256.0f);
+	const float cosLat = cos( lat );
+	const float sinLat = sin( lat );
+	const float cosLon = cos( lon );
+	const float sinLon = sin( lon );
+	output[0] = cosLat * sinLon;
+	output[1] = sinLat * sinLon;
+	output[2] = cosLon;
+}
+
+
 static void LerpMeshVertexes( md3Surface_t* surf, float backlerp )
 {
 	short	*oldXyz, *newXyz, *oldNormals, *newNormals;
@@ -382,7 +396,6 @@ static void LerpMeshVertexes( md3Surface_t* surf, float backlerp )
 	float	oldXyzScale, newXyzScale;
 	float	oldNormalScale, newNormalScale;
 	int		vertNum;
-	unsigned lat, lng;
 	int		numVerts;
 
 	outXyz = tess.xyz[tess.numVertexes];
@@ -405,23 +418,11 @@ static void LerpMeshVertexes( md3Surface_t* surf, float backlerp )
 			newXyz += 4, newNormals += 4,
 			outXyz += 4, outNormal += 4) 
 		{
-
 			outXyz[0] = newXyz[0] * newXyzScale;
 			outXyz[1] = newXyz[1] * newXyzScale;
 			outXyz[2] = newXyz[2] * newXyzScale;
 
-			lat = ( newNormals[0] >> 8 ) & 0xff;
-			lng = ( newNormals[0] & 0xff );
-			lat *= (FUNCTABLE_SIZE/256);
-			lng *= (FUNCTABLE_SIZE/256);
-
-			// decode X as cos( lat ) * sin( long )
-			// decode Y as sin( lat ) * sin( long )
-			// decode Z as cos( long )
-
-			outNormal[0] = tr.sinTable[(lat+(FUNCTABLE_SIZE/4))&FUNCTABLE_MASK] * tr.sinTable[lng];
-			outNormal[1] = tr.sinTable[lat] * tr.sinTable[lng];
-			outNormal[2] = tr.sinTable[(lng+(FUNCTABLE_SIZE/4))&FUNCTABLE_MASK];
+			DecompressNormalVector( outNormal, newNormals );
 		}
 	} else {
 		//
@@ -446,28 +447,11 @@ static void LerpMeshVertexes( md3Surface_t* surf, float backlerp )
 			outXyz[2] = oldXyz[2] * oldXyzScale + newXyz[2] * newXyzScale;
 
 			// FIXME: interpolate lat/long instead?
-			lat = ( newNormals[0] >> 8 ) & 0xff;
-			lng = ( newNormals[0] & 0xff );
-			lat *= 4;
-			lng *= 4;
-			uncompressedNewNormal[0] = tr.sinTable[(lat+(FUNCTABLE_SIZE/4))&FUNCTABLE_MASK] * tr.sinTable[lng];
-			uncompressedNewNormal[1] = tr.sinTable[lat] * tr.sinTable[lng];
-			uncompressedNewNormal[2] = tr.sinTable[(lng+(FUNCTABLE_SIZE/4))&FUNCTABLE_MASK];
-
-			lat = ( oldNormals[0] >> 8 ) & 0xff;
-			lng = ( oldNormals[0] & 0xff );
-			lat *= 4;
-			lng *= 4;
-
-			uncompressedOldNormal[0] = tr.sinTable[(lat+(FUNCTABLE_SIZE/4))&FUNCTABLE_MASK] * tr.sinTable[lng];
-			uncompressedOldNormal[1] = tr.sinTable[lat] * tr.sinTable[lng];
-			uncompressedOldNormal[2] = tr.sinTable[(lng+(FUNCTABLE_SIZE/4))&FUNCTABLE_MASK];
-
+			DecompressNormalVector( uncompressedNewNormal, newNormals );
+			DecompressNormalVector( uncompressedOldNormal, oldNormals );
 			outNormal[0] = uncompressedOldNormal[0] * oldNormalScale + uncompressedNewNormal[0] * newNormalScale;
 			outNormal[1] = uncompressedOldNormal[1] * oldNormalScale + uncompressedNewNormal[1] * newNormalScale;
 			outNormal[2] = uncompressedOldNormal[2] * oldNormalScale + uncompressedNewNormal[2] * newNormalScale;
-
-//			VectorNormalize (outNormal);
 		}
 		VectorArrayNormalize((vec4_t *)tess.normal[tess.numVertexes], numVerts);
 	}

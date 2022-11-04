@@ -24,45 +24,81 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_local.h"
 
 
-static double WaveValue( const float* table, double base, double amplitude, double phase, double freq )
+// input's in the [0;1] range
+typedef double (*waveGenFunc_t)( double );
+
+
+static double WaveGenSine( double x )
 {
-	// the original code did a double to 32-bit int conversion of x
-	const double x = (phase + tess.shaderTime * freq) * FUNCTABLE_SIZE;
-	const int i = (int)((int64_t)x & (int64_t)FUNCTABLE_MASK);
-	const double r = base + table[i] * amplitude;
+	return sin(x * 2.0 * M_PI);
+}
+
+
+static double WaveGenSquare( double x )
+{
+	return x < 0.5 ? 1.0 : -1.0;
+}
+
+
+static double WaveGenTriangle( double xs )
+{
+	// the original table shifts the triangle for whatever reason...
+	const double x = (xs < 0.75) ? (xs + 0.25) : (xs - 0.75);
+	const double l = x * 4.0 - 1.0;
+	const double r = 1.0 - (x - 0.5) * 4.0;
+	const double f = (x < 0.5) ? l : r;
+
+	return f;
+}
+
+
+static double WaveGenSawTooth( double x )
+{
+	return x;
+}
+
+
+static double WaveGenInverseSawTooth( double x )
+{
+	return 1.0 - x;
+}
+
+
+static double WaveGenInvalid( double x )
+{
+	ri.Error( ERR_DROP, "WaveGenInvalid called in shader '%s'\n", tess.shader->name );
+	return 0.0;
+}
+
+
+static double WaveValue( genFunc_t func , double base, double amplitude, double phase, double freq )
+{
+	static const waveGenFunc_t waveGenFunctions[GF_COUNT] =
+	{
+		WaveGenInvalid, // GF_NULL
+		WaveGenSine,
+		WaveGenSquare,
+		WaveGenTriangle,
+		WaveGenSawTooth,
+		WaveGenInverseSawTooth,
+		WaveGenInvalid // GF_NOISE
+	};
+
+	// fmod doesn't behave how we want with negative numerators
+	// fmod(-2.25, 1) returns -0.25 but we really want 0.75
+	const double xo = phase + tess.shaderTime * freq;
+	const double xr = (double)(int)xo; // rounded towards 0
+	const double x = xo >= 0.0 ? (xo - xr) : (xo - xr + 1.0);
+	const double r = base + (waveGenFunctions[func])(x) * amplitude;
 
 	return r;
 }
 
 
-static const float* TableForFunc( genFunc_t func ) 
-{
-	switch ( func )
-	{
-	case GF_SIN:
-		return tr.sinTable;
-	case GF_TRIANGLE:
-		return tr.triangleTable;
-	case GF_SQUARE:
-		return tr.squareTable;
-	case GF_SAWTOOTH:
-		return tr.sawToothTable;
-	case GF_INVERSE_SAWTOOTH:
-		return tr.inverseSawToothTable;
-	case GF_NONE:
-	default:
-		break;
-	}
-
-	ri.Error( ERR_DROP, "TableForFunc called with invalid function '%d' in shader '%s'\n", func, tess.shader->name );
-	return NULL;
-}
-
-
 // Evaluates a given waveForm_t, referencing backEnd.refdef.time directly
-static float EvalWaveForm( const waveForm_t *wf ) 
+static float EvalWaveForm( const waveForm_t *wf )
 {
-	return WaveValue( TableForFunc( wf->func ), wf->base, wf->amplitude, wf->phase, wf->frequency );
+	return WaveValue( wf->func, wf->base, wf->amplitude, wf->phase, wf->frequency );
 }
 
 
@@ -139,12 +175,10 @@ static void RB_CalcDeformVertexes( const deformStage_t* ds, int firstVertex, int
 	}
 	else
 	{
-		const float* table = TableForFunc(ds->deformationWave.func);
-
 		for ( int i = 0; i < numVertexes; i++, xyz += 4, normal += 4 )
 		{
 			const float off = ( xyz[0] + xyz[1] + xyz[2] ) * ds->deformationSpread;
-			const float scale = WaveValue( table, ds->deformationWave.base, 
+			const float scale = WaveValue( ds->deformationWave.func, ds->deformationWave.base, 
 				ds->deformationWave.amplitude,
 				ds->deformationWave.phase + off,
 				ds->deformationWave.frequency );
@@ -190,21 +224,14 @@ static void RB_CalcDeformNormals( const deformStage_t* ds, int firstVertex, int 
 
 static void RB_CalcBulgeVertexes( const deformStage_t* ds, int firstVertex, int numVertexes )
 {
-	int i;
-	const float *st = ( const float * ) &tess.texCoords[firstVertex];
-	float		*xyz = ( float * ) &tess.xyz[firstVertex];
-	float		*normal = ( float * ) &tess.normal[firstVertex];
-	float		now;
+	const float* st = (const float*)&tess.texCoords[firstVertex];
+	float* xyz = (float*)&tess.xyz[firstVertex];
+	float* normal = (float*)&tess.normal[firstVertex];
 
-	now = backEnd.refdef.time * ds->bulgeSpeed / 1000.0f;
+	const float now = (backEnd.refdef.time / 1000.0f) * ds->bulgeSpeed;
 
-	for ( i = 0; i < numVertexes; i++, xyz += 4, st += 2, normal += 4 ) {
-		int		off;
-		float scale;
-
-		off = (float)( FUNCTABLE_SIZE / (M_PI*2) ) * ( st[0] * ds->bulgeWidth + now );
-
-		scale = tr.sinTable[ off & FUNCTABLE_MASK ] * ds->bulgeHeight;
+	for ( int i = 0; i < numVertexes; i++, xyz += 4, st += 2, normal += 4 ) {
+		const float scale = ds->bulgeHeight * sin(st[0] * ds->bulgeWidth + now);
 			
 		xyz[0] += normal[0] * scale;
 		xyz[1] += normal[1] * scale;
@@ -216,8 +243,9 @@ static void RB_CalcBulgeVertexes( const deformStage_t* ds, int firstVertex, int 
 // a deformation that can move an entire surface along a wave path
 static void RB_CalcMoveVertexes( const deformStage_t* ds, int firstVertex, int numVertexes )
 {
-	const float* table = TableForFunc( ds->deformationWave.func );
-	const double scale = WaveValue( table, ds->deformationWave.base, 
+	const double scale = WaveValue(
+		ds->deformationWave.func,
+		ds->deformationWave.base, 
 		ds->deformationWave.amplitude,
 		ds->deformationWave.phase,
 		ds->deformationWave.frequency );
@@ -832,19 +860,13 @@ static void RB_CalcEnvironmentTexCoords( float *st, int firstVertex, int numVert
 
 static void RB_CalcTurbulentTexCoords( const waveForm_t *wf, float *st, int firstVertex, int numVertexes )
 {
-	int i;
-	double now;
 	vec4_t* const v = &tess.xyz[firstVertex];
+	const double now = ( wf->phase + tess.shaderTime * wf->frequency );
 
-	now = ( wf->phase + tess.shaderTime * wf->frequency );
-
-	for ( i = 0; i < numVertexes; i++, st += 2 )
+	for ( int i = 0; i < numVertexes; i++, st += 2 )
 	{
-		float s = st[0];
-		float t = st[1];
-
-		st[0] = s + tr.sinTable[ ( ( int ) ( ( ( v[i][0] + v[i][2] )* 1.0/128 * 0.125 + now ) * FUNCTABLE_SIZE ) ) & ( FUNCTABLE_MASK ) ] * wf->amplitude;
-		st[1] = t + tr.sinTable[ ( ( int ) ( ( v[i][1] * 1.0/128 * 0.125 + now ) * FUNCTABLE_SIZE ) ) & ( FUNCTABLE_MASK ) ] * wf->amplitude;
+		st[0] += sin( ( ( v[i][0] + v[i][2] )* 1.0 / 128 * 0.125 + now ) * 2.0 * M_PI ) * wf->amplitude;
+		st[1] += sin( ( v[i][1] * 1.0 / 128 * 0.125 + now ) * 2.0 * M_PI ) * wf->amplitude;
 	}
 }
 
@@ -885,13 +907,9 @@ static void RB_CalcScrollTexCoords( const float scrollSpeed[2], float *st, int n
 
 static void RB_CalcRotateTexCoords( float degsPerSecond, float *st, int numVertexes )
 {
-    double timeScale = tess.shaderTime;
-
-	double degs = -degsPerSecond * timeScale;
-	int index = degs * ( FUNCTABLE_SIZE / 360.0f );
-
-	float sinValue = tr.sinTable[ index & FUNCTABLE_MASK ];
-	float cosValue = tr.sinTable[ ( index + FUNCTABLE_SIZE / 4 ) & FUNCTABLE_MASK ];
+	const double x = -degsPerSecond * (tess.shaderTime / 360.0) * 2.0 * M_PI;
+	const double sinValue = sin(x);
+	const double cosValue = cos(x);
 
     texModInfo_t tmi;
 	tmi.matrix[0][0] = cosValue;
