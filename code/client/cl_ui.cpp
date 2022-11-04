@@ -900,7 +900,7 @@ static intptr_t CL_UISystemCalls( intptr_t* args )
 		return 0;
 
 	case UI_R_RENDERSCENE:
-		re.RenderScene( VMA(1) );
+		re.RenderScene( VMA(1), 0 );
 		return 0;
 
 	case UI_R_SETCOLOR:
@@ -1159,7 +1159,7 @@ static intptr_t CL_UISystemCalls( intptr_t* args )
 		return 0;
 
 	case UI_EXT_ENABLEERRORCALLBACK:
-		cls.uiErrorCallbackVMCall = (int)args[1];
+		cls.uivmCalls[UIVM_ERROR_CALLBACK] = (int)args[1];
 		return 0;
 
 	default:
@@ -1172,7 +1172,7 @@ static intptr_t CL_UISystemCalls( intptr_t* args )
 
 void CL_ShutdownUI()
 {
-	cls.uiErrorCallbackVMCall = 0;
+	Com_Memset( cls.uivmCalls, 0, sizeof(cls.uivmCalls) );
 	cls.keyCatchers &= ~KEYCATCH_UI;
 	cls.uiStarted = qfalse;
 	if ( !uivm )
@@ -1208,18 +1208,17 @@ void CL_InitUI()
 	}
 
 	// init for this gamestate
-	cls.uiErrorCallbackVMCall = 0;
 	VM_Call( uivm, UI_INIT, (cls.state >= CA_AUTHORIZING && cls.state < CA_ACTIVE) );
 }
 
 
 void CL_ForwardUIError( int level, int module, const char* error )
 {
-	if ( uivm == NULL || cls.uiErrorCallbackVMCall == 0 )
+	if ( uivm == NULL || cls.uivmCalls[UIVM_ERROR_CALLBACK] == 0 )
 		return;
 
 	Q_strncpyz( (char*)interopBufferOut, error, interopBufferOutSize );
-	VM_Call( uivm, cls.uiErrorCallbackVMCall, level, module );
+	VM_Call( uivm, cls.uivmCalls[UIVM_ERROR_CALLBACK], level, module );
 }
 
 

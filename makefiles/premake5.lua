@@ -369,6 +369,7 @@ local function ApplyExeProjectSettings(exeName, server)
 		"client/cl_cgame.cpp",
 		"client/cl_cin.cpp",
 		"client/cl_console.cpp",
+		"client/cl_demo.cpp",
 		"client/cl_download.cpp",
 		"client/cl_gl.cpp",
 		"client/cl_input.cpp",

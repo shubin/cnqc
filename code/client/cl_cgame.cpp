@@ -94,6 +94,11 @@ static int CL_GetCurrentCmdNumber()
 
 static void CL_GetCurrentSnapshotNumber( int* snapshotNumber, int* serverTime )
 {
+	if ( clc.newDemoPlayer ) {
+		CL_NDP_GetCurrentSnapshotNumber( snapshotNumber, serverTime );
+		return;
+	}
+
 	*snapshotNumber = cl.snap.messageNum;
 	*serverTime = cl.snap.serverTime;
 }
@@ -101,6 +106,10 @@ static void CL_GetCurrentSnapshotNumber( int* snapshotNumber, int* serverTime )
 
 static qbool CL_GetSnapshot( int snapshotNumber, snapshot_t* snapshot )
 {
+	if ( clc.newDemoPlayer ) {
+		return CL_NDP_GetSnapshot( snapshotNumber, snapshot );
+	}
+
 	int i, count;
 
 	if ( snapshotNumber > cl.snap.messageNum ) {
@@ -154,7 +163,7 @@ static void CL_SetUserCmdValue( int userCmdValue, float sensitivityScale )
 }
 
 
-static void CL_ConfigstringModified()
+void CL_ConfigstringModified()
 {
 	int index = atoi( Cmd_Argv(1) );
 	if ( index < 0 || index >= MAX_CONFIGSTRINGS ) {
@@ -209,6 +218,10 @@ static void CL_ConfigstringModified()
 
 static qbool CL_GetServerCommand( int serverCommandNumber )
 {
+	if ( clc.newDemoPlayer ) {
+		return CL_NDP_GetServerCommand( serverCommandNumber );
+	}
+
 	static char bigConfigString[BIG_INFO_STRING];
 
 	// if we have irretrievably lost a reliable command, drop the connection
@@ -306,6 +319,7 @@ static void CL_CM_LoadMap( const char* mapname )
 
 void CL_ShutdownCGame()
 {
+	Com_Memset( cls.cgvmCalls, 0, sizeof(cls.cgvmCalls) );
 	cls.keyCatchers &= ~KEYCATCH_CGAME;
 	cls.cgameStarted = qfalse;
 	cls.cgameForwardInput = 0;
@@ -336,6 +350,12 @@ static qbool CL_CG_GetValue( char* value, int valueSize, const char* key )
 		{ "trap_MatchAlertEvent", CG_EXT_MATCHALERTEVENT },
 		{ "trap_Error2", CG_EXT_ERROR2 },
 		{ "trap_IsRecordingDemo", CG_EXT_ISRECORDINGDEMO },
+		{ "trap_CNQ3_NDP_Enable", CG_EXT_NDP_ENABLE },
+		{ "trap_CNQ3_NDP_Seek", CG_EXT_NDP_SEEK },
+		{ "trap_CNQ3_NDP_ReadUntil", CG_EXT_NDP_READUNTIL },
+		{ "trap_CNQ3_NDP_StartVideo", CG_EXT_NDP_STARTVIDEO },
+		{ "trap_CNQ3_NDP_StopVideo", CG_EXT_NDP_STOPVIDEO },
+		{ "trap_CNQ3_R_RenderScene", CG_EXT_R_RENDERSCENE },
 		// commands
 		{ "screenshotnc", 1 },
 		{ "screenshotncJPEG", 1 },
@@ -519,7 +539,7 @@ static intptr_t CL_CgameSystemCalls( intptr_t *args )
 		re.AddLightToScene( VMA(1), VMF(2), VMF(3), VMF(4), VMF(5) );
 		return 0;
 	case CG_R_RENDERSCENE:
-		re.RenderScene( VMA(1) );
+		re.RenderScene( VMA(1), 0 );
 		return 0;
 	case CG_R_SETCOLOR:
 		re.SetColor( VMA(1) );
@@ -527,14 +547,6 @@ static intptr_t CL_CgameSystemCalls( intptr_t *args )
 	case CG_R_DRAWSTRETCHPIC:
 		re.DrawStretchPic( VMF(1), VMF(2), VMF(3), VMF(4), VMF(5), VMF(6), VMF(7), VMF(8), args[9] );
 		return 0;
-#if defined( QC )
-	case CG_R_DRAWQUAD:
-		re.DrawQuad( 
-			VMF(1), VMF(2), VMF(3), VMF(4), VMF(5), VMF(6), VMF(7), VMF(8), 
-			VMF(9), VMF(10), VMF(11), VMF(12), VMF(13), VMF(14), VMF(15), VMF(16), 
-			args[17] );
-		return 0;
-#endif
 	case CG_R_MODELBOUNDS:
 		re.ModelBounds( args[1], VMA(2), VMA(3) );
 		return 0;
@@ -668,12 +680,51 @@ static intptr_t CL_CgameSystemCalls( intptr_t *args )
 
 	case CG_EXT_ISRECORDINGDEMO:
 		return clc.demorecording;
-
+		
 #if defined( QC )
 	case CG_GET_ADVERTISEMENTS:
 		re.GetAdvertisements(VMA(1), VMA(2), VMA(3));
 		return 0;
+		
+	case CG_R_DRAWQUAD:
+		re.DrawQuad( 
+			VMF(1), VMF(2), VMF(3), VMF(4), VMF(5), VMF(6), VMF(7), VMF(8), 
+			VMF(9), VMF(10), VMF(11), VMF(12), VMF(13), VMF(14), VMF(15), VMF(16), 
+			args[17] );
+		return 0;
 #endif
+
+	case CG_EXT_NDP_ENABLE:
+		if( clc.demoplaying && cl_demoPlayer->integer ) {
+			cls.cgameNewDemoPlayer = qtrue;
+			cls.cgvmCalls[CGVM_NDP_ANALYZE_COMMAND] = args[1];
+			cls.cgvmCalls[CGVM_NDP_GENERATE_COMMANDS] = args[2];
+			cls.cgvmCalls[CGVM_NDP_IS_CS_NEEDED] = args[3];
+			cls.cgvmCalls[CGVM_NDP_ANALYZE_SNAPSHOT] = args[4];
+			cls.cgvmCalls[CGVM_NDP_END_ANALYSIS] = args[5];
+			return qtrue;
+		} else {
+			return qfalse;
+		}
+
+	case CG_EXT_NDP_SEEK:
+		return CL_NDP_Seek( args[1] );
+
+	case CG_EXT_NDP_READUNTIL:
+		CL_NDP_ReadUntil( args[1] );
+		return 0;
+
+	case CG_EXT_NDP_STARTVIDEO:
+		Cvar_Set( cl_aviFrameRate->name, va( "%d", (int)args[2] ) );
+		return CL_OpenAVIForWriting( va( "videos/%s", (const char*)VMA(1) ), qfalse );
+
+	case CG_EXT_NDP_STOPVIDEO:
+		CL_CloseAVI();
+		return 0;
+
+	case CG_EXT_R_RENDERSCENE:
+		re.RenderScene( VMA(1), args[2] );
+		return 0;
 
 	default:
 		Com_Error( ERR_DROP, "Bad cgame system trap: %i", args[0] );
@@ -710,6 +761,7 @@ void CL_InitCGame()
 	int t = Sys_Milliseconds();
 
 	cls.cgameForwardInput = 0;
+	cls.cgameNewDemoPlayer = qfalse;
 
 	// put away the console
 	Con_Close();
@@ -720,11 +772,7 @@ void CL_InitCGame()
 	Com_sprintf( cl.mapname, sizeof( cl.mapname ), "maps/%s.bsp", mapname );
 
 	// if sv_pure is set we only allow qvms to be loaded
-#if defined( QC ) && 0
-	const vmInterpret_t interpret = VMI_NATIVE;
-#else
 	const vmInterpret_t interpret = cl_connectedToPureServer ? VMI_COMPILED : (vmInterpret_t)Cvar_VariableIntegerValue( "vm_cgame" );
-#endif
 
 	cgvm = VM_Create( VM_CGAME, CL_CgameSystemCalls, interpret );
 	if ( !cgvm ) {
@@ -869,6 +917,11 @@ static void CL_FirstSnapshot()
 
 void CL_SetCGameTime()
 {
+	if ( clc.newDemoPlayer ) {
+		CL_NDP_SetCGameTime();
+		return;
+	}
+
 	// getting a valid frame message ends the connection process
 	if ( cls.state != CA_ACTIVE ) {
 		if ( cls.state != CA_PRIMED ) {
@@ -969,3 +1022,45 @@ void CL_SetCGameTime()
 
 }
 
+
+void CL_CGNDP_AnalyzeCommand( int serverTime )
+{
+	Q_assert(cls.cgameNewDemoPlayer);
+	VM_Call(cgvm, cls.cgvmCalls[CGVM_NDP_ANALYZE_COMMAND], serverTime);
+}
+
+
+void CL_CGNDP_GenerateCommands( const char** commands, int* numCommandBytes )
+{
+	Q_assert(cls.cgameNewDemoPlayer);
+	Q_assert(commands);
+	Q_assert(numCommandBytes);
+	VM_Call(cgvm, cls.cgvmCalls[CGVM_NDP_GENERATE_COMMANDS]);
+	*numCommandBytes = *(int*)interopBufferIn;
+	*commands = (const char*)interopBufferIn + 4;
+}
+
+
+qbool CL_CGNDP_IsConfigStringNeeded( int csIndex )
+{
+	Q_assert(cls.cgameNewDemoPlayer);
+	Q_assert(csIndex >= 0 && csIndex < MAX_CONFIGSTRINGS);
+	return (qbool)VM_Call(cgvm, cls.cgvmCalls[CGVM_NDP_IS_CS_NEEDED], csIndex);
+}
+
+
+void CL_CGNDP_AnalyzeSnapshot( int progress )
+{
+	Q_assert(cls.cgameNewDemoPlayer);
+	Q_assert(progress >= 0 && progress < 100);
+	VM_Call(cgvm, cls.cgvmCalls[CGVM_NDP_ANALYZE_SNAPSHOT], progress);
+}
+
+
+void CL_CGNDP_EndAnalysis( const char* filePath, int firstServerTime, int lastServerTime, qbool videoRestart )
+{
+	Q_assert(cls.cgameNewDemoPlayer);
+	Q_assert(lastServerTime > firstServerTime);
+	Q_strncpyz((char*)interopBufferOut, filePath, interopBufferOutSize);
+	VM_Call(cgvm, cls.cgvmCalls[CGVM_NDP_END_ANALYSIS], firstServerTime, lastServerTime, videoRestart);
+}

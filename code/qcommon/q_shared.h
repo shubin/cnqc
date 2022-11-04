@@ -225,6 +225,7 @@ typedef int		clipHandle_t;
 typedef enum {
 	ERR_FATAL,					// exit the entire game with a popup window
 	ERR_DROP,					// print to console and disconnect from game
+	ERR_DROP_NDP,				// same but the NDP can run its own handler when active
 	ERR_SERVERDISCONNECT,		// don't kill server
 	ERR_DISCONNECT,				// client disconnected from the server
 	ERR_NEED_CD					// pop up the need-cd dialog

@@ -146,3 +146,8 @@ S_COLOR_VAL "    2 " S_COLOR_HELP "= On in debug builds only"
 "Example: init       lines starting with 'init'\n" \
 "Example: *init      lines containing 'init'\n" \
 "Example: >*net      lines starting with '>' AND containing 'net'"
+
+#define help_cl_demoPlayer \
+"1 enables demo rewind\n" \
+S_COLOR_VAL "    0 " S_COLOR_HELP "= Uses the original demo player\n" \
+S_COLOR_VAL "    1 " S_COLOR_HELP "= Uses the new demo player when the mod supports it"

@@ -173,7 +173,7 @@ typedef struct {
 	int			serverMessageSequence;
 
 	// reliable messages received from server
-	int			serverCommandSequence;
+	int			serverCommandSequence;			// the number of the latest available command
 	int			lastExecutedServerCommand;		// last server command grabbed or executed with CL_GetServerCommand
 	char		serverCommands[MAX_RELIABLE_COMMANDS][MAX_STRING_CHARS];
 	qbool		serverCommandsBad[MAX_RELIABLE_COMMANDS];	// non-zero means the command shouldn't be fed to cgame
@@ -196,6 +196,7 @@ typedef struct {
 	qbool	demoplaying;
 	qbool	demowaiting;	// don't record until a non-delta message is received
 	qbool	firstDemoFrameSkipped;
+	qbool	newDemoPlayer;	// running the new player with rewind support
 	fileHandle_t	demofile;
 
 	int			timeDemoFrames;		// counter of rendered frames
@@ -245,6 +246,22 @@ typedef struct {
 	unsigned short	port;
 } serverAddress_t;
 
+// CGame VM calls that are extensions
+enum {
+	CGVM_NDP_END_ANALYSIS,
+	CGVM_NDP_ANALYZE_SNAPSHOT,
+	CGVM_NDP_ANALYZE_COMMAND,
+	CGVM_NDP_GENERATE_COMMANDS, // generate synchronization commands
+	CGVM_NDP_IS_CS_NEEDED,      // does this config string need to be re-submitted?
+	CGVM_COUNT
+};
+
+// UI VM calls that are extensions
+enum {
+	UIVM_ERROR_CALLBACK, // forward errors to UI?
+	UIVM_COUNT
+};
+
 typedef struct {
 	connstate_t	state;				// connection status
 	int			keyCatchers;		// bit flags
@@ -261,11 +278,16 @@ typedef struct {
 	qbool	uiStarted;
 	qbool	cgameStarted;
 
+	// extensions VM calls indices
+	// 0 when not available
+	int			cgvmCalls[CGVM_COUNT];
+	int			uivmCalls[UIVM_COUNT];
+
+	// extension: new demo player supported by the mod
+	qbool		cgameNewDemoPlayer;
+
 	// extension: forward input to cgame regardless of keycatcher state?
 	int			cgameForwardInput;	// 1=mouse, 2=keys (note: we don't forward the escape key)
-
-	// extension: forward errors to ui?
-	int			uiErrorCallbackVMCall;	// 0 when not available
 
 	int			framecount;
 	int			frametime;			// msec since last frame
@@ -354,6 +376,8 @@ extern	cvar_t	*cl_allowDownload;	// 0=off, 1=CNQ3, -1=id
 extern	cvar_t	*cl_inGameVideo;
 
 extern	cvar_t	*cl_matchAlerts;	// bit mask, see the MAF_* constants
+extern	cvar_t	*cl_demoPlayer;
+extern	cvar_t	*cl_escapeAbortsDemo;
 
 extern	cvar_t	*r_khr_debug;
 
@@ -496,6 +520,12 @@ void CL_InitCGame();
 void CL_ShutdownCGame();
 void CL_CGameRendering( stereoFrame_t stereo );
 void CL_SetCGameTime();
+void CL_ConfigstringModified();
+void CL_CGNDP_EndAnalysis( const char* filePath, int firstServerTime, int lastServerTime, qbool videoRestart );
+void CL_CGNDP_AnalyzeSnapshot( int progress );
+void CL_CGNDP_AnalyzeCommand( int serverTime );
+void CL_CGNDP_GenerateCommands( const char** commands, int* numCommandBytes );
+qbool CL_CGNDP_IsConfigStringNeeded( int csIndex );
 
 //
 // cl_ui.c
@@ -545,6 +575,18 @@ void CL_MapDownload_CrashCleanUp();
 //
 qbool CL_GL_WantDebug();	// do we want a debug context from the platform layer?
 void CL_GL_Init();			// enables debug output if needed
+
+//
+// cl_demo.cpp
+//
+void CL_NDP_PlayDemo( qbool videoRestart );
+void CL_NDP_SetCGameTime();
+void CL_NDP_GetCurrentSnapshotNumber( int* snapshotNumber, int* serverTime );
+qbool CL_NDP_GetSnapshot( int snapshotNumber, snapshot_t* snapshot );
+qbool CL_NDP_GetServerCommand( int serverCommandNumber );
+int CL_NDP_Seek( int serverTime );
+void CL_NDP_ReadUntil( int serverTime );
+void CL_NDP_HandleError();
 
 //
 // OS-specific

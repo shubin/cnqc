@@ -197,7 +197,7 @@ void RE_AddLightToScene( const vec3_t org, float radius, float r, float g, float
 // draw a 3D view into a part of the window, then return to 2D drawing
 // rendering a scene may require multiple views to be rendered to handle mirrors
 
-void RE_RenderScene( const refdef_t* fd )
+void RE_RenderScene( const refdef_t* fd, int us )
 {
 	if ( !tr.registered ) {
 		return;
@@ -228,6 +228,7 @@ void RE_RenderScene( const refdef_t* fd )
 	VectorCopy( fd->viewaxis[2], tr.refdef.viewaxis[2] );
 
 	tr.refdef.time = fd->time;
+	tr.refdef.microSeconds = us;
 	tr.refdef.rdflags = fd->rdflags;
 
 	// copy the areamask data over and note if it has changed, which
@@ -248,7 +249,9 @@ void RE_RenderScene( const refdef_t* fd )
 
 	// derived info
 
-	tr.refdef.floatTime = (double)tr.refdef.time / 1000.0;
+	tr.refdef.floatTime =
+		(double)tr.refdef.time / 1000.0 +
+		(double)tr.refdef.microSeconds / 1000000.0;
 
 	tr.refdef.numDrawSurfs = r_firstSceneDrawSurf;
 	tr.refdef.drawSurfs = backEndData->drawSurfs;

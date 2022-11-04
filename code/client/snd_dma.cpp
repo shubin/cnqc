@@ -233,6 +233,13 @@ static sfxHandle_t S_Base_RegisterSound( const char* name )
 		return 0;
 	}
 
+	if ( name[0] == '\0' ) {
+		if ( !cls.cgameNewDemoPlayer ) {
+			Com_Printf( "Sound name is empty\n" );
+		}
+		return 0;
+	}
+
 	if ( strlen( name ) >= MAX_QPATH ) {
 		Com_Printf( "Sound name exceeds MAX_QPATH\n" );
 		return 0;
