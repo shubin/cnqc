@@ -2833,6 +2833,13 @@ void R_ShaderList_f( void )
 {
 	const char* const match = Cmd_Argc() > 1 ? Cmd_Argv( 1 ) : NULL;
 
+	ri.Printf( PRINT_ALL, "S   : Stage count\n" );
+	ri.Printf( PRINT_ALL, "P   : Pass count (collapsed stages)\n" );
+	ri.Printf( PRINT_ALL, "L   : Lightmap index\n" );
+	ri.Printf( PRINT_ALL, "E   : Explicitly defined (i.e. defined by code)\n" );
+	ri.Printf( PRINT_ALL, "func: 'sky' if it's a sky shader, empty otherwise\n" );
+	ri.Printf( PRINT_ALL, "\n" );
+
 	ri.Printf( PRINT_ALL, "S P L E func order   name \n" );
 
 	int count = 0;
