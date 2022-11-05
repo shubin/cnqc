@@ -8,7 +8,7 @@ extern dllSyscall_t syscall;
 #define EMPTY
 
 #ifdef Q3_VM
-#define DEF_TRAP_0(ret, R, Name) typedef R (*Name##_t)(); Name##_t Name
+#define DEF_TRAP_0(ret, R, Name) typedef R (*Name##_t)(void); Name##_t Name
 #define DEF_TRAP_1(ret, R, Name, A1) typedef R (*Name##_t)(A1); Name##_t Name
 #define DEF_TRAP_2(ret, R, Name, A1, A2) typedef R (*Name##_t)(A1, A2); Name##_t Name
 #define DEF_TRAP_3(ret, R, Name, A1, A2, A3) typedef R (*Name##_t)(A1, A2, A3); Name##_t Name
@@ -16,7 +16,7 @@ extern dllSyscall_t syscall;
 #define DEF_TRAP_5(ret, R, Name, A1, A2, A3, A4, A5) typedef R (*Name##_t)(A1, A2, A3, A4, A5); Name##_t Name
 #define DEF_TRAP_6(ret, R, Name, A1, A2, A3, A4, A5, A6) typedef R (*Name##_t)(A1, A2, A3, A4, A5, A6); Name##_t Name
 #else
-#define DEF_TRAP_0(ret, R, Name) R Name() { ret syscall(cpma_ext.Name); }
+#define DEF_TRAP_0(ret, R, Name) R Name(void) { ret syscall(cpma_ext.Name); }
 #define DEF_TRAP_1(ret, R, Name, A1) R Name(A1 a1) { ret syscall(cpma_ext.Name, (int)a1); }
 #define DEF_TRAP_2(ret, R, Name, A1, A2) R Name(A1 a1, A2 a2) { ret syscall(cpma_ext.Name, (int)a1, (int)a2); }
 #define DEF_TRAP_3(ret, R, Name, A1, A2, A3) R Name(A1 a1, A2 a2, A3 a3) { ret syscall(cpma_ext.Name, (int)a1, (int)a2, (int)a3); }
