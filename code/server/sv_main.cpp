@@ -637,7 +637,7 @@ static void SV_CalcPings()
 SV_CheckTimeouts
 
 If a packet has not been received from a client for timeout->integer 
-seconds, drop the conneciton.  Server time is used instead of
+seconds, drop the connection.  Server time is used instead of
 realtime to avoid dropping the local client while debugging.
 
 When a client is normally dropped, the client_t goes into a zombie state
@@ -646,28 +646,26 @@ if necessary
 ==================
 */
 void SV_CheckTimeouts( void ) {
-	int		i;
-	client_t	*cl;
-	int			droppoint;
-	int			zombiepoint;
+	const int droppoint = svs.time - 1000 * sv_timeout->integer;
+	const int zombiepoint = svs.time - 1000 * sv_zombietime->integer;
 
-	droppoint = svs.time - 1000 * sv_timeout->integer;
-	zombiepoint = svs.time - 1000 * sv_zombietime->integer;
+	for ( int i = 0; i < sv_maxclients->integer; i++ ) {
+		client_t *cl = &svs.clients[i];
 
-	for (i=0,cl=svs.clients ; i < sv_maxclients->integer ; i++,cl++) {
 		// message times may be wrong across a changelevel
 		if (cl->lastPacketTime > svs.time) {
 			cl->lastPacketTime = svs.time;
 		}
 
-		if (cl->state == CS_ZOMBIE
-		&& cl->lastPacketTime < zombiepoint) {
+		if ( cl->state == CS_ZOMBIE && cl->lastPacketTime < zombiepoint ) {
 			// using the client id cause the cl->name is empty at this point
 			Com_DPrintf( "Going from CS_ZOMBIE to CS_FREE for client %d\n", i );
 			cl->state = CS_FREE;	// can now be reused
 			continue;
 		}
-		if ( cl->state >= CS_CONNECTED && cl->lastPacketTime < droppoint) {
+		if ( cl->state >= CS_CONNECTED &&
+		     cl->lastPacketTime < droppoint &&
+		     ( cl->gentity->r.svFlags & SVF_BOT ) == 0 ) {
 			// wait several frames so a debugger session doesn't
 			// cause a timeout
 			if ( ++cl->timeoutCount > 5 ) {
