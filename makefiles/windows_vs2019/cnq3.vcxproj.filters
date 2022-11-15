@@ -419,6 +419,9 @@
     <ClCompile Include="..\..\code\win32\win_files.cpp">
       <Filter>win32</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\code\client\cl_demo.cpp">
+      <Filter>client</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\..\code\win32\winquake.rc">
