@@ -1453,17 +1453,6 @@ typedef struct {
 	float	s2, t2;
 } stretchPicCommand_t;
 
-#if defined( QC )
-typedef struct {
-	int			commandId;
-	const shader_t	*shader;
-	float x0, y0, s0, t0;
-	float x1, y1, s1, t1;
-	float x2, y2, s2, t2;
-	float x3, y3, s3, t3;
-} drawQuadCommand_t;
-#endif
-
 typedef struct {
 	int		commandId;
 	const shader_t* shader;
@@ -1512,9 +1501,6 @@ typedef enum {
 	RC_END_OF_LIST,
 	RC_SET_COLOR,
 	RC_STRETCH_PIC,
-#if defined( QC )
-	RC_DRAW_QUAD,
-#endif
 	RC_TRIANGLE,
 	RC_DRAW_SURFS,
 	RC_BEGIN_FRAME,
@@ -1637,14 +1623,6 @@ void RE_EndFrame( int* pcFE, int* pc2D, int* pc3D, qbool render );
 void RE_SetColor( const float* rgba );
 void RE_StretchPic( float x, float y, float w, float h,
 		float s1, float t1, float s2, float t2, qhandle_t hShader );
-#if defined( QC )
-void RE_DrawQuad( 
-	float x0, float y0, float s0, float t0,
-	float x1, float y1, float s1, float t1,
-	float x2, float y2, float s2, float t2,
-	float x3, float y3, float s3, float t3,
-	qhandle_t hShader );
-#endif
 void RE_DrawTriangle( float x0, float y0, float x1, float y1, float x2, float y2,
 		float s0, float t0, float s1, float t1, float s2, float t2, qhandle_t hShader );
 

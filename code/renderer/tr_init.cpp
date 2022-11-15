@@ -717,9 +717,7 @@ const refexport_t* GetRefAPI( const refimport_t* rimp )
 
 	re.SetColor = RE_SetColor;
 	re.DrawStretchPic = RE_StretchPic;
-#if defined( QC )
-	re.DrawQuad = RE_DrawQuad;
-#endif
+
 	re.DrawTriangle = RE_DrawTriangle;
 	re.DrawStretchRaw = RE_StretchRaw;
 

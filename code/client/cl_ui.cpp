@@ -912,11 +912,8 @@ static intptr_t CL_UISystemCalls( intptr_t* args )
 		return 0;
 
 #if defined( QC )
-	case UI_R_DRAWQUAD:
-		re.DrawQuad(
-			VMF(1), VMF(2), VMF(3), VMF(4), VMF(5), VMF(6), VMF(7), VMF(8), 
-			VMF(9), VMF(10), VMF(11), VMF(12), VMF(13), VMF(14), VMF(15), VMF(16), 
-			args[17] );
+	case UI_R_DRAWTRIANGLE:
+		re.DrawTriangle( VMF(1), VMF(2), VMF(3), VMF(4), VMF(5), VMF(6), VMF(7), VMF(8), VMF(9), VMF(10), VMF(11), VMF(12), args[13] );
 		return 0;
 #endif
 

@@ -67,9 +67,6 @@ typedef enum {
 	UI_R_RENDERSCENE,
 	UI_R_SETCOLOR,
 	UI_R_DRAWSTRETCHPIC,
-#if defined( QC )
-	UI_R_DRAWQUAD,
-#endif
 	UI_UPDATESCREEN,
 	UI_CM_LERPTAG,
 	UI_CM_LOADMODEL,
@@ -132,11 +129,6 @@ typedef enum {
 	UI_FS_SEEK,
 	UI_SET_PBCLSTATUS,
 
-#if defined(QC)
-	UI_R_DRAWQUAD,
-#endif
-
-
 	UI_MEMSET = 100,
 	UI_MEMCPY,
 	UI_STRNCPY,
@@ -146,6 +138,10 @@ typedef enum {
 	UI_SQRT,
 	UI_FLOOR,
 	UI_CEIL,
+
+#if defined(QC)
+	UI_R_DRAWTRIANGLE = 500,
+#endif
 
 	// engine extensions
 	// the mod should _never_ use these symbols

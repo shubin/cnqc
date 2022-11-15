@@ -124,10 +124,6 @@ typedef enum {
 	CG_R_RENDERSCENE,
 	CG_R_SETCOLOR,
 	CG_R_DRAWSTRETCHPIC,
-#if defined( QC )
-	CG_GET_ADVERTISEMENTS,
-	CG_R_DRAWQUAD,
-#endif
 	CG_R_MODELBOUNDS,
 	CG_R_LERPTAG,
 	CG_GETGLCONFIG,
@@ -188,9 +184,9 @@ typedef enum {
 	DO_NOT_WANT_CG_TESTPRINTFLOAT,
 	CG_ACOS,
 
-#if defined(QC)
-	CG_GET_ADVERTISEMENTS = 150,
-	CG_R_DRAWQUAD,
+#if defined( QC )
+	CG_GET_ADVERTISEMENTS = 500,
+	CG_R_DRAWTRIANGLE,
 #endif
 
 	// engine extensions
