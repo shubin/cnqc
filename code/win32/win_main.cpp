@@ -108,7 +108,7 @@ qbool Sys_LowPhysicalMemory()
 
 // show the early console as an error dialog
 
-void QDECL Sys_Error( const char *error, ... )
+void QDECL Sys_Error( PRINTF_FORMAT_STRING const char *error, ... )
 {
 	va_list		argptr;
 	char		text[4096];

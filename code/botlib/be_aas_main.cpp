@@ -53,7 +53,7 @@ libvar_t *saveroutingcache;
 // Returns:					-
 // Changes Globals:		-
 //===========================================================================
-void QDECL AAS_Error(char *fmt, ...)
+void QDECL AAS_Error(PRINTF_FORMAT_STRING char *fmt, ...)
 {
 	char str[1024];
 	va_list arglist;

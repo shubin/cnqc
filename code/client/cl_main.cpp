@@ -1734,7 +1734,7 @@ void CL_StartHunkUsers( void ) {
 }
 
 
-static void QDECL CL_RefPrintf( printParm_t print_level, const char* fmt, ... )
+static void QDECL CL_RefPrintf( printParm_t print_level, PRINTF_FORMAT_STRING const char* fmt, ... )
 {
 	va_list va;
 	char msg[MAXPRINTMSG];

@@ -641,7 +641,7 @@ char *Q_CleanStr( char *string ) {
 }
 
 
-void QDECL Com_sprintf( char *dest, int size, const char *fmt, ...) {
+void QDECL Com_sprintf( char *dest, int size, PRINTF_FORMAT_STRING const char *fmt, ...) {
 	int		len;
 	va_list		argptr;
 	char	bigbuffer[32000];	// big, but small enough to fit in PPC stack
@@ -670,7 +670,7 @@ varargs versions of all text functions.
 FIXME: make this buffer size safe someday
 ============
 */
-const char* QDECL va( const char* format, ... )
+const char* QDECL va( PRINTF_FORMAT_STRING const char* format, ... )
 {
 	static char string[4][32000];	// in case va is called by nested functions
 	static int index = 0;

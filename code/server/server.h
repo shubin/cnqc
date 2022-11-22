@@ -256,7 +256,7 @@ extern	cvar_t	*sv_minRestartDelay;
 // sv_main.c
 //
 void SV_FinalMessage (char *message);
-void QDECL SV_SendServerCommand( client_t *cl, const char *fmt, ...);
+void QDECL SV_SendServerCommand( client_t *cl, PRINTF_FORMAT_STRING const char *fmt, ...);
 
 
 void SV_AddOperatorCommands();

@@ -149,7 +149,7 @@ static void FormatQueryWS( char* query, int querySize, const char* mapName )
 }
 
 
-static void PrintError( mapDownload_t* dl, const char* format, ... )
+static void PrintError( mapDownload_t* dl, PRINTF_FORMAT_STRING const char* format, ... )
 {
 	va_list ap;
 	va_start(ap, format);

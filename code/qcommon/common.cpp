@@ -147,7 +147,7 @@ void Com_EndRedirect (void)
 
 // a raw string should NEVER be passed as fmt, because of "%f" type crashers
 
-void QDECL Com_Printf( const char *fmt, ... )
+void QDECL Com_Printf( PRINTF_FORMAT_STRING const char *fmt, ... )
 {
 	char msg[MAXPRINTMSG];
 
@@ -217,7 +217,7 @@ void QDECL Com_Printf( const char *fmt, ... )
 
 // a Com_Printf that only shows up if the "developer" cvar is set
 
-void QDECL Com_DPrintf( const char *fmt, ...)
+void QDECL Com_DPrintf( PRINTF_FORMAT_STRING const char *fmt, ...)
 {
 	// don't confuse non-developers with techie stuff...
 	if ( !com_developer || !com_developer->integer )
@@ -233,7 +233,7 @@ void QDECL Com_DPrintf( const char *fmt, ...)
 }
 
 
-void QDECL Com_Error( int level, const char* fmt, ... )
+void QDECL Com_Error( int level, PRINTF_FORMAT_STRING const char* fmt, ... )
 {
 	static char msg[MAXPRINTMSG];
 
@@ -245,7 +245,7 @@ void QDECL Com_Error( int level, const char* fmt, ... )
 }
 
 
-void QDECL Com_ErrorExt( int code, int module, qbool realError, const char *fmt, ... )
+void QDECL Com_ErrorExt( int code, int module, qbool realError, PRINTF_FORMAT_STRING const char *fmt, ... )
 {
 	static int	lastErrorTime;
 	static int	errorCount;

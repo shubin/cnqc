@@ -564,7 +564,7 @@ void NET_SendPacket( netsrc_t sock, int length, const void* data, const netadr_t
 
 // sends a text message in an out-of-band datagram
 
-void QDECL NET_OutOfBandPrint( netsrc_t sock, const netadr_t& adr, const char* format, ... )
+void QDECL NET_OutOfBandPrint( netsrc_t sock, const netadr_t& adr, PRINTF_FORMAT_STRING const char* format, ... )
 {
 	char string[MAX_MSGLEN];
 
