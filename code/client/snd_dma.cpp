@@ -200,12 +200,16 @@ static void S_memoryLoad( sfx_t* sfx )
 {
 	// Unfortunately, sound and image loads during gameplay are perfectly valid.
 	// Mod code really should pre-load as much as it can during CGAME_INIT.
-	// Even though correct sound playback behavior is given the priority here,
-	// it's important to let the user know his config might need a tweak.
-	if ( cls.state == CA_ACTIVE ) {
+	// Some stuff can't really be pre-loaded, such as when loading a new player model.
+	if ( cls.state == CA_ACTIVE && com_developer && com_developer->integer ) {
+		enum { SoundBufferSize = 16 };
+		static sfx_t* sounds[SoundBufferSize];
+		static int soundIndex = 0;
 		static int64_t lastLoadTime = -9000;
 		static int64_t lastMsgTime = -9000;
 		static int loadCount = 1;
+
+		sounds[soundIndex++] = sfx;
 
 		const int64_t currTime = Sys_Milliseconds();
 		if ( currTime < lastLoadTime + 1000 )
@@ -214,8 +218,13 @@ static void S_memoryLoad( sfx_t* sfx )
 			loadCount = 1;
 		lastLoadTime = currTime;
 
-		if ( loadCount > 1 && currTime >= lastMsgTime + 1000 ) {
-			Com_Printf( "^3WARNING^7: Excessive sound loads. Increase " S_COLOR_CVAR "com_soundMegs ^7if performance drops.\n" );
+		if ( loadCount > 2 && currTime >= lastMsgTime + 1000 ) {
+			Com_Printf( "^3WARNING: excessive sound loads\n" );
+			for ( int i = 0; i < SoundBufferSize; ++i ) {
+				sfx_t* const sound = sounds[ ( soundIndex + i ) % SoundBufferSize ];
+				if ( sound != NULL )
+					Com_Printf( "^3- %s\n", sound->soundName );
+			}
 			lastMsgTime = currTime;
 			loadCount = 1;
 		}
