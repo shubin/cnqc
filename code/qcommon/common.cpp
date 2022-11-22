@@ -3597,7 +3597,7 @@ static const char* Com_GetCompilerInfo()
 				  fullVerStr + 4,
 				  int(_MSC_BUILD) );
 	} else {
-		info = va( "%scl.exe %s.%02d", fullVerStr, int(_MSC_BUILD) );
+		info = va( "%scl.exe %s.%02d", info, fullVerStr, int(_MSC_BUILD) );
 	}
 
 	return info;

@@ -1282,7 +1282,7 @@ static void SV_UserMove( client_t *cl, msg_t *msg, qbool delta ) {
 	if (sv_pure->integer && !cl->pureReceived) {
 		if (cl->state == CS_ACTIVE) {
 			// we didn't get a cp yet, don't assume anything and just send the gamestate all over again
-			Com_DPrintf( "%s: didn't get cp command, resending gamestate\n", cl->name, cl->state );
+			Com_DPrintf( "%s: didn't get cp command, resending gamestate (client state: %d)\n", cl->name, cl->state );
 			SV_SendClientGameState( cl );
 		}
 		return;

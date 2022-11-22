@@ -1002,7 +1002,7 @@ void CL_InitKeyCommands()
 ///////////////////////////////////////////////////////////////
 
 
-static void CL_AddKeyUpCommands( int key, const char* kb )
+static void CL_AddKeyUpCommands( int key, const char* kb, unsigned time )
 {
 	int i;
 	char button[1024], *buttonPtr;
@@ -1019,8 +1019,7 @@ static void CL_AddKeyUpCommands( int key, const char* kb )
 			if ( button[0] == '+' && keys[key].sendMinusCmd ) {
 				// button commands add keynum and time as parms so that multiple
 				// sources can be discriminated and subframe corrected
-                char	cmd[1024];
-				Com_sprintf (cmd, sizeof(cmd), "-%s %i %i\n", button+1, key, time);
+				const char* const cmd = va ("-%s %i %i\n", button + 1, key, (int)time);
 				Cbuf_AddText (cmd);
 				keyevent = qtrue;
 			} else {
@@ -1136,7 +1135,7 @@ void CL_KeyEvent( int key, qbool down, unsigned time )
 	if (!down) {
 		kb = keys[key].binding;
 
-		CL_AddKeyUpCommands( key, kb );
+		CL_AddKeyUpCommands( key, kb, time );
 
 		if ( (cls.keyCatchers & KEYCATCH_UI) && uivm ) {
 			VM_Call( uivm, UI_KEY_EVENT, key, down );
@@ -1182,8 +1181,7 @@ void CL_KeyEvent( int key, qbool down, unsigned time )
 					if ( button[0] == '+') {
 						// button commands add keynum and time as parms so that multiple
 						// sources can be discriminated and subframe corrected
-                        char	cmd[1024];
-						Com_sprintf (cmd, sizeof(cmd), "%s %i %i\n", button, key, time);
+						const char* const cmd = va ("%s %i %i\n", button, key, (int)time);
 						Cbuf_AddText (cmd);
 					} else {
 						// down-only command
