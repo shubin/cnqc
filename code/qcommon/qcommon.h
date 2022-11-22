@@ -126,7 +126,7 @@ void NET_Shutdown();
 void NET_Restart();
 void NET_FlushPacketQueue();
 void NET_SendPacket( netsrc_t sock, int length, const void* data, const netadr_t& to );
-void QDECL NET_OutOfBandPrint( netsrc_t sock, const netadr_t& adr, const char* format, ... );
+void QDECL NET_OutOfBandPrint( netsrc_t sock, const netadr_t& adr, PRINTF_FORMAT_STRING const char* format, ... );
 void QDECL NET_OutOfBandData( netsrc_t sock, const netadr_t& adr, const byte* data, int len );
 
 qbool NET_CompareAdr( const netadr_t& a, const netadr_t& b );
@@ -502,7 +502,7 @@ typedef struct cvarTableItem_s {
 	const char*		help;
 } cvarTableItem_t;
 
-typedef void ( QDECL *printf_t )( const char* fmt, ... );
+typedef void ( QDECL *printf_t )( PRINTF_FORMAT_STRING const char* fmt, ... );
 
 cvar_t *Cvar_Get( const char *var_name, const char *value, int flags );
 // creates the variable if it doesn't exist, or returns the existing one
@@ -701,7 +701,7 @@ int		FS_FTell( fileHandle_t f );
 
 void	FS_Flush( fileHandle_t f );
 
-void	QDECL FS_Printf( fileHandle_t f, const char *fmt, ... ) __attribute__ ((format (printf, 2, 3)));
+void	QDECL FS_Printf( fileHandle_t f, PRINTF_FORMAT_STRING const char *fmt, ... ) __attribute__ ((format (printf, 2, 3)));
 // like fprintf
 
 int		FS_FOpenFileByMode( const char *qpath, fileHandle_t *f, fsMode_t mode );
@@ -843,7 +843,7 @@ void		Info_Print( const char *s );
 
 void		Com_BeginRedirect (char *buffer, int buffersize, void (*flush)(char *));
 void		Com_EndRedirect( void );
-void		QDECL Com_DPrintf( const char *fmt, ... );
+void		QDECL Com_DPrintf( PRINTF_FORMAT_STRING const char *fmt, ... );
 void		Com_Quit( int status );
 int			Com_EventLoop();
 int			Com_Milliseconds();	// will be journaled properly
@@ -1108,7 +1108,7 @@ void	Sys_ShutdownInput();
 void* QDECL	Sys_LoadDll( const char* name, dllSyscall_t *entryPoint, dllSyscall_t systemcalls );
 void		Sys_UnloadDll( void* dllHandle );
 
-void QDECL	Sys_Error( const char *error, ...);
+void QDECL	Sys_Error( PRINTF_FORMAT_STRING const char *error, ...);
 
 // allowed to fail and return NULL
 // if it succeeds, returns memory allocated by Z_Malloc
@@ -1157,7 +1157,7 @@ void	Sys_MicroSleep( int us );
 int64_t	Sys_Microseconds();
 
 // prints text in the debugger's output window
-void	Sys_DebugPrintf( const char* fmt, ... );
+void	Sys_DebugPrintf( PRINTF_FORMAT_STRING const char* fmt, ... );
 qbool	Sys_IsDebuggerAttached();
 
 #ifndef DEDICATED

@@ -335,7 +335,7 @@ void JSONW_BooleanValue(const char* name, qbool value)
 	JSONW_StringValue(name, value ? "true" : "false");
 }
 
-void JSONW_StringValue(const char* name, const char* format, ...)
+void JSONW_StringValue(const char* name, PRINTF_FORMAT_STRING const char* format, ...)
 {
 	static char buffer[4096];
 
@@ -364,7 +364,7 @@ void JSONW_UnnamedHex(uint64_t number)
 	JSONW_UnnamedString(Q_itohex(number, qtrue, qtrue));
 }
 
-void JSONW_UnnamedString(const char* format, ...)
+void JSONW_UnnamedString(PRINTF_FORMAT_STRING const char* format, ...)
 {
 	static char buffer[4096];
 

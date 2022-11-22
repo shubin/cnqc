@@ -38,9 +38,9 @@ void JSONW_EndArray();
 void JSONW_IntegerValue(const char* name, int number);
 void JSONW_HexValue(const char* name, uint64_t number);
 void JSONW_BooleanValue(const char* name, qbool value);
-void JSONW_StringValue(const char* name, const char* format, ...);
+void JSONW_StringValue(const char* name, PRINTF_FORMAT_STRING const char* format, ...);
 void JSONW_UnnamedHex(uint64_t number);
-void JSONW_UnnamedString(const char* format, ...);
+void JSONW_UnnamedString(PRINTF_FORMAT_STRING const char* format, ...);
 
 // crash.cpp
 void Crash_SaveQVMPointer(vmIndex_t vmIndex, vm_t* vm);

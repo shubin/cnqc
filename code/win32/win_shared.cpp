@@ -127,7 +127,7 @@ int Sys_GetUptimeSeconds( qbool parent )
 }
 
 
-void Sys_DebugPrintf( const char* fmt, ... )
+void Sys_DebugPrintf( PRINTF_FORMAT_STRING const char* fmt, ... )
 {
 	char buffer[1024];
 	va_list argptr;

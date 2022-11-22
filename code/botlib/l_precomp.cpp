@@ -114,7 +114,7 @@ token_t *freetokens;					//free tokens from the heap
 //list with global defines added to every source loaded
 define_t *globaldefines;
 
-void QDECL SourceError(source_t *source, char *str, ...)
+void QDECL SourceError(source_t *source, PRINTF_FORMAT_STRING char *str, ...)
 {
 	char text[1024];
 	va_list ap;
@@ -134,7 +134,7 @@ void QDECL SourceError(source_t *source, char *str, ...)
 } 
 
 
-void QDECL SourceWarning(source_t *source, char *str, ...)
+void QDECL SourceWarning(source_t *source, PRINTF_FORMAT_STRING char *str, ...)
 {
 	char text[1024];
 	va_list ap;

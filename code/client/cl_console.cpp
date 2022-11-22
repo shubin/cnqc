@@ -667,7 +667,7 @@ static void Con_FillRect( float x, float y, float w, float h, const vec4_t color
 }
 
 
-static void QDECL Con_HelpPrintf( const char* fmt, ... )
+static void QDECL Con_HelpPrintf( PRINTF_FORMAT_STRING const char* fmt, ... )
 {
 	va_list argptr;
 	va_start( argptr, fmt );

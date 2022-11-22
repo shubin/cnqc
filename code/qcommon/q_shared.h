@@ -72,6 +72,14 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #endif
 
 
+#if defined(_MSC_VER)
+#include <sal.h>
+#define PRINTF_FORMAT_STRING _Printf_format_string_
+#else
+#define PRINTF_FORMAT_STRING
+#endif
+
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
@@ -528,12 +536,12 @@ typedef enum {
 	EXT_ERRLEV_SVDISC	// ERR_SERVERDISCONNECT
 } extErrorLevel_t;
 
-const char* QDECL va( const char* format, ... );
+const char* QDECL va( PRINTF_FORMAT_STRING const char* format, ... );
 
-void QDECL Com_Error( int level, const char* error, ... );
-void QDECL Com_ErrorExt( int level, int module, qbool realError, const char* error, ... );
-void QDECL Com_Printf( const char* msg, ... );
-void QDECL Com_sprintf (char *dest, int size, const char *fmt, ...);
+void QDECL Com_Error( int level, PRINTF_FORMAT_STRING const char* error, ... );
+void QDECL Com_ErrorExt( int level, int module, qbool realError, PRINTF_FORMAT_STRING const char* error, ... );
+void QDECL Com_Printf( PRINTF_FORMAT_STRING const char* msg, ... );
+void QDECL Com_sprintf( char *dest, int size, PRINTF_FORMAT_STRING const char *fmt, ... );
 
 float Com_Clamp( float min, float max, float value );
 int Com_ClampInt( int min, int max, int value );
