@@ -1141,14 +1141,47 @@ qbool Con_HandleMarkMode( qbool ctrlDown, qbool shiftDown, int key )
 		return qtrue;
 	}
 
-	if(key == K_END) {
+	if (key == K_END) {
 		if (ctrlDown)
 			return qfalse;
 		con.markX = con.linewidth - 1;
-		if (!shiftDown) {
+
+		if (shiftDown) {
+			// avoid selecting trailing columns of whitespace
+			const int markStartY = min( con.markStartY, con.markY );
+			const int markEndY = max( con.markStartY, con.markY );
+			while (con.markX > 0) {
+				qboolean skip = qtrue;
+				for (int y = markStartY; y <= markEndY; ++y) {
+					const int row = y % con.totallines;
+					const short* const text = con.text + row * con.linewidth;
+					const char c = text[con.markX] & 0xFF;
+					if (c != ' ')
+						skip = qfalse;
+				}
+
+				if (!skip)
+					break;
+
+				con.markX--;
+			}
+		} else {
+			// avoid jumping into whitespace
+			const int row = con.markY % con.totallines;
+			const short* const text = con.text + row * con.linewidth;
+			while (con.markX > 0) {
+				const char c = text[con.markX] & 0xFF;
+				if (c != ' ')
+					break;
+
+				con.markX--;
+			}
+
+			// back to single character selection
 			con.markStartX = con.markX;
 			con.markStartY = con.markY;
 		}
+
 		Con_AutoScrollMarkPosition();
 		return qtrue;
 	}
