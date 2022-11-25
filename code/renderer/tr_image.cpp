@@ -837,8 +837,10 @@ image_t* R_FindImageFile( const char* name, int flags, textureWrap_t glWrapClamp
 		const forcedLoadImage_t* const fli = g_forcedLoadImages + i;
 		if ( hash == fli->shaderNameHash &&
 			 strcmp( R_GetMapName(), fli->mapName ) == 0 &&
-			 strcmp( name, fli->shaderName ) == 0 )
+			 strcmp( name, fli->shaderName ) == 0 ) {
 		   forcedLoad = qtrue;
+		   break;
+		}
 	}
 	
 	// see if the image is already loaded
