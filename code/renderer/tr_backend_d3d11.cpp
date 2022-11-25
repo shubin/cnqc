@@ -1870,8 +1870,10 @@ static qbool GAL_Init()
 		// only nVidia's drivers seem to consistently handle the extra IASetVertexBuffers calls well enough
 		d3d.splitBufferOffsets = Q_stristr(glConfig.renderer_string, "NVIDIA") != NULL;
 #else
-		// however, we'll just treat all drivers as equally dumb by default for now
-		d3d.splitBufferOffsets = D3D11SO_SYNCEDOFFSETS;
+		// we'll just treat all drivers as equally bad for now and force synced offsets
+		// it also seems that nVidia's new drivers might have a problem with the split offsets code path
+		// (yet to be confirmed)
+		d3d.splitBufferOffsets = qfalse;
 #endif
 	}
 	else
