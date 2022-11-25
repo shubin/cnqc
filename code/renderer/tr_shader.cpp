@@ -2319,6 +2319,28 @@ static qbool IsReplaceBlendMode( unsigned int stateBits )
 }
 
 
+static void BuildPerImageShaderList( shader_t* newShader )
+{
+	if ( newShader->isSky ) {
+		image_t** const boxes[2] = { (image_t**)newShader->sky.outerbox, (image_t**)newShader->sky.innerbox };
+		for ( int b = 0; b < 2; ++b ) {
+			image_t** const images = boxes[b];
+			for ( int i = 0; i < 6; ++i ) {
+				R_AddImageShader( images[i], newShader );
+			}
+		}
+	} else {
+		for ( int s = 0; s < newShader->numStages; ++s ) {
+			shaderStage_t* const newStage = newShader->stages[s];
+			const int numImages = max( newStage->bundle.numImageAnimations, 1 );
+			for ( int i = 0; i < numImages; ++i ) {
+				R_AddImageShader( newStage->bundle.image[i], newShader );
+			}
+		}
+	}
+}
+
+
 // returns a freshly allocated shader with info
 // copied from the current global working shader
 
@@ -2536,7 +2558,11 @@ static shader_t* FinishShader()
 
 	ProcessGreyscale();
 
-	return GeneratePermanentShader();
+	shader_t* const newShader = GeneratePermanentShader();
+
+	BuildPerImageShaderList( newShader );
+
+	return newShader;
 }
 
 
@@ -2669,7 +2695,7 @@ shader_t* R_FindShader( const char *name, int lightmapIndex, qbool mipRawImage )
 	Q_strncpyz( fileName, name, sizeof( fileName ) );
 	COM_DefaultExtension( fileName, sizeof( fileName ), ".tga" );
 
-	const image_t* image;
+	image_t* image;
 	if (mipRawImage)
 		image = R_FindImageFile( fileName, 0, TW_REPEAT );
 	else
@@ -2727,7 +2753,7 @@ shader_t* R_FindShader( const char *name, int lightmapIndex, qbool mipRawImage )
 // shaders registered from raw data should be "anonymous" and unsearchable
 // because they don't have the supercession concept of "real" shaders
 
-qhandle_t RE_RegisterShaderFromImage( const char* name, const image_t* image )
+qhandle_t RE_RegisterShaderFromImage( const char* name, image_t* image )
 {
 	const shader_t* sh;
 
@@ -2925,17 +2951,9 @@ void R_ShaderInfo_f()
 		return;
 	}
 
-	const int fileIndex = shader->fileIndex;
-	if ( fileIndex >= 0 && fileIndex < s_numShaderFiles ) {
-		const int nameOffset = s_shaderFileNameOffsets[fileIndex];
-		const char* const fileName = s_shaderFileNames + nameOffset;
-		ri.Printf( PRINT_ALL, "File: scripts/%s\n", fileName );
-
-		char pakName[256];
-		const int pakChecksum = s_shaderPakChecksums[fileIndex];
-		if( FS_GetPakPath( pakName, sizeof(pakName), pakChecksum ) ) {
-			ri.Printf( PRINT_ALL, "Pak : %s\n", pakName );
-		}
+	const char* const shaderPath = R_GetShaderPath( shader );
+	if ( shaderPath != NULL ) {
+		ri.Printf( PRINT_ALL, "%s\n", shaderPath );
 	}
 
 	if ( Q_stricmp( Cmd_Argv(2), "code" ) ) {
@@ -2966,6 +2984,51 @@ void R_ShaderInfo_f()
 			ri.Printf( PRINT_ALL, "%c", c0 );
 		}
 		s++;
+	}
+}
+
+
+void R_MixedUse_f()
+{
+	for ( int i = 0; i < tr.numImages; ++i ) {
+		image_t* const image = tr.images[i];
+		if ( image->numShaders < 2 || !Q_stricmp(image->name, "*white") ) {
+			continue;
+		}
+
+		const qbool nmm0 = tr.imageShaders[image->firstShaderIndex]->imgflags & IMG_NOMIPMAP;
+		const qbool npm0 = tr.imageShaders[image->firstShaderIndex]->imgflags & IMG_NOPICMIP;
+
+		qbool mixed = qfalse;
+		for ( int s = 1; s < image->numShaders; ++s ) {
+			const shader_t* const shader = tr.imageShaders[image->firstShaderIndex + s];
+			const qbool nmmS = shader->imgflags & IMG_NOMIPMAP;
+			const qbool npmS = shader->imgflags & IMG_NOPICMIP;
+			if ( nmmS != nmm0 || npmS != npm0 ) {
+				mixed = qtrue;
+				break;
+			}
+		}
+
+		if ( !mixed ) {
+			continue;
+		}
+
+		ri.Printf( PRINT_ALL, "^5%s:\n", image->name );
+		for ( int s = 0; s < image->numShaders; ++s ) {
+			const shader_t* const shader = tr.imageShaders[image->firstShaderIndex + s];
+			const qbool nmmS = shader->imgflags & IMG_NOMIPMAP;
+			const qbool npmS = shader->imgflags & IMG_NOPICMIP;
+			ri.Printf( PRINT_ALL, "%s %s %s\n",
+					  nmmS ? "NMM" : "   ",
+					  npmS ? "NPM" : "   ",
+					  shader->name);
+
+			const char* const shaderPath = R_GetShaderPath( shader );
+			if ( shaderPath != NULL ) {
+				ri.Printf( PRINT_ALL, "        -> %s\n", shaderPath );
+			}
+		}
 	}
 }
 
@@ -3012,7 +3075,7 @@ static void ScanAndLoadShaderFiles()
 			ri.Error( ERR_DROP, "Couldn't load %s", filename );
 		len[i] = COM_Compress( buffers[i] );
 		sum += len[i];
-		sumNames += strlen( shaderFileNames[i] );
+		sumNames += strlen( shaderFileNames[i] ) + 1;
 	}
 
 	s_shaderText = RI_New<char>( sum + numShaderFiles + 1 );
@@ -3111,4 +3174,24 @@ void R_InitShaders()
 	CreateInternalShaders();
 
 	ScanAndLoadShaderFiles();
+}
+
+
+const char* R_GetShaderPath( const shader_t* shader )
+{
+	const int fileIndex = shader->fileIndex;
+	if ( fileIndex < 0 || fileIndex >= s_numShaderFiles ) {
+		return NULL;
+	}
+
+	const int nameOffset = s_shaderFileNameOffsets[fileIndex];
+	const char* const fileName = s_shaderFileNames + nameOffset;
+
+	char pakName[256];
+	const int pakChecksum = s_shaderPakChecksums[fileIndex];
+	if( FS_GetPakPath( pakName, sizeof(pakName), pakChecksum ) ) {
+		return va( "%s/scripts/%s", pakName, fileName );
+	}
+
+	return va( "scripts/%s", fileName );
 }
