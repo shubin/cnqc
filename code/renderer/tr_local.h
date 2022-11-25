@@ -87,6 +87,8 @@ typedef unsigned int textureHandle_t; // what this number actually means is up t
 #define MAX_TEXTURE_SIZE 2048
 
 
+struct shader_t;
+
 struct image_t {
 	image_t* next;
 
@@ -98,6 +100,12 @@ struct image_t {
 	textureWrap_t	wrapClampMode;
 
 	char	name[MAX_QPATH];	// game path, including extension
+
+	// used to index into tr.imageShaders
+	int		firstShaderIndex;
+	int		numShaders;
+
+	int		pakChecksum;
 };
 
 
@@ -272,7 +280,7 @@ typedef struct {
 #define	MAX_IMAGE_ANIMATIONS	8
 
 typedef struct {
-	const image_t*	image[MAX_IMAGE_ANIMATIONS];
+	image_t*		image[MAX_IMAGE_ANIMATIONS];
 	int				numImageAnimations;
 	double			imageAnimationSpeed;
 	qbool			isVideoMap;		// shit code - no reason to have both of these
@@ -344,7 +352,7 @@ typedef enum {
 
 typedef struct {
 	float		cloudHeight;
-	const image_t *outerbox[6], *innerbox[6];
+	image_t *outerbox[6], *innerbox[6];
 } skyParms_t;
 
 typedef struct {
@@ -906,6 +914,9 @@ typedef struct {
 	int numImages;
 	image_t* images[MAX_DRAWIMAGES];
 
+	shader_t*	imageShaders[2048];
+	int			numImageShaders;
+
 	// shader indexes from other modules will be looked up in tr.shaders[]
 	// shader indexes from drawsurfs will be looked up in sortedShaders[]
 	// lower indexed sortedShaders must be rendered first (opaque surfaces before translucent)
@@ -1152,14 +1163,17 @@ void	R_ConfigureVideoMode( int desktopWidth, int desktopHeight );	// writes to g
 #define IMG_EXTLMATLAS  0x0010  // external lightmap atlas => no mip-mapping, no anisotropic
 #define IMG_NOAF        0x0020  // never enable anisotropic filtering
 
-const image_t* R_FindImageFile( const char* name, int flags, textureWrap_t glWrapClampMode );
+image_t* R_FindImageFile( const char* name, int flags, textureWrap_t glWrapClampMode );
 image_t* R_CreateImage( const char* name, byte* pic, int width, int height, textureFormat_t format, int flags, textureWrap_t wrapClampMode );
 void	R_UploadLightmapTile( image_t* image, byte* pic, int x, int y, int width, int height );
 
 void	R_SetColorMappings();
 
 void	R_ImageList_f( void );
+void	R_ImageInfo_f( void );
 void	R_SkinList_f( void );
+
+void	R_AddImageShader( image_t* image, shader_t* shader );
 
 void	R_InitFogTable();
 float	R_FogFactor( float s, float t );
@@ -1183,14 +1197,16 @@ void R_MipMap( byte** outD, const byte* inD, int inW, int inH, textureWrap_t tw 
 //
 qhandle_t RE_RegisterShader( const char* name );
 qhandle_t RE_RegisterShaderNoMip( const char* name );
-qhandle_t RE_RegisterShaderFromImage( const char* name, const image_t* image );
+qhandle_t RE_RegisterShaderFromImage( const char* name, image_t* image );
 
 shader_t	*R_FindShader( const char *name, int lightmapIndex, qbool mipRawImage );
 const shader_t* R_GetShaderByHandle( qhandle_t hShader );
 void		R_InitShaders();
 void		R_ShaderList_f( void );
 void		R_ShaderInfo_f();
+void		R_MixedUse_f();
 void		R_CompleteShaderName_f( int startArg, int compArg );
+const char* R_GetShaderPath( const shader_t* shader );
 
 /*
 ====================================================================

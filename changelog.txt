@@ -4,6 +4,10 @@ See the end of this file for known issues.
 
 DD Mmm 20 - 1.53
 
+add: /imageinfo <imagepath> prints where the image was loaded from and shaders that reference it
+
+add: /shadermixeduse prints all images referenced in shaders with conflicting global directives
+
 add: cl_demoPlayer <0|1> (default: 1) selects the demo playback system to use
   cl_demoPlayer 0 = always uses the original demo player
   cl_demoPlayer 1 = uses the new demo player with time rewind support when the mod supports it

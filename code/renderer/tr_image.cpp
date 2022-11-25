@@ -134,6 +134,45 @@ void R_ImageList_f( void )
 }
 
 
+void R_ImageInfo_f()
+{
+	if ( Cmd_Argc() <= 1 ) {
+		ri.Printf( PRINT_ALL, "usage: %s <imagepath>\n", Cmd_Argv(0) );
+		return;
+	}
+
+	const char* const name = Cmd_Argv(1);
+	const image_t* image = NULL;
+	for ( int i = 0; i < tr.numImages; i++ ) {
+		if ( !Q_stricmp( tr.images[i]->name, name ) ) {
+			image = tr.images[i];
+			break;
+		}
+	}
+
+	char pakName[256];
+	if ( FS_GetPakPath( pakName, sizeof( pakName ), image->pakChecksum ) ) {
+		ri.Printf( PRINT_ALL, "%s/%s\n", pakName, image->name );
+	}
+
+	ri.Printf( PRINT_ALL, "Used in these shaders:\n" );
+	for ( int s = 0; s < image->numShaders; ++s ) {
+		const shader_t* const shader = tr.imageShaders[image->firstShaderIndex + s];
+		const qbool nmmS = shader->imgflags & IMG_NOMIPMAP;
+		const qbool npmS = shader->imgflags & IMG_NOPICMIP;
+		ri.Printf( PRINT_ALL, "%s %s %s\n",
+					nmmS ? "NMM" : "   ",
+					npmS ? "NPM" : "   ",
+					shader->name );
+
+		const char* const shaderPath = R_GetShaderPath( shader );
+		if ( shaderPath != NULL ) {
+			ri.Printf( PRINT_ALL, "        -> %s\n", shaderPath );
+		}
+	}
+}
+
+
 ///////////////////////////////////////////////////////////////
 
 
@@ -726,7 +765,7 @@ static const imageLoader_t imageLoaders[] = {
 };
 
 
-static void R_LoadImage( const char* name, byte** pic, int* w, int* h, textureFormat_t* format )
+static void R_LoadImage( int* pakChecksum, const char* name, byte** pic, int* w, int* h, textureFormat_t* format )
 {
 	*pic = NULL;
 	*w = 0;
@@ -736,7 +775,7 @@ static void R_LoadImage( const char* name, byte** pic, int* w, int* h, textureFo
 	char altName[MAX_QPATH];
 
 	byte* buffer;
-	int bufferSize = ri.FS_ReadFile( name, (void**)&buffer );
+	int bufferSize = ri.FS_ReadFilePak( name, (void**)&buffer, pakChecksum );
 	if ( buffer == NULL ) {
 		const char* lastDot = strrchr( name, '.' );
 		const int nameLength = lastDot != NULL ? (int)(lastDot - name) : (int)strlen( name );
@@ -747,7 +786,7 @@ static void R_LoadImage( const char* name, byte** pic, int* w, int* h, textureFo
 			memcpy( altName, name, nameLength );
 			altName[nameLength] = '\0';
 			Q_strcat( altName, sizeof(altName), imageLoaders[i].extension );
-			bufferSize = ri.FS_ReadFile( altName, (void**)&buffer );
+			bufferSize = ri.FS_ReadFilePak( altName, (void**)&buffer, pakChecksum );
 			if ( buffer != NULL ) {
 				name = altName;
 				break;
@@ -786,7 +825,7 @@ static const forcedLoadImage_t g_forcedLoadImages[] = {
 
 // finds or loads the given image - returns NULL if it fails, not a default image
 
-const image_t* R_FindImageFile( const char* name, int flags, textureWrap_t glWrapClampMode )
+image_t* R_FindImageFile( const char* name, int flags, textureWrap_t glWrapClampMode )
 {
 	if ( !name )
 		return NULL;
@@ -837,14 +876,15 @@ const image_t* R_FindImageFile( const char* name, int flags, textureWrap_t glWra
 	// load the pic from disk
 	//
 	byte* pic;
-	int width, height;
+	int width, height, pakChecksum;
 	textureFormat_t format;
-	R_LoadImage( name, &pic, &width, &height, &format );
+	R_LoadImage( &pakChecksum, name, &pic, &width, &height, &format );
 
 	if ( !pic )
 		return NULL;
 
 	image_t* const image = R_CreateImage( name, pic, width, height, format, flags, glWrapClampMode );
+	image->pakChecksum = pakChecksum;
 	ri.Free( pic );
 	return image;
 }
@@ -1127,4 +1167,26 @@ void R_SkinList_f( void )
 
 	ri.Printf( PRINT_ALL, "%i skins found\n", skinCount );
 	ri.Printf( PRINT_ALL, "------------------\n" );
+}
+
+
+void R_AddImageShader( image_t* image, shader_t* shader )
+{
+	assert( shader != NULL );
+	if (image == NULL || shader == NULL)
+		return;
+
+	assert( tr.numImageShaders < ARRAY_LEN( tr.imageShaders ) );
+	if (tr.numImageShaders >= ARRAY_LEN( tr.imageShaders ))
+		return;
+
+	// we consider index 0 to be invalid
+	if (tr.numImageShaders == 0)
+		tr.numImageShaders++;
+
+	tr.imageShaders[tr.numImageShaders] = shader;
+	if (image->firstShaderIndex == 0)
+		image->firstShaderIndex = tr.numImageShaders;
+	image->numShaders++;
+	tr.numImageShaders++;
 }

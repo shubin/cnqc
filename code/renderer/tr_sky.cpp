@@ -494,7 +494,7 @@ void R_InitSkyTexCoords( float heightCloud )
 
 static void DrawSkyBox()
 {
-	const image_t*const* skyImages = &tess.shader->sky.outerbox[0];
+	image_t* const* skyImages = &tess.shader->sky.outerbox[0];
 	RB_PushSingleStageShader( GLS_DEPTHMASK_TRUE, CT_TWO_SIDED );
 	shaderStage_t* const stage = tess.shader->stages[0];
 	stage->rgbGen = CGEN_IDENTITY_LIGHTING;
