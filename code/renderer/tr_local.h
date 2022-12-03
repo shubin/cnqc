@@ -435,6 +435,10 @@ struct shader_t {
 	int fileIndex;
 	const char* text;
 
+	// vertex lighting
+	qbool vlWanted;					// just a request, can be denied
+	qbool vlApplied;				// qtrue if request accepted AND shader modified
+
 	shader_t* next;
 };
 
@@ -1199,7 +1203,10 @@ qhandle_t RE_RegisterShader( const char* name );
 qhandle_t RE_RegisterShaderNoMip( const char* name );
 qhandle_t RE_RegisterShaderFromImage( const char* name, image_t* image );
 
-shader_t	*R_FindShader( const char *name, int lightmapIndex, qbool mipRawImage );
+#define FINDSHADER_MIPRAWIMAGE_BIT 1
+#define FINDSHADER_VERTEXLIGHT_BIT 2
+
+shader_t	*R_FindShader( const char *name, int lightmapIndex, int flags );
 const shader_t* R_GetShaderByHandle( qhandle_t hShader );
 void		R_InitShaders();
 void		R_ShaderList_f( void );

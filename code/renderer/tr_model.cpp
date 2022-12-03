@@ -158,7 +158,7 @@ static qbool R_LoadMD3( model_t *mod, int lod, void *buffer, const char *mod_nam
 		// register the shaders
 		shader = (md3Shader_t *) ( (byte *)surf + surf->ofsShaders );
 		for ( j = 0 ; j < surf->numShaders ; j++, shader++ ) {
-			const shader_t* sh = R_FindShader( shader->name, LIGHTMAP_NONE, qtrue );
+			const shader_t* sh = R_FindShader( shader->name, LIGHTMAP_NONE, FINDSHADER_MIPRAWIMAGE_BIT );
 			if ( sh->defaultShader ) {
 				shader->shaderIndex = 0;
 			} else {
