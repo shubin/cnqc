@@ -153,10 +153,6 @@ static void R_LoadLightmaps( const lump_t* l )
 	// set this now as the default to avoid divisions by 0
 	lightmapsPerAtlas = 1;
 
-	// if we are in r_vertexLight mode, we don't need the lightmaps at all
-	if ( r_vertexLight->integer )
-		return;
-
 	const int fileBytes = l->filelen;
 	if ( !fileBytes )
 		return;
@@ -294,10 +290,10 @@ static shader_t* ShaderForShaderNum( int shaderNum, int lightmapNum )
 
 	const dshader_t* dsh = &s_worldData.shaders[ shaderNum ];
 
-	if (r_vertexLight->integer)
-		lightmapNum = LIGHTMAP_BY_VERTEX;
-
-	shader_t* shader = R_FindShader( dsh->shader, lightmapNum, qtrue );
+	int flags = FINDSHADER_MIPRAWIMAGE_BIT;
+	if ( r_vertexLight->integer != 0 || lightmapNum == LIGHTMAP_BY_VERTEX )
+		flags |= FINDSHADER_VERTEXLIGHT_BIT;
+	shader_t* shader = R_FindShader( dsh->shader, lightmapNum, flags );
 
 	if ( r_singleShader->integer && (shader->sort != SS_ENVIRONMENT) )
 		return tr.defaultShader;
@@ -1481,7 +1477,7 @@ static void R_LoadFogs( const lump_t* l, const lump_t* brushesLump, const lump_t
 		++sideNum;
 
 		// get information from the shader for fog parameters
-		shader_t* shader = R_FindShader( fogs->shader, LIGHTMAP_NONE, qtrue );
+		shader_t* shader = R_FindShader( fogs->shader, LIGHTMAP_NONE, FINDSHADER_MIPRAWIMAGE_BIT );
 
 		out->parms = shader->fogParms;
 

@@ -1081,7 +1081,7 @@ qhandle_t RE_RegisterSkin( const char* name )
 	if ( Q_stricmpn( name + strlen( name ) - 5, ".skin", 6 ) ) {
 		skin->numSurfaces = 1;
 		skin->surfaces[0] = RI_New<skinSurface_t>();
-		skin->surfaces[0]->shader = R_FindShader( name, LIGHTMAP_NONE, qtrue );
+		skin->surfaces[0]->shader = R_FindShader( name, LIGHTMAP_NONE, FINDSHADER_MIPRAWIMAGE_BIT );
 		return hSkin;
 	}
 
@@ -1117,7 +1117,7 @@ qhandle_t RE_RegisterSkin( const char* name )
 
 		skinSurface_t* surf = skin->surfaces[ skin->numSurfaces ] = RI_New<skinSurface_t>();
 		Q_strncpyz( surf->name, surfName, sizeof( surf->name ) );
-		surf->shader = R_FindShader( token, LIGHTMAP_NONE, qtrue );
+		surf->shader = R_FindShader( token, LIGHTMAP_NONE, FINDSHADER_MIPRAWIMAGE_BIT );
 		skin->numSurfaces++;
 	}
 

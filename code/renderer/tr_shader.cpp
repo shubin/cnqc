@@ -1884,96 +1884,6 @@ static void FindLightingStages()
 }
 
 
-/*
-=================
-VertexLightingCollapse
-
-If vertex lighting is enabled, only render a single pass,
-trying to guess which is the correct one to best approximate
-what it is supposed to look like.
-=================
-*/
-static void VertexLightingCollapse( void ) {
-	int		stage;
-	shaderStage_t	*bestStage;
-	int		bestImageRank;
-	int		rank;
-
-	// if we aren't opaque, just use the first pass
-	if ( shader.sort == SS_OPAQUE ) {
-
-		// pick the best texture for the single pass
-		bestStage = &stages[0];
-		bestImageRank = -999999;
-
-		for ( stage = 0; stage < MAX_SHADER_STAGES; stage++ ) {
-			shaderStage_t *pStage = &stages[stage];
-
-			if ( !pStage->active ) {
-				break;
-			}
-			rank = 0;
-
-			if ( pStage->type == ST_LIGHTMAP ) {
-				rank -= 100;
-			}
-			if ( pStage->tcGen != TCGEN_TEXTURE ) {
-				rank -= 5;
-			}
-			if ( pStage->numTexMods ) {
-				rank -= 5;
-			}
-			if ( pStage->rgbGen != CGEN_IDENTITY && pStage->rgbGen != CGEN_IDENTITY_LIGHTING ) {
-				rank -= 3;
-			}
-
-			if ( rank > bestImageRank  ) {
-				bestImageRank = rank;
-				bestStage = pStage;
-			}
-		}
-
-		Com_Memcpy( &stages[0], bestStage, sizeof( shaderStage_t ) );
-		stages[0].stateBits &= ~( GLS_DSTBLEND_BITS | GLS_SRCBLEND_BITS );
-		stages[0].stateBits |= GLS_DEPTHMASK_TRUE;
-		if ( shader.lightmapIndex == LIGHTMAP_NONE ) {
-			stages[0].rgbGen = CGEN_LIGHTING_DIFFUSE;
-		} else {
-			stages[0].rgbGen = CGEN_EXACT_VERTEX;
-		}
-		stages[0].alphaGen = AGEN_SKIP;
-	} else {
-		// don't use a lightmap (tesla coils)
-		if ( stages[0].type == ST_LIGHTMAP ) {
-			stages[0] = stages[1];
-		}
-
-		// if we were in a cross-fade cgen, hack it to normal
-		if ( stages[0].rgbGen == CGEN_ONE_MINUS_ENTITY || stages[1].rgbGen == CGEN_ONE_MINUS_ENTITY ) {
-			stages[0].rgbGen = CGEN_IDENTITY_LIGHTING;
-		}
-		if ( ( stages[0].rgbGen == CGEN_WAVEFORM && stages[0].rgbWave.func == GF_SAWTOOTH )
-			&& ( stages[1].rgbGen == CGEN_WAVEFORM && stages[1].rgbWave.func == GF_INVERSE_SAWTOOTH ) ) {
-			stages[0].rgbGen = CGEN_IDENTITY_LIGHTING;
-		}
-		if ( ( stages[0].rgbGen == CGEN_WAVEFORM && stages[0].rgbWave.func == GF_INVERSE_SAWTOOTH )
-			&& ( stages[1].rgbGen == CGEN_WAVEFORM && stages[1].rgbWave.func == GF_SAWTOOTH ) ) {
-			stages[0].rgbGen = CGEN_IDENTITY_LIGHTING;
-		}
-	}
-
-	for ( stage = 1; stage < MAX_SHADER_STAGES; stage++ ) {
-		shaderStage_t *pStage = &stages[stage];
-
-		if ( !pStage->active ) {
-			break;
-		}
-
-		Com_Memset( pStage, 0, sizeof( *pStage ) );
-	}
-}
-
-
 static qbool IsAdditiveBlendDepthFade()
 {
 	for (int i = 0; i < shader.numStages; ++i) {
@@ -2319,6 +2229,26 @@ static qbool IsReplaceBlendMode( unsigned int stateBits )
 }
 
 
+static void ApplyVertexLighting()
+{
+	if (shader.sort > SS_OPAQUE)
+		return;
+
+	for (int stage = 0; stage < MAX_SHADER_STAGES; stage++) {
+		shaderStage_t* const pStage = &stages[stage];
+		if (UsesInternalLightmap(pStage) || UsesExternalLightmap(pStage)) {
+			// keep the ST_LIGHTMAP type so that
+			// dynamic lighting uses the right texture
+			pStage->type = ST_LIGHTMAP;
+			pStage->bundle.image[0] = tr.whiteImage;
+			pStage->rgbGen = CGEN_EXACT_VERTEX;
+			pStage->alphaGen = AGEN_SKIP;
+			shader.vlApplied = qtrue;
+		}
+	}
+}
+
+
 static void BuildPerImageShaderList( shader_t* newShader )
 {
 	if ( newShader->isSky ) {
@@ -2347,7 +2277,6 @@ static void BuildPerImageShaderList( shader_t* newShader )
 static shader_t* FinishShader()
 {
 	int stage;
-	qbool hasLightmapStage = qfalse;
 
 	//
 	// set polygon offset
@@ -2391,7 +2320,6 @@ static shader_t* FinishShader()
 			if ( pStage->tcGen == TCGEN_BAD ) {
 				pStage->tcGen = TCGEN_LIGHTMAP;
 			}
-			hasLightmapStage = qtrue;
 		} else {
 			if ( pStage->tcGen == TCGEN_BAD ) {
 				pStage->tcGen = TCGEN_TEXTURE;
@@ -2451,11 +2379,8 @@ static shader_t* FinishShader()
 	//
 	// if we are in r_vertexLight mode, never use a lightmap texture
 	//
-	if ( stage > 1 && r_vertexLight->integer && GetLightmapStageIndex() >= 0 ) {
-		VertexLightingCollapse();
-		stage = 1;
-		hasLightmapStage = qfalse;
-	}
+	if ( shader.vlWanted )
+		ApplyVertexLighting();
 
 	//
 	// look for multitexture potential
@@ -2539,16 +2464,6 @@ static shader_t* FinishShader()
 		}
 	}
 
-/* !!!
-	if ( shader.lightmapIndex >= 0 && !hasLightmapStage ) {
-		ri.Printf( PRINT_DEVELOPER, "WARNING: shader '%s' has lightmap but no lightmap stage!\n", shader.name );
-		// this causes every instance of the same shader, i.e. EVERY SURFACE, to count as a new shader
-		//shader.lightmapIndex = LIGHTMAP_NONE;
-		// even without that, 3ex will still create dozens of dupes per shader in lightmap mode
-		// because of mismatches between the bsp lightmap indexes and the shader files not having lightmap stages
-	}
-*/
-
 	// non-sky fog-only shaders don't have any normal passes
 	if ( !shader.isSky && stage == 0 ) {
 		shader.sort = SS_FOG;
@@ -2609,17 +2524,13 @@ entity skin surfaces.
 If lightmapIndex == LIGHTMAP_2D, then the image will be used
 for 2D rendering unless an explicit shader is found
 
-If lightmapIndex == LIGHTMAP_BY_VERTEX, then the image will use
-the vertex rgba modulate values, as appropriate for misc_model
-pre-lit surfaces.
-
 Other lightmapIndex values will have a lightmap stage created
 and src*dest blending applied with the texture, as appropriate for
 most world construction surfaces.
 
 ===============
 */
-shader_t* R_FindShader( const char *name, int lightmapIndex, qbool mipRawImage )
+shader_t* R_FindShader( const char *name, int lightmapIndex, int flags )
 {
 	char		strippedName[MAX_QPATH];
 	char		fileName[MAX_QPATH];
@@ -2632,7 +2543,7 @@ shader_t* R_FindShader( const char *name, int lightmapIndex, qbool mipRawImage )
 
 	// use (fullbright) vertex lighting if the bsp file doesn't have lightmaps
 	if ( lightmapIndex >= 0 && lightmapIndex >= tr.numLightmaps )
-		lightmapIndex = LIGHTMAP_BY_VERTEX;
+		flags |= FINDSHADER_VERTEXLIGHT_BIT;
 
 	COM_StripExtension(name, strippedName, sizeof(strippedName));
 
@@ -2675,6 +2586,9 @@ shader_t* R_FindShader( const char *name, int lightmapIndex, qbool mipRawImage )
 			// had errors, so use default shader
 			shader.defaultShader = qtrue;
 		}
+		if ( flags & FINDSHADER_VERTEXLIGHT_BIT ) {
+			shader.vlWanted = qtrue;
+		}
 		sh = FinishShader();
 
 		int fileIndex = -1;
@@ -2696,7 +2610,7 @@ shader_t* R_FindShader( const char *name, int lightmapIndex, qbool mipRawImage )
 	COM_DefaultExtension( fileName, sizeof( fileName ), ".tga" );
 
 	image_t* image;
-	if (mipRawImage)
+	if (flags & FINDSHADER_MIPRAWIMAGE_BIT)
 		image = R_FindImageFile( fileName, 0, TW_REPEAT );
 	else
 		image = R_FindImageFile( fileName, IMG_NOMIPMAP | IMG_NOPICMIP, TW_CLAMP_TO_EDGE );
@@ -2721,11 +2635,6 @@ shader_t* R_FindShader( const char *name, int lightmapIndex, qbool mipRawImage )
 		// dynamic colors at vertexes
 		stages[0].rgbGen = CGEN_LIGHTING_DIFFUSE;
 		stages[0].stateBits = GLS_DEFAULT;
-	} else if ( shader.lightmapIndex == LIGHTMAP_BY_VERTEX ) {
-		// explicit colors at vertexes
-		stages[0].rgbGen = CGEN_EXACT_VERTEX;
-		stages[0].alphaGen = AGEN_SKIP;
-		stages[0].stateBits = GLS_DEFAULT;
 	} else if ( shader.lightmapIndex == LIGHTMAP_2D ) {
 		// GUI elements
 		stages[0].rgbGen = CGEN_VERTEX;
@@ -2733,6 +2642,13 @@ shader_t* R_FindShader( const char *name, int lightmapIndex, qbool mipRawImage )
 		stages[0].stateBits = GLS_DEPTHTEST_DISABLE |
 			  GLS_SRCBLEND_SRC_ALPHA |
 			  GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
+	} else if ( flags & FINDSHADER_VERTEXLIGHT_BIT ) {
+		// explicit colors at vertexes
+		stages[0].rgbGen = CGEN_EXACT_VERTEX;
+		stages[0].alphaGen = AGEN_SKIP;
+		stages[0].stateBits = GLS_DEFAULT;
+		shader.vlWanted = qtrue;
+		shader.vlApplied = qtrue;
 	} else {
 		// two pass lightmap
 		stages[0].rgbGen = CGEN_IDENTITY;
@@ -2801,7 +2717,12 @@ static qhandle_t RE_RegisterShaderInternal( const char* name, int lightmapIndex,
 		return 0;
 	}
 
-	const shader_t* sh = R_FindShader( name, lightmapIndex, mip );
+	int flags = 0;
+	if ( mip )
+		flags |= FINDSHADER_MIPRAWIMAGE_BIT;
+	if ( r_vertexLight->integer )
+		flags |= FINDSHADER_VERTEXLIGHT_BIT;
+	const shader_t* sh = R_FindShader( name, lightmapIndex, flags );
 	return sh->defaultShader ? 0 : sh->index;
 }
 
@@ -2940,12 +2861,15 @@ void R_ShaderInfo_f()
 
 	if ( shader->text == NULL ) {
 		const char* type;
-		switch ( shader->lightmapIndex ) {
-			case LIGHTMAP_BROKEN:    type = "broken lit surface"; break;
-			case LIGHTMAP_2D:        type = "UI element";         break;
-			case LIGHTMAP_BY_VERTEX: type = "vertex-lit surface"; break;
-			case LIGHTMAP_NONE:      type = "opaque surface";     break;
-			default:                 type = "lit surface";        break;
+		if ( shader->vlApplied ) {
+			type = "vertex-lit surface";
+		} else {
+			switch ( shader->lightmapIndex ) {
+				case LIGHTMAP_BROKEN:    type = "broken lit surface"; break;
+				case LIGHTMAP_2D:        type = "UI element";         break;
+				case LIGHTMAP_NONE:      type = "opaque surface";     break;
+				default:                 type = "lit surface";        break;
+			}
 		}
 		ri.Printf( PRINT_ALL, "shader has no code (type: %s)\n", type );
 		return;
