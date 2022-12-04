@@ -325,8 +325,9 @@ void GfxInfo_f( void )
 		ri.Printf( PRINT_ALL, "Renderer: %s\n", glConfig.renderer_string );
 	if ( glConfig.version_string[0] != '\0' )
 		ri.Printf( PRINT_ALL, "OpenGL version: %s\n", glConfig.version_string );
+	ri.Printf( PRINT_ALL, "MSAA                  : %dx\n", glInfo.msaaSampleCount );
+	ri.Printf( PRINT_ALL, "MSAA alpha to coverage: %s\n", glInfo.alphaToCoverageSupport ? "ON" : "OFF" );
 	ri.Printf( PRINT_ALL, "Depth fade            : %s\n", glInfo.depthFadeSupport ? "ON" : "OFF" );
-	ri.Printf( PRINT_ALL, "Alpha to coverage     : %s\n", glInfo.alphaToCoverageSupport ? "ON" : "OFF" );
 	ri.Printf( PRINT_ALL, "GPU mip-map generation: %s\n", glInfo.mipGenSupport ? "ON" : "OFF" );
 	gal.PrintInfo();
 }

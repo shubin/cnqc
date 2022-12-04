@@ -1833,6 +1833,7 @@ static qbool GAL_Init()
 	glInfo.depthFadeSupport = r_depthFade->integer == 1;
 	glInfo.mipGenSupport = mipGenOK;
 	glInfo.alphaToCoverageSupport = alphaToCoverageOK;
+	glInfo.msaaSampleCount = sampleDesc.Count;
 
 	if(fullInit)
 	{
@@ -1880,8 +1881,6 @@ static qbool GAL_Init()
 	{
 		d3d.splitBufferOffsets = r_d3d11_syncOffsets->integer == D3D11SO_SPLITOFFSETS;
 	}
-
-	ri.Printf(PRINT_ALL, "MSAA: %d samples requested, %d selected\n", r_msaa->integer, sampleDesc.Count);
 
 	return qtrue;
 }

@@ -501,6 +501,11 @@ static void GL2_CreateColorRenderBufferStorageMS( int* samples )
 	if ( errorCode != GL_NO_ERROR )
 		ri.Error( ERR_FATAL, "Failed to create multi-sampled render buffer storage (error 0x%X)\n", (unsigned int)errorCode );
 
+	GLint realSampleCount = 0;
+	glGetRenderbufferParameteriv( GL_RENDERBUFFER, GL_RENDERBUFFER_SAMPLES, &realSampleCount );
+	if ( glGetError() == GL_NO_ERROR && realSampleCount > 0 )
+		sampleCount = realSampleCount;
+
 	*samples = sampleCount;
 }
 
@@ -599,8 +604,7 @@ static qbool GL2_FBO_Init()
 			GL2_FBO_CreateSS( frameBuffersPostProcess[1], qtrue );
 	}
 
-	if ( result )
-		ri.Printf( PRINT_ALL, "MSAA: %d samples requested, %d selected\n", r_msaa->integer, finalSampleCount );
+	glInfo.msaaSampleCount = finalSampleCount;
 
 	return result;
 }

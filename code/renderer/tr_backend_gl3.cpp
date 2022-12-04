@@ -958,6 +958,13 @@ static void CreateColorTextureStorageMS(int* samples)
 		ri.Error(ERR_FATAL, "Failed to create multi-sampled texture storage (error 0x%X)\n", (unsigned int)errorCode);
 	}
 
+	GLint realSampleCount = 0;
+	glGetTexLevelParameteriv(GL_TEXTURE_2D_MULTISAMPLE, 0, GL_TEXTURE_SAMPLES, &realSampleCount);
+	if(glGetError() == GL_NO_ERROR && realSampleCount > 0)
+	{
+		sampleCount = realSampleCount;
+	}
+
 	*samples = sampleCount;
 }
 
@@ -1058,7 +1065,7 @@ static void FBO_Init()
 		FBO_CreateSS(&gl.fbSS[1], qtrue, qtrue, "post-process #2");
 	}
 
-	ri.Printf(PRINT_ALL, "MSAA: %d samples requested, %d selected\n", r_msaa->integer, finalSampleCount);
+	glInfo.msaaSampleCount = finalSampleCount;
 }
 
 static void FBO_Bind(const FrameBuffer* fb)

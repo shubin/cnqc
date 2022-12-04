@@ -1676,6 +1676,7 @@ struct glinfo_t {
 	qbool	depthFadeSupport;
 	qbool	mipGenSupport;
 	qbool	alphaToCoverageSupport;
+	int		msaaSampleCount;		// active number of samples, can differ from r_msaa->integer
 };
 
 extern glinfo_t glInfo;
