@@ -105,7 +105,7 @@ qbool	com_fullyInitialized;
 
 static char com_errorMessage[MAXPRINTMSG];
 
-static void Com_WriteConfigToFile( const char* filename );
+static void Com_WriteConfigToFile( const char* filename, qbool forceWrite );
 static void Com_WriteConfig_f();
 static void Com_CompleteWriteConfig_f( int startArg, int compArg );
 static const char* Com_GetCompilerInfo();
@@ -354,7 +354,7 @@ void Com_Quit( int status )
 #ifndef DEDICATED
 	// note that cvar_modifiedFlags's CVAR_ARCHIVE bit is set when a bind is modified
 	if ( com_frameNumber > 0 && (cvar_modifiedFlags & CVAR_ARCHIVE) != 0 )
-		Com_WriteConfigToFile( "q3config.cfg" );
+		Com_WriteConfigToFile( "q3config.cfg", qfalse );
 #endif
 	Sys_SaveHistory();
 
@@ -2180,7 +2180,7 @@ static const cmdTableItem_t com_cmds[] =
 	{ "rand", Com_Rand_f },
 #endif
 	{ "quit", Com_Quit_f, NULL, "closes the application" },
-	{ "writeconfig", Com_WriteConfig_f, Com_CompleteWriteConfig_f, "write the cvars and key binds to a file" }
+	{ "writeconfig", Com_WriteConfig_f, Com_CompleteWriteConfig_f, help_writeconfig }
 };
 
 
@@ -2355,7 +2355,7 @@ void Com_Init( char *commandLine )
 //==================================================================
 
 
-static void Com_WriteConfigToFile( const char* filename )
+static void Com_WriteConfigToFile( const char* filename, qbool forceWrite )
 {
 	fileHandle_t f = FS_FOpenFileWrite( filename );
 	if ( !f ) {
@@ -2367,7 +2367,7 @@ static void Com_WriteConfigToFile( const char* filename )
 #ifndef DEDICATED
 	Key_WriteBindings(f);
 #endif
-	Cvar_WriteVariables(f);
+	Cvar_WriteVariables( f, forceWrite );
 	FS_FCloseFile( f );
 }
 
@@ -2376,16 +2376,17 @@ static void Com_WriteConfigToFile( const char* filename )
 
 static void Com_WriteConfig_f()
 {
-	if ( Cmd_Argc() != 2 ) {
-		Com_Printf( "Usage: writeconfig <filename>\n" );
+	if ( Cmd_Argc() < 2 ) {
+		Com_Printf( "Usage: writeconfig <filename> [-f]\n" );
 		return;
 	}
 
+	const qbool writeAllVars = Cmd_Argc() >= 3 && !Q_stricmp( Cmd_Argv(2), "-f" );
 	char filename[MAX_QPATH];
 	Q_strncpyz( filename, Cmd_Argv(1), sizeof( filename ) );
 	COM_DefaultExtension( filename, sizeof( filename ), ".cfg" );
 	Com_Printf( "Writing %s.\n", filename );
-	Com_WriteConfigToFile( filename );
+	Com_WriteConfigToFile( filename, writeAllVars );
 }
 
 

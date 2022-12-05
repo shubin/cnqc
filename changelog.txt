@@ -4,6 +4,8 @@ See the end of this file for known issues.
 
 DD Mmm 20 - 1.53
 
+add: /writeconfig now has a "-f" option to force writing all CVars (whether archived or not)
+
 add: /imageinfo <imagepath> prints where the image was loaded from and shaders that reference it
 
 add: /shadermixeduse prints all images referenced in shaders with conflicting global directives
