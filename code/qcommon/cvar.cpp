@@ -1132,10 +1132,12 @@ static void Cvar_Reset_f( void )
 
 // appends lines containing "seta variable value" for all cvars with the archive flag set
 
-void Cvar_WriteVariables( fileHandle_t f )
+void Cvar_WriteVariables( fileHandle_t f, qbool forceWrite )
 {
 	for (const cvar_t* var = cvar_vars; var; var = var->next) {
-		if ((Q_stricmp( var->name, "cl_cdkey" ) == 0) || !(var->flags & CVAR_ARCHIVE))
+		if (Q_stricmp( var->name, "cl_cdkey" ) == 0)
+			continue;
+		if (!forceWrite && !(var->flags & CVAR_ARCHIVE))
 			continue;
 		// write the latched value, even if it hasn't taken effect yet
 		FS_Printf( f, "seta %s \"%s\"\n", var->name, var->latchedString ? var->latchedString : var->string );

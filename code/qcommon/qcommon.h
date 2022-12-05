@@ -570,7 +570,7 @@ qbool Cvar_Command();
 // called by Cmd_ExecuteString when Cmd_Argv(0) doesn't match a known command
 // returns true if the command was a variable reference that was handled. (print or change)
 
-void	Cvar_WriteVariables( fileHandle_t f );
+void	Cvar_WriteVariables( fileHandle_t f, qbool forceWrite );
 // writes lines containing "set variable value" for all variables
 // with the archive flag set to qtrue.
 

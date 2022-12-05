@@ -62,3 +62,9 @@ S_COLOR_VAL "    2 " S_COLOR_HELP "= JIT-compiled QVM"
 "max. allowed framerate\n" \
 "It's highly recommended to only use " S_COLOR_VAL "125 " S_COLOR_HELP "or " S_COLOR_VAL "250 " S_COLOR_HELP "with V-Sync disabled.\n" \
 "If you see 'connection interruped' with " S_COLOR_VAL "250" S_COLOR_HELP ", set it back to " S_COLOR_VAL "125" S_COLOR_HELP "."
+
+#define help_writeconfig \
+"writes CVars and key binds to a file\n" \
+"Usage: " S_COLOR_CMD "writeconfig " S_COLOR_VAL "<filename> [-f]" S_COLOR_HELP "\n" \
+S_COLOR_VAL "-f " S_COLOR_HELP "will force writing all CVars,\n" \
+"whether they're archived or not."
