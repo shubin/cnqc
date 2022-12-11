@@ -2912,7 +2912,7 @@ void R_ShaderInfo_f()
 }
 
 
-void R_MixedUse_f()
+void R_ShaderMixedUse_f()
 {
 	for ( int i = 0; i < tr.numImages; ++i ) {
 		image_t* const image = tr.images[i];
@@ -2920,27 +2920,20 @@ void R_MixedUse_f()
 			continue;
 		}
 
-		const qbool nmm0 = tr.imageShaders[image->firstShaderIndex]->imgflags & IMG_NOMIPMAP;
-		const qbool npm0 = tr.imageShaders[image->firstShaderIndex]->imgflags & IMG_NOPICMIP;
-
-		qbool mixed = qfalse;
-		for ( int s = 1; s < image->numShaders; ++s ) {
-			const shader_t* const shader = tr.imageShaders[image->firstShaderIndex + s];
-			const qbool nmmS = shader->imgflags & IMG_NOMIPMAP;
-			const qbool npmS = shader->imgflags & IMG_NOPICMIP;
-			if ( nmmS != nmm0 || npmS != npm0 ) {
-				mixed = qtrue;
-				break;
-			}
-		}
-
-		if ( !mixed ) {
+		const int mixedFlags = image->flags0 & image->flags1;
+		if ( ( mixedFlags & ( IMG_NOMIPMAP | IMG_NOPICMIP ) ) == 0 ) {
 			continue;
 		}
 
 		ri.Printf( PRINT_ALL, "^5%s:\n", image->name );
-		for ( int s = 0; s < image->numShaders; ++s ) {
-			const shader_t* const shader = tr.imageShaders[image->firstShaderIndex + s];
+		for ( int is = 0; is < ARRAY_LEN( tr.imageShaders ); ++is ) {
+			const int imageIndex = tr.imageShaders[is] & 0xFFFF;
+			if ( imageIndex != i ) {
+				continue;
+			}
+
+			const int s = (tr.imageShaders[is] >> 16) & 0xFFFF;
+			const shader_t* const shader = tr.shaders[s];
 			const qbool nmmS = shader->imgflags & IMG_NOMIPMAP;
 			const qbool npmS = shader->imgflags & IMG_NOPICMIP;
 			ri.Printf( PRINT_ALL, "%s %s %s\n",

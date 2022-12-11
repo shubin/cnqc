@@ -101,11 +101,11 @@ struct image_t {
 
 	char	name[MAX_QPATH];	// game path, including extension
 
-	// used to index into tr.imageShaders
-	int		firstShaderIndex;
-	int		numShaders;
-
 	int		pakChecksum;
+	int		index;				// indexes tr.images
+	int		numShaders;			// number of shaders referencing this image
+	int		flags0;				// flags requested to be 0 by at least 1 shader
+	int		flags1;				// flags requested to be 1 by at least 1 shader
 };
 
 
@@ -916,7 +916,9 @@ typedef struct {
 	int numImages;
 	image_t* images[MAX_DRAWIMAGES];
 
-	shader_t*	imageShaders[2048];
+	// associative array of image_t and shader_t indices where each entry is unique
+	// the indices index into tr.images and tr.shaders
+	int			imageShaders[2048]; // shader index in high 16 bits, image index in low 16 bits
 	int			numImageShaders;
 
 	// shader indexes from other modules will be looked up in tr.shaders[]
@@ -1209,7 +1211,7 @@ const shader_t* R_GetShaderByHandle( qhandle_t hShader );
 void		R_InitShaders();
 void		R_ShaderList_f( void );
 void		R_ShaderInfo_f();
-void		R_MixedUse_f();
+void		R_ShaderMixedUse_f();
 void		R_CompleteShaderName_f( int startArg, int compArg );
 const char* R_GetShaderPath( const shader_t* shader );
 

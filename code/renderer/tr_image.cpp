@@ -143,11 +143,18 @@ void R_ImageInfo_f()
 
 	const char* const name = Cmd_Argv(1);
 	const image_t* image = NULL;
+	int imageIndex = -1;
 	for ( int i = 0; i < tr.numImages; i++ ) {
 		if ( !Q_stricmp( tr.images[i]->name, name ) ) {
 			image = tr.images[i];
+			imageIndex = i;
 			break;
 		}
+	}
+
+	if ( imageIndex < 0 ) {
+		ri.Printf( PRINT_ALL, "image not found\n" );
+		return;
 	}
 
 	char pakName[256];
@@ -156,8 +163,14 @@ void R_ImageInfo_f()
 	}
 
 	ri.Printf( PRINT_ALL, "Used in these shaders:\n" );
-	for ( int s = 0; s < image->numShaders; ++s ) {
-		const shader_t* const shader = tr.imageShaders[image->firstShaderIndex + s];
+	for ( int is = 0; is < ARRAY_LEN( tr.imageShaders ); ++is ) {
+		const int i = tr.imageShaders[is] & 0xFFFF;
+		if ( i != imageIndex ) {
+			continue;
+		}
+
+		const int s = (tr.imageShaders[is] >> 16) & 0xFFFF;
+		const shader_t* const shader = tr.shaders[s];
 		const qbool nmmS = shader->imgflags & IMG_NOMIPMAP;
 		const qbool npmS = shader->imgflags & IMG_NOPICMIP;
 		ri.Printf( PRINT_ALL, "%s %s %s\n",
@@ -390,6 +403,11 @@ image_t* R_CreateImage( const char* name, byte* pic, int width, int height, text
 	image->width = width;
 	image->height = height;
 	image->wrapClampMode = glWrapClampMode;
+
+	image->index = tr.numImages;
+	image->numShaders = 0;
+	image->flags0 = 0;
+	image->flags1 = 0;
 
 	tr.numImages++;
 
@@ -1182,13 +1200,18 @@ void R_AddImageShader( image_t* image, shader_t* shader )
 	if (tr.numImageShaders >= ARRAY_LEN( tr.imageShaders ))
 		return;
 
+	const int imageShader = (shader->index << 16) | image->index;
+	for (int is = 0; is < tr.numImageShaders; ++is) {
+		if (tr.imageShaders[is] == imageShader)
+			return;
+	}
+
 	// we consider index 0 to be invalid
 	if (tr.numImageShaders == 0)
 		tr.numImageShaders++;
 
-	tr.imageShaders[tr.numImageShaders] = shader;
-	if (image->firstShaderIndex == 0)
-		image->firstShaderIndex = tr.numImageShaders;
+	tr.imageShaders[tr.numImageShaders++] = imageShader;
 	image->numShaders++;
-	tr.numImageShaders++;
+	image->flags0 |= shader->imgflags ^ -1;
+	image->flags1 |= shader->imgflags;
 }
