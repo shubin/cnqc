@@ -343,7 +343,7 @@ static const cmdTableItem_t r_cmds[] =
 	{ "imageinfo", R_ImageInfo_f, NULL, "prints info for a specific image" },
 	{ "shaderlist", R_ShaderList_f, NULL, "prints loaded shaders" },
 	{ "shaderinfo", R_ShaderInfo_f, R_CompleteShaderName_f, "prints info for a specific shader" },
-	{ "shadermixeduse", R_MixedUse_f, NULL, "prints all mixed use issues" },
+	{ "shadermixeduse", R_ShaderMixedUse_f, NULL, "prints all mixed use issues" },
 	{ "skinlist", R_SkinList_f, NULL, "prints loaded skins" },
 	{ "modellist", R_Modellist_f, NULL, "prints loaded models" },
 	{ "screenshot", R_ScreenShotTGA_f, NULL, "takes a TARGA (.tga) screenshot" },
