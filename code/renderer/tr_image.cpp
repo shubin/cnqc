@@ -120,17 +120,9 @@ void R_ImageList_f( void )
 		ri.Printf( PRINT_ALL, " %s\n", image->name );
 	}
 
-	const char* units[] = { "KB", "MB", "GB", "TB" };
-	int amount = totalByteCount >> 10;
-	int unit = 0;
-	while ( amount >= 1024 ) {
-		amount >>= 10;
-		++unit;
-	}
-
 	ri.Printf( PRINT_ALL, "---------\n" );
 	ri.Printf( PRINT_ALL, "%i images found\n", imageCount );
-	ri.Printf( PRINT_ALL, "Estimated VRAM use: %i %s\n\n", amount, units[unit] );
+	ri.Printf( PRINT_ALL, "Estimated VRAM use: %s\n\n", Com_FormatBytes( totalByteCount ) );
 }
 
 
