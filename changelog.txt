@@ -18,11 +18,11 @@ add: cl_escapeAbortsDemo <0|1> (default: 1) decides whether the escape key can a
   reminder: you can always use /disconnect to stop demo playback
 
 add: r_depthClamp <0|1> (default: 0) disables vertex clipping against the near and far clip planes
-	enabling this feature will raise the maximum allowed FoV value of CPMA 1.53
-	it turns the view frustum into a pyramid and prevents any vertex between the near clip plane
-	and the camera's position from getting clipped (but will still clip anything behind the camera),
-	which prevents solid objects from being seen through when too close to the camera
-	because depth values are clamped, improper depth ordering can potentially occur
+  enabling this feature will raise the maximum allowed FoV value of CPMA 1.53
+  it turns the view frustum into a pyramid and prevents any vertex between the near clip plane
+  and the camera's position from getting clipped (but will still clip anything behind the camera),
+  which prevents solid objects from being seen through when too close to the camera
+  because depth values are clamped, improper depth ordering can potentially occur
 
 add: /shaderinfo <shadername> [code] prints where the shader was loaded from and optionally the code
 
