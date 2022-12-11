@@ -265,6 +265,17 @@ static void Upload32( image_t* image, unsigned int* data )
 		}
 	}
 
+	const char* npmImageDirs[] = {
+		"textures/npmenv/",
+		"textures/npmpads/"
+	};
+	for ( int i = 0; i < ARRAY_LEN( npmImageDirs ); ++i ) {
+		if ( !Q_stricmpn( image->name, npmImageDirs[i], strlen( npmImageDirs[i] ) ) ) {
+			image->flags |= IMG_NOPICMIP;
+			break;
+		}
+	}
+
 	int scaled_width, scaled_height;
 
 	// convert to exact power of 2 sizes

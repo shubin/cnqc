@@ -55,6 +55,8 @@ add: /waitms <milliseconds> to delay command executions by the specified number 
 add: r_alphaToCoverageMipBoost <0.0 to 0.5> (default: 0.125) boosts the alpha value of higher mip levels
   with A2C enabled, it prevents alpha-tested surfaces from fading (too much) in the distance
 
+chg: forcing the nopicmip flag on 2 new texture folders: "textures/npmenv" and "textures/npmpads"
+
 chg: r_vertexLight 1 no longer collapses shaders but replaces lightmaps with vertex colors
   for transparent shaders, lightmaps are still used because vertex colors are broken on some maps
 
