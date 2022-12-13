@@ -85,7 +85,7 @@ chg: r_lightmap 1 now handles most alpha-tested surfaces
 
 chg: com_soundMegs now defaults to 16
 
-chg: all rendering backends use depth clipping, near clip plane distance is 1 instead of 4
+chg: the camera's near clip plane distance is now 1 instead of 4
 
 chg: cl_aviFrameRate now defaults to 60
 
@@ -131,10 +131,10 @@ fix: with r_backend D3D11, some device reset scenarios caused fatal errors inste
 
 fix: CVar slots that have been freed (e.g. through unset/cvar_trim/cvar_reset) can now be re-used
 
-fix: with alpha to coverage enabled, high r_picmip values should longer cause
+fix: with alpha to coverage enabled, high r_picmip values should no longer cause
   alpha-tested surfaces to become transparent in the distance (e.g. q3wcp14 corridor floors)
 
-fix: with r_backend GL3, shader uniforms caching could break with fog-only shaders
+fix: with r_backend GL3, caching of shader uniforms could break with fog-only shaders
 
 fix: with r_backend D3D11, partial clears incorrectly affected entire render targets
   example: black views in CPMA multi-view with r_fastsky 1
@@ -1122,7 +1122,7 @@ act: can't fix (root cause unknown)
 
 iss: strong gamma correction breaks anti-aliasing
 exp: MSAA resolve happens before the post-process pass
-act: will get fixed for D3D11 and GL3
+act: won't fix
 
 iss: D3D11 full-screen toggles with the 32-bit client freeze myT's PC :-(
 cfg: nVidia GeForce GTX 1070 - Windows 7 SP1 x64 - drivers 445.87
