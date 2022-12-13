@@ -1617,7 +1617,8 @@ void RE_LoadWorldMap( const char* name )
 	tr.worldMapLoaded = qtrue;
 
 	byte* buffer;
-	ri.FS_ReadFile( name, (void**)&buffer );
+	int pakChecksum = 0;
+	ri.FS_ReadFilePak( name, (void**)&buffer, &pakChecksum );
 	if ( !buffer )
 		ri.Error( ERR_DROP, "RE_LoadWorldMap: %s not found", name );
 
@@ -1663,6 +1664,15 @@ void RE_LoadWorldMap( const char* name )
 	tr.world = &s_worldData;
 
 	ri.FS_FreeFile( buffer );
+
+	// invertedpenguin: replace the blood pool behind the RA because it severely impedes legibility
+	// (yes, r_mapGreyscale can be an effective work-around)
+	if ( pakChecksum == 1472072794 &&
+	     s_worldData.numsurfaces == 3064 &&
+	     !Q_stricmp( R_GetMapName(), "invertedpenguin" ) &&
+	     !Q_stricmp( s_worldData.surfaces[2859].shader->name, "textures/inpe/m_liq/meat_liquid_bloodpool_A" ) ) {
+		s_worldData.surfaces[2859].shader = R_FindShader( "textures/liquids/calm_poollight", LIGHTMAP_NONE, 0 );
+	}
 }
 
 
