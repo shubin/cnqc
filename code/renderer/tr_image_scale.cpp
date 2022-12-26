@@ -401,9 +401,9 @@ static void IMG_Gamma_F32toU8( imageU8_t* output, const imageF32_t* input )
 }
 
 
-static int IMG_WrapPixel( int p, int size, textureWrap_t wrapMode )
+static int IMG_WrapPixel( int p, int size, textureWrap_t textureWrap )
 {
-	if (wrapMode == TW_CLAMP_TO_EDGE) {
+	if (textureWrap == TW_CLAMP_TO_EDGE) {
 		return clamp(p, 0, size - 1);
 	}
 

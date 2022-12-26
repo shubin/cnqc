@@ -255,7 +255,10 @@ void RE_EndFrame( int* pcFE, int* pc2D, int* pc3D, qbool render )
 	}
 
 	if ( render ) {
-		R_CMD_END( swapBuffersCommand_t, RC_SWAP_BUFFERS );
+		{
+			// forcing the sub-scope to prevent variable shadowing
+			R_CMD_END( swapBuffersCommand_t, RC_SWAP_BUFFERS );
+		}
 		if ( delayScreenshot ) {
 			R_CMD_END( screenshotCommand_t, RC_SCREENSHOT );
 			*cmd = r_delayedScreenshot;

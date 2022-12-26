@@ -949,16 +949,16 @@ static void AddAllCommands( const commandBuffer_t* cmdBuf )
 }
 
 
-static void SeekToIndex( int index )
+static void SeekToIndex( int seekIndex )
 {
-	if (index < 0) {
+	if (seekIndex < 0) {
 		Warning("Attempted to seek out of range");
-		index = 0;
-	} else if (index >= demo.numIndices) {
-		index = demo.numIndices - 1;
+		seekIndex = 0;
+	} else if (seekIndex >= demo.numIndices) {
+		seekIndex = demo.numIndices - 1;
 	}
 
-	const demoIndex_t* demoIndex = &demo.indices[index];
+	const demoIndex_t* demoIndex = &demo.indices[seekIndex];
 	MB_Seek(&demo.buffer, demoIndex->byteOffset);
 	ReadNextSnapshot(); // 1st in next, ??? in current
 	ReadNextSnapshot(); // 2nd in next, 1st in current
@@ -992,9 +992,9 @@ static void SeekToIndex( int index )
 	PrintCmdListBegin("synch CS commands");
 	qsort(cs, numCS, sizeof(configString_t), &CompareConfigStringTimes);
 	for (int i = 0; i < numCS; ++i) {
-		const int index = cs[i].index;
-		const char* const csNew = syncSnap->configStrings + syncSnap->configStringOffsets[index];
-		AddCommand(va("cs %d \"%s\"", index, csNew));
+		const int csIndex = cs[i].index;
+		const char* const csValue = syncSnap->configStrings + syncSnap->configStringOffsets[csIndex];
+		AddCommand(va("cs %d \"%s\"", csIndex, csValue));
 	}
 	PrintCmdListEnd();
 
