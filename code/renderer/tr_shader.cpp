@@ -1573,14 +1573,14 @@ static void SortNewShader()
 
 	const int numDrawSurfs = tr.refdef.numDrawSurfs;
 	drawSurf_t* drawSurfs = tr.refdef.drawSurfs;
-	for( int i = 0; i < numDrawSurfs; ++i, ++drawSurfs ) {
+	for( i = 0; i < numDrawSurfs; ++i, ++drawSurfs ) {
 		R_DecomposeSort( drawSurfs->sort, &entityNum, &wrongShader, &fogNum );
 		drawSurfs->sort = R_ComposeSort( entityNum, tr.shaders[drawSurfs->shaderNum], fogNum );
 	}
 
 	const int numLitSurfs = tr.refdef.numLitSurfs;
 	litSurf_t* litSurfs = tr.refdef.litSurfs;
-	for ( int i = 0; i < numLitSurfs; ++i, ++litSurfs ) {
+	for ( i = 0; i < numLitSurfs; ++i, ++litSurfs ) {
 		R_DecomposeSort( litSurfs->sort, &entityNum, &wrongShader, &fogNum );
 		litSurfs->sort = R_ComposeSort( entityNum, tr.shaders[litSurfs->shaderNum], fogNum );
 	}
@@ -2846,25 +2846,25 @@ void R_ShaderInfo_f()
 	}
 
 	const char* const name = Cmd_Argv(1);
-	const shader_t* shader = NULL;
+	const shader_t* sh = NULL;
 	for ( int i = 0; i < tr.numShaders; i++ ) {
 		if ( !Q_stricmp( tr.shaders[i]->name, name ) ) {
-			shader = tr.shaders[i];
+			sh = tr.shaders[i];
 			break;
 		}
 	}
 
-	if ( shader == NULL ) {
+	if ( sh == NULL ) {
 		ri.Printf( PRINT_ALL, "shader not found\n" );
 		return;
 	}
 
-	if ( shader->text == NULL ) {
+	if ( sh->text == NULL ) {
 		const char* type;
-		if ( shader->vlApplied ) {
+		if ( sh->vlApplied ) {
 			type = "vertex-lit surface";
 		} else {
-			switch ( shader->lightmapIndex ) {
+			switch ( sh->lightmapIndex ) {
 				case LIGHTMAP_BROKEN:    type = "broken lit surface"; break;
 				case LIGHTMAP_2D:        type = "UI element";         break;
 				case LIGHTMAP_NONE:      type = "opaque surface";     break;
@@ -2875,7 +2875,7 @@ void R_ShaderInfo_f()
 		return;
 	}
 
-	const char* const shaderPath = R_GetShaderPath( shader );
+	const char* const shaderPath = R_GetShaderPath( sh );
 	if ( shaderPath != NULL ) {
 		ri.Printf( PRINT_ALL, "%s\n", shaderPath );
 	}
@@ -2884,7 +2884,7 @@ void R_ShaderInfo_f()
 		return;
 	}
 
-	const char* s = shader->text;
+	const char* s = sh->text;
 	int tabs = 0;
 	for ( ;; ) {
 		const char c0 = s[0];
@@ -2933,15 +2933,15 @@ void R_ShaderMixedUse_f()
 			}
 
 			const int s = (tr.imageShaders[is] >> 16) & 0xFFFF;
-			const shader_t* const shader = tr.shaders[s];
-			const qbool nmmS = shader->imgflags & IMG_NOMIPMAP;
-			const qbool npmS = shader->imgflags & IMG_NOPICMIP;
+			const shader_t* const sh = tr.shaders[s];
+			const qbool nmmS = sh->imgflags & IMG_NOMIPMAP;
+			const qbool npmS = sh->imgflags & IMG_NOPICMIP;
 			ri.Printf( PRINT_ALL, "%s %s %s\n",
 					  nmmS ? "NMM" : "   ",
 					  npmS ? "NPM" : "   ",
-					  shader->name);
+					  sh->name);
 
-			const char* const shaderPath = R_GetShaderPath( shader );
+			const char* const shaderPath = R_GetShaderPath( sh );
 			if ( shaderPath != NULL ) {
 				ri.Printf( PRINT_ALL, "        -> %s\n", shaderPath );
 			}
@@ -3094,9 +3094,9 @@ void R_InitShaders()
 }
 
 
-const char* R_GetShaderPath( const shader_t* shader )
+const char* R_GetShaderPath( const shader_t* sh )
 {
-	const int fileIndex = shader->fileIndex;
+	const int fileIndex = sh->fileIndex;
 	if ( fileIndex < 0 || fileIndex >= s_numShaderFiles ) {
 		return NULL;
 	}
