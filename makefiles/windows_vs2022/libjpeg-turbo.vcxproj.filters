@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="simd">
+      <UniqueIdentifier>{32EC9D7C-1E23-9F0D-C70F-8510B3251B0F}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\code\libjpeg-turbo\jcapimin.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jcapistd.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jccoefct.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jccolor.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jcdctmgr.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jchuff.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jcinit.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jcmainct.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jcmarker.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jcmaster.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jcomapi.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jcparam.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jcphuff.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jcprepct.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jcsample.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jctrans.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jdapimin.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jdapistd.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jdatadst.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jdatasrc.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jdcoefct.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jdcolor.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jddctmgr.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jdhuff.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jdinput.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jdmainct.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jdmarker.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jdmaster.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jdmerge.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jdphuff.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jdpostct.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jdsample.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jdtrans.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jerror.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jfdctflt.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jfdctfst.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jfdctint.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jidctflt.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jidctfst.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jidctint.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jidctred.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jmemmgr.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jquant1.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jquant2.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\jutils.c" />
+    <ClCompile Include="..\..\code\libjpeg-turbo\simd\jsimd_i386.c">
+      <Filter>simd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\libjpeg-turbo\simd\jsimd_x86_64.c">
+      <Filter>simd</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jccolor-mmx.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jccolor-sse2-64.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jccolor-sse2.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jcgray-mmx.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jcgray-sse2-64.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jcgray-sse2.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jchuff-sse2-64.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jchuff-sse2.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jcsample-mmx.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jcsample-sse2-64.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jcsample-sse2.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jdcolor-mmx.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jdcolor-sse2-64.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jdcolor-sse2.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jdmerge-mmx.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jdmerge-sse2-64.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jdmerge-sse2.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jdsample-mmx.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jdsample-sse2-64.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jdsample-sse2.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jfdctflt-3dn.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jfdctflt-sse-64.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jfdctflt-sse.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jfdctfst-mmx.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jfdctfst-sse2-64.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jfdctfst-sse2.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jfdctint-mmx.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jfdctint-sse2-64.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jfdctint-sse2.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jidctflt-3dn.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jidctflt-sse.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jidctflt-sse2-64.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jidctflt-sse2.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jidctfst-mmx.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jidctfst-sse2-64.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jidctfst-sse2.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jidctint-mmx.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jidctint-sse2-64.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jidctint-sse2.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jidctred-mmx.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jidctred-sse2-64.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jidctred-sse2.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jquant-3dn.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jquant-mmx.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jquant-sse.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jquantf-sse2-64.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jquantf-sse2.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jquanti-sse2-64.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jquanti-sse2.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\libjpeg-turbo\simd\jsimdcpu.asm">
+      <Filter>simd</Filter>
+    </CustomBuild>
+  </ItemGroup>
+</Project>

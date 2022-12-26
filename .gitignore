@@ -13,4 +13,5 @@ makefiles/windows_vs*/*sdf
 makefiles/*/obj
 .build
 .bin
+.vs
 /.project
