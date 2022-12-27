@@ -25,11 +25,10 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 #include <SDL2/SDL.h>
 
 
-// @TODO: cvars for freq and samples?
+// @TODO: cvar for samples?
 // @TODO: cvar for the device name? ("alsa", "pulseaudio", etc)
 static const int bits = 16;
 static const int channels = 2;
-static const int freq = 44100; // got issues with 22050 in the VM
 static const int samples = 2048;
 static const SDL_AudioFormat format = AUDIO_S16SYS;
 
@@ -98,7 +97,7 @@ qbool Sys_S_Init()
 	// open the default audio device
 	SDL_AudioSpec desired;
 	memset(&desired, 0, sizeof(desired));
-	desired.freq = freq;
+	desired.freq = s_khz->integer == 44 ? 44100 : 22050;
 	desired.format = format;
 	desired.samples = samples;
 	desired.channels = channels;
