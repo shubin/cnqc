@@ -244,7 +244,7 @@ static void MB_GrowTo( memoryBuffer_t* mb, int numBytes )
 	if (mb->data && mb->capacity < numBytes) {
 		byte* const oldData = mb->data;
 		numBytes = max(numBytes, mb->capacity * 2);
-		mb->data = (byte*)malloc(numBytes);
+		mb->data = (byte*)calloc(numBytes, 1);
 		if (!mb->data) {
 			Drop("Ran out of memory");
 		}
@@ -252,7 +252,7 @@ static void MB_GrowTo( memoryBuffer_t* mb, int numBytes )
 		Com_Memcpy(mb->data, oldData, mb->position);
 		free(oldData);
 	} else if (!mb->data) {
-		mb->data = (byte*)malloc(numBytes);
+		mb->data = (byte*)calloc(numBytes, 1);
 		if (!mb->data) {
 			Drop("Ran out of memory");
 		}
@@ -631,6 +631,9 @@ static void ParseSnapshot()
 
 	// update our custom snapshot data structure
 	ndpSnapshot_t* const currNDPSnap = parser.currSnap;
+	for (int i = 0; i < MAX_GENTITIES; ++i) {
+		currNDPSnap->entities[i].number = MAX_GENTITIES - 1;
+	}
 	for (int i = 0; i < newSnap->numEntities; ++i) {
 		const int index = (newSnap->parseEntitiesNum + i) & (MAX_PARSE_ENTITIES - 1);
 		const entityState_t* const ent = &parser.entities[index];
@@ -896,8 +899,11 @@ static void ReadNextSnapshot()
 	}
 	qbool entSet[MAX_GENTITIES];
 	Com_Memset(entSet, 0, sizeof(entSet));
+	int prevIndex = -1;
 	for (;;) {
 		const int index = MSG_ReadBits(&inMsg, GENTITYNUM_BITS);
+		Q_assert(index > prevIndex);
+		prevIndex = index;
 		if (index == MAX_GENTITIES - 1) {
 			break;
 		}
@@ -911,7 +917,7 @@ static void ReadNextSnapshot()
 	}
 	if (!isFullSnap) {
 		// copy over old valid entities and mark missing ones as invalid
-		for (int i = 0; i < MAX_GENTITIES; ++i) {
+		for (int i = 0; i < MAX_GENTITIES - 1; ++i) {
 			if (entSet[i]) {
 				continue;
 			}
