@@ -2269,7 +2269,7 @@ void Com_Init( char *commandLine )
 
 	// get dedicated here for proper hunk megs initialization
 #ifdef DEDICATED
-	com_dedicated = Cvar_Get("dedicated", "1", CVAR_ROM);
+	com_dedicated = Cvar_Get("dedicated", "1", CVAR_ROM | CVAR_INIT);
 #else
 	com_dedicated = Cvar_Get("dedicated", "0", CVAR_LATCH);
 #endif
