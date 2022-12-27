@@ -243,7 +243,11 @@ qbool Sys_GetPacket( netadr_t* net_from, msg_t* net_message )
 	int ret = recvfrom( ip_socket, (char*)net_message->data, net_message->maxsize, 0, (struct sockaddr *)&from, &fromlen );
 	if (ret == SOCKET_ERROR) {
 		int err = socketError;
+#ifdef _WIN32
+		if (err == EAGAIN || err == ECONNRESET || err == WSAEWOULDBLOCK)
+#else
 		if (err == EAGAIN || err == ECONNRESET)
+#endif
 			return qfalse;
 		//Com_Printf( "NET_GetPacket: %s\n", NET_ErrorString() );
 		return qfalse;
