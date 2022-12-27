@@ -65,12 +65,19 @@ static cvar_t* s_show;
 static cvar_t* s_mixahead;
 static cvar_t* s_mixPreStep;
 cvar_t* s_testsound;
+cvar_t *s_khz;
 
 static loopSound_t		loopSounds[MAX_GENTITIES];
 static channel_t		*freelist = NULL;
 
 int						s_rawend;
 portable_samplepair_t	s_rawsamples[MAX_RAW_SAMPLES];
+
+#if defined( _WIN32 )
+#define S_KHZ_DEFAULT "22"
+#else
+#define S_KHZ_DEFAULT "44"
+#endif
 
 
 static void S_Base_SoundInfo()
@@ -1150,7 +1157,8 @@ static const cvarTableItem_t cl_cvars[] =
 	{ &s_mixahead, "s_mixahead", "0.2", CVAR_ARCHIVE, CVART_FLOAT },
 	{ &s_mixPreStep, "s_mixPreStep", "0.05", CVAR_ARCHIVE, CVART_FLOAT },
 	{ &s_show, "s_show", "0", CVAR_CHEAT, CVART_INTEGER, "0", "2" },
-	{ &s_testsound, "s_testsound", "0", CVAR_CHEAT, CVART_BOOL }
+	{ &s_testsound, "s_testsound", "0", CVAR_CHEAT, CVART_BOOL },
+	{ &s_khz, "s_khz", S_KHZ_DEFAULT, CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "22", "44" }
 };
 
 
