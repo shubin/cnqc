@@ -215,6 +215,10 @@ namespace RHI
 			rtvHandle.ptr += descriptorIncSize;
 		}
 
+		ID3D12CommandAllocator* commandAllocator;
+		hr = rhi.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocator));
+		Check(hr, "ID3D12Device::CreateCommandAllocator");
+
 		__debugbreak();
 	}
 
