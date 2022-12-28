@@ -534,7 +534,7 @@ void R_Init()
 
 	R_InitMipFilter();
 
-	// @TODO: gal
+	RHI::Init();
 	GfxInfo_f();
 
 	R_InitImages();

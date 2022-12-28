@@ -120,45 +120,65 @@ static const char* GetDeviceRemovedReasonString(HRESULT reason)
 }
 
 
-void Init()
+namespace RHI
 {
-	HRESULT hr = S_OK;
+	void Init()
+	{
+		Sys_V_Init();
 
-	__debugbreak();
+		HRESULT hr = S_OK;
 
 #if defined(_DEBUG)
-	if(SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&rhi.debug))))
-	{
-		// @NOTE: calling after device creation will remove the device
-		rhi.debug->EnableDebugLayer();
-	}
+		if(SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&rhi.debug))))
+		{
+			// @NOTE: calling after device creation will remove the device
+			// @TODO: hitting this error :(
+			// D3D Error 887e0003: (13368@153399640) at 00007FFC84ECF985 - D3D12 SDKLayers dll does not match the D3D12SDKVersion of D3D12 Core dll.
+			rhi.debug->EnableDebugLayer();
+		}
 #endif
 
-	hr = CreateDXGIFactory1(IID_PPV_ARGS(&rhi.dxgiFactory1));
-	Check(hr, "CreateDXGIFactory1");
-	IDXGIAdapter1* adapter;
-	UINT i = 0;
-	while(rhi.dxgiFactory1->EnumAdapters1(i++, &adapter) != DXGI_ERROR_NOT_FOUND)
-	{
-		DXGI_ADAPTER_DESC1 desc;
-		adapter->GetDesc1(&desc);
-		//desc.Description;
-		// can check if device supports D3D12:
-		//if(SUCCEEDED(D3D12CreateDevice(adapter, D3D_FEATURE_LEVEL_12_0, __uuidof(ID3D12Device), NULL)))
+		hr = CreateDXGIFactory1(IID_PPV_ARGS(&rhi.dxgiFactory1));
+		Check(hr, "CreateDXGIFactory1");
+		IDXGIAdapter1* adapter;
+		UINT i = 0;
+		while(rhi.dxgiFactory1->EnumAdapters1(i++, &adapter) != DXGI_ERROR_NOT_FOUND)
+		{
+			DXGI_ADAPTER_DESC1 desc;
+			adapter->GetDesc1(&desc);
+			//desc.Description;
+			//__debugbreak();
+			// can check if device supports D3D12:
+			//if(SUCCEEDED(D3D12CreateDevice(adapter, D3D_FEATURE_LEVEL_12_0, __uuidof(ID3D12Device), NULL)))
+		}
+
+		// @TODO: first argument is the adapter, NULL is default
+		hr = D3D12CreateDevice(NULL, D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&rhi.device));
+		Check(hr, "D3D12CreateDevice");
+
+		DXGI_SWAP_CHAIN_DESC swapChainDesc = { 0 };
+		/*swapChainDesc.BufferCount = ;
+		swapChainDesc.BufferDesc.Format = ;
+		swapChainDesc.BufferDesc.Width = ;
+		swapChainDesc.BufferDesc.Height = ;
+		swapChainDesc.BufferDesc.RefreshRate = ;
+		swapChainDesc.BufferDesc.Scaling = ;
+		swapChainDesc.BufferDesc.ScanlineOrdering = ;
+		swapChainDesc.BufferUsage = ;
+		swapChainDesc.Flags = ;
+		swapChainDesc.OutputWindow = ;
+		swapChainDesc.SampleDesc.Count = ;
+		swapChainDesc.SampleDesc.Quality = ;
+		swapChainDesc.SwapEffect = ;
+		swapChainDesc.Windowed = ;*/
+		hr = rhi.dxgiFactory1->CreateSwapChain(rhi.device, &swapChainDesc, &rhi.dxgiSwapChain);
+		Check(hr, "IDXGIFactory::CreateSwapChain");
+		//rhi.dxgiSwapChain->QueryInterface(IID_PPV_ARGS(&rhi.));
+		//IDXGISwapChain3::GetCurrentBackBufferIndex
 	}
 
-	// @TODO: first argument is the adapter
-	hr = D3D12CreateDevice(NULL, D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&rhi.device));
-	Check(hr, "D3D12CreateDevice");
-
-	DXGI_SWAP_CHAIN_DESC swapChainDesc;
-	hr = rhi.dxgiFactory1->CreateSwapChain(rhi.device, &swapChainDesc, &rhi.dxgiSwapChain);
-	Check(hr, "IDXGIFactory::CreateSwapChain");
-	rhi.dxgiSwapChain->QueryInterface(IID_PPV_ARGS(&rhi.debug));
-	//IDXGISwapChain3::GetCurrentBackBufferIndex
-}
-
-void ShutDown()
-{
-	// use DXGIGetDebugInterface to enumerate what's alive
+	void ShutDown()
+	{
+		// use DXGIGetDebugInterface to enumerate what's alive
+	}
 }

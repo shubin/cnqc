@@ -1636,4 +1636,11 @@ extern qbool				r_delayedScreenshotPending;
 extern int					r_delayedScreenshotFrame;
 
 
+namespace RHI
+{
+	void Init();
+	void ShutDown();
+}
+
+
 #endif //TR_LOCAL_H
