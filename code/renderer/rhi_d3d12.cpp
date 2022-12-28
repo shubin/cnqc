@@ -27,13 +27,18 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 #include <dxgi.h>
 
 
+#if defined(_DEBUG) // @TODO: Q3 macro to specify D3D12SDKVersion
+extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 608; }
+extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8".\\D3D12\\"; }
+#endif
+
+
 struct RHIPrivate
 {
 	ID3D12Debug* debug; // can be NULL
 	IDXGIFactory1* dxgiFactory1;
 	ID3D12Device* device;
 	IDXGISwapChain* dxgiSwapChain;
-
 };
 
 static RHIPrivate rhi;
@@ -132,8 +137,9 @@ namespace RHI
 		if(SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&rhi.debug))))
 		{
 			// calling after device creation will remove the device
-			// @TODO: hitting this error :(
+			// if you hit this error:
 			// D3D Error 887e0003: (13368@153399640) at 00007FFC84ECF985 - D3D12 SDKLayers dll does not match the D3D12SDKVersion of D3D12 Core dll.
+			// make sure your D3D12SDKVersion and D3D12SDKPath are valid!
 			rhi.debug->EnableDebugLayer();
 		}
 #endif
