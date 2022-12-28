@@ -219,7 +219,18 @@ namespace RHI
 		hr = rhi.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocator));
 		Check(hr, "ID3D12Device::CreateCommandAllocator");
 
+		ID3D12GraphicsCommandList* commandList;
+		hr = rhi.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator, NULL, IID_PPV_ARGS(&commandList));
+		Check(hr, "ID3D12Device::CreateCommandList");
+		hr = commandList->Close();
+		Check(hr, "ID3D12GraphicsCommandList::Close");
+
 		__debugbreak();
+
+		// clear the screen for testing
+		/*commandList->ClearRenderTargetView();
+		commandQueue->ExecuteCommandLists(1, &commandList);
+		rhi.dxgiSwapChain->Present(0, DXGI_PRESENT_ALLOW_TEARING);*/
 	}
 
 	void ShutDown()
