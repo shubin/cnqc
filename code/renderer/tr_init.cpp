@@ -31,8 +31,6 @@ screenshotCommand_t	r_delayedScreenshot;
 qbool				r_delayedScreenshotPending = qfalse;
 int					r_delayedScreenshotFrame = 0;
 
-graphicsAPILayer_t	gal;
-
 cvar_t	*r_backend;
 cvar_t	*r_frameSleep;
 
@@ -179,7 +177,7 @@ static void RB_TakeScreenshotTGA( int x, int y, int width, int height, const cha
 	tga->width = LittleShort( width );
 	tga->height = LittleShort( height );
 	tga->pixel_size = 24;
-	gal.ReadPixels( x, y, width, height, 1, CS_BGR, p + sizeof(TargaHeader) );
+	//@TODO: gal.ReadPixels( x, y, width, height, 1, CS_BGR, p + sizeof(TargaHeader) );
 	ri.FS_WriteFile( fileName, p, sizeof(TargaHeader) + c );
 }
 
@@ -187,7 +185,7 @@ static void RB_TakeScreenshotTGA( int x, int y, int width, int height, const cha
 static void RB_TakeScreenshotJPG( int x, int y, int width, int height, const char* fileName )
 {
 	RI_AutoPtr p( width * height * 4 );
-	gal.ReadPixels( x, y, width, height, 1, CS_RGBA, p );
+	//@TODO: gal.ReadPixels( x, y, width, height, 1, CS_RGBA, p );
 
 	RI_AutoPtr out( width * height * 4 );
 	int n = SaveJPGToBuffer( out, 95, width, height, p );
@@ -298,13 +296,13 @@ const void *RB_TakeVideoFrameCmd( const void *data )
 
 	if( cmd->motionJpeg )
 	{
-		gal.ReadPixels( 0, 0, cmd->width, cmd->height, 1, CS_RGBA, cmd->captureBuffer );
+		//@TODO: gal.ReadPixels( 0, 0, cmd->width, cmd->height, 1, CS_RGBA, cmd->captureBuffer );
 		const int frameSize = SaveJPGToBuffer( cmd->encodeBuffer, 95, cmd->width, cmd->height, cmd->captureBuffer );
 		ri.CL_WriteAVIVideoFrame( cmd->encodeBuffer, frameSize );
 	}
 	else
 	{
-		gal.ReadPixels( 0, 0, cmd->width, cmd->height, 4, CS_BGR, cmd->captureBuffer );
+		//@TODO: gal.ReadPixels( 0, 0, cmd->width, cmd->height, 4, CS_BGR, cmd->captureBuffer );
 		const int frameSize = PAD( cmd->width, 4 ) * cmd->height * 3;
 		ri.CL_WriteAVIVideoFrame( cmd->captureBuffer, frameSize );
 	}
@@ -329,7 +327,7 @@ void GfxInfo_f( void )
 	ri.Printf( PRINT_ALL, "MSAA alpha to coverage: %s\n", glInfo.alphaToCoverageSupport ? "ON" : "OFF" );
 	ri.Printf( PRINT_ALL, "Depth fade            : %s\n", glInfo.depthFadeSupport ? "ON" : "OFF" );
 	ri.Printf( PRINT_ALL, "GPU mip-map generation: %s\n", glInfo.mipGenSupport ? "ON" : "OFF" );
-	gal.PrintInfo();
+	//@TODO: gal.PrintInfo();
 }
 
 
@@ -463,56 +461,6 @@ static void R_Register()
 }
 
 
-static void R_InitGAL()
-{
-	struct gal_t {
-		getGALInterface_t grabInterface;
-		galId_t id;
-		const char* cvarValue;
-		const char* fullName;
-	};
-
-	// preferred option goes first
-	const gal_t galArray[] = {
-#if defined( _WIN32 )
-		{ &GAL_GetD3D11, GAL_D3D11, "D3D11", "Direct3D 11" },
-#endif
-		{ &GAL_GetGL3, GAL_GL3, "GL3", "OpenGL 3" },
-		{ &GAL_GetGL2, GAL_GL2, "GL2", "OpenGL 2" }
-	};
-
-	int galIndex = -1;
-	for ( int i = 0; i < ARRAY_LEN( galArray ); ++i ) {
-		if ( !Q_stricmp( r_backend->string, galArray[i].cvarValue ) ) {
-			galIndex = i;
-			break;
-		}
-	}
-
-	if ( galIndex < 0 ) {
-		galIndex = 0;
-		ri.Printf( PRINT_WARNING, "Invalid r_backend value, selecting the %s back-end instead\n", galArray[galIndex].fullName );
-		ri.Cvar_Set( r_backend->name, galArray[galIndex].cvarValue );
-	}
-
-	ri.Printf( PRINT_ALL, "Initializing the %s back-end...\n", galArray[galIndex].fullName );
-
-#if defined( _DEBUG )
-	// helps catch unset function pointers
-	memset( &gal, 0, sizeof( gal ) );
-#endif
-
-	if ( !galArray[galIndex].grabInterface( &gal ) )
-		ri.Error( ERR_FATAL, "Failed to grab the %s back-end's interface\n", galArray[galIndex].fullName );
-
-	if ( !gal.Init() )
-		ri.Error( ERR_FATAL, "Failed to initialize the %s back-end\n", galArray[galIndex].fullName );
-
-	gal.id = galArray[galIndex].id;
-	GfxInfo_f();
-}
-
-
 static void R_InitMipFilter()
 {
 	struct filter_t {
@@ -586,7 +534,8 @@ void R_Init()
 
 	R_InitMipFilter();
 
-	R_InitGAL();
+	// @TODO: gal
+	GfxInfo_f();
 
 	R_InitImages();
 
@@ -614,7 +563,7 @@ static void RE_Shutdown( qbool destroyWindow )
 
 	if ( tr.registered ) {
 		ri.Cmd_UnregisterModule();
-		gal.ShutDown( destroyWindow );
+		//@TODO: gal.ShutDown( destroyWindow );
 	}
 
 	// shut down platform-specific video stuff
@@ -656,7 +605,7 @@ static void RE_StretchRaw( int x, int y, int w, int h, int cols, int rows, const
 	if ( !tr.registered )
 		return;
 
-	gal.UpdateScratch( tr.scratchImage[client], cols, rows, data, dirty );
+	//@TODO: gal.UpdateScratch( tr.scratchImage[client], cols, rows, data, dirty );
 	tr.scratchShader->stages[0]->bundle.image[0] = tr.scratchImage[client];
 	RE_StretchPic( x, y, w, h, 0.5f / cols, 0.5f / rows, (cols - 0.5f) / cols, (rows - 0.5f) / rows, (qhandle_t)tr.scratchShader->index );
 }

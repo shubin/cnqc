@@ -37,7 +37,7 @@ static void RB_Set2D()
 	backEnd.refdef.time = ri.Milliseconds();
 	backEnd.refdef.floatTime = (double)backEnd.refdef.time / 1000.0;
 
-	gal.Begin2D();
+	//@TODO: gal.Begin2D();
 }
 
 
@@ -225,8 +225,9 @@ static void RB_RenderDrawSurfList( const drawSurf_t* drawSurfs, int numDrawSurfs
 	backEnd.projection2D = qfalse;
 	backEnd.pc = backEnd.pc3D;
 
-	if ( beginView )
-		gal.Begin3D();
+	// @TODO: gal
+	/*if (beginView)
+		gal.Begin3D();*/
 
 	// draw everything
 	int oldEntityNum = -1;
@@ -342,16 +343,16 @@ static void RB_RenderDrawSurfList( const drawSurf_t* drawSurfs, int numDrawSurfs
 				tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
 			}
 
-			gal.SetModelViewMatrix( backEnd.orient.modelMatrix );
+			//@TODO: gal.SetModelViewMatrix( backEnd.orient.modelMatrix );
 
 			//
 			// change depthrange if needed
 			//
 			if ( oldDepthRange != depthRange ) {
 				if ( depthRange ) {
-					gal.SetDepthRange( 0, 0.3 );
+					//@TODO: gal.SetDepthRange( 0, 0.3 );
 				} else {
-					gal.SetDepthRange( 0, 1 );
+					//@TODO: gal.SetDepthRange( 0, 1 );
 				}
 				oldDepthRange = depthRange;
 			}
@@ -371,9 +372,9 @@ static void RB_RenderDrawSurfList( const drawSurf_t* drawSurfs, int numDrawSurfs
 	}
 
 	// go back to the world modelview matrix
-	gal.SetModelViewMatrix( backEnd.viewParms.world.modelMatrix );
+	//@TODO: gal.SetModelViewMatrix( backEnd.viewParms.world.modelMatrix );
 	if ( depthRange ) {
-		gal.SetDepthRange( 0, 1 );
+		//@TODO: gal.SetDepthRange( 0, 1 );
 	}
 }
 
@@ -471,18 +472,18 @@ static void RB_RenderLitSurfList( dlight_t* dl, qbool opaque )
 			}
 
 			R_TransformDlights( 1, dl, &backEnd.orient );
-			gal.BeginDynamicLight();
+			//@TODO: gal.BeginDynamicLight();
 
-			gal.SetModelViewMatrix( backEnd.orient.modelMatrix );
+			//@TODO: gal.SetModelViewMatrix( backEnd.orient.modelMatrix );
 
 			//
 			// change depthrange if needed
 			//
 			if ( oldDepthRange != depthRange ) {
 				if ( depthRange ) {
-					gal.SetDepthRange( 0, 0.3 );
+					//@TODO: gal.SetDepthRange( 0, 0.3 );
 				} else {
-					gal.SetDepthRange( 0, 1 );
+					//@TODO: gal.SetDepthRange( 0, 1 );
 				}
 				oldDepthRange = depthRange;
 			}
@@ -502,9 +503,9 @@ static void RB_RenderLitSurfList( dlight_t* dl, qbool opaque )
 	}
 
 	// go back to the world modelview matrix
-	gal.SetModelViewMatrix( backEnd.viewParms.world.modelMatrix );
+	//@TODO: gal.SetModelViewMatrix( backEnd.viewParms.world.modelMatrix );
 	if ( depthRange ) {
-		gal.SetDepthRange( 0, 1 );
+		//@TODO: gal.SetDepthRange( 0, 1 );
 	}
 }
 
@@ -534,7 +535,7 @@ static void R_DebugPolygon( int colorMask, int numPoints, const float* points )
 	stage.constantColor[2] = ((colorMask >> 2) & 1) ? 255 : 0;
 	stage.constantColor[3] = 255;
 	R_ComputeColors( &stage, tess.svars[0], 0, numPoints );
-	gal.Draw( DT_GENERIC );
+	//@TODO: gal.Draw( DT_GENERIC );
 
 	// wireframe
 	for ( int i = 0, n = 0; i < numPoints; ++i ) {
@@ -546,9 +547,9 @@ static void R_DebugPolygon( int colorMask, int numPoints, const float* points )
 	stage.stateBits |= GLS_POLYMODE_LINE;
 	stage.rgbGen = CGEN_IDENTITY;
 	R_ComputeColors( &stage, tess.svars[0], 0, numPoints );
-	gal.SetDepthRange( 0, 0 );
-	gal.Draw( DT_GENERIC );
-	gal.SetDepthRange( 0, 1 );
+	//@TODO: gal.SetDepthRange( 0, 0 );
+	//@TODO: gal.Draw( DT_GENERIC );
+	//@TODO: gal.SetDepthRange( 0, 1 );
 
 	RB_PopShader();
 	tess.numVertexes = 0;
@@ -601,7 +602,7 @@ static const void* RB_BeginFrame( const void* data )
 	const beginFrameCommand_t* cmd = (const beginFrameCommand_t*)data;
 
 	R_SetColorMappings();
-	gal.BeginFrame();
+	//@TODO: gal.BeginFrame();
 
 	return (const void*)(cmd + 1);
 }
@@ -621,7 +622,7 @@ static const void* RB_SwapBuffers( const void* data )
 	backEnd.pc3D[RB_USEC] = (int)( endTime - startTime );
 
 	const swapBuffersCommand_t* cmd = (const swapBuffersCommand_t*)data;
-	gal.EndFrame();
+	//@TODO: gal.EndFrame();
 	Sys_V_EndFrame();
 	const int64_t swapTime = ri.Microseconds();
 	backEnd.pc3D[RB_USEC_END] = (int)( swapTime - endTime );

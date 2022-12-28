@@ -235,7 +235,7 @@ static void Upload32( image_t* image, unsigned int* data )
 	if ( image->flags & IMG_LMATLAS ) {
 		image->flags |= IMG_NOMIPMAP;
 		image->flags |= IMG_NOAF;
-		gal.CreateTexture( image, 1, image->width, image->height );
+		//@TODO: gal.CreateTexture( image, 1, image->width, image->height );
 		return;
 	}
 
@@ -319,7 +319,7 @@ static void Upload32( image_t* image, unsigned int* data )
 			image->height = max( image->height >> 1, 1 );
 			mipOffset++;
 		}
-		gal.CreateTextureEx( image, mipCount, mipOffset, w, h, data );
+		//@TODO: gal.CreateTextureEx( image, mipCount, mipOffset, w, h, data );
 		return;
 	}
 
@@ -327,8 +327,8 @@ static void Upload32( image_t* image, unsigned int* data )
 	// copy or resample data as appropriate for first MIP level
 	if ( ( scaled_width == image->width ) && ( scaled_height == image->height ) ) {
 		if ( image->flags & IMG_NOMIPMAP ) {
-			gal.CreateTexture( image, 1, image->width, image->height );
-			gal.UpdateTexture( image, 0, 0, 0, image->width, image->height, data );
+			//@TODO: gal.CreateTexture( image, 1, image->width, image->height );
+			//@TODO: gal.UpdateTexture( image, 0, 0, 0, image->width, image->height, data );
 			return;
 		}
 		Com_Memcpy( pScaled, data, image->width * image->height * 4 );
@@ -350,8 +350,8 @@ static void Upload32( image_t* image, unsigned int* data )
 		R_LightScaleTexture( pScaled.Get<byte>(), scaled_width, scaled_height );
 
 	const int mipCount = ( image->flags & IMG_NOMIPMAP ) ? 1 : ComputeMipCount( scaled_width, scaled_height );
-	gal.CreateTexture( image, mipCount, scaled_width, scaled_height );
-	gal.UpdateTexture( image, 0, 0, 0, scaled_width, scaled_height, pScaled );
+	//@TODO: gal.CreateTexture( image, mipCount, scaled_width, scaled_height );
+	//@TODO: gal.UpdateTexture( image, 0, 0, 0, scaled_width, scaled_height, pScaled );
 
 	if ( !(image->flags & IMG_NOMIPMAP) )
 	{
@@ -370,7 +370,7 @@ static void Upload32( image_t* image, unsigned int* data )
 			if ( r_colorMipLevels->integer )
 				R_BlendOverTexture( imageData, scaled_width * scaled_height, mipBlendColors[miplevel] );
 
-			gal.UpdateTexture( image, miplevel, 0, 0, scaled_width, scaled_height, imageData );
+			//@TODO: gal.UpdateTexture( image, miplevel, 0, 0, scaled_width, scaled_height, imageData );
 		}
 	}	
 }
@@ -381,7 +381,7 @@ void R_UploadLightmapTile( image_t* image, byte* pic, int x, int y, int width, i
 	if ( !(image->flags & IMG_LMATLAS) )
 		ri.Error( ERR_DROP, "R_UploadLightmapTile: IMG_LMATLAS flag not defined\n" );
 
-	gal.UpdateTexture( image, 0, x, y, width, height, pic );
+	//@TODO: gal.UpdateTexture( image, 0, x, y, width, height, pic );
 }
 
 

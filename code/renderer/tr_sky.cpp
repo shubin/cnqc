@@ -528,7 +528,7 @@ static void DrawSkyBox()
 		tess.numVertexes = 0;
 		tess.numIndexes = 0;
 		FillCloudySkySide( sky_mins_subd, sky_maxs_subd, qtrue );
-		gal.Draw( DT_GENERIC );
+		//@TODO: gal.Draw( DT_GENERIC );
 		
 	}
 
@@ -551,16 +551,17 @@ void RB_DrawSky()
 	// r_showsky will let all the sky blocks be drawn in
 	// front of everything to allow developers to see how
 	// much sky is getting sucked in
-	gal.BeginSkyAndClouds(r_showsky->integer ? 0.0 : 1.0);
+	//@TODO: gal.BeginSkyAndClouds(r_showsky->integer ? 0.0 : 1.0);
 	
 	if (tess.shader->sky.outerbox[0] && tess.shader->sky.outerbox[0] != tr.defaultImage)
 		DrawSkyBox();
 
 	if (tess.shader->sky.cloudHeight > 0.0f) {
 		R_BuildCloudData();
-		if (tess.numVertexes)
-			gal.Draw(DT_GENERIC);
+		//@TODO: gal
+		/*if (tess.numVertexes)
+			gal.Draw(DT_GENERIC);*/
 	}
 
-	gal.EndSkyAndClouds();
+	//@TODO: gal.EndSkyAndClouds();
 }

@@ -46,6 +46,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "glw_win.h"
 
 
+glwstate_t glw_state;
+
+
 // responsible for creating the Win32 window and initializing the OpenGL driver.
 
 static qbool GLW_CreateWindow()

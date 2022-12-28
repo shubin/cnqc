@@ -438,10 +438,10 @@ static void R_SetupProjection()
 
 	tr.viewParms.projectionMatrix[2] = 0;
 	tr.viewParms.projectionMatrix[6] = 0;
-	if ( gal.id == GAL_D3D11 ) {
+	if ( 1 ) { // D3D12
 		tr.viewParms.projectionMatrix[10] = -zFar / depth;
 		tr.viewParms.projectionMatrix[14] = -zFar * zNear / depth;
-	} else {
+	} else { // some other APIs that match OpenGL in the future?
 		tr.viewParms.projectionMatrix[10] = -( zFar + zNear ) / depth;
 		tr.viewParms.projectionMatrix[14] = -2 * zFar * zNear / depth;
 	}
