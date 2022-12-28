@@ -57,6 +57,9 @@ add: /waitms <milliseconds> to delay command executions by the specified number 
 add: r_alphaToCoverageMipBoost <0.0 to 0.5> (default: 0.125) boosts the alpha value of higher mip levels
   with A2C enabled, it prevents alpha-tested surfaces from fading (too much) in the distance
 
+chg: CVar sets will use all arguments instead of only the first one
+  example: pressing n with `bind n "name x y z"` will rename to "x y z" instead of "x"
+
 chg: invertedpenguin's RA blood pool has a new look to help better see the RA against its background
 
 chg: forcing the nopicmip flag on 2 new texture folders: "textures/npmenv" and "textures/npmpads"
