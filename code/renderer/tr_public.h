@@ -23,6 +23,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define __TR_PUBLIC_H
 
 #include "../qcommon/tr_types.h"
+#include "rhi_public.h"
 
 
 // print levels for severity-coloring (FIXME: move to qcommon for cgame as well?)
@@ -158,9 +159,6 @@ typedef struct {
 	qbool (*inPVS)( const vec3_t p1, const vec3_t p2 );
 
 	void (*TakeVideoFrame)( int h, int w, byte* captureBuffer, byte *encodeBuffer, qbool motionJpeg );
-
-	// when the final model-view matrix is computed, for cl_drawMouseLag
-	int		(*GetCameraMatrixTime)();
 
 	// qtrue means it should be safe to call any other function
 	qbool	(*Registered)();

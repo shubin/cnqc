@@ -216,6 +216,206 @@ void R_MultMatrix( const float *a, const float *b, float *out )
 }
 
 
+void R_InvMatrix( const float* m, float* invOut )
+{
+	float inv[16];
+
+	inv[0] = m[5] * m[10] * m[15] -
+		m[5] * m[11] * m[14] -
+		m[9] * m[6] * m[15] +
+		m[9] * m[7] * m[14] +
+		m[13] * m[6] * m[11] -
+		m[13] * m[7] * m[10];
+
+	inv[4] = -m[4] * m[10] * m[15] +
+		m[4] * m[11] * m[14] +
+		m[8] * m[6] * m[15] -
+		m[8] * m[7] * m[14] -
+		m[12] * m[6] * m[11] +
+		m[12] * m[7] * m[10];
+
+	inv[8] = m[4] * m[9] * m[15] -
+		m[4] * m[11] * m[13] -
+		m[8] * m[5] * m[15] +
+		m[8] * m[7] * m[13] +
+		m[12] * m[5] * m[11] -
+		m[12] * m[7] * m[9];
+
+	inv[12] = -m[4] * m[9] * m[14] +
+		m[4] * m[10] * m[13] +
+		m[8] * m[5] * m[14] -
+		m[8] * m[6] * m[13] -
+		m[12] * m[5] * m[10] +
+		m[12] * m[6] * m[9];
+
+	inv[1] = -m[1] * m[10] * m[15] +
+		m[1] * m[11] * m[14] +
+		m[9] * m[2] * m[15] -
+		m[9] * m[3] * m[14] -
+		m[13] * m[2] * m[11] +
+		m[13] * m[3] * m[10];
+
+	inv[5] = m[0] * m[10] * m[15] -
+		m[0] * m[11] * m[14] -
+		m[8] * m[2] * m[15] +
+		m[8] * m[3] * m[14] +
+		m[12] * m[2] * m[11] -
+		m[12] * m[3] * m[10];
+
+	inv[9] = -m[0] * m[9] * m[15] +
+		m[0] * m[11] * m[13] +
+		m[8] * m[1] * m[15] -
+		m[8] * m[3] * m[13] -
+		m[12] * m[1] * m[11] +
+		m[12] * m[3] * m[9];
+
+	inv[13] = m[0] * m[9] * m[14] -
+		m[0] * m[10] * m[13] -
+		m[8] * m[1] * m[14] +
+		m[8] * m[2] * m[13] +
+		m[12] * m[1] * m[10] -
+		m[12] * m[2] * m[9];
+
+	inv[2] = m[1] * m[6] * m[15] -
+		m[1] * m[7] * m[14] -
+		m[5] * m[2] * m[15] +
+		m[5] * m[3] * m[14] +
+		m[13] * m[2] * m[7] -
+		m[13] * m[3] * m[6];
+
+	inv[6] = -m[0] * m[6] * m[15] +
+		m[0] * m[7] * m[14] +
+		m[4] * m[2] * m[15] -
+		m[4] * m[3] * m[14] -
+		m[12] * m[2] * m[7] +
+		m[12] * m[3] * m[6];
+
+	inv[10] = m[0] * m[5] * m[15] -
+		m[0] * m[7] * m[13] -
+		m[4] * m[1] * m[15] +
+		m[4] * m[3] * m[13] +
+		m[12] * m[1] * m[7] -
+		m[12] * m[3] * m[5];
+
+	inv[14] = -m[0] * m[5] * m[14] +
+		m[0] * m[6] * m[13] +
+		m[4] * m[1] * m[14] -
+		m[4] * m[2] * m[13] -
+		m[12] * m[1] * m[6] +
+		m[12] * m[2] * m[5];
+
+	inv[3] = -m[1] * m[6] * m[11] +
+		m[1] * m[7] * m[10] +
+		m[5] * m[2] * m[11] -
+		m[5] * m[3] * m[10] -
+		m[9] * m[2] * m[7] +
+		m[9] * m[3] * m[6];
+
+	inv[7] = m[0] * m[6] * m[11] -
+		m[0] * m[7] * m[10] -
+		m[4] * m[2] * m[11] +
+		m[4] * m[3] * m[10] +
+		m[8] * m[2] * m[7] -
+		m[8] * m[3] * m[6];
+
+	inv[11] = -m[0] * m[5] * m[11] +
+		m[0] * m[7] * m[9] +
+		m[4] * m[1] * m[11] -
+		m[4] * m[3] * m[9] -
+		m[8] * m[1] * m[7] +
+		m[8] * m[3] * m[5];
+
+	inv[15] = m[0] * m[5] * m[10] -
+		m[0] * m[6] * m[9] -
+		m[4] * m[1] * m[10] +
+		m[4] * m[2] * m[9] +
+		m[8] * m[1] * m[6] -
+		m[8] * m[2] * m[5];
+
+	const float det = m[0] * inv[0] + m[1] * inv[4] + m[2] * inv[8] + m[3] * inv[12];
+	if ( det == 0.0f ) {
+		return;
+	}
+
+	const float invDet = 1.0f / det;
+	for ( int i = 0; i < 16; ++i ) {
+		invOut[i] = inv[i] * invDet;
+	}
+}
+
+
+void R_TransposeMatrix( const float* in, float* out )
+{
+	out[ 0] = in[ 0];
+	out[ 4] = in[ 1];
+	out[ 8] = in[ 2];
+	out[12] = in[ 3];
+
+	out[ 1] = in[ 4];
+	out[ 5] = in[ 5];
+	out[ 9] = in[ 6];
+	out[13] = in[ 7];
+
+	out[ 2] = in[ 8];
+	out[ 6] = in[ 9];
+	out[10] = in[10];
+	out[14] = in[11];
+
+	out[ 3] = in[12];
+	out[ 7] = in[13];
+	out[11] = in[14];
+	out[15] = in[15];
+}
+
+
+void R_CameraPositionFromMatrix( const float* modelView, vec3_t cameraPos )
+{
+	float modelViewT[16];
+	R_TransposeMatrix( modelView, modelViewT );
+
+	// plane normals 
+	vec3_t n1, n2, n3;
+	VectorCopy( modelViewT + 0 * 4, n1 );
+	VectorCopy( modelViewT + 1 * 4, n2 );
+	VectorCopy( modelViewT + 2 * 4, n3 );
+
+	// plane distances
+	const float d1 = modelViewT[0 * 4 + 3];
+	const float d2 = modelViewT[1 * 4 + 3];
+	const float d3 = modelViewT[2 * 4 + 3];
+
+	// intersection of the 3 planes
+	vec3_t n2n3, n3n1, n1n2;
+	CrossProduct( n2, n3, n2n3 );
+	CrossProduct( n3, n1, n3n1 );
+	CrossProduct( n1, n2, n1n2 );
+
+	// top = (n2n3 * d1) + (n3n1 * d2) + (n1n2 * d3)
+	vec3_t top;
+	VectorMA( vec3_origin, d1, n2n3, top );
+	VectorMA( top, d2, n3n1, top );
+	VectorMA( top, d3, n1n2, top );
+	const float denom = DotProduct( n1, n2n3 );
+	VectorScale( top, -1.0f / denom, cameraPos );
+}
+
+
+void R_CameraAxisVectorsFromMatrix( const float* modelView, vec3_t axisX, vec3_t axisY, vec3_t axisZ )
+{
+	axisX[0] = modelView[ 0];
+	axisX[1] = modelView[ 4];
+	axisX[2] = modelView[ 8];
+
+	axisY[0] = modelView[ 1];
+	axisY[1] = modelView[ 5];
+	axisY[2] = modelView[ 9];
+
+	axisZ[0] = modelView[ 2];
+	axisZ[1] = modelView[ 6];
+	axisZ[2] = modelView[10];
+}
+
+
 void R_MakeIdentityMatrix( float* m )
 {
 	m[ 0] = 1.0f;
@@ -419,12 +619,12 @@ static void R_SetupProjection()
 	//
 	// set up projection matrix
 	//
-	zNear	= 1.0f;
-	zFar	= tr.viewParms.zFar;
+	zNear = 1.0f;
+	zFar  = tr.viewParms.zFar;
 
 	height = 2.0f * zNear * tan( tr.refdef.fov_y * M_PI / 360.0f );
-	width = 2.0f * zNear * tan( tr.refdef.fov_x * M_PI / 360.0f );
-	depth = zFar - zNear;
+	width  = 2.0f * zNear * tan( tr.refdef.fov_x * M_PI / 360.0f );
+	depth  = zFar - zNear;
 
 	tr.viewParms.projectionMatrix[0] = 2 * zNear / width;
 	tr.viewParms.projectionMatrix[4] = 0;
@@ -438,13 +638,8 @@ static void R_SetupProjection()
 
 	tr.viewParms.projectionMatrix[2] = 0;
 	tr.viewParms.projectionMatrix[6] = 0;
-	if ( gal.id == GAL_D3D11 ) {
-		tr.viewParms.projectionMatrix[10] = -zFar / depth;
-		tr.viewParms.projectionMatrix[14] = -zFar * zNear / depth;
-	} else {
-		tr.viewParms.projectionMatrix[10] = -( zFar + zNear ) / depth;
-		tr.viewParms.projectionMatrix[14] = -2 * zFar * zNear / depth;
-	}
+	tr.viewParms.projectionMatrix[10] = zNear / depth;
+	tr.viewParms.projectionMatrix[14] = zFar * zNear / depth;
 
 	tr.viewParms.projectionMatrix[3] = 0;
 	tr.viewParms.projectionMatrix[7] = 0;
@@ -749,16 +944,18 @@ static qbool SurfIsOffscreen( const drawSurf_t* drawSurf )
 	int entityNum;
 	int numTriangles;
 	const shader_t *shader;
-	int		fogNum;
 	vec4_t clip, eye;
 	int i;
 	unsigned int pointAnd = (unsigned int)~0;
 
 	R_RotateForViewer();
 
-	R_DecomposeSort( drawSurf->sort, &entityNum, &shader, &fogNum );
-	RB_BeginSurface( shader, fogNum );
-	rb_surfaceTable[ *drawSurf->surface ]( drawSurf->surface );
+	R_DecomposeSort( drawSurf->sort, &entityNum, &shader );
+	tess.numIndexes = 0;
+	tess.numVertexes = 0;
+	tess.shader = shader;
+	tess.xstages = (const shaderStage_t**)shader->stages;
+	R_TessellateSurface( drawSurf->surface );
 
 	assert( tess.numVertexes < 128 );
 
@@ -882,7 +1079,7 @@ static qbool R_MirrorViewBySurface( drawSurf_t* drawSurf, int entityNum )
 	// OPTIMIZE: restrict the viewport on the mirrored view
 
 	// render the mirror view
-	R_RenderView( &newParms );
+	R_RenderScene( &newParms );
 
 	tr.viewParms = oldParms;
 
@@ -970,7 +1167,11 @@ static void R_RadixSort( drawSurf_t *source, int size )
   R_Radix( 1, size, scratch, source );
   R_Radix( 2, size, source, scratch );
   R_Radix( 3, size, scratch, source );
+  R_Radix( 4, size, source, scratch );
+  R_Radix( 5, size, scratch, source );
 #else
+  R_Radix( 5, size, source, scratch );
+  R_Radix( 4, size, scratch, source );
   R_Radix( 3, size, source, scratch );
   R_Radix( 2, size, scratch, source );
   R_Radix( 1, size, source, scratch );
@@ -1079,7 +1280,7 @@ static float SurfGreyscaleAmount( const shader_t* shader )
 }
 
 
-void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int fogIndex )
+void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int fogIndex, int staticGeoChunk )
 {
 	if (tr.refdef.numDrawSurfs >= MAX_DRAWSURFS)
 		return;
@@ -1090,6 +1291,7 @@ void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int fo
 	drawSurf->model = tr.currentModel != NULL ? tr.currentModel->index : 0;
 	drawSurf->shaderNum = shader->index;
 	drawSurf->greyscale = SurfGreyscaleAmount( shader );
+	drawSurf->staticGeoChunk = staticGeoChunk;
 }
 
 
@@ -1116,20 +1318,25 @@ void R_AddLitSurf( const surfaceType_t* surface, const shader_t* shader, int fog
 }
 
 
-unsigned int R_ComposeSort( int entityNum, const shader_t *shader, int fogNum )
+uint64_t R_ComposeSort( int entityNum, const shader_t* shader, int staticGeoChunk )
 {
 	return
-		(entityNum << QSORT_ENTITYNUM_SHIFT) |
-		(shader->sortedIndex << QSORT_SHADERNUM_SHIFT) |
-		(fogNum << QSORT_FOGNUM_SHIFT);
+		( (uint64_t)entityNum << DRAWSORT_ENTITY_INDEX ) |
+		( (uint64_t)shader->sortedIndex << DRAWSORT_SHADER_INDEX ) |
+		( (uint64_t)( staticGeoChunk > 0 ? 0 : 1 ) << DRAWSORT_STATICGEO_INDEX ) |
+		( (uint64_t)( shader->pipelines[0].pipeline ) << DRAWSORT_PSO_INDEX ) |
+		( (uint64_t)( shader->isSky ? 1 : 0 ) << DRAWSORT_SKY_INDEX ) |
+		( (uint64_t)( shader->isAlphaTestedOpaque ? 1 : 0 ) << DRAWSORT_ALPHATEST_INDEX ) |
+		( (uint64_t)( shader->isOpaque ? 0 : 1 ) << DRAWSORT_OPAQUE_INDEX ) |
+		( (uint64_t)( shader->sort == SS_PORTAL ? 0 : 1 ) << DRAWSORT_PORTAL_INDEX );
 }
 
 
-void R_DecomposeSort( unsigned sort, int *entityNum, const shader_t **shader, int *fogNum )
+void R_DecomposeSort( uint64_t sort, int* entityNum, const shader_t** shader )
 {
-	*fogNum = ( sort >> QSORT_FOGNUM_SHIFT ) & 31;
-	*shader = tr.sortedShaders[ ( sort >> QSORT_SHADERNUM_SHIFT ) & (MAX_SHADERS-1) ];
-	*entityNum = ( sort >> QSORT_ENTITYNUM_SHIFT ) & MAX_REFENTITIES;
+	*entityNum = ( sort >> DRAWSORT_ENTITY_INDEX ) & MAX_REFENTITIES;
+	*shader = tr.sortedShaders[ ( sort >> DRAWSORT_SHADER_INDEX ) & (MAX_SHADERS-1) ];
+	
 }
 
 
@@ -1278,40 +1485,28 @@ static void R_SortDrawSurfs( int firstDrawSurf, int firstLitSurf )
 		return;
 	}
 
-	// sort the drawsurfs by sort type, then shader, then entity, etc
 	R_RadixSort( drawSurfs, numDrawSurfs );
-
-	const shader_t* shader;
-	int fogNum, entityNum;
 
 	// check for any pass through drawing,
 	// which may cause another view to be rendered first
-	for ( int i = 0 ; i < numDrawSurfs ; i++ ) {
-		R_DecomposeSort( (drawSurfs+i)->sort, &entityNum, &shader, &fogNum );
-
-		if ( shader->sort > SS_PORTAL ) {
-			break;
-		}
-
-		// no shader should ever have this sort type
-		if ( shader->sort == SS_BAD ) {
-			ri.Error( ERR_DROP, "Shader '%s' with sort == SS_BAD", shader->name );
-		}
+	const shader_t* shader;
+	int entityNum;
+	for ( int i = 0; i < numDrawSurfs; i++ ) {
+		R_DecomposeSort( (drawSurfs + i)->sort, &entityNum, &shader );
 
 		// if the mirror was completely clipped away, we may need to check another surface
-		if ( R_MirrorViewBySurface( (drawSurfs+i), entityNum) ) {
+		if ( shader->sort == SS_PORTAL && R_MirrorViewBySurface( (drawSurfs + i), entityNum ) ) {
 			// this is a debug option to see exactly what is being mirrored
 			if ( r_portalOnly->integer ) {
 				return;
 			}
-			break;		// only one mirror view at a time
 		}
 	}
 
 	// compute the average camera depth of all transparent surfaces
 	int numTranspSurfs = 0;
 	for ( int i = numDrawSurfs - 1; i >= 0; --i ) {
-		R_DecomposeSort( (drawSurfs+i)->sort, &entityNum, &shader, &fogNum );
+		R_DecomposeSort( (drawSurfs+i)->sort, &entityNum, &shader );
 
 		if ( shader->sort <= SS_OPAQUE ) {
 			numTranspSurfs = numDrawSurfs - i - 1;
@@ -1328,7 +1523,7 @@ static void R_SortDrawSurfs( int firstDrawSurf, int firstLitSurf )
 	const sortFunc_t transpSort = r_ignoreShaderSortKey->integer ? &R_CompareDrawSurfNoKey : &R_CompareDrawSurf;
 	qsort( drawSurfs + numDrawSurfs - numTranspSurfs, numTranspSurfs, sizeof(drawSurf_t), transpSort );
 
-#if defined(_DEBUG)
+#if 0
 	if ( r_ignoreShaderSortKey->integer == 0 ) {
 		float prevSort = -1.0f;
 		for ( int i = 0; i < numDrawSurfs; ++i ) {
@@ -1446,12 +1641,10 @@ static void R_GenerateDrawSurfs()
 }
 
 
-int re_cameraMatrixTime;
-
-
-// a view may be either the actual camera view, or a mirror / remote location
-
-void R_RenderView( const viewParms_t* parms )
+// this function renders 1 scene, which has either 1 view or 2 views
+// a view may be either the actual camera view (last view drawn, always present)
+// or a mirror / remote location (first view drawn, only when a mirror/portal is present)
+void R_RenderScene( const viewParms_t* parms )
 {
 	if ( parms->viewportWidth <= 0 || parms->viewportHeight <= 0 )
 		return;
@@ -1466,7 +1659,6 @@ void R_RenderView( const viewParms_t* parms )
 	const int firstLitSurf = tr.refdef.numLitSurfs;
 
 	// set viewParms.world
-	re_cameraMatrixTime = Sys_Milliseconds();
 	R_RotateForViewer();
 
 	R_SetupFrustum();
@@ -1474,6 +1666,8 @@ void R_RenderView( const viewParms_t* parms )
 	R_GenerateDrawSurfs();
 
 	R_SortDrawSurfs( firstDrawSurf, firstLitSurf );
+
+	R_EndScene( parms );
 }
 
 
@@ -1500,11 +1694,8 @@ const image_t* R_UpdateAndGetBundleImage( const textureBundle_t* bundle, updateA
 	if ( bundle->numImageAnimations <= 1 )
 		return bundle->image[0];
 
-	// it is necessary to do this messy calc to make sure animations line up
-	// exactly with waveforms of the same frequency
-	double v = tess.shaderTime * bundle->imageAnimationSpeed * FUNCTABLE_SIZE;
-	long long int index = v;
-	index >>= FUNCTABLE_SHIFT;
+	const double v = tess.shaderTime * bundle->imageAnimationSpeed;
+	const int index = (int)v;
 	if ( index < 0 ) // may happen with shader time offsets
 		return bundle->image[0];
 

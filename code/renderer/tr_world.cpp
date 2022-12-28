@@ -191,9 +191,7 @@ static void R_AddWorldSurface( msurface_t* surf )
 	surf->vcBSP = tr.viewCount;
 
 	// surfaces that don't ever draw anything are not considered visible
-	if ( surf->shader->numStages == 0 &&
-		surf->shader->sort > SS_ENVIRONMENT &&
-		( surf->shader->fogPass == FP_NONE || surf->fogIndex == 0 ) )
+	if ( surf->shader->numStages == 0 && !surf->shader->isSky )
 		return;
 
 	if ( R_CullSurface( surf->data, surf->shader ) )
@@ -201,7 +199,7 @@ static void R_AddWorldSurface( msurface_t* surf )
 
 	surf->vcVisible = tr.viewCount;
 
-	R_AddDrawSurf( surf->data, surf->shader, surf->fogIndex );
+	R_AddDrawSurf( surf->data, surf->shader, surf->fogIndex, surf->staticGeoChunk );
 }
 
 

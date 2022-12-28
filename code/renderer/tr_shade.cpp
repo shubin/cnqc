@@ -40,6 +40,8 @@ shaderCommands_t tess;
 
 void RB_BeginSurface( const shader_t* shader, int fogNum )
 {
+	Q_assert(!"RB_BeginSurface");
+
 	tess.numIndexes = 0;
 	tess.numVertexes = 0;
 	tess.shader = shader;
@@ -115,7 +117,7 @@ static void RB_DrawDynamicLight()
 	backEnd.pc[RB_LIT_BATCHES]++;
 	backEnd.pc[RB_LIT_VERTICES] += tess.numVertexes;
 	backEnd.pc[RB_LIT_INDICES] += tess.numIndexes;
-	gal.Draw(DT_DYNAMIC_LIGHT);
+	//@TODO: gal.Draw(DT_DYNAMIC_LIGHT);
 }
 
 
@@ -142,7 +144,7 @@ static void RB_DrawGeneric()
 	backEnd.pc[RB_BATCHES]++;
 	backEnd.pc[RB_VERTICES] += tess.numVertexes;
 	backEnd.pc[RB_INDICES] += tess.numIndexes;
-	gal.Draw(tess.depthFade != DFT_NONE ? DT_SOFT_SPRITE : DT_GENERIC);
+	//@TODO: gal.Draw(tess.depthFade != DFT_NONE ? DT_SOFT_SPRITE : DT_GENERIC);
 }
 
 
@@ -184,10 +186,10 @@ static void RB_DrawDebug( const shaderCommands_t* input, qbool drawNormals, int 
 	R_ComputeColors(tess.shader->stages[0], tess.svars[0], 0, tess.numVertexes);
 
 	if ((options & SHOWTRIS_OCCLUDE_BIT) == 0) {
-		gal.SetDepthRange(0, 0);
+		//@TODO: gal.SetDepthRange(0, 0);
 	}
-	gal.Draw(DT_GENERIC);
-	gal.SetDepthRange(0, 1);
+	//@TODO: gal.Draw(DT_GENERIC);
+	//@TODO: gal.SetDepthRange(0, 1);
 
 	RB_PopShader();
 }
@@ -195,6 +197,8 @@ static void RB_DrawDebug( const shaderCommands_t* input, qbool drawNormals, int 
 
 void RB_EndSurface()
 {
+	Q_assert(!"RB_EndSurface");
+
 	shaderCommands_t* input = &tess;
 
 	if (!input->numIndexes || !input->numVertexes)

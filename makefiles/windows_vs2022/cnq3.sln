@@ -7,11 +7,14 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cnq3", "cnq3.vcxproj", "{BA
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cnq3-server", "cnq3-server.vcxproj", "{3EA67B52-AA5B-F447-3350-EE1E9F04EB4B}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "glew", "glew.vcxproj", "{7463977C-609A-980D-0987-7E10F59C140F}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libjpeg-turbo", "libjpeg-turbo.vcxproj", "{DB56484D-4717-C483-1052-0D017CD10860}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "renderer", "renderer.vcxproj", "{9C6AA017-8837-FB22-B150-E9CA9D7C30B1}"
+	ProjectSection(ProjectDependencies) = postProject
+		{4B7F8CE3-3737-CE30-A03E-A78C8C156921} = {4B7F8CE3-3737-CE30-A03E-A78C8C156921}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "shadercomp", "shadercomp.vcxproj", "{4B7F8CE3-3737-CE30-A03E-A78C8C156921}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -45,14 +48,6 @@ Global
 		{3EA67B52-AA5B-F447-3350-EE1E9F04EB4B}.release|Win32.Build.0 = release|Win32
 		{3EA67B52-AA5B-F447-3350-EE1E9F04EB4B}.release|x64.ActiveCfg = release|x64
 		{3EA67B52-AA5B-F447-3350-EE1E9F04EB4B}.release|x64.Build.0 = release|x64
-		{7463977C-609A-980D-0987-7E10F59C140F}.debug|Win32.ActiveCfg = debug|Win32
-		{7463977C-609A-980D-0987-7E10F59C140F}.debug|Win32.Build.0 = debug|Win32
-		{7463977C-609A-980D-0987-7E10F59C140F}.debug|x64.ActiveCfg = debug|x64
-		{7463977C-609A-980D-0987-7E10F59C140F}.debug|x64.Build.0 = debug|x64
-		{7463977C-609A-980D-0987-7E10F59C140F}.release|Win32.ActiveCfg = release|Win32
-		{7463977C-609A-980D-0987-7E10F59C140F}.release|Win32.Build.0 = release|Win32
-		{7463977C-609A-980D-0987-7E10F59C140F}.release|x64.ActiveCfg = release|x64
-		{7463977C-609A-980D-0987-7E10F59C140F}.release|x64.Build.0 = release|x64
 		{DB56484D-4717-C483-1052-0D017CD10860}.debug|Win32.ActiveCfg = debug|Win32
 		{DB56484D-4717-C483-1052-0D017CD10860}.debug|Win32.Build.0 = debug|Win32
 		{DB56484D-4717-C483-1052-0D017CD10860}.debug|x64.ActiveCfg = debug|x64
@@ -69,6 +64,14 @@ Global
 		{9C6AA017-8837-FB22-B150-E9CA9D7C30B1}.release|Win32.Build.0 = release|Win32
 		{9C6AA017-8837-FB22-B150-E9CA9D7C30B1}.release|x64.ActiveCfg = release|x64
 		{9C6AA017-8837-FB22-B150-E9CA9D7C30B1}.release|x64.Build.0 = release|x64
+		{4B7F8CE3-3737-CE30-A03E-A78C8C156921}.debug|Win32.ActiveCfg = debug|Win32
+		{4B7F8CE3-3737-CE30-A03E-A78C8C156921}.debug|Win32.Build.0 = debug|Win32
+		{4B7F8CE3-3737-CE30-A03E-A78C8C156921}.debug|x64.ActiveCfg = debug|x64
+		{4B7F8CE3-3737-CE30-A03E-A78C8C156921}.debug|x64.Build.0 = debug|x64
+		{4B7F8CE3-3737-CE30-A03E-A78C8C156921}.release|Win32.ActiveCfg = release|Win32
+		{4B7F8CE3-3737-CE30-A03E-A78C8C156921}.release|Win32.Build.0 = release|Win32
+		{4B7F8CE3-3737-CE30-A03E-A78C8C156921}.release|x64.ActiveCfg = release|x64
+		{4B7F8CE3-3737-CE30-A03E-A78C8C156921}.release|x64.Build.0 = release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -34,6 +34,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <conio.h>
 #include <malloc.h>
 #include <VersionHelpers.h>
+#include "../renderdoc/renderdoc_app.h"
 
 
 WinVars_t g_wv;
@@ -359,6 +360,16 @@ void Sys_SetClipboardData( const char* text )
 }
 
 
+void Sys_GetCursorPosition( int* x, int* y )
+{
+	POINT point;
+	GetCursorPos( &point );
+	ScreenToClient( g_wv.hWnd, &point );
+	*x = point.x;
+	*y = point.y;
+}
+
+
 /*
 ========================================================================
 
@@ -650,6 +661,24 @@ static void S_Frame()
 		mute = minimized;
 	}
 	WIN_S_Mute( mute );
+}
+
+
+static void WIN_LoadRenderDoc()
+{
+	renderDocAPI = NULL;
+
+	const HMODULE module = GetModuleHandleA( "renderdoc.dll" );
+	if ( module != NULL ) {
+		const pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress( module, "RENDERDOC_GetAPI" );
+		if ( RENDERDOC_GetAPI( CNQ3_RENDERDOC_API_VERSION, (void**)&renderDocAPI ) != 1 ) {
+			renderDocAPI = NULL;
+		}
+	}
+
+	if ( renderDocAPI ) {
+		renderDocAPI->UnloadCrashHandler();
+	}
 }
 
 
@@ -981,6 +1010,24 @@ static void WIN_SetCorePreference()
 }
 
 
+static void WIN_SetThreadName( PCWSTR name )
+{
+	// SetThreadDescription is only available since Windows 10 version 1607
+
+	typedef HRESULT (WINAPI *SetThreadDescription_t)( HANDLE, PCWSTR );
+
+	HINSTANCE module = LoadLibraryA( "KernelBase.dll" );
+	if ( module == NULL )
+		return;
+
+	SetThreadDescription_t pSetThreadDescription = (SetThreadDescription_t)GetProcAddress( module, "SetThreadDescription" );
+	if ( pSetThreadDescription != NULL )
+		(*pSetThreadDescription)( GetCurrentThread(), name );
+
+	FreeLibrary( module );
+}
+
+
 ///////////////////////////////////////////////////////////////
 
 
@@ -992,7 +1039,13 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 
 	g_wv.hInstance = hInstance;
 
+#ifndef DEDICATED
+	WIN_LoadRenderDoc(); // load first to avoid messing with our exception handlers
+#endif
+
 	WIN_InstallExceptionHandlers();
+
+	WIN_SetThreadName( L"main thread" );
 
 	WIN_FixCurrentDirectory();
 

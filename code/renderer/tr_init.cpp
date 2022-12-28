@@ -31,11 +31,6 @@ screenshotCommand_t	r_delayedScreenshot;
 qbool				r_delayedScreenshotPending = qfalse;
 int					r_delayedScreenshotFrame = 0;
 
-graphicsAPILayer_t	gal;
-
-cvar_t	*r_backend;
-cvar_t	*r_frameSleep;
-
 cvar_t	*r_verbose;
 
 cvar_t	*r_displayRefresh;
@@ -64,27 +59,23 @@ cvar_t	*r_lightmapGreyscale;
 cvar_t	*r_mapGreyscale;
 cvar_t	*r_mapGreyscaleCTF;
 cvar_t	*r_teleporterFlash;
+cvar_t	*r_sleepThreshold;
 cvar_t	*r_novis;
 cvar_t	*r_nocull;
 cvar_t	*r_nocurves;
 cvar_t	*r_depthFade;
-cvar_t	*r_gpuMipGen;
-cvar_t	*r_alphaToCoverage;
 cvar_t	*r_dither;
 cvar_t	*r_rtColorFormat;
 cvar_t	*r_depthClamp;
+cvar_t	*r_gpuPreference;
 
 cvar_t	*r_mipGenFilter;
 cvar_t	*r_mipGenGamma;
 cvar_t	*r_ditherStrength;
 cvar_t	*r_transpSort;
-cvar_t	*r_gl3_geoStream;
-cvar_t	*r_d3d11_syncOffsets;
-cvar_t	*r_d3d11_presentMode;
 cvar_t	*r_ext_max_anisotropy;
-cvar_t	*r_msaa;
+cvar_t	*r_smaa;
 
-cvar_t	*r_ignoreGLErrors;
 cvar_t	*r_ignoreShaderSortKey;
 
 cvar_t	*r_vertexLight;
@@ -98,18 +89,15 @@ cvar_t	*r_picmip;
 cvar_t	*r_showsky;
 cvar_t	*r_showtris;
 cvar_t	*r_shownormals;
-cvar_t	*r_finish;
 cvar_t	*r_clear;
 cvar_t	*r_swapInterval;
-cvar_t	*r_textureMode;
+cvar_t	*r_lego;
 cvar_t	*r_lockpvs;
 cvar_t	*r_noportals;
 cvar_t	*r_portalOnly;
 
 cvar_t	*r_subdivisions;
 cvar_t	*r_lodCurveError;
-
-cvar_t	*r_alphaToCoverageMipBoost;
 
 cvar_t	*r_width;
 cvar_t	*r_height;
@@ -124,6 +112,9 @@ cvar_t	*r_ambientScale;
 cvar_t	*r_directedScale;
 cvar_t	*r_debugLight;
 cvar_t	*r_debugSort;
+
+cvar_t	*r_debugUI;
+cvar_t	*r_debugInput;
 
 // these limits apply to the sum of all scenes in a frame:
 // the main view, all the 3D icons, and even the console etc
@@ -169,7 +160,7 @@ void R_ConfigureVideoMode( int desktopWidth, int desktopHeight )
 ///////////////////////////////////////////////////////////////
 
 
-static void RB_TakeScreenshotTGA( int x, int y, int width, int height, const char* fileName )
+static void RB_TakeScreenshotTGA( int width, int height, const char* fileName )
 {
 	int c = (width * height * 3);
 	RI_AutoPtr p( sizeof(TargaHeader) + c );
@@ -180,15 +171,15 @@ static void RB_TakeScreenshotTGA( int x, int y, int width, int height, const cha
 	tga->width = LittleShort( width );
 	tga->height = LittleShort( height );
 	tga->pixel_size = 24;
-	gal.ReadPixels( x, y, width, height, 1, CS_BGR, p + sizeof(TargaHeader) );
+	renderPipeline->ReadPixels( width, height, 1, CS_BGR, p + sizeof(TargaHeader) );
 	ri.FS_WriteFile( fileName, p, sizeof(TargaHeader) + c );
 }
 
 
-static void RB_TakeScreenshotJPG( int x, int y, int width, int height, const char* fileName )
+static void RB_TakeScreenshotJPG( int width, int height, const char* fileName )
 {
 	RI_AutoPtr p( width * height * 4 );
-	gal.ReadPixels( x, y, width, height, 1, CS_RGBA, p );
+	renderPipeline->ReadPixels( width, height, 1, CS_RGBA, p );
 
 	RI_AutoPtr out( width * height * 4 );
 	int n = SaveJPGToBuffer( out, 95, width, height, p );
@@ -196,18 +187,15 @@ static void RB_TakeScreenshotJPG( int x, int y, int width, int height, const cha
 }
 
 
-const void* RB_TakeScreenshotCmd( const screenshotCommand_t* cmd )
+const byte* RB_TakeScreenshotCmd( const screenshotCommand_t* cmd )
 {
-	// NOTE: the current read buffer is the last FBO color attachment texture that was written to
-	// therefore, ReadPixels will get the latest data even with double/triple buffering enabled
-
 	switch (cmd->type) {
 		case screenshotCommand_t::SS_JPG:
-			RB_TakeScreenshotJPG( cmd->x, cmd->y, cmd->width, cmd->height, cmd->fileName );
+			RB_TakeScreenshotJPG( cmd->width, cmd->height, cmd->fileName );
 			ri.Printf( PRINT_ALL, "Wrote %s\n", cmd->fileName );
 			break;
 		case screenshotCommand_t::SS_TGA:
-			RB_TakeScreenshotTGA( cmd->x, cmd->y, cmd->width, cmd->height, cmd->fileName );
+			RB_TakeScreenshotTGA( cmd->width, cmd->height, cmd->fileName );
 			ri.Printf( PRINT_ALL, "Wrote %s\n", cmd->fileName );
 			break;
 	}
@@ -218,7 +206,7 @@ const void* RB_TakeScreenshotCmd( const screenshotCommand_t* cmd )
 		r_delayedScreenshotFrame = 0;
 	}
 
-	return (const void*)(cmd + 1);
+	return (const byte*)(cmd + 1);
 }
 
 
@@ -239,7 +227,7 @@ static void R_TakeScreenshot( const char* ext, screenshotCommand_t::ss_type type
 	} else {
 		if ( R_FindRenderCommand( RC_SCREENSHOT ) )
 			return;
-		cmd = (screenshotCommand_t*)R_GetCommandBuffer( sizeof(screenshotCommand_t), qfalse );
+		cmd = (screenshotCommand_t*)R_AllocateRenderCommand( sizeof(screenshotCommand_t), RC_SCREENSHOT, qfalse );
 		if ( !cmd )
 			return;
 		cmd->delayed = qfalse;
@@ -256,8 +244,6 @@ static void R_TakeScreenshot( const char* ext, screenshotCommand_t::ss_type type
 	}
 
 	cmd->commandId = RC_SCREENSHOT;
-	cmd->x = 0;
-	cmd->y = 0;
 	cmd->width = glConfig.vidWidth;
 	cmd->height = glConfig.vidHeight;
 	cmd->fileName = s;
@@ -293,24 +279,22 @@ static void R_ScreenShotNoConJPG_f()
 //============================================================================
 
 
-const void *RB_TakeVideoFrameCmd( const void *data )
+const byte *RB_TakeVideoFrameCmd( const videoFrameCommand_t *cmd )
 {
-	const videoFrameCommand_t* cmd = (const videoFrameCommand_t*)data;
-
 	if( cmd->motionJpeg )
 	{
-		gal.ReadPixels( 0, 0, cmd->width, cmd->height, 1, CS_RGBA, cmd->captureBuffer );
+		renderPipeline->ReadPixels( cmd->width, cmd->height, 1, CS_RGBA, cmd->captureBuffer );
 		const int frameSize = SaveJPGToBuffer( cmd->encodeBuffer, 95, cmd->width, cmd->height, cmd->captureBuffer );
 		ri.CL_WriteAVIVideoFrame( cmd->encodeBuffer, frameSize );
 	}
 	else
 	{
-		gal.ReadPixels( 0, 0, cmd->width, cmd->height, 4, CS_BGR, cmd->captureBuffer );
+		renderPipeline->ReadPixels( cmd->width, cmd->height, 4, CS_BGR, cmd->captureBuffer );
 		const int frameSize = PAD( cmd->width, 4 ) * cmd->height * 3;
 		ri.CL_WriteAVIVideoFrame( cmd->captureBuffer, frameSize );
 	}
 
-	return (const void *)(cmd + 1);
+	return (const byte *)(cmd + 1);
 }
 
 
@@ -319,18 +303,11 @@ const void *RB_TakeVideoFrameCmd( const void *data )
 
 void GfxInfo_f( void )
 {
-	ri.Printf( PRINT_ALL, "Back-end: %s\n", r_backend->string );
 	if ( glConfig.vendor_string[0] != '\0' )
 		ri.Printf( PRINT_ALL, "Vendor: %s\n", glConfig.vendor_string );
 	if ( glConfig.renderer_string[0] != '\0' )
 		ri.Printf( PRINT_ALL, "Renderer: %s\n", glConfig.renderer_string );
-	if ( glConfig.version_string[0] != '\0' )
-		ri.Printf( PRINT_ALL, "OpenGL version: %s\n", glConfig.version_string );
-	ri.Printf( PRINT_ALL, "MSAA                  : %dx\n", glInfo.msaaSampleCount );
-	ri.Printf( PRINT_ALL, "MSAA alpha to coverage: %s\n", glInfo.alphaToCoverageSupport ? "ON" : "OFF" );
-	ri.Printf( PRINT_ALL, "Depth fade            : %s\n", glInfo.depthFadeSupport ? "ON" : "OFF" );
-	ri.Printf( PRINT_ALL, "GPU mip-map generation: %s\n", glInfo.mipGenSupport ? "ON" : "OFF" );
-	gal.PrintInfo();
+	//@TODO: RHI::PrintInfo();
 }
 
 
@@ -359,25 +336,13 @@ static const cvarTableItem_t r_cvars[] =
 	//
 	// latched and archived variables
 	//
-#if defined( _WIN32 )
-	{ &r_backend, "r_backend", "D3D11", CVAR_ARCHIVE | CVAR_LATCH, CVART_STRING, NULL, NULL, help_r_backend },
-#else
-	{ &r_backend, "r_backend", "GL3", CVAR_ARCHIVE | CVAR_LATCH, CVART_STRING,  NULL, NULL, help_r_backend },
-#endif
-	{ &r_frameSleep, "r_frameSleep", "2", CVAR_ARCHIVE, CVART_INTEGER, "0", "2", help_r_frameSleep },
 	{ &r_mipGenFilter, "r_mipGenFilter", "L4", CVAR_ARCHIVE | CVAR_LATCH, CVART_STRING, NULL, NULL, help_r_mipGenFilter },
 	{ &r_mipGenGamma, "r_mipGenGamma", "1.8", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "1.0", "3.0", help_r_mipGenGamma },
-	{ &r_gl3_geoStream, "r_gl3_geoStream", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", XSTRING(GL3MAP_MAX), help_r_gl3_geoStream },
-	{ &r_d3d11_syncOffsets, "r_d3d11_syncOffsets", "2", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", XSTRING(D3D11SO_MAX), help_r_d3d11_syncOffsets },
-	{ &r_d3d11_presentMode, "r_d3d11_presentMode", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", XSTRING(DXGIPM_MAX), help_r_d3d11_presentMode },
 	{ &r_ext_max_anisotropy, "r_ext_max_anisotropy", "16", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "16", help_r_ext_max_anisotropy },
-	{ &r_msaa, "r_msaa", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "32", "anti-aliasing sample count, " S_COLOR_VAL "0" S_COLOR_HELP "=off" },
-	{ &r_picmip, "r_picmip", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "16", help_r_picmip },
 	{ &r_roundImagesDown, "r_roundImagesDown", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_roundImagesDown },
 	{ &r_colorMipLevels, "r_colorMipLevels", "0", CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_colorMipLevels },
 	{ &r_detailTextures, "r_detailtextures", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, "enables detail textures shader stages" },
 	{ &r_mode, "r_mode", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", XSTRING(VIDEOMODE_MAX), help_r_mode },
-	{ &r_blitMode, "r_blitMode", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", XSTRING(BLITMODE_MAX), help_r_blitMode },
 	{ &r_brightness, "r_brightness", "2", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "0.25", "32", "overall brightness" },
 	// should be called r_lightmapBrightness
 	{ &r_mapBrightness, "r_mapBrightness", "2", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "0.25", "32", "brightness of lightmap textures" },
@@ -394,11 +359,11 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_lightmap, "r_lightmap", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_lightmap },
 	{ &r_lightmapGreyscale, "r_lightmapGreyscale", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "0", "1", "how desaturated the lightmap looks" },
 	{ &r_depthFade, "r_depthFade", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_depthFade },
-	{ &r_gpuMipGen, "r_gpuMipGen", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_gpuMipGen },
-	{ &r_alphaToCoverage, "r_alphaToCoverage", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_alphaToCoverage },
 	{ &r_dither, "r_dither", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_dither },
 	{ &r_rtColorFormat, "r_rtColorFormat", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", XSTRING(RTCF_MAX), help_r_rtColorFormat },
 	{ &r_depthClamp, "r_depthClamp", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_depthClamp },
+	{ &r_gpuPreference, "r_gpuPreference", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", XSTRING(GPUPREF_MAX), help_r_gpuPreference},
+	{ &r_swapInterval, "r_swapInterval", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, "enables v-sync" },
 
 	//
 	// latched variables that can only change over a restart
@@ -409,25 +374,24 @@ static const cvarTableItem_t r_cvars[] =
 	//
 	// archived variables that can change at any time
 	//
+	{ &r_smaa, "r_smaa", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "4", help_r_smaa },
+	{ &r_picmip, "r_picmip", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "16", help_r_picmip },
+	{ &r_blitMode, "r_blitMode", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", XSTRING(BLITMODE_MAX), help_r_blitMode },
 	{ &r_lodbias, "r_lodbias", "-2", CVAR_ARCHIVE, CVART_INTEGER, "-16", "16", help_r_lodbias },
-	{ &r_ignoreGLErrors, "r_ignoreGLErrors", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "if " S_COLOR_VAL "0" S_COLOR_HELP ", OpenGL errors are fatal" },
 	{ &r_ignoreShaderSortKey, "r_ignoreShaderSortKey", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_ignoreShaderSortKey },
 	{ &r_fastsky, "r_fastsky", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_fastsky },
 	{ &r_noportals, "r_noportals", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_noportals },
 	{ &r_dynamiclight, "r_dynamiclight", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "enables dynamic lights" },
-	{ &r_finish, "r_finish", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "enables glFinish calls" },
-	{ &r_swapInterval, "r_swapInterval", "0", CVAR_ARCHIVE, CVART_INTEGER, "-8", "8", help_r_swapInterval },
-	// r_textureMode's default value can't be an empty string because otherwise, a user-created default can stick (see Cvar_Get)
-	{ &r_textureMode, "r_textureMode", "best", CVAR_ARCHIVE | CVAR_LATCH, CVART_STRING, NULL, NULL, help_r_textureMode },
+	{ &r_lego, "r_lego", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "LEGO(R) texture filtering" },
 	{ &r_gamma, "r_gamma", "1.2", CVAR_ARCHIVE, CVART_FLOAT, "0.5", "3", help_r_gamma },
 	{ &r_greyscale, "r_greyscale", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", "1", "how desaturated the final image looks" },
 	{ &r_ditherStrength, "r_ditherStrength", "1.0", CVAR_ARCHIVE, CVART_FLOAT, "0.125", "8.0", help_r_ditherStrength },
 	{ &r_transpSort, "r_transpSort", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_transpSort },
 	{ &r_lodCurveError, "r_lodCurveError", "2000", CVAR_ARCHIVE, CVART_FLOAT, "250", "10000", "curved surfaces LOD scale" },
-	{ &r_alphaToCoverageMipBoost, "r_alphaToCoverageMipBoost", "0.125", CVAR_ARCHIVE, CVART_FLOAT, "0", "0.5", "increases the alpha value of higher mip levels" },
 	{ &r_mapGreyscale, "r_mapGreyscale", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", "1", "how desaturated the map looks" },
 	{ &r_mapGreyscaleCTF, "r_mapGreyscaleCTF", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", "1", help_r_mapGreyscaleCTF },
 	{ &r_teleporterFlash, "r_teleporterFlash", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "draws bright colors when being teleported" },
+	{ &r_sleepThreshold, "r_sleepThreshold", "2500", CVAR_ARCHIVE, CVART_INTEGER, "2000", "4000", help_r_sleepThreshold },
 
 	//
 	// temporary variables that can change at any time
@@ -454,7 +418,9 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_clear, "r_clear", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "clears to violet instead of black" },
 	{ &r_lockpvs, "r_lockpvs", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "helps visualize the current PVS' limits" },
 	{ &r_maxpolys, "r_maxpolys", XSTRING(DEFAULT_MAX_POLYS), 0, CVART_INTEGER, XSTRING(DEFAULT_MAX_POLYS), NULL, "maximum polygon count per frame" },
-	{ &r_maxpolyverts, "r_maxpolyverts", XSTRING(DEFAULT_MAX_POLYVERTS), 0, CVART_INTEGER, XSTRING(DEFAULT_MAX_POLYVERTS), NULL, "maximum polygon vertex count per frame" }
+	{ &r_maxpolyverts, "r_maxpolyverts", XSTRING(DEFAULT_MAX_POLYVERTS), 0, CVART_INTEGER, XSTRING(DEFAULT_MAX_POLYVERTS), NULL, "maximum polygon vertex count per frame" },
+	{ &r_debugUI, "r_debugUI", "0", CVAR_TEMP, CVART_BOOL, NULL, NULL, "displays the debug/profile GUI" },
+	{ &r_debugInput, "r_debugInput", "0", CVAR_TEMP, CVART_BOOL, NULL, NULL, "routes input to the debug/profile GUI" }
 };
 
 
@@ -462,56 +428,6 @@ static void R_Register()
 {
 	ri.Cvar_RegisterTable( r_cvars, ARRAY_LEN(r_cvars) );
 	ri.Cmd_RegisterTable( r_cmds, ARRAY_LEN(r_cmds) );
-}
-
-
-static void R_InitGAL()
-{
-	struct gal_t {
-		getGALInterface_t grabInterface;
-		galId_t id;
-		const char* cvarValue;
-		const char* fullName;
-	};
-
-	// preferred option goes first
-	const gal_t galArray[] = {
-#if defined( _WIN32 )
-		{ &GAL_GetD3D11, GAL_D3D11, "D3D11", "Direct3D 11" },
-#endif
-		{ &GAL_GetGL3, GAL_GL3, "GL3", "OpenGL 3" },
-		{ &GAL_GetGL2, GAL_GL2, "GL2", "OpenGL 2" }
-	};
-
-	int galIndex = -1;
-	for ( int i = 0; i < ARRAY_LEN( galArray ); ++i ) {
-		if ( !Q_stricmp( r_backend->string, galArray[i].cvarValue ) ) {
-			galIndex = i;
-			break;
-		}
-	}
-
-	if ( galIndex < 0 ) {
-		galIndex = 0;
-		ri.Printf( PRINT_WARNING, "Invalid r_backend value, selecting the %s back-end instead\n", galArray[galIndex].fullName );
-		ri.Cvar_Set( r_backend->name, galArray[galIndex].cvarValue );
-	}
-
-	ri.Printf( PRINT_ALL, "Initializing the %s back-end...\n", galArray[galIndex].fullName );
-
-#if defined( _DEBUG )
-	// helps catch unset function pointers
-	memset( &gal, 0, sizeof( gal ) );
-#endif
-
-	if ( !galArray[galIndex].grabInterface( &gal ) )
-		ri.Error( ERR_FATAL, "Failed to grab the %s back-end's interface\n", galArray[galIndex].fullName );
-
-	if ( !gal.Init() )
-		ri.Error( ERR_FATAL, "Failed to initialize the %s back-end\n", galArray[galIndex].fullName );
-
-	gal.id = galArray[galIndex].id;
-	GfxInfo_f();
 }
 
 
@@ -588,7 +504,8 @@ void R_Init()
 
 	R_InitMipFilter();
 
-	R_InitGAL();
+	renderPipeline->Init();
+	GfxInfo_f();
 
 	R_InitImages();
 
@@ -604,19 +521,13 @@ void R_Init()
 
 static void RE_Shutdown( qbool destroyWindow )
 {
-	ri.Printf( PRINT_DEVELOPER, "RE_Shutdown( %i )", destroyWindow );
+	ri.Printf( PRINT_DEVELOPER, "RE_Shutdown( %i )\n", destroyWindow );
 
-	// This will also force the creation of a new context when switching
-	// between GL2 and GL3, which is what we want because
-	// the implementations have their own resources we can't keep around.
-	if ( !destroyWindow && r_backend->latchedString )
-		destroyWindow = qtrue;
-
-	ri.Printf( PRINT_DEVELOPER, " -> %i\n", destroyWindow );
+	R_ShutDownGUI();
 
 	if ( tr.registered ) {
 		ri.Cmd_UnregisterModule();
-		gal.ShutDown( destroyWindow );
+		renderPipeline->ShutDown( destroyWindow );
 	}
 
 	// shut down platform-specific video stuff
@@ -647,18 +558,12 @@ static void RE_EndRegistration()
 }
 
 
-static int RE_GetCameraMatrixTime()
-{
-	return re_cameraMatrixTime;
-}
-
-
 static void RE_StretchRaw( int x, int y, int w, int h, int cols, int rows, const byte *data, int client, qbool dirty )
 {
 	if ( !tr.registered )
 		return;
 
-	gal.UpdateScratch( tr.scratchImage[client], cols, rows, data, dirty );
+	//@TODO: gal.UpdateScratch( tr.scratchImage[client], cols, rows, data, dirty );
 	tr.scratchShader->stages[0]->bundle.image[0] = tr.scratchImage[client];
 	RE_StretchPic( x, y, w, h, 0.5f / cols, 0.5f / rows, (cols - 0.5f) / cols, (rows - 0.5f) / rows, (qhandle_t)tr.scratchShader->index );
 }
@@ -672,9 +577,6 @@ static qbool RE_Registered()
 
 static qbool RE_IsFrameSleepNeeded()
 {
-	if ( r_frameSleep->integer != 2 )
-		return r_frameSleep->integer;
-
 	return !Sys_V_IsVSynced();
 }
 
@@ -729,8 +631,6 @@ const refexport_t* GetRefAPI( const refimport_t* rimp )
 	re.inPVS = R_inPVS;
 
 	re.TakeVideoFrame = RE_TakeVideoFrame;
-
-	re.GetCameraMatrixTime = RE_GetCameraMatrixTime;
 
 	re.Registered = RE_Registered;
 

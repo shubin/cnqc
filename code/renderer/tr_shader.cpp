@@ -1529,6 +1529,199 @@ static int R_CompareShaders( const void* aPtr, const void* bPtr )
 }
 
 
+static qbool IsColorGenDynamic(colorGen_t cGen)
+{
+	switch(cGen)
+	{
+		case CGEN_BAD:
+		case CGEN_IDENTITY:
+		case CGEN_IDENTITY_LIGHTING:
+		case CGEN_LIGHTING_DIFFUSE:
+		case CGEN_CONST:
+		case CGEN_VERTEX:
+		case CGEN_EXACT_VERTEX:
+		case CGEN_ONE_MINUS_VERTEX:
+		case CGEN_FOG:
+			return qfalse;
+
+		case CGEN_WAVEFORM: // time-based
+		case CGEN_ENTITY: // mod can change it frame to frame
+		case CGEN_ONE_MINUS_ENTITY: // mod can change it frame to frame
+			return qtrue;
+
+		default:
+			Q_assert(!"Unsupported colorGen_t");
+			return qtrue;
+	}
+}
+
+
+static qbool IsAlphaGenDynamic(alphaGen_t aGen)
+{
+	switch(aGen)
+	{
+		case AGEN_SKIP:
+		case AGEN_IDENTITY:
+		case AGEN_CONST:
+		case AGEN_VERTEX:
+		case AGEN_ONE_MINUS_VERTEX:
+			return qfalse;
+
+		case AGEN_WAVEFORM: // time-based
+		case AGEN_LIGHTING_SPECULAR: // changes with camera position
+		case AGEN_ENTITY: // mod can change it frame to frame
+		case AGEN_ONE_MINUS_ENTITY: // mod can change it frame to frame
+		case AGEN_PORTAL: // changes with camera position
+			return qtrue;
+
+		default:
+			Q_assert(!"Unsupported alphaGen_t");
+			return qtrue;
+	}
+}
+
+
+static qbool IsTexCoordGenDynamic(texCoordGen_t tcGen)
+{
+	switch(tcGen)
+	{
+		case TCGEN_IDENTITY:
+		case TCGEN_BAD:
+		case TCGEN_TEXTURE:
+		case TCGEN_LIGHTMAP:
+		case TCGEN_VECTOR:
+		case TCGEN_FOG: // not relevant for us anyhow
+			return qfalse;
+
+		case TCGEN_ENVIRONMENT_MAPPED: // changes with camera position
+			return qtrue;
+
+		default:
+			Q_assert(!"Unsupported texCoordGen_t");
+			return qtrue;
+	}
+}
+
+
+static qbool IsTexModDynamic(texMod_t texMod)
+{
+	switch(texMod)
+	{
+		case TMOD_NONE:
+		case TMOD_SCALE:
+		case TMOD_TRANSFORM:
+			return qfalse;
+
+		case TMOD_TURBULENT: // time
+		case TMOD_ENTITY_TRANSLATE: // time
+		case TMOD_SCROLL: // time
+		case TMOD_STRETCH: // time
+		case TMOD_ROTATE: // time
+			return qtrue;
+
+		default:
+			Q_assert(!"Unsupported texMod_t");
+			return qtrue;
+	}
+}
+
+
+static qbool IsDeformDynamic(deform_t deform)
+{
+	switch(deform)
+	{
+		case DEFORM_NONE:
+		case DEFORM_PROJECTION_SHADOW: // unsupported
+		case DEFORM_TEXT0:
+		case DEFORM_TEXT1:
+		case DEFORM_TEXT2:
+		case DEFORM_TEXT3:
+		case DEFORM_TEXT4:
+		case DEFORM_TEXT5:
+		case DEFORM_TEXT6:
+		case DEFORM_TEXT7:
+			return qfalse;
+
+		case DEFORM_WAVE: // time
+		case DEFORM_NORMALS: // time
+		case DEFORM_BULGE: // time
+		case DEFORM_MOVE: // time
+		case DEFORM_AUTOSPRITE: // changes with camera orientation
+		case DEFORM_AUTOSPRITE2: // changes with camera orientation
+			return qtrue;
+
+		default:
+			Q_assert(!"Unsupported deform_t");
+			return qtrue;
+	}
+}
+
+
+static void ClassifyShaderOpacity(shader_t* sh)
+{
+	// @TODO: is this always correct?
+	const qbool isOpaque = sh->sort <= SS_OPAQUE;
+	qbool startsWithAlphaTest = qfalse;
+	if(sh->numStages > 0)
+	{
+		startsWithAlphaTest = (sh->stages[0]->stateBits & GLS_ATEST_BITS) != 0;
+	}
+
+	sh->isOpaque = isOpaque;
+	sh->isAlphaTestedOpaque = isOpaque && startsWithAlphaTest;
+}
+
+
+static void ClassifyShaderDynamism(shader_t* sh)
+{
+	sh->isDynamic = qtrue;
+	
+	for(int d = 0; d < sh->numDeforms; ++d)
+	{
+		if(IsDeformDynamic(sh->deforms[d].deformation))
+		{
+			return;
+		}
+	}
+
+	for(int s = 0; s < sh->numStages; ++s)
+	{
+		shaderStage_t* const stage = sh->stages[s];
+		for(int t = 0; t < stage->numTexMods; ++t)
+		{
+			if(IsTexModDynamic(stage->texMods[t].type))
+			{
+				return;
+			}
+		}
+
+		if(IsColorGenDynamic(stage->rgbGen))
+		{
+			return;
+		}
+
+		if(IsAlphaGenDynamic(stage->alphaGen))
+		{
+			return;
+		}
+
+		if(IsTexCoordGenDynamic(stage->tcGen))
+		{
+			return;
+		}
+	}
+
+	sh->isDynamic = qfalse;
+}
+
+
+static void ClassifyShader(shader_t* sh)
+{
+	ClassifyShaderOpacity(sh);
+	ClassifyShaderDynamism(sh);
+}
+
+
 /*
 Positions the most recently created shader in the tr.sortedShaders[] array
 such that the shader->sort key is sorted relative to the other shaders.
@@ -1568,21 +1761,21 @@ static void SortNewShader()
 	// The extra CPU cost for the fix-up is nothing compared to loading new textures mid-frame.
 	//
 
-	int entityNum, fogNum;
+	int entityNum;
 	const shader_t* wrongShader;
 
 	const int numDrawSurfs = tr.refdef.numDrawSurfs;
 	drawSurf_t* drawSurfs = tr.refdef.drawSurfs;
 	for( i = 0; i < numDrawSurfs; ++i, ++drawSurfs ) {
-		R_DecomposeSort( drawSurfs->sort, &entityNum, &wrongShader, &fogNum );
-		drawSurfs->sort = R_ComposeSort( entityNum, tr.shaders[drawSurfs->shaderNum], fogNum );
+		R_DecomposeSort( drawSurfs->sort, &entityNum, &wrongShader );
+		drawSurfs->sort = R_ComposeSort( entityNum, tr.shaders[drawSurfs->shaderNum], drawSurfs->staticGeoChunk );
 	}
 
 	const int numLitSurfs = tr.refdef.numLitSurfs;
 	litSurf_t* litSurfs = tr.refdef.litSurfs;
 	for ( i = 0; i < numLitSurfs; ++i, ++litSurfs ) {
-		R_DecomposeSort( litSurfs->sort, &entityNum, &wrongShader, &fogNum );
-		litSurfs->sort = R_ComposeSort( entityNum, tr.shaders[litSurfs->shaderNum], fogNum );
+		R_DecomposeSort( litSurfs->sort, &entityNum, &wrongShader );
+		litSurfs->sort = R_ComposeSort( entityNum, tr.shaders[litSurfs->shaderNum], drawSurfs->staticGeoChunk );
 	}
 }
 
@@ -1624,236 +1817,17 @@ static shader_t* GeneratePermanentShader()
 		Com_Memcpy( newShader->stages[i]->texMods, stages[i].texMods, n * sizeof( texModInfo_t ) );
 	}
 
+	ClassifyShader( newShader );
+
 	SortNewShader();
+
+	renderPipeline->ProcessShader( *newShader );
 
 	int hash = Q_FileHash(newShader->name, FILE_HASH_SIZE);
 	newShader->next = hashTable[hash];
 	hashTable[hash] = newShader;
 
 	return newShader;
-}
-
-
-/*
-========================================================================================
-
-SHADER OPTIMIZATION AND FOGGING
-
-========================================================================================
-*/
-
-
-typedef struct {
-	int			blendA;
-	int			blendB;
-	texEnv_t	multitextureEnv;
-	int			multitextureBlend;
-} collapse_t;
-
-static const collapse_t collapse[] = {
-	// the most common (and most worthwhile) collapse is for DxLM shaders
-	{ 0, GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO,
-		TE_MODULATE, 0 },
-
-	{ 0, GLS_DSTBLEND_SRC_COLOR | GLS_SRCBLEND_ZERO,
-		TE_MODULATE, 0 },
-
-	{ GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR, GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR,
-		TE_MODULATE, GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR },
-
-	{ GLS_DSTBLEND_SRC_COLOR | GLS_SRCBLEND_ZERO, GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR,
-		TE_MODULATE, GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR },
-
-	{ GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR, GLS_DSTBLEND_SRC_COLOR | GLS_SRCBLEND_ZERO,
-		TE_MODULATE, GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR },
-
-	{ GLS_DSTBLEND_SRC_COLOR | GLS_SRCBLEND_ZERO, GLS_DSTBLEND_SRC_COLOR | GLS_SRCBLEND_ZERO,
-		TE_MODULATE, GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR },
-
-	{ 0, GLS_DSTBLEND_ONE | GLS_SRCBLEND_ONE,
-		TE_ADD, 0 },
-
-	{ GLS_DSTBLEND_ONE | GLS_SRCBLEND_ONE, GLS_DSTBLEND_ONE | GLS_SRCBLEND_ONE,
-		TE_ADD, GLS_DSTBLEND_ONE | GLS_SRCBLEND_ONE },
-#if 0
-	{ 0, GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA | GLS_SRCBLEND_SRC_ALPHA,
-		TE_DECAL, 0 },
-#endif
-	{ -1 }
-};
-
-/*
-================
-CollapseMultitexture
-
-Attempt to combine two stages into a single multitexture stage
-FIXME: I think modulated add + modulated add collapses incorrectly
-=================
-*/
-static qbool CollapseMultitexture( void ) {
-	int abits, bbits;
-	int i;
-
-	// make sure both stages are active
-	if ( !stages[0].active || !stages[1].active ) {
-		return qfalse;
-	}
-
-	abits = stages[0].stateBits;
-	bbits = stages[1].stateBits;
-
-	// make sure that both stages have identical state other than blend modes
-	if ( ( abits & ~( GLS_DSTBLEND_BITS | GLS_SRCBLEND_BITS | GLS_DEPTHMASK_TRUE ) ) !=
-		( bbits & ~( GLS_DSTBLEND_BITS | GLS_SRCBLEND_BITS | GLS_DEPTHMASK_TRUE ) ) ) {
-		return qfalse;
-	}
-
-	abits &= ( GLS_DSTBLEND_BITS | GLS_SRCBLEND_BITS );
-	bbits &= ( GLS_DSTBLEND_BITS | GLS_SRCBLEND_BITS );
-
-	// search for a valid multitexture blend function
-	for ( i = 0; collapse[i].blendA != -1 ; i++ ) {
-		if ( abits == collapse[i].blendA
-			&& bbits == collapse[i].blendB ) {
-			break;
-		}
-	}
-
-	// nothing found
-	if ( collapse[i].blendA == -1 ) {
-		return qfalse;
-	}
-
-	// make sure waveforms have identical parameters
-	if ( ( stages[0].rgbGen != stages[1].rgbGen ) ||
-		( stages[0].alphaGen != stages[1].alphaGen ) )  {
-		return qfalse;
-	}
-
-	// an add collapse can only have identity colors
-	if ( collapse[i].multitextureEnv == TE_ADD && stages[0].rgbGen != CGEN_IDENTITY ) {
-		return qfalse;
-	}
-
-	if ( stages[0].rgbGen == CGEN_WAVEFORM )
-	{
-		if ( memcmp( &stages[0].rgbWave,
-					 &stages[1].rgbWave,
-					 sizeof( stages[0].rgbWave ) ) )
-		{
-			return qfalse;
-		}
-	}
-	if ( stages[0].alphaGen == AGEN_WAVEFORM )
-	{
-		if ( memcmp( &stages[0].alphaWave,
-					 &stages[1].alphaWave,
-					 sizeof( stages[0].alphaWave ) ) )
-		{
-			return qfalse;
-		}
-	}
-
-
-	return qfalse;
-/*
-	// set the new blend state bits
-	shader.multitextureEnv = collapse[i].multitextureEnv;
-	stages[0].stateBits &= ~( GLS_DSTBLEND_BITS | GLS_SRCBLEND_BITS );
-	stages[0].stateBits |= collapse[i].multitextureBlend;
-
-	//
-	// move down subsequent shaders
-	//
-	memmove( &stages[1], &stages[2], sizeof( stages[0] ) * ( MAX_SHADER_STAGES - 2 ) );
-	Com_Memset( &stages[MAX_SHADER_STAGES-1], 0, sizeof( stages[0] ) );
-
-	return qtrue;
-*/
-}
-
-
-/*
-collapses can be a bit tricky, so we set a few simplifying groundrules:
-first off, GL_REPLACE and GL_DECAL are almost completely pointless
-since they're just subsets of GL_MODULATE. the only time they can ever
-have value is in a multi-add collapse where one layer is modulated by
-an rgbgen but the other needs to maintain identity colors
-*/
-
-#define GLS_BLEND_BITS (GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS)
-
-static void CollapseStages()
-{
-	int i;
-	// NEVER reference the global stages[] etc in here, only these locals
-	int numStages = shader.numStages;
-	shaderStage_t* aStages = &stages[0];
-
-#define CollapseFailure { ++aStages; --numStages; continue; }
-
-	while (numStages >= 2) {
-		int abits = aStages[0].stateBits;
-		int bbits = aStages[1].stateBits;
-
-		if ( ( abits & ~(GLS_BLEND_BITS | GLS_DEPTHMASK_TRUE) ) !=
-			 ( bbits & ~(GLS_BLEND_BITS | GLS_DEPTHMASK_TRUE) ) )
-			CollapseFailure;
-
-		if ( ( aStages[0].rgbGen != aStages[1].rgbGen ) || ( aStages[0].alphaGen != aStages[1].alphaGen ) )
-			CollapseFailure;
-
-		abits &= GLS_BLEND_BITS;
-		bbits &= GLS_BLEND_BITS;
-
-		for ( i = 0; collapse[i].blendA != -1; ++i ) {
-			if ( (abits == collapse[i].blendA) && (bbits == collapse[i].blendB) ) {
-				break;
-			}
-		}
-
-		if ( collapse[i].blendA == -1 )
-			CollapseFailure;
-
-		// Check that all colors are opaque white on the second stage
-		// because the stage iterator can't currently specify
-		// another color array.
-		// Example shader broken without this extra test:
-		// "textures/sfx/diamond2cjumppad"
-		// The ring pulses in and out instead of only out.
-
-		// These cases must always be rejected because they depend
-		// on time elapsed, camera position, entity colors, etc.
-		if (	aStages[1].rgbGen == CGEN_LIGHTING_DIFFUSE ||
-				aStages[1].rgbGen == CGEN_WAVEFORM ||
-				aStages[1].rgbGen == CGEN_ENTITY ||
-				aStages[1].rgbGen == CGEN_ONE_MINUS_ENTITY ||
-				aStages[1].alphaGen == AGEN_WAVEFORM ||
-				aStages[1].alphaGen == AGEN_LIGHTING_SPECULAR ||
-				aStages[1].alphaGen == AGEN_ENTITY ||
-				aStages[1].alphaGen == AGEN_ONE_MINUS_ENTITY ||
-				aStages[1].alphaGen == AGEN_PORTAL )
-			CollapseFailure;
-
-		// For the remaining cases, we generate and test the colors.
-		R_ComputeColors( &aStages[1], tess.svars[0], 0, tess.numVertexes );
-		const int* colors = (const int*)tess.svars[0].colors;
-		const int colorCount = tess.numVertexes;
-		int allOnes = -1;
-		for ( int c = 0; c < colorCount; ++c )
-			allOnes &= colors[c];
-		if ( allOnes != -1 )
-			CollapseFailure;
-
-		aStages[0].stateBits &= ~GLS_BLEND_BITS;
-		aStages[0].stateBits |= collapse[i].multitextureBlend;
-		aStages[1].mtEnv = collapse[i].multitextureEnv;
-		aStages[0].mtStages = 1;
-		aStages += 2;
-		numStages -= 2;
-	}
-
-#undef CollapseFailure
 }
 
 
@@ -1894,9 +1868,9 @@ static qbool IsAdditiveBlendDepthFade()
 		const unsigned int src = bits & GLS_SRCBLEND_BITS;
 		const unsigned int dst = bits & GLS_DSTBLEND_BITS;
 		if ((src != GLS_SRCBLEND_ONE && src != GLS_SRCBLEND_SRC_ALPHA && src != GLS_SRCBLEND_ONE_MINUS_SRC_ALPHA) ||
-		   dst != GLS_DSTBLEND_ONE ||
-		   (bits & GLS_DEPTHMASK_TRUE) != 0)
-		   return qfalse;
+			dst != GLS_DSTBLEND_ONE ||
+			(bits & GLS_DEPTHMASK_TRUE) != 0)
+			return qfalse;
 	}
 
 	return qtrue;
@@ -2000,7 +1974,7 @@ static void ProcessDepthFade()
 	shader.dfType = DFT_NONE;
 
 	if (!glInfo.depthFadeSupport)
-	   return;
+		return;
 
 	if (shader.sort <= SS_OPAQUE)
 		return;
@@ -2175,6 +2149,105 @@ static void ProcessGreyscale()
 	}
 
 	shader.greyscaleCTF = qfalse;
+}
+
+
+static alphaGen_t GetActualAlphaTest(const shaderStage_t* stage)
+{
+	if (stage->alphaGen != AGEN_SKIP) {
+		return stage->alphaGen;
+	}
+
+	switch (stage->rgbGen) {
+		case CGEN_IDENTITY: return AGEN_IDENTITY;
+		case CGEN_IDENTITY_LIGHTING: return (alphaGen_t)__LINE__; // alpha = tr.identityLightByte
+		case CGEN_LIGHTING_DIFFUSE: return AGEN_IDENTITY;
+		case CGEN_CONST: return AGEN_CONST;
+		case CGEN_VERTEX: return AGEN_VERTEX;
+		case CGEN_EXACT_VERTEX: return AGEN_VERTEX;
+		case CGEN_ONE_MINUS_VERTEX: return (alphaGen_t)__LINE__; // doesn't write to alpha currently...
+		case CGEN_FOG: return (alphaGen_t)__LINE__;
+		case CGEN_WAVEFORM: return AGEN_IDENTITY;
+		case CGEN_ENTITY: return AGEN_ENTITY;
+		case CGEN_ONE_MINUS_ENTITY: return AGEN_ONE_MINUS_ENTITY;
+		case CGEN_DEBUG_ALPHA: return AGEN_IDENTITY;
+		default: return (alphaGen_t)__LINE__;
+	}
+}
+
+
+static void FixRedundantAlphaTesting()
+{
+	if (shader.numStages < 2 ||
+		!stages[0].active ||
+		!stages[1].active) {
+		return;
+	}
+
+	const unsigned int bits0 = stages[0].stateBits;
+	const unsigned int bits1 = stages[1].stateBits;
+
+	// both stages must be opaque
+	const unsigned int blendReplace = GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO;
+	const unsigned int blendNone = 0;
+	if ((bits0 & GLS_BLEND_BITS) != blendReplace && (bits0 & GLS_BLEND_BITS) != blendNone) {
+		return;
+	}
+	if ((bits1 & GLS_BLEND_BITS) != blendReplace && (bits1 & GLS_BLEND_BITS) != blendNone) {
+		return;
+	}
+
+	// both stages must have complementary alpha tests,
+	// meaning all fragment are written by the end of stage #2
+	// (provided texture, alphaGen and depth states match)
+	const unsigned int bitsOr = bits0 | bits1;
+	const unsigned int maskAT = GLS_ATEST_BITS;
+	const unsigned int expectAT = GLS_ATEST_GE_80 | GLS_ATEST_LT_80;
+	if ((bitsOr & maskAT) != expectAT) {
+		return;
+	}
+
+	// same texture
+	// @TODO: animMap support
+	if (stages[0].bundle.image[0] != stages[1].bundle.image[0]) {
+		return;
+	}
+
+	// same depth states and polygon fill
+	const unsigned int maskRest = GLS_DEPTHMASK_TRUE | GLS_POLYMODE_LINE | GLS_DEPTHTEST_DISABLE | GLS_DEPTHFUNC_EQUAL;
+	const unsigned int expectRest = GLS_DEPTHMASK_TRUE;
+	if ((bits0 & maskRest) != expectRest || (bits1 & maskRest) != expectRest) {
+		return;
+	}
+
+	// same alphaGen
+	const alphaGen_t ag0 = GetActualAlphaTest(&stages[0]);
+	const alphaGen_t ag1 = GetActualAlphaTest(&stages[1]);
+	if (ag0 != ag1) {
+		return;
+	}
+
+	stages[0].stateBits &= ~GLS_ATEST_BITS;
+}
+
+
+// we don't want to allow multiple strictly equivalent states that have different bit patterns
+// this leads to more pixel shaders, more PSOs, more PSO switches...
+static void FixUnusedBlendModes()
+{
+	for (int s = 0; s < MAX_SHADER_STAGES; ++s) {
+		const unsigned int oldBlendBits = stages[s].stateBits & GLS_BLEND_BITS;
+
+		int newBlendBits = oldBlendBits;
+		if (oldBlendBits == (GLS_SRCBLEND_ZERO | GLS_DSTBLEND_SRC_COLOR)) {
+			newBlendBits = GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO;
+		} else if (oldBlendBits == (GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO)) {
+			newBlendBits = 0;
+		}
+
+		stages[s].stateBits &= ~GLS_BLEND_BITS;
+		stages[s].stateBits |= newBlendBits;
+	}
 }
 
 
@@ -2382,18 +2455,9 @@ static shader_t* FinishShader()
 	if ( shader.vlWanted )
 		ApplyVertexLighting();
 
-	//
-	// look for multitexture potential
-	//
-	if ( stage > 1 && CollapseMultitexture() ) {
-		stage--;
-	}
-
 	shader.numStages = stage;
 
 	FindLightingStages();
-
-	CollapseStages();
 
 	if ( r_fullbright->integer ) {
 		// we replace the lightmap texture with the white texture
@@ -2427,7 +2491,6 @@ static shader_t* FinishShader()
 				stages[i].active = qfalse;
 			}
 			stages[0].stateBits = stateBits;
-			stages[0].mtStages = 0;
 			shader.lightingStages[ST_DIFFUSE] = 0; // for working dynamic lights
 			shader.lightingStages[ST_LIGHTMAP] = 0;
 		}
@@ -2472,6 +2535,10 @@ static shader_t* FinishShader()
 	ProcessDepthFade();
 
 	ProcessGreyscale();
+
+	FixRedundantAlphaTesting();
+
+	FixUnusedBlendModes();
 
 	shader_t* const newShader = GeneratePermanentShader();
 
@@ -2770,7 +2837,7 @@ void R_ShaderList_f( void )
 	const char* const match = Cmd_Argc() > 1 ? Cmd_Argv( 1 ) : NULL;
 
 	ri.Printf( PRINT_ALL, "S   : Stage count\n" );
-	ri.Printf( PRINT_ALL, "P   : Pass count (collapsed stages)\n" );
+	ri.Printf( PRINT_ALL, "P   : PSO count\n" );
 	ri.Printf( PRINT_ALL, "L   : Lightmap index\n" );
 	ri.Printf( PRINT_ALL, "E   : Explicitly defined (i.e. defined by code)\n" );
 	ri.Printf( PRINT_ALL, "func: 'sky' if it's a sky shader, empty otherwise\n" );
@@ -2785,11 +2852,7 @@ void R_ShaderList_f( void )
 		if ( match && !Com_Filter( match, sh->name ) )
 			continue;
 
-		int passes = sh->numStages;
-		for ( int s = 0; s < sh->numStages; ++s )
-			passes -= sh->stages[s]->mtStages;
-
-		ri.Printf( PRINT_ALL, "%i %i ", sh->numStages, passes );
+		ri.Printf( PRINT_ALL, "%i %i ", sh->numStages, sh->numPipelines );
 
 		if (sh->lightmapIndex >= 0 ) {
 			ri.Printf( PRINT_ALL, "L " );
@@ -2802,7 +2865,7 @@ void R_ShaderList_f( void )
 			ri.Printf( PRINT_ALL, "  " );
 		}
 
-		if ( sh->sort == SS_ENVIRONMENT ) {
+		if ( sh->isSky ) {
 			ri.Printf( PRINT_ALL, "sky " );
 		} else {
 			ri.Printf( PRINT_ALL, "    " );
