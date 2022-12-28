@@ -131,7 +131,7 @@ namespace RHI
 #if defined(_DEBUG)
 		if(SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&rhi.debug))))
 		{
-			// @NOTE: calling after device creation will remove the device
+			// calling after device creation will remove the device
 			// @TODO: hitting this error :(
 			// D3D Error 887e0003: (13368@153399640) at 00007FFC84ECF985 - D3D12 SDKLayers dll does not match the D3D12SDKVersion of D3D12 Core dll.
 			rhi.debug->EnableDebugLayer();
@@ -156,22 +156,32 @@ namespace RHI
 		hr = D3D12CreateDevice(NULL, D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&rhi.device));
 		Check(hr, "D3D12CreateDevice");
 
+		ID3D12CommandQueue* commandQueue;
+		D3D12_COMMAND_QUEUE_DESC commandQueueDesc = { 0 };
+		commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+		commandQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+		commandQueueDesc.NodeMask = 0; // always 0 for a single GPU
+		commandQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+		hr = rhi.device->CreateCommandQueue(& commandQueueDesc, IID_PPV_ARGS(&commandQueue));
+		Check(hr, "ID3D12Device::CreateCommandQueue");
+
 		DXGI_SWAP_CHAIN_DESC swapChainDesc = { 0 };
-		/*swapChainDesc.BufferCount = ;
-		swapChainDesc.BufferDesc.Format = ;
-		swapChainDesc.BufferDesc.Width = ;
-		swapChainDesc.BufferDesc.Height = ;
-		swapChainDesc.BufferDesc.RefreshRate = ;
-		swapChainDesc.BufferDesc.Scaling = ;
-		swapChainDesc.BufferDesc.ScanlineOrdering = ;
-		swapChainDesc.BufferUsage = ;
-		swapChainDesc.Flags = ;
-		swapChainDesc.OutputWindow = ;
-		swapChainDesc.SampleDesc.Count = ;
-		swapChainDesc.SampleDesc.Quality = ;
-		swapChainDesc.SwapEffect = ;
-		swapChainDesc.Windowed = ;*/
-		hr = rhi.dxgiFactory1->CreateSwapChain(rhi.device, &swapChainDesc, &rhi.dxgiSwapChain);
+		swapChainDesc.BufferCount = 2;
+		swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		swapChainDesc.BufferDesc.Width = glInfo.winWidth;
+		swapChainDesc.BufferDesc.Height = glInfo.winHeight;
+		swapChainDesc.BufferDesc.RefreshRate.Numerator = 0;
+		swapChainDesc.BufferDesc.RefreshRate.Denominator = 1;
+		swapChainDesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
+		swapChainDesc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
+		swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+		swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+		swapChainDesc.OutputWindow = GetActiveWindow();
+		swapChainDesc.SampleDesc.Count = 1;
+		swapChainDesc.SampleDesc.Quality = 0;
+		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+		swapChainDesc.Windowed = TRUE;
+		hr = rhi.dxgiFactory1->CreateSwapChain(commandQueue, &swapChainDesc, &rhi.dxgiSwapChain);
 		Check(hr, "IDXGIFactory::CreateSwapChain");
 		//rhi.dxgiSwapChain->QueryInterface(IID_PPV_ARGS(&rhi.));
 		//IDXGISwapChain3::GetCurrentBackBufferIndex
