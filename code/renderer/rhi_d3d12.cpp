@@ -43,6 +43,8 @@ struct RHIPrivate
 
 static RHIPrivate rhi;
 
+const UINT FrameCount = 2;
+
 
 #define COM_RELEASE(p)       do { if(p) { p->Release(); p = NULL; } } while((void)0,0)
 #define COM_RELEASE_ARRAY(a) do { for(int i = 0; i < ARRAY_LEN(a); ++i) { COM_RELEASE(a[i]); } } while((void)0,0)
@@ -166,13 +168,13 @@ namespace RHI
 		D3D12_COMMAND_QUEUE_DESC commandQueueDesc = { 0 };
 		commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 		commandQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-		commandQueueDesc.NodeMask = 0; // always 0 for a single GPU
 		commandQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+		commandQueueDesc.NodeMask = 0;
 		hr = rhi.device->CreateCommandQueue(& commandQueueDesc, IID_PPV_ARGS(&commandQueue));
 		Check(hr, "ID3D12Device::CreateCommandQueue");
 
 		DXGI_SWAP_CHAIN_DESC swapChainDesc = { 0 };
-		swapChainDesc.BufferCount = 2;
+		swapChainDesc.BufferCount = FrameCount;
 		swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		swapChainDesc.BufferDesc.Width = glInfo.winWidth;
 		swapChainDesc.BufferDesc.Height = glInfo.winHeight;
@@ -191,10 +193,33 @@ namespace RHI
 		Check(hr, "IDXGIFactory::CreateSwapChain");
 		//rhi.dxgiSwapChain->QueryInterface(IID_PPV_ARGS(&rhi.));
 		//IDXGISwapChain3::GetCurrentBackBufferIndex
+
+		ID3D12DescriptorHeap* rtvHeap;
+		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = { 0 };
+		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+		rtvHeapDesc.NumDescriptors = FrameCount;
+		rtvHeapDesc.NodeMask = 0;
+		hr = rhi.device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&rtvHeap));
+		Check(hr, "ID3D12Device::CreateDescriptorHeap");
+
+		const UINT descriptorIncSize = rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rtvHeap->GetCPUDescriptorHandleForHeapStart();
+
+		ID3D12Resource* renderTargets[FrameCount];
+		for(UINT f = 0; f < FrameCount; ++f)
+		{
+			hr = rhi.dxgiSwapChain->GetBuffer(f, IID_PPV_ARGS(&renderTargets[f]));
+			Check(hr, "IDXGIFactory::GetBuffer");
+			rhi.device->CreateRenderTargetView(renderTargets[f], NULL, rtvHandle);
+			rtvHandle.ptr += descriptorIncSize;
+		}
+
+		__debugbreak();
 	}
 
 	void ShutDown()
 	{
-		// use DXGIGetDebugInterface to enumerate what's alive
+		// use the debug interface from DXGIGetDebugInterface to enumerate what's alive
 	}
 }
