@@ -14,9 +14,6 @@
   <ItemGroup>
     <ClCompile Include="..\..\code\renderer\stb_image.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_backend.cpp" />
-    <ClCompile Include="..\..\code\renderer\tr_backend_d3d11.cpp" />
-    <ClCompile Include="..\..\code\renderer\tr_backend_gl2.cpp" />
-    <ClCompile Include="..\..\code\renderer\tr_backend_gl3.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_bsp.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_cmds.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_curve.cpp" />
@@ -36,34 +33,6 @@
     <ClCompile Include="..\..\code\renderer\tr_sky.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_surface.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_world.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\..\code\renderer\hlsl\clear.hlsl">
-      <Filter>hlsl</Filter>
-    </None>
-    <None Include="..\..\code\renderer\hlsl\dl.hlsl">
-      <Filter>hlsl</Filter>
-    </None>
-    <None Include="..\..\code\renderer\hlsl\generic.hlsl">
-      <Filter>hlsl</Filter>
-    </None>
-    <None Include="..\..\code\renderer\hlsl\mip_end.hlsl">
-      <Filter>hlsl</Filter>
-    </None>
-    <None Include="..\..\code\renderer\hlsl\mip_pass.hlsl">
-      <Filter>hlsl</Filter>
-    </None>
-    <None Include="..\..\code\renderer\hlsl\mip_start.hlsl">
-      <Filter>hlsl</Filter>
-    </None>
-    <None Include="..\..\code\renderer\hlsl\post.hlsl">
-      <Filter>hlsl</Filter>
-    </None>
-    <None Include="..\..\code\renderer\hlsl\shared.hlsli">
-      <Filter>hlsl</Filter>
-    </None>
-    <None Include="..\..\code\renderer\hlsl\sprite.hlsl">
-      <Filter>hlsl</Filter>
-    </None>
+    <ClCompile Include="..\..\code\renderer\rhi_d3d12.cpp" />
   </ItemGroup>
 </Project>

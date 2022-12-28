@@ -1,6 +1,6 @@
 /*
 ===========================================================================
-Copyright (C) 2019 Gian 'myT' Schellenbaum
+Copyright (C) 2022 Gian 'myT' Schellenbaum
 
 This file is part of Challenge Quake 3 (CNQ3).
 
@@ -18,30 +18,27 @@ You should have received a copy of the GNU General Public License
 along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 ===========================================================================
 */
-// linear-space FLOAT to gamma-space UINT8 compute shader
+// Direct3D 12 Rendering Hardware Interface
 
-Texture2D<float4>  src : register(t0);
-RWTexture2D<uint4> dst : register(u0);
 
-cbuffer Constants : register(b0)
+#include <d3d12.h>
+#include <dxgi.h>
+
+
+void xxx()
 {
-	float4 blendColor;
-	float intensity;
-	float invGamma; // 1.0 / gamma
-	float dummy0;
-	float dummy1;
-}
+	//D3D12GetDebugInterface
+	//ID3D12Debug::EnableDebugLayer
+	//CreateDXGIFactory1
+	//D3D12CreateDevice
 
-[numthreads(8, 8, 1)]
-void cs_main(uint3 id : SV_DispatchThreadID)
-{
-	// yes, intensity *should* be done in light-linear space
-	// but we keep the old behavior for consistency...
-	float4 in0 = src[id.xy];
-	float3 in1 = 0.5 * (in0.rgb + blendColor.rgb);
-	float3 inV = lerp(in0.rgb, in1.rgb, blendColor.a);
-	float3 out0 = pow(max(inV, 0.0), invGamma);
-	float3 out1 = out0 * intensity;
-	float4 outV = saturate(float4(out1, in0.a));
-	dst[id.xy] = outV * 255.0;
+	HRESULT hr = S_OK;
+
+	IDXGIFactory1* dxgiFactory;
+	CreateDXGIFactory1(IID_PPV_ARGS(&dxgiFactory));
+
+	// first argument is the adapter
+	// to list adapters: IDXGIFactory1::EnumAdapters
+	ID3D12Device* device;
+	D3D12CreateDevice(NULL, D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&device));
 }

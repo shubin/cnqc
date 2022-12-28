@@ -1223,24 +1223,13 @@ IMPLEMENTATION SPECIFIC FUNCTIONS
 ====================================================================
 */
 
-enum galId_t {
-	GAL_GL2,
-	GAL_GL3,
-	GAL_D3D11,
-	GAL_COUNT
-};
-
 // Video initialization:
-// o loading OpenGL and getting core function pointers
 // - creating a window and changing video mode if needed,
 // - respecting r_fullscreen, r_mode, r_width, r_height
-// o creating a valid OpenGL context and making it current
 // - filling up the right glconfig fields (see glconfig_t definition)
-void Sys_V_Init( galId_t type );
+void Sys_V_Init();
 
 // Video shutdown:
-// o unloading OpenGL and zeroing the core function pointers
-// o destroying the OpenGL context
 // - destroying the window
 // - resetting the proper video mode if necessary
 void Sys_V_Shutdown();
@@ -1557,74 +1546,12 @@ typedef enum {
 	CS_COUNT
 } colorSpace_t;
 
-typedef enum {
-	DT_GENERIC,
-	DT_DYNAMIC_LIGHT,
-	DT_SOFT_SPRITE
-} drawType_t;
-
-typedef struct {
-	galId_t	id;
-
-	qbool	(*Init)();
-	void	(*ShutDown)( qbool fullShutDown );
-
-	void	(*BeginFrame)();
-	void	(*EndFrame)();
-
-	// saves the current clip plane and disables it
-	// sets depth range to [depth; depth]
-	void	(*BeginSkyAndClouds)( double depth );
-
-	// sets depth range to [0; 1]
-	// restores the old clip plane, if any
-	void	(*EndSkyAndClouds)();
-
-	void	(*ReadPixels)( int x, int y, int w, int h, int alignment, colorSpace_t colorSpace, void* out );
-
-	void	(*CreateTexture)( image_t* image, int mipCount, int w, int h );
-	void	(*UpdateTexture)( image_t* image, int mip, int x, int y, int w, int h, const void* data );
-	void	(*UpdateScratch)( image_t* image, int w, int h, const void* data, qbool dirty );
-
-	// handles everything in one go, including mip-map generation
-	// - image->format must be TF_RGBA8
-	// - w and h must be powers of 2
-	void	(*CreateTextureEx)( image_t* image, int mipCount, int mipOffset, int w0, int h0, const void* mip0 );
-
-	void	(*Draw)( drawType_t type );
-
-	// sets the model-view matrix (identity)
-	// sets the projection matrix (orthographic transform)
-	// sets the viewport and scissor rectangles
-	void	(*Begin2D)();
-
-	// clears the target buffers
-	// sets the projection matrix
-	// sets the viewport and scissor rectangles
-	// sets the clip plane
-	void	(*Begin3D)();
-
-	void	(*SetModelViewMatrix)( const float* matrix );
-	void	(*SetDepthRange)( double near, double far );
-
-	// lets us know that tess.light is ready and the data should be copied over now
-	void	(*BeginDynamicLight)();
-
-	void	(*PrintInfo)();
-} graphicsAPILayer_t;
-
 extern	int		max_polys;
 extern	int		max_polyverts;
 
 extern	backEndData_t*		backEndData;
-extern	graphicsAPILayer_t	gal;
 
 void GfxInfo_f( void );
-
-typedef qbool ( *getGALInterface_t )( graphicsAPILayer_t* );
-qbool GAL_GetGL2( graphicsAPILayer_t* rb );
-qbool GAL_GetGL3( graphicsAPILayer_t* rb );
-qbool GAL_GetD3D11( graphicsAPILayer_t* rb );
 
 void RB_ExecuteRenderCommands( const void *data );
 void RB_PushSingleStageShader( int stateBits, cullType_t cullType );

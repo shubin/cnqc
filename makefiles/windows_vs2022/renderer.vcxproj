@@ -117,7 +117,8 @@
       <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
     </Lib>
     <PreBuildEvent>
-      <Command>..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_generic_vs /Fh ..\..\code\renderer\hlsl\generic_vs.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_ps /Fh ..\..\code\renderer\hlsl\generic_ps.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_a_ps /Fh ..\..\code\renderer\hlsl\generic_a_ps.h /O0 /Zi /DCNQ3_A2C=1 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_d_ps /Fh ..\..\code\renderer\hlsl\generic_d_ps.h /O0 /Zi /DCNQ3_DITHER=1 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_ad_ps /Fh ..\..\code\renderer\hlsl\generic_ad_ps.h /O0 /Zi /DCNQ3_A2C=1 /DCNQ3_DITHER=1 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\post.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_post_vs /Fh ..\..\code\renderer\hlsl\post_vs.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\post.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_post_ps /Fh ..\..\code\renderer\hlsl\post_ps.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\dl.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_dl_vs /Fh ..\..\code\renderer\hlsl\dl_vs.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\dl.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_dl_ps /Fh ..\..\code\renderer\hlsl\dl_ps.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\sprite.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_sprite_vs /Fh ..\..\code\renderer\hlsl\sprite_vs.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\sprite.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_sprite_ps /Fh ..\..\code\renderer\hlsl\sprite_ps.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\clear.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_clear_vs /Fh ..\..\code\renderer\hlsl\clear_vs.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\clear.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_clear_ps /Fh ..\..\code\renderer\hlsl\clear_ps.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\mip_start.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_start_cs /Fh ..\..\code\renderer\hlsl\mip_start_cs.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\mip_pass.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_pass_cs /Fh ..\..\code\renderer\hlsl\mip_pass_cs.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\mip_end.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_end_cs /Fh ..\..\code\renderer\hlsl\mip_end_cs.h /O0 /Zi</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">
@@ -142,7 +143,8 @@
       <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
     </Lib>
     <PreBuildEvent>
-      <Command>..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_generic_vs /Fh ..\..\code\renderer\hlsl\generic_vs.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_ps /Fh ..\..\code\renderer\hlsl\generic_ps.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_a_ps /Fh ..\..\code\renderer\hlsl\generic_a_ps.h /O0 /Zi /DCNQ3_A2C=1 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_d_ps /Fh ..\..\code\renderer\hlsl\generic_d_ps.h /O0 /Zi /DCNQ3_DITHER=1 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_ad_ps /Fh ..\..\code\renderer\hlsl\generic_ad_ps.h /O0 /Zi /DCNQ3_A2C=1 /DCNQ3_DITHER=1 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\post.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_post_vs /Fh ..\..\code\renderer\hlsl\post_vs.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\post.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_post_ps /Fh ..\..\code\renderer\hlsl\post_ps.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\dl.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_dl_vs /Fh ..\..\code\renderer\hlsl\dl_vs.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\dl.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_dl_ps /Fh ..\..\code\renderer\hlsl\dl_ps.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\sprite.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_sprite_vs /Fh ..\..\code\renderer\hlsl\sprite_vs.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\sprite.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_sprite_ps /Fh ..\..\code\renderer\hlsl\sprite_ps.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\clear.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_clear_vs /Fh ..\..\code\renderer\hlsl\clear_vs.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\clear.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_clear_ps /Fh ..\..\code\renderer\hlsl\clear_ps.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\mip_start.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_start_cs /Fh ..\..\code\renderer\hlsl\mip_start_cs.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\mip_pass.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_pass_cs /Fh ..\..\code\renderer\hlsl\mip_pass_cs.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\mip_end.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_end_cs /Fh ..\..\code\renderer\hlsl\mip_end_cs.h /O0 /Zi</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release|x64'">
@@ -177,7 +179,8 @@
       <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
     </Lib>
     <PreBuildEvent>
-      <Command>..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_generic_vs /Fh ..\..\code\renderer\hlsl\generic_vs.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_ps /Fh ..\..\code\renderer\hlsl\generic_ps.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_a_ps /Fh ..\..\code\renderer\hlsl\generic_a_ps.h /O3 /DCNQ3_A2C=1 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_d_ps /Fh ..\..\code\renderer\hlsl\generic_d_ps.h /O3 /DCNQ3_DITHER=1 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_ad_ps /Fh ..\..\code\renderer\hlsl\generic_ad_ps.h /O3 /DCNQ3_A2C=1 /DCNQ3_DITHER=1 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\post.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_post_vs /Fh ..\..\code\renderer\hlsl\post_vs.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\post.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_post_ps /Fh ..\..\code\renderer\hlsl\post_ps.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\dl.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_dl_vs /Fh ..\..\code\renderer\hlsl\dl_vs.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\dl.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_dl_ps /Fh ..\..\code\renderer\hlsl\dl_ps.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\sprite.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_sprite_vs /Fh ..\..\code\renderer\hlsl\sprite_vs.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\sprite.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_sprite_ps /Fh ..\..\code\renderer\hlsl\sprite_ps.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\clear.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_clear_vs /Fh ..\..\code\renderer\hlsl\clear_vs.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\clear.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_clear_ps /Fh ..\..\code\renderer\hlsl\clear_ps.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\mip_start.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_start_cs /Fh ..\..\code\renderer\hlsl\mip_start_cs.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\mip_pass.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_pass_cs /Fh ..\..\code\renderer\hlsl\mip_pass_cs.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\mip_end.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_end_cs /Fh ..\..\code\renderer\hlsl\mip_end_cs.h /O3</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release|Win32'">
@@ -213,7 +216,8 @@
       <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
     </Lib>
     <PreBuildEvent>
-      <Command>..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_generic_vs /Fh ..\..\code\renderer\hlsl\generic_vs.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_ps /Fh ..\..\code\renderer\hlsl\generic_ps.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_a_ps /Fh ..\..\code\renderer\hlsl\generic_a_ps.h /O3 /DCNQ3_A2C=1 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_d_ps /Fh ..\..\code\renderer\hlsl\generic_d_ps.h /O3 /DCNQ3_DITHER=1 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_ad_ps /Fh ..\..\code\renderer\hlsl\generic_ad_ps.h /O3 /DCNQ3_A2C=1 /DCNQ3_DITHER=1 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\post.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_post_vs /Fh ..\..\code\renderer\hlsl\post_vs.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\post.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_post_ps /Fh ..\..\code\renderer\hlsl\post_ps.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\dl.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_dl_vs /Fh ..\..\code\renderer\hlsl\dl_vs.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\dl.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_dl_ps /Fh ..\..\code\renderer\hlsl\dl_ps.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\sprite.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_sprite_vs /Fh ..\..\code\renderer\hlsl\sprite_vs.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\sprite.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_sprite_ps /Fh ..\..\code\renderer\hlsl\sprite_ps.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\clear.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_clear_vs /Fh ..\..\code\renderer\hlsl\clear_vs.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\clear.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_clear_ps /Fh ..\..\code\renderer\hlsl\clear_ps.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\mip_start.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_start_cs /Fh ..\..\code\renderer\hlsl\mip_start_cs.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\mip_pass.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_pass_cs /Fh ..\..\code\renderer\hlsl\mip_pass_cs.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\mip_end.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_end_cs /Fh ..\..\code\renderer\hlsl\mip_end_cs.h /O3</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -223,11 +227,9 @@
     <ClInclude Include="..\..\code\renderer\tr_public.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\code\renderer\rhi_d3d12.cpp" />
     <ClCompile Include="..\..\code\renderer\stb_image.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_backend.cpp" />
-    <ClCompile Include="..\..\code\renderer\tr_backend_d3d11.cpp" />
-    <ClCompile Include="..\..\code\renderer\tr_backend_gl2.cpp" />
-    <ClCompile Include="..\..\code\renderer\tr_backend_gl3.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_bsp.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_cmds.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_curve.cpp" />
@@ -247,17 +249,6 @@
     <ClCompile Include="..\..\code\renderer\tr_sky.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_surface.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_world.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\..\code\renderer\hlsl\clear.hlsl" />
-    <None Include="..\..\code\renderer\hlsl\dl.hlsl" />
-    <None Include="..\..\code\renderer\hlsl\generic.hlsl" />
-    <None Include="..\..\code\renderer\hlsl\mip_end.hlsl" />
-    <None Include="..\..\code\renderer\hlsl\mip_pass.hlsl" />
-    <None Include="..\..\code\renderer\hlsl\mip_start.hlsl" />
-    <None Include="..\..\code\renderer\hlsl\post.hlsl" />
-    <None Include="..\..\code\renderer\hlsl\shared.hlsli" />
-    <None Include="..\..\code\renderer\hlsl\sprite.hlsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

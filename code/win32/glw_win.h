@@ -30,17 +30,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 extern "C" {
 #endif
 
-typedef struct
-{
-	// The main window's rendering context is the only one we can ever keep around
-	// because the window class has the CS_OWNDC style set (for OpenGL).
-	HDC			hDC;
-	HGLRC		hGLRC;
-	HINSTANCE	hinstOpenGL;
+typedef struct {
+	// @TODO: move this crap out of this file and nuke the file
 	qbool		cdsDevModeValid;
 	DEVMODE		cdsDevMode;			// Custom device mode for full-screen with r_mode 1.
-	qbool		pixelFormatSet;
-	int			nPendingPF;
 } glwstate_t;
 
 extern glwstate_t glw_state;

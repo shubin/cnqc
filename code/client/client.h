@@ -571,12 +571,6 @@ void CL_MapDownload_DrawConsole( float cw, float ch );
 void CL_MapDownload_CrashCleanUp();
 
 //
-// cl_gl.cpp
-//
-qbool CL_GL_WantDebug();	// do we want a debug context from the platform layer?
-void CL_GL_Init();			// enables debug output if needed
-
-//
 // cl_demo.cpp
 //
 void CL_NDP_PlayDemo( qbool videoRestart );
