@@ -163,7 +163,10 @@ qbool rawmouse_t::ProcessMessage( UINT msg, WPARAM wParam, LPARAM lParam )
 		UpdateWheel( (SHORT)ri.data.mouse.usButtonData );
 
 	for (int i = 0; i < 5; ++i) {
-		if (active && (ri.data.mouse.usButtonFlags & riBtnDnFlags[i]) != 0)
+		// @TODO: was previously only sent when active was qtrue
+		// is this still okay now?
+		//if (active && (ri.data.mouse.usButtonFlags & riBtnDnFlags[i]) != 0)
+		if (ri.data.mouse.usButtonFlags & riBtnDnFlags[i])
 			WIN_QueEvent( g_wv.sysMsgTime, SE_KEY, K_MOUSE1 + i, qtrue, 0, NULL );
 
 		// we always send the button up events to avoid
