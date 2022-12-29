@@ -24,7 +24,6 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 #include "tr_local.h"
 #include <Windows.h>
 #include <d3d12.h>
-#include <dxgi.h>
 #include <dxgi1_4.h>
 
 
@@ -59,6 +58,8 @@ static RHIPrivate rhi;
 
 #define COM_RELEASE(p)       do { if(p) { p->Release(); p = NULL; } } while((void)0,0)
 #define COM_RELEASE_ARRAY(a) do { for(int i = 0; i < ARRAY_LEN(a); ++i) { COM_RELEASE(a[i]); } } while((void)0,0)
+
+#define D3D(Exp)             Check((Exp), #Exp)
 
 
 static const char* GetSystemErrorString(HRESULT hr)
@@ -142,7 +143,21 @@ namespace RHI
 {
 	static void WaitForPreviousFrame()
 	{
+		// @TODO: better approach
 
+		// signal and increment the fence value
+		const UINT64 fence = rhi.fenceValue;
+		D3D(rhi.commandQueue->Signal(rhi.fence, fence));
+		rhi.fenceValue++;
+
+		// wait until the previous frame is finished
+		if(rhi.fence->GetCompletedValue() < fence)
+		{
+			D3D(rhi.fence->SetEventOnCompletion(fence, rhi.fenceEvent));
+			WaitForSingleObject(rhi.fenceEvent, INFINITE);
+		}
+
+		rhi.frameIndex = rhi.dxgiSwapChain3->GetCurrentBackBufferIndex();
 	}
 
 	void Init()
@@ -242,8 +257,6 @@ namespace RHI
 		hr = rhi.commandList->Close();
 		Check(hr, "ID3D12GraphicsCommandList::Close");
 
-		__debugbreak();
-
 		hr = rhi.device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&rhi.fence));
 		Check(hr, "ID3D12Device::CreateFence");
 		rhi.fenceValue = 1;
@@ -257,38 +270,66 @@ namespace RHI
 		// queue work...
 
 		WaitForPreviousFrame();
+
+		glInfo.maxTextureSize = 2048;
+		glInfo.maxAnisotropy = 0;
+		glInfo.depthFadeSupport = qfalse;
+		glInfo.mipGenSupport = qtrue;
+		glInfo.alphaToCoverageSupport = qfalse;
+		glInfo.msaaSampleCount = 1;
 	}
 
 	void ShutDown()
 	{
-		// use the debug interface from DXGIGetDebugInterface to enumerate what's alive
+		// @TODO: use the debug interface from DXGIGetDebugInterface to enumerate what's alive
+
+		WaitForPreviousFrame();
+
+		CloseHandle(rhi.fenceEvent);
+
+		// @TODO: release all the COM resources...
 	}
 
 	void BeginFrame()
 	{
-		HRESULT hr;
+		D3D(rhi.commandAllocator->Reset());
+		D3D(rhi.commandList->Reset(rhi.commandAllocator, NULL));
 
-		// clear the screen for testing
-		hr = rhi.commandList->Reset(rhi.commandAllocator, NULL);
-		Check(hr, "ID3D12GraphicsCommandList::Reset");
+		D3D12_RESOURCE_BARRIER barrier = { 0 };
+		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+		barrier.Transition.pResource = rhi.renderTargets[rhi.frameIndex];
+		barrier.Transition.Subresource = 0; // D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES
+		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+		rhi.commandList->ResourceBarrier(1, &barrier);
 
-		/*const FLOAT clearColor[4] = {0.0f, 1.0f, 0.0f, 1.0f};
-		rhi.commandList->ClearRenderTargetView(rhi.rtvHandle, clearColor, 0, NULL);*/
+		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = { 0 };
+		rtvHandle.ptr = rhi.rtvHandle.ptr + rhi.frameIndex * rhi.rtvIncSize;
+		rhi.commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, NULL);
 
-		hr = rhi.commandList->Close();
-		Check(hr, "ID3D12GraphicsCommandList::Close");
+		const FLOAT clearColor[4] = {0.0f, 1.0f, 0.0f, 1.0f};
+		rhi.commandList->ClearRenderTargetView(rhi.rtvHandle, clearColor, 0, NULL);
 	}
 
 	void EndFrame()
 	{
-		/*if(r_swapInterval->modified)
-		{
-			r_swapInterval->modified = qfalse;
-			// @TODO: do whatever needs to be done with r_swapInterval->integer
-		}*/
+		D3D12_RESOURCE_BARRIER barrier = { 0 };
+		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+		barrier.Transition.pResource = rhi.renderTargets[rhi.frameIndex];
+		barrier.Transition.Subresource = 0; // D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES
+		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+		rhi.commandList->ResourceBarrier(1, &barrier);
+
+		D3D(rhi.commandList->Close());
 
 		ID3D12CommandList* commandListArray[] = { rhi.commandList };
 		rhi.commandQueue->ExecuteCommandLists(ARRAY_LEN(commandListArray), commandListArray);
-		rhi.dxgiSwapChain3->Present(r_swapInterval->integer, DXGI_PRESENT_ALLOW_TEARING);
+
+		D3D(rhi.dxgiSwapChain3->Present(r_swapInterval->integer, DXGI_PRESENT_ALLOW_TEARING));
+
+		WaitForPreviousFrame();
 	}
 }
