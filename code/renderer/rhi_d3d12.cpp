@@ -41,6 +41,7 @@ static const UINT FrameCount = 2;
 struct RHIPrivate
 {
 	ID3D12Debug* debug; // can be NULL
+	ID3D12InfoQueue* infoQueue; // can be NULL
 #if defined(_DEBUG)
 	IDXGIFactory2* factory;
 #else
@@ -230,6 +231,27 @@ namespace RHI
 
 		// @TODO: first argument is the adapter, NULL is default
 		D3D(D3D12CreateDevice(NULL, featureLevel, IID_PPV_ARGS(&rhi.device)));
+
+#if defined(_DEBUG)
+		if(rhi.debug)
+		{
+			rhi.device->QueryInterface(IID_PPV_ARGS(&rhi.infoQueue));
+			if(rhi.infoQueue)
+			{
+				rhi.infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
+				rhi.infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
+
+				D3D12_MESSAGE_ID filteredMessages[] =
+				{
+					D3D12_MESSAGE_ID_SETPRIVATEDATA_CHANGINGPARAMS
+				};
+				D3D12_INFO_QUEUE_FILTER filter = { 0 };
+				filter.DenyList.NumIDs = ARRAY_LEN(filteredMessages);
+				filter.DenyList.pIDList = filteredMessages;
+				rhi.infoQueue->AddStorageFilterEntries(&filter);
+			}
+		}
+#endif
 
 		D3D12_COMMAND_QUEUE_DESC commandQueueDesc = { 0 };
 		commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
