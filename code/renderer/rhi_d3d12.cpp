@@ -29,6 +29,15 @@ to do:
 - integrate D3D12MA
 - compiler switch for GPU validation
 - D3DCOMPILE_DEBUG for shaders
+- use ID3D12Device4::CreateCommandList1 to create closed command lists
+- if a feature level below 12.0 is good enough,
+	use ID3D12Device::CheckFeatureSupport with D3D12_FEATURE_D3D12_OPTIONS / D3D12_FEATURE_DATA_D3D12_OPTIONS
+	to ensure Resource Binding Tier 2 is available
+- IDXGISwapChain::SetFullScreenState(TRUE) with the borderless window taking up the entire screen
+	and ALLOW_TEARING set on both the flip mode swap chain and Present() flags
+	will enable true immediate independent flip mode and give us the lowest latency possible
+- NvAPI_D3D_GetLatency to get (simulated) input to display latency
+- NvAPI_D3D_IsGSyncCapable / NvAPI_D3D_IsGSyncActive for diagnostics
 */
 
 
@@ -444,7 +453,10 @@ namespace RHI
 
 	void BeginFrame()
 	{
+		// reclaim used memory
 		D3D(rhi.commandAllocators[rhi.frameIndex]->Reset());
+
+		// start recording
 		D3D(rhi.commandList->Reset(rhi.commandAllocators[rhi.frameIndex], NULL));
 
 		D3D12_RESOURCE_BARRIER barrier = { 0 };
@@ -474,6 +486,7 @@ namespace RHI
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 		rhi.commandList->ResourceBarrier(1, &barrier);
 
+		// stop recording
 		D3D(rhi.commandList->Close());
 
 		ID3D12CommandList* commandListArray[] = { rhi.commandList };
