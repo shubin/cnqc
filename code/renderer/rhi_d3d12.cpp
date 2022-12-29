@@ -33,7 +33,10 @@ extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8".\\D3D12
 #endif
 
 
-const UINT FrameCount = 2;
+// this has 2 meanings:
+// 1. maximum number of frames queued
+// 2. number of frames in the back buffer
+static const UINT FrameCount = 2;
 
 struct RHIPrivate
 {
@@ -45,12 +48,12 @@ struct RHIPrivate
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle;
 	UINT rtvIncSize;
 	ID3D12Resource* renderTargets[FrameCount];
-	ID3D12CommandAllocator* commandAllocator;
+	ID3D12CommandAllocator* commandAllocators[FrameCount];
 	ID3D12GraphicsCommandList* commandList;
 	UINT frameIndex;
 	HANDLE fenceEvent;
 	ID3D12Fence* fence;
-	UINT64 fenceValue;
+	UINT64 fenceValues[FrameCount];
 };
 
 static RHIPrivate rhi;
@@ -141,30 +144,42 @@ static const char* GetDeviceRemovedReasonString(HRESULT reason)
 
 namespace RHI
 {
-	static void WaitForPreviousFrame()
+	static void MoveToNextFrame()
 	{
-		// @TODO: better approach
-
-		// signal and increment the fence value
-		const UINT64 fence = rhi.fenceValue;
-		D3D(rhi.commandQueue->Signal(rhi.fence, fence));
-		rhi.fenceValue++;
-
-		// wait until the previous frame is finished
-		if(rhi.fence->GetCompletedValue() < fence)
-		{
-			D3D(rhi.fence->SetEventOnCompletion(fence, rhi.fenceEvent));
-			WaitForSingleObject(rhi.fenceEvent, INFINITE);
-		}
+		const UINT64 currentFenceValue = rhi.fenceValues[rhi.frameIndex];
+		D3D(rhi.commandQueue->Signal(rhi.fence, currentFenceValue));
 
 		rhi.frameIndex = rhi.dxgiSwapChain3->GetCurrentBackBufferIndex();
+
+		// wait indefinitely to start rendering if needed
+		if(rhi.fence->GetCompletedValue() < rhi.fenceValues[rhi.frameIndex])
+		{
+			D3D(rhi.fence->SetEventOnCompletion(rhi.fenceValues[rhi.frameIndex], rhi.fenceEvent));
+			WaitForSingleObjectEx(rhi.fenceEvent, INFINITE, FALSE);
+		}
+
+		rhi.fenceValues[rhi.frameIndex] = currentFenceValue + 1;
+	}
+
+	static void WaitUntilDeviceIsIdle()
+	{
+		D3D(rhi.commandQueue->Signal(rhi.fence, rhi.fenceValues[rhi.frameIndex]));
+
+		D3D(rhi.fence->SetEventOnCompletion(rhi.fenceValues[rhi.frameIndex], rhi.fenceEvent));
+		WaitForSingleObjectEx(rhi.fenceEvent, INFINITE, FALSE);
+
+		rhi.fenceValues[rhi.frameIndex]++;
 	}
 
 	void Init()
 	{
 		Sys_V_Init();
 
-		HRESULT hr = S_OK;
+		/*
+		@TODO: use
+DXGI_CREATE_FACTORY_DEBUG
+D3D11_CREATE_DEVICE_DEBUG 
+		*/
 
 #if defined(_DEBUG)
 		if(SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&rhi.debug))))
@@ -177,14 +192,13 @@ namespace RHI
 		}
 #endif
 
-		hr = CreateDXGIFactory1(IID_PPV_ARGS(&rhi.dxgiFactory1));
-		Check(hr, "CreateDXGIFactory1");
+		D3D(CreateDXGIFactory1(IID_PPV_ARGS(&rhi.dxgiFactory1)));
 		IDXGIAdapter1* adapter;
 		UINT i = 0;
 		while(rhi.dxgiFactory1->EnumAdapters1(i++, &adapter) != DXGI_ERROR_NOT_FOUND)
 		{
 			DXGI_ADAPTER_DESC1 desc;
-			adapter->GetDesc1(&desc);
+			adapter->GetDesc1(&desc); // can fail
 			//desc.Description;
 			//__debugbreak();
 			// can check if device supports D3D12:
@@ -192,16 +206,14 @@ namespace RHI
 		}
 
 		// @TODO: first argument is the adapter, NULL is default
-		hr = D3D12CreateDevice(NULL, D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&rhi.device));
-		Check(hr, "D3D12CreateDevice");
+		D3D(D3D12CreateDevice(NULL, D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&rhi.device)));
 
 		D3D12_COMMAND_QUEUE_DESC commandQueueDesc = { 0 };
 		commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 		commandQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 		commandQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
 		commandQueueDesc.NodeMask = 0;
-		hr = rhi.device->CreateCommandQueue(&commandQueueDesc, IID_PPV_ARGS(&rhi.commandQueue));
-		Check(hr, "ID3D12Device::CreateCommandQueue");
+		D3D(rhi.device->CreateCommandQueue(&commandQueueDesc, IID_PPV_ARGS(&rhi.commandQueue)));
 
 		IDXGISwapChain* dxgiSwapChain;
 		DXGI_SWAP_CHAIN_DESC swapChainDesc = { 0 };
@@ -220,11 +232,9 @@ namespace RHI
 		swapChainDesc.SampleDesc.Quality = 0;
 		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 		swapChainDesc.Windowed = TRUE;
-		hr = rhi.dxgiFactory1->CreateSwapChain(rhi.commandQueue, &swapChainDesc, &dxgiSwapChain);
-		Check(hr, "IDXGIFactory::CreateSwapChain");
+		D3D(rhi.dxgiFactory1->CreateSwapChain(rhi.commandQueue, &swapChainDesc, &dxgiSwapChain));
 
-		hr = dxgiSwapChain->QueryInterface(IID_PPV_ARGS(&rhi.dxgiSwapChain3));
-		Check(hr, "IDXGISwapChain::QueryInterface");
+		D3D(dxgiSwapChain->QueryInterface(IID_PPV_ARGS(&rhi.dxgiSwapChain3)));
 		rhi.frameIndex = rhi.dxgiSwapChain3->GetCurrentBackBufferIndex();
 		COM_RELEASE(dxgiSwapChain);
 
@@ -234,8 +244,7 @@ namespace RHI
 		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 		rtvHeapDesc.NumDescriptors = FrameCount;
 		rtvHeapDesc.NodeMask = 0;
-		hr = rhi.device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&rtvHeap));
-		Check(hr, "ID3D12Device::CreateDescriptorHeap");
+		D3D(rhi.device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&rtvHeap)));
 
 		rhi.rtvIncSize = rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 		rhi.rtvHandle = rtvHeap->GetCPUDescriptorHandleForHeapStart();
@@ -243,23 +252,21 @@ namespace RHI
 		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandleIt = rhi.rtvHandle;
 		for(UINT f = 0; f < FrameCount; ++f)
 		{
-			hr = rhi.dxgiSwapChain3->GetBuffer(f, IID_PPV_ARGS(&rhi.renderTargets[f]));
-			Check(hr, "IDXGIFactory::GetBuffer");
+			D3D(rhi.dxgiSwapChain3->GetBuffer(f, IID_PPV_ARGS(&rhi.renderTargets[f])));
 			rhi.device->CreateRenderTargetView(rhi.renderTargets[f], NULL, rtvHandleIt);
 			rtvHandleIt.ptr += rhi.rtvIncSize;
+
+			D3D(rhi.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&rhi.commandAllocators[f])));
 		}
 
-		hr = rhi.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&rhi.commandAllocator));
-		Check(hr, "ID3D12Device::CreateCommandAllocator");
+		// get command list ready to use during init
+		D3D(rhi.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, rhi.commandAllocators[rhi.frameIndex], NULL, IID_PPV_ARGS(&rhi.commandList)));
+		D3D(rhi.commandList->Close());
 
-		hr = rhi.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, rhi.commandAllocator, NULL, IID_PPV_ARGS(&rhi.commandList));
-		Check(hr, "ID3D12Device::CreateCommandList");
-		hr = rhi.commandList->Close();
-		Check(hr, "ID3D12GraphicsCommandList::Close");
+		// queue some actual work...
 
-		hr = rhi.device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&rhi.fence));
-		Check(hr, "ID3D12Device::CreateFence");
-		rhi.fenceValue = 1;
+		D3D(rhi.device->CreateFence(rhi.fenceValues[rhi.frameIndex], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&rhi.fence)));
+		rhi.fenceValues[rhi.frameIndex]++;
 
 		rhi.fenceEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 		if(rhi.fenceEvent == NULL)
@@ -267,9 +274,7 @@ namespace RHI
 			Check(HRESULT_FROM_WIN32(GetLastError()), "CreateEvent");
 		}
 
-		// queue work...
-
-		WaitForPreviousFrame();
+		WaitUntilDeviceIsIdle();
 
 		glInfo.maxTextureSize = 2048;
 		glInfo.maxAnisotropy = 0;
@@ -283,7 +288,7 @@ namespace RHI
 	{
 		// @TODO: use the debug interface from DXGIGetDebugInterface to enumerate what's alive
 
-		WaitForPreviousFrame();
+		WaitUntilDeviceIsIdle();
 
 		CloseHandle(rhi.fenceEvent);
 
@@ -292,8 +297,8 @@ namespace RHI
 
 	void BeginFrame()
 	{
-		D3D(rhi.commandAllocator->Reset());
-		D3D(rhi.commandList->Reset(rhi.commandAllocator, NULL));
+		D3D(rhi.commandAllocators[rhi.frameIndex]->Reset());
+		D3D(rhi.commandList->Reset(rhi.commandAllocators[rhi.frameIndex], NULL));
 
 		D3D12_RESOURCE_BARRIER barrier = { 0 };
 		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -330,6 +335,6 @@ namespace RHI
 		// DXGI_PRESENT_ALLOW_TEARING
 		D3D(rhi.dxgiSwapChain3->Present(r_swapInterval->integer, 0));
 
-		WaitForPreviousFrame();
+		MoveToNextFrame();
 	}
 }
