@@ -24,7 +24,6 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 /*
 to do:
 - partial inits and shutdown
-- use ID3D12Object::SetName instead of SetPrivateData?
 - move the Dear ImGui rendering outside of the RHI
 - integrate D3D12MA
 - compiler switch for GPU validation
@@ -155,19 +154,11 @@ static qbool Check(HRESULT hr, const char* function)
 	return qfalse;
 }
 
-static qbool CheckAndName(HRESULT hr, const char* function, ID3D12DeviceChild* resource, const char* resourceName)
+static void SetDebugName(ID3D12DeviceChild* resource, const char* resourceName)
 {
-	if(SUCCEEDED(hr))
-	{
-		resource->SetPrivateData(WKPDID_D3DDebugObjectName, strlen(resourceName), resourceName);
-		return qtrue;
-	}
-
-	if(1) // @TODO: fatal error mode always on for now
-	{
-		ri.Error(ERR_FATAL, "'%s' failed to create '%s' with code 0x%08X (%s)\n", function, resourceName, (unsigned int)hr, GetSystemErrorString(hr));
-	}
-	return qfalse;
+	// ID3D12Object::SetName is a Unicode wrapper for
+	// ID3D12Object::SetPrivateData with WKPDID_D3DDebugObjectNameW
+	resource->SetPrivateData(WKPDID_D3DDebugObjectName, strlen(resourceName), resourceName);
 }
 
 static const char* GetDeviceRemovedReasonString(HRESULT reason)
@@ -298,26 +289,28 @@ namespace RHI
 		This interface is supported on Windows 10 April 2018 Update (17134) or later.
 		*/
 #if 0
-		IDXGIAdapter1* adapter;
-		UINT i = 0;
-		while(rhi.factory->EnumAdapters1(i++, &adapter) != DXGI_ERROR_NOT_FOUND)
 		{
-			DXGI_ADAPTER_DESC1 desc;
-			if(FAILED(adapter->GetDesc1(&desc)))
+			IDXGIAdapter1* adapter;
+			UINT i = 0;
+			while(rhi.factory->EnumAdapters1(i++, &adapter) != DXGI_ERROR_NOT_FOUND)
 			{
-				continue;
+				DXGI_ADAPTER_DESC1 desc;
+				if(FAILED(adapter->GetDesc1(&desc)))
+				{
+					continue;
+				}
+				if(desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+				{
+					continue;
+				}
+				if(FAILED(D3D12CreateDevice(adapter, featureLevel, __uuidof(ID3D12Device), NULL)))
+				{
+					continue;
+				}
+				// we have a valid candidate, do something
+				//desc.Description;
+				//__debugbreak();
 			}
-			if(desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
-			{
-				continue;
-			}
-			if(FAILED(D3D12CreateDevice(adapter, featureLevel, __uuidof(ID3D12Device), NULL)))
-			{
-				continue;
-			}
-			// we have a valid candidate, do something
-			//desc.Description;
-			//__debugbreak();
 		}
 #endif
 
@@ -345,60 +338,74 @@ namespace RHI
 		}
 #endif
 
-		D3D12_COMMAND_QUEUE_DESC commandQueueDesc = { 0 };
-		commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-		commandQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-		commandQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-		commandQueueDesc.NodeMask = 0;
-		D3D(rhi.device->CreateCommandQueue(&commandQueueDesc, IID_PPV_ARGS(&rhi.commandQueue)));
-
-		IDXGISwapChain* dxgiSwapChain;
-		DXGI_SWAP_CHAIN_DESC swapChainDesc = { 0 };
-		swapChainDesc.BufferCount = FrameCount;
-		swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		swapChainDesc.BufferDesc.Width = glInfo.winWidth;
-		swapChainDesc.BufferDesc.Height = glInfo.winHeight;
-		swapChainDesc.BufferDesc.RefreshRate.Numerator = 0;
-		swapChainDesc.BufferDesc.RefreshRate.Denominator = 1;
-		swapChainDesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
-		swapChainDesc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
-		swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-		swapChainDesc.Flags = 0; // DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING
-		swapChainDesc.OutputWindow = GetActiveWindow();
-		swapChainDesc.SampleDesc.Count = 1;
-		swapChainDesc.SampleDesc.Quality = 0;
-		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-		swapChainDesc.Windowed = TRUE;
-		D3D(rhi.factory->CreateSwapChain(rhi.commandQueue, &swapChainDesc, &dxgiSwapChain));
-
-		D3D(dxgiSwapChain->QueryInterface(IID_PPV_ARGS(&rhi.swapChain)));
-		rhi.frameIndex = rhi.swapChain->GetCurrentBackBufferIndex();
-		COM_RELEASE(dxgiSwapChain);
-
-		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = { 0 };
-		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-		rtvHeapDesc.NumDescriptors = FrameCount;
-		rtvHeapDesc.NodeMask = 0;
-		D3D(rhi.device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&rhi.rtvHeap)));
-
-		rhi.rtvIncSize = rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-		rhi.rtvHandle = rhi.rtvHeap->GetCPUDescriptorHandleForHeapStart();
-
-		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandleIt = rhi.rtvHandle;
-		for(UINT f = 0; f < FrameCount; ++f)
 		{
-			D3D(rhi.swapChain->GetBuffer(f, IID_PPV_ARGS(&rhi.renderTargets[f])));
-			rhi.device->CreateRenderTargetView(rhi.renderTargets[f], NULL, rtvHandleIt);
-			rtvHandleIt.ptr += rhi.rtvIncSize;
+			D3D12_COMMAND_QUEUE_DESC commandQueueDesc = { 0 };
+			commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+			commandQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+			commandQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+			commandQueueDesc.NodeMask = 0;
+			D3D(rhi.device->CreateCommandQueue(&commandQueueDesc, IID_PPV_ARGS(&rhi.commandQueue)));
+			SetDebugName(rhi.commandQueue, "Main Command Queue");
+		}
 
-			D3D(rhi.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&rhi.commandAllocators[f])));
+		{
+			IDXGISwapChain* dxgiSwapChain;
+			DXGI_SWAP_CHAIN_DESC swapChainDesc = { 0 };
+			swapChainDesc.BufferCount = FrameCount;
+			swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+			swapChainDesc.BufferDesc.Width = glInfo.winWidth;
+			swapChainDesc.BufferDesc.Height = glInfo.winHeight;
+			swapChainDesc.BufferDesc.RefreshRate.Numerator = 0;
+			swapChainDesc.BufferDesc.RefreshRate.Denominator = 1;
+			swapChainDesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
+			swapChainDesc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
+			swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+			swapChainDesc.Flags = 0; // DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING
+			swapChainDesc.OutputWindow = GetActiveWindow();
+			swapChainDesc.SampleDesc.Count = 1;
+			swapChainDesc.SampleDesc.Quality = 0;
+			swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+			swapChainDesc.Windowed = TRUE;
+			D3D(rhi.factory->CreateSwapChain(rhi.commandQueue, &swapChainDesc, &dxgiSwapChain));
+
+			D3D(dxgiSwapChain->QueryInterface(IID_PPV_ARGS(&rhi.swapChain)));
+			rhi.frameIndex = rhi.swapChain->GetCurrentBackBufferIndex();
+			COM_RELEASE(dxgiSwapChain);
+		}
+
+		{
+			D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = { 0 };
+			rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+			rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+			rtvHeapDesc.NumDescriptors = FrameCount;
+			rtvHeapDesc.NodeMask = 0;
+			D3D(rhi.device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&rhi.rtvHeap)));
+			SetDebugName(rhi.rtvHeap, "Swap Chain RTV Descriptor Heap");
+
+			rhi.rtvIncSize = rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+			rhi.rtvHandle = rhi.rtvHeap->GetCPUDescriptorHandleForHeapStart();
+		}
+
+		{
+			D3D12_CPU_DESCRIPTOR_HANDLE rtvHandleIt = rhi.rtvHandle;
+			for(UINT f = 0; f < FrameCount; ++f)
+			{
+				D3D(rhi.swapChain->GetBuffer(f, IID_PPV_ARGS(&rhi.renderTargets[f])));
+				rhi.device->CreateRenderTargetView(rhi.renderTargets[f], NULL, rtvHandleIt);
+				SetDebugName(rhi.renderTargets[f], va("Swap Chain RTV #%d", f + 1));
+				rtvHandleIt.ptr += rhi.rtvIncSize;
+
+				D3D(rhi.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&rhi.commandAllocators[f])));
+				SetDebugName(rhi.commandAllocators[f], va("Command Allocator #%d", f + 1));
+			}
 		}
 
 		// get command list ready to use during init
 		D3D(rhi.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, rhi.commandAllocators[rhi.frameIndex], NULL, IID_PPV_ARGS(&rhi.commandList)));
+		SetDebugName(rhi.commandList, "Command List");
 
 		D3D(rhi.device->CreateFence(rhi.fenceValues[rhi.frameIndex], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&rhi.fence)));
+		SetDebugName(rhi.fence, "Command Queue Fence");
 		rhi.fenceValues[rhi.frameIndex]++;
 
 		rhi.fenceEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
@@ -414,6 +421,7 @@ namespace RHI
 			heapDesc.NumDescriptors = MAX_DRAWIMAGES * 2;
 			heapDesc.NodeMask = 0;
 			D3D(rhi.device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&rhi.srvHeap)));
+			SetDebugName(rhi.srvHeap, "CBV SRV UAV Descriptor Heap");
 		}
 
 		// queue some actual work...
