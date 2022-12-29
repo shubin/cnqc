@@ -1639,7 +1639,7 @@ extern int					r_delayedScreenshotFrame;
 namespace RHI
 {
 	void Init();
-	void ShutDown();
+	void ShutDown(qbool destroyWindow);
 
 	void BeginFrame();
 	void EndFrame();

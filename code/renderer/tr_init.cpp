@@ -563,7 +563,7 @@ static void RE_Shutdown( qbool destroyWindow )
 
 	if ( tr.registered ) {
 		ri.Cmd_UnregisterModule();
-		//@TODO: gal.ShutDown( destroyWindow );
+		RHI::ShutDown( destroyWindow );
 	}
 
 	// shut down platform-specific video stuff

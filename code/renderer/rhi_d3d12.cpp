@@ -52,6 +52,7 @@ struct RHIPrivate
 	ID3D12Device* device;
 	ID3D12CommandQueue* commandQueue;
 	IDXGISwapChain3* swapChain;
+	ID3D12DescriptorHeap* rtvHeap;
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle;
 	UINT rtvIncSize;
 	ID3D12Resource* renderTargets[FrameCount];
@@ -205,7 +206,7 @@ namespace RHI
 		HRESULT deviceRemovedReason = S_OK;
 		if(hr == DXGI_ERROR_DEVICE_REMOVED || hr == D3DDDIERR_DEVICEREMOVED)
 		{
-			deviceRemovedReason = d3ds.device->GetDeviceRemovedReason();
+			deviceRemovedReason = rhi.device->GetDeviceRemovedReason();
 			if(deviceRemovedReason == DXGI_ERROR_DEVICE_RESET)
 			{
 				presentError = PE_DEVICE_RESET;
@@ -346,16 +347,15 @@ namespace RHI
 		rhi.frameIndex = rhi.swapChain->GetCurrentBackBufferIndex();
 		COM_RELEASE(dxgiSwapChain);
 
-		ID3D12DescriptorHeap* rtvHeap;
 		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = { 0 };
 		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 		rtvHeapDesc.NumDescriptors = FrameCount;
 		rtvHeapDesc.NodeMask = 0;
-		D3D(rhi.device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&rtvHeap)));
+		D3D(rhi.device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&rhi.rtvHeap)));
 
 		rhi.rtvIncSize = rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-		rhi.rtvHandle = rtvHeap->GetCPUDescriptorHandleForHeapStart();
+		rhi.rtvHandle = rhi.rtvHeap->GetCPUDescriptorHandleForHeapStart();
 
 		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandleIt = rhi.rtvHandle;
 		for(UINT f = 0; f < FrameCount; ++f)
@@ -392,15 +392,38 @@ namespace RHI
 		glInfo.msaaSampleCount = 1;
 	}
 
-	void ShutDown()
+	void ShutDown(qbool destroyWindow)
 	{
-		// @TODO: use the debug interface from DXGIGetDebugInterface to enumerate what's alive
+		// @TODO: account for destroyWindow
 
 		WaitUntilDeviceIsIdle();
 
 		CloseHandle(rhi.fenceEvent);
 
-		// @TODO: release all the COM resources...
+		COM_RELEASE(rhi.fence);
+		COM_RELEASE(rhi.commandList);
+		COM_RELEASE_ARRAY(rhi.commandAllocators);
+		COM_RELEASE_ARRAY(rhi.renderTargets);
+		COM_RELEASE(rhi.rtvHeap);
+		COM_RELEASE(rhi.swapChain);
+		COM_RELEASE(rhi.commandQueue);
+		COM_RELEASE(rhi.infoQueue);
+		COM_RELEASE(rhi.device);
+		COM_RELEASE(rhi.factory);
+		COM_RELEASE(rhi.dxgiInfoQueue);
+		COM_RELEASE(rhi.debug);
+		
+#if defined(_DEBUG)
+		IDXGIDebug1* debug = NULL;
+		if(SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&debug))))
+		{
+			// DXGI_DEBUG_RLO_ALL is DXGI_DEBUG_RLO_SUMMARY | DXGI_DEBUG_RLO_DETAIL | DXGI_DEBUG_RLO_IGNORE_INTERNAL
+			OutputDebugStringA("CNQ3: calling ReportLiveObjects\n");
+			const HRESULT hr = debug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL);
+			OutputDebugStringA(va("CNQ3: ReportLiveObjects returned 0x%08X (%s)\n", (unsigned int)hr, GetSystemErrorString(hr)));
+			debug->Release();
+		}
+#endif
 	}
 
 	void BeginFrame()
