@@ -23,7 +23,7 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 
 /*
 to do:
-- partial inits and shutdown
+* partial inits and shutdown
 - move the Dear ImGui rendering outside of the RHI
 - integrate D3D12MA
 - compiler switch for GPU validation

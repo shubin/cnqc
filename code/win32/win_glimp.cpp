@@ -141,9 +141,8 @@ static qbool GLW_CreateWindow()
 		//ri.Printf( PRINT_DEVELOPER, "...window already present, CreateWindowEx skipped\n" );
 
 		// @TODO: unify this crap
-		// @TODO: full-screen to windowed has a delay to show the title bar
 
-		const LONG oldStyle = GetWindowLongA(g_wv.hWnd, GWL_STYLE);
+		const LONG_PTR oldStyle = GetWindowLongPtrA(g_wv.hWnd, GWL_STYLE);
 		const qbool fullScreen = (oldStyle & WS_POPUP) != 0;
 		RECT r;
 		GetClientRect(g_wv.hWnd, &r);
@@ -151,8 +150,8 @@ static qbool GLW_CreateWindow()
 			r.bottom - r.top != glInfo.winHeight ||
 			fullScreen != glInfo.winFullscreen)
 		{
-			int style = WS_VISIBLE | WS_CLIPCHILDREN;
-			int exstyle = 0;
+			LONG_PTR style = WS_VISIBLE | WS_CLIPCHILDREN;
+			LONG_PTR exstyle = 0;
 
 			if(glInfo.winFullscreen)
 			{
@@ -187,13 +186,10 @@ static qbool GLW_CreateWindow()
 
 			const int x = monRect.left + dx;
 			const int y = monRect.top + dy;
-			
-			SetWindowPos(g_wv.hWnd, 0, x, y, w, h, SWP_NOREDRAW | SWP_NOZORDER);
-			SetWindowLongA(g_wv.hWnd, GWL_STYLE, style);
-			SetWindowLongA(g_wv.hWnd, GWL_EXSTYLE, exstyle);
-			RedrawWindow(g_wv.hWnd, 0, 0, RDW_INVALIDATE | RDW_FRAME);
-			//ShowWindow(g_wv.hWnd, SW_SHOW);
-			//UpdateWindow(g_wv.hWnd);
+
+			SetWindowLongPtrA(g_wv.hWnd, GWL_STYLE, style);
+			SetWindowLongPtrA(g_wv.hWnd, GWL_EXSTYLE, exstyle);
+			MoveWindow(g_wv.hWnd, x, y, w, h, TRUE);
 		}
 	}
 
