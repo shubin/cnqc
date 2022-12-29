@@ -138,7 +138,63 @@ static qbool GLW_CreateWindow()
 	}
 	else
 	{
-		ri.Printf( PRINT_DEVELOPER, "...window already present, CreateWindowEx skipped\n" );
+		//ri.Printf( PRINT_DEVELOPER, "...window already present, CreateWindowEx skipped\n" );
+
+		// @TODO: unify this crap
+		// @TODO: full-screen to windowed has a delay to show the title bar
+
+		const LONG oldStyle = GetWindowLongA(g_wv.hWnd, GWL_STYLE);
+		const qbool fullScreen = (oldStyle & WS_POPUP) != 0;
+		RECT r;
+		GetClientRect(g_wv.hWnd, &r);
+		if(r.right - r.left != glInfo.winWidth ||
+			r.bottom - r.top != glInfo.winHeight ||
+			fullScreen != glInfo.winFullscreen)
+		{
+			int style = WS_VISIBLE | WS_CLIPCHILDREN;
+			int exstyle = 0;
+
+			if(glInfo.winFullscreen)
+			{
+				style |= WS_POPUP;
+				exstyle |= WS_EX_TOPMOST;
+			}
+			else
+			{
+				style |= WS_OVERLAPPED | WS_BORDER | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+			}
+
+			r.left = 0;
+			r.top = 0;
+			r.right = glInfo.winWidth;
+			r.bottom = glInfo.winHeight;
+
+			const int w = r.right - r.left;
+			const int h = r.bottom - r.top;
+
+			const RECT& monRect = g_wv.monitorRects[g_wv.monitor];
+
+			int dx = 0;
+			int dy = 0;
+
+			if(!glInfo.winFullscreen)
+			{
+				dx = ri.Cvar_Get("vid_xpos", "0", 0)->integer;
+				dy = ri.Cvar_Get("vid_ypos", "0", 0)->integer;
+				dx = Com_ClampInt(0, max(0, monRect.right - monRect.left - w), dx);
+				dy = Com_ClampInt(0, max(0, monRect.bottom - monRect.top - h), dy);
+			}
+
+			const int x = monRect.left + dx;
+			const int y = monRect.top + dy;
+			
+			SetWindowPos(g_wv.hWnd, 0, x, y, w, h, SWP_NOREDRAW | SWP_NOZORDER);
+			SetWindowLongA(g_wv.hWnd, GWL_STYLE, style);
+			SetWindowLongA(g_wv.hWnd, GWL_EXSTYLE, exstyle);
+			RedrawWindow(g_wv.hWnd, 0, 0, RDW_INVALIDATE | RDW_FRAME);
+			//ShowWindow(g_wv.hWnd, SW_SHOW);
+			//UpdateWindow(g_wv.hWnd);
+		}
 	}
 
 	SetForegroundWindow( g_wv.hWnd );
