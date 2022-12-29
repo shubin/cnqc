@@ -263,8 +263,6 @@ D3D11_CREATE_DEVICE_DEBUG
 		D3D(rhi.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, rhi.commandAllocators[rhi.frameIndex], NULL, IID_PPV_ARGS(&rhi.commandList)));
 		D3D(rhi.commandList->Close());
 
-		// queue some actual work...
-
 		D3D(rhi.device->CreateFence(rhi.fenceValues[rhi.frameIndex], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&rhi.fence)));
 		rhi.fenceValues[rhi.frameIndex]++;
 
@@ -273,6 +271,8 @@ D3D11_CREATE_DEVICE_DEBUG
 		{
 			Check(HRESULT_FROM_WIN32(GetLastError()), "CreateEvent");
 		}
+
+		// queue some actual work...
 
 		WaitUntilDeviceIsIdle();
 
