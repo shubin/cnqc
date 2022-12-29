@@ -75,6 +75,7 @@ struct RHIPrivate
 	ID3D12CommandQueue* commandQueue;
 	IDXGISwapChain3* swapChain;
 	ID3D12DescriptorHeap* rtvHeap;
+	ID3D12DescriptorHeap* srvHeap; // SRV + UAV + CBV
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle;
 	UINT rtvIncSize;
 	ID3D12Resource* renderTargets[FrameCount];
@@ -396,7 +397,6 @@ namespace RHI
 
 		// get command list ready to use during init
 		D3D(rhi.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, rhi.commandAllocators[rhi.frameIndex], NULL, IID_PPV_ARGS(&rhi.commandList)));
-		D3D(rhi.commandList->Close());
 
 		D3D(rhi.device->CreateFence(rhi.fenceValues[rhi.frameIndex], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&rhi.fence)));
 		rhi.fenceValues[rhi.frameIndex]++;
@@ -407,7 +407,18 @@ namespace RHI
 			Check(HRESULT_FROM_WIN32(GetLastError()), "CreateEvent");
 		}
 
+		{
+			D3D12_DESCRIPTOR_HEAP_DESC heapDesc = { 0 };
+			heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+			heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+			heapDesc.NumDescriptors = MAX_DRAWIMAGES * 2;
+			heapDesc.NodeMask = 0;
+			D3D(rhi.device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&rhi.srvHeap)));
+		}
+
 		// queue some actual work...
+
+		D3D(rhi.commandList->Close());
 
 		WaitUntilDeviceIsIdle();
 
@@ -418,7 +429,9 @@ namespace RHI
 		glInfo.alphaToCoverageSupport = qfalse;
 		glInfo.msaaSampleCount = 1;
 
-		if(!ImGui_ImplDX12_Init(rhi.device, FrameCount, DXGI_FORMAT_R8G8B8A8_UNORM, rhi.srvHeap, rhi.fontSrvCpu, rhi.fontSrvGPU))
+		if(!ImGui_ImplDX12_Init(rhi.device, FrameCount, DXGI_FORMAT_R8G8B8A8_UNORM, rhi.srvHeap,
+			rhi.srvHeap->GetCPUDescriptorHandleForHeapStart(),
+			rhi.srvHeap->GetGPUDescriptorHandleForHeapStart()))
 		{
 			ri.Error(ERR_FATAL, "Failed to initialize graphics objects for Dear ImGUI\n");
 		}
@@ -438,6 +451,7 @@ namespace RHI
 		COM_RELEASE(rhi.commandList);
 		COM_RELEASE_ARRAY(rhi.commandAllocators);
 		COM_RELEASE_ARRAY(rhi.renderTargets);
+		COM_RELEASE(rhi.srvHeap);
 		COM_RELEASE(rhi.rtvHeap);
 		COM_RELEASE(rhi.swapChain);
 		COM_RELEASE(rhi.commandQueue);
@@ -477,6 +491,8 @@ namespace RHI
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		rhi.commandList->ResourceBarrier(1, &barrier);
 
+		rhi.commandList->SetDescriptorHeaps(1, &rhi.srvHeap);
+
 		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = { 0 };
 		rtvHandle.ptr = rhi.rtvHandle.ptr + rhi.frameIndex * rhi.rtvIncSize;
 		rhi.commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, NULL);
@@ -488,8 +504,14 @@ namespace RHI
 	{
 		if(r_debugUI->integer)
 		{
+			ImGuiIO& io = ImGui::GetIO();
+			io.DisplaySize.x = glConfig.vidWidth;
+			io.DisplaySize.y = glConfig.vidHeight;
 			ImGui_ImplDX12_NewFrame();
+			ImGui::NewFrame();
 			ImGui::ShowDemoWindow();
+			ImGui::EndFrame();
+			ImGui::Render();
 			ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), rhi.commandList);
 		}
 
