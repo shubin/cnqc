@@ -449,7 +449,12 @@ void IN_Activate( qbool active )
 
 static qbool IN_ShouldBeActive()
 {
+	// @TODO: move most of this out so shared client code handles this once
+
 	if ( in_noGrab && in_noGrab->integer )
+		return qfalse;
+
+	if ( Cvar_VariableIntegerValue("r_debugInput") )
 		return qfalse;
 
 	const qbool isConsoleDown = (cls.keyCatchers & KEYCATCH_CONSOLE) != 0;
