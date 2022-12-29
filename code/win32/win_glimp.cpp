@@ -141,15 +141,6 @@ static qbool GLW_CreateWindow()
 		ri.Printf( PRINT_DEVELOPER, "...window already present, CreateWindowEx skipped\n" );
 	}
 
-	// @TODO:
-	/*if (WIN_UsingOpenGL() && !GLW_InitDriver())
-	{
-		ShowWindow( g_wv.hWnd, SW_HIDE );
-		DestroyWindow( g_wv.hWnd );
-		g_wv.hWnd = NULL;
-		return qfalse;
-	}*/
-
 	SetForegroundWindow( g_wv.hWnd );
 	SetFocus( g_wv.hWnd );
 
