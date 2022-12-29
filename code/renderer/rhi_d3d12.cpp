@@ -214,7 +214,7 @@ namespace RHI
 		swapChainDesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
 		swapChainDesc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
 		swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-		swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+		swapChainDesc.Flags = 0; // DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING
 		swapChainDesc.OutputWindow = GetActiveWindow();
 		swapChainDesc.SampleDesc.Count = 1;
 		swapChainDesc.SampleDesc.Quality = 0;
@@ -307,9 +307,8 @@ namespace RHI
 		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = { 0 };
 		rtvHandle.ptr = rhi.rtvHandle.ptr + rhi.frameIndex * rhi.rtvIncSize;
 		rhi.commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, NULL);
-
-		const FLOAT clearColor[4] = {0.0f, 1.0f, 0.0f, 1.0f};
-		rhi.commandList->ClearRenderTargetView(rhi.rtvHandle, clearColor, 0, NULL);
+		const FLOAT clearColor[4] = { 0.0f, 1.0f, 0.0f, 1.0f };
+		rhi.commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, NULL);
 	}
 
 	void EndFrame()
@@ -328,7 +327,8 @@ namespace RHI
 		ID3D12CommandList* commandListArray[] = { rhi.commandList };
 		rhi.commandQueue->ExecuteCommandLists(ARRAY_LEN(commandListArray), commandListArray);
 
-		D3D(rhi.dxgiSwapChain3->Present(r_swapInterval->integer, DXGI_PRESENT_ALLOW_TEARING));
+		// DXGI_PRESENT_ALLOW_TEARING
+		D3D(rhi.dxgiSwapChain3->Present(r_swapInterval->integer, 0));
 
 		WaitForPreviousFrame();
 	}
