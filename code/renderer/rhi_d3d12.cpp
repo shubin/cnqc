@@ -25,6 +25,7 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 #include <Windows.h>
 #include <d3d12.h>
 #include <dxgi1_4.h>
+#include <dxgidebug.h>
 
 
 #if defined(_DEBUG) // @TODO: Q3 macro to specify D3D12SDKVersion
@@ -42,6 +43,7 @@ struct RHIPrivate
 {
 	ID3D12Debug* debug; // can be NULL
 	ID3D12InfoQueue* infoQueue; // can be NULL
+	IDXGIInfoQueue* dxgiInfoQueue; // can be NULL
 #if defined(_DEBUG)
 	IDXGIFactory2* factory;
 #else
@@ -189,10 +191,18 @@ namespace RHI
 			// make sure your D3D12SDKVersion and D3D12SDKPath are valid!
 			rhi.debug->EnableDebugLayer();
 		}
+
+		UINT dxgiFactoryFlags = 0;
+		if(SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&rhi.dxgiInfoQueue))))
+		{
+			dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
+			rhi.dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, TRUE);
+			rhi.dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, TRUE);
+		}
 #endif
 
 #if defined(_DEBUG)
-		D3D(CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(&rhi.factory)));
+		D3D(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&rhi.factory)));
 #else
 		D3D(CreateDXGIFactory1(IID_PPV_ARGS(&rhi.factory)));
 #endif
