@@ -556,15 +556,7 @@ void R_Init()
 
 static void RE_Shutdown( qbool destroyWindow )
 {
-	ri.Printf( PRINT_DEVELOPER, "RE_Shutdown( %i )", destroyWindow );
-
-	// This will also force the creation of a new context when switching
-	// between GL2 and GL3, which is what we want because
-	// the implementations have their own resources we can't keep around.
-	if ( !destroyWindow && r_backend->latchedString )
-		destroyWindow = qtrue;
-
-	ri.Printf( PRINT_DEVELOPER, " -> %i\n", destroyWindow );
+	ri.Printf( PRINT_DEVELOPER, "RE_Shutdown( %i )\n", destroyWindow );
 
 	if ( tr.registered ) {
 		ri.Cmd_UnregisterModule();

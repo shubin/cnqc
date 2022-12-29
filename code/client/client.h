@@ -278,6 +278,9 @@ typedef struct {
 	qbool	uiStarted;
 	qbool	cgameStarted;
 
+	// a full client shut down has been initiated
+	qbool	fullClientShutDown;
+
 	// extensions VM calls indices
 	// 0 when not available
 	int			cgvmCalls[CGVM_COUNT];

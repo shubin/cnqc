@@ -476,6 +476,8 @@ CL_ShutdownAll
 */
 void CL_ShutdownAll(void)
 {
+	cls.fullClientShutDown = qtrue;
+
 	// clear sounds
 	S_DisableSounds();
 	// shutdown CGame
@@ -485,7 +487,7 @@ void CL_ShutdownAll(void)
 
 	// shutdown the renderer
 	if ( re.Shutdown ) {
-		re.Shutdown( qfalse );		// don't destroy window or context
+		re.Shutdown( qtrue );
 	}
 
 	cls.uiStarted = qfalse;
@@ -1795,7 +1797,7 @@ static void CL_ShutdownRef()
 	if ( !re.Shutdown ) {
 		return;
 	}
-	re.Shutdown( qtrue );
+	re.Shutdown( cls.fullClientShutDown );
 	Com_Memset( &re, 0, sizeof( re ) );
 }
 
@@ -1876,6 +1878,8 @@ doesn't know what graphics to reload
 */
 static void CL_Vid_Restart_f()
 {
+	cls.fullClientShutDown = qfalse;
+
 	// Settings may have changed so stop recording now
 	CL_CloseAVI();
 
@@ -2258,6 +2262,8 @@ void CL_Init()
 {
 	//QSUBSYSTEM_INIT_START( "Client" );
 
+	cls.fullClientShutDown = qfalse;
+
 	CL_ConInit();
 
 	CL_ClearState();
@@ -2301,6 +2307,8 @@ void CL_Shutdown()
 		return;
 	}
 	recursive = qtrue;
+
+	cls.fullClientShutDown = qtrue;
 
 	CL_Disconnect( qtrue );
 

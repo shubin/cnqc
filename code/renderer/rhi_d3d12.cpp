@@ -250,6 +250,13 @@ namespace RHI
 	{
 		Sys_V_Init();
 
+		if(rhi.device != NULL)
+		{
+			return;
+		}
+
+		memset(&rhi, 0, sizeof(rhi));
+
 #if defined(_DEBUG)
 		if(SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&rhi.debug))))
 		{
@@ -447,7 +454,11 @@ namespace RHI
 
 	void ShutDown(qbool destroyWindow)
 	{
-		// @TODO: account for destroyWindow
+		if(!destroyWindow)
+		{
+			WaitUntilDeviceIsIdle();
+			return;
+		}
 
 		ImGui_ImplDX12_Shutdown();
 

@@ -1087,6 +1087,7 @@ void CL_KeyEvent( int key, qbool down, unsigned time )
 #endif
 
 #if defined(_DEBUG)
+	// @TODO: CVars to remap the keys?
 	if ( down && key == K_F1 ) {
 		if ( Cvar_VariableIntegerValue( "r_debugUI" ) ) {
 			Cvar_Set( "r_debugUI", "0" );
@@ -1103,6 +1104,10 @@ void CL_KeyEvent( int key, qbool down, unsigned time )
 		} else {
 			Cvar_Set( "r_debugInput", "1" );
 		}
+		return;
+	}
+	if ( down && key == K_F3 ) {
+		Cbuf_AddText( "vid_restart\n" );
 		return;
 	}
 #endif
