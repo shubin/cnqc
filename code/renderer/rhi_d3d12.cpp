@@ -46,6 +46,8 @@ to do:
 #include <d3d12.h>
 #include <dxgi1_4.h>
 #include <dxgidebug.h>
+// @TODO: move out of the RHI...
+#include "../imgui/imgui_impl_dx12.h"
 
 
 #if defined(_DEBUG) // @TODO: Q3 macro to specify D3D12SDKVersion
@@ -415,11 +417,18 @@ namespace RHI
 		glInfo.mipGenSupport = qtrue;
 		glInfo.alphaToCoverageSupport = qfalse;
 		glInfo.msaaSampleCount = 1;
+
+		if(!ImGui_ImplDX12_Init(rhi.device, FrameCount, DXGI_FORMAT_R8G8B8A8_UNORM, rhi.srvHeap, rhi.fontSrvCpu, rhi.fontSrvGPU))
+		{
+			ri.Error(ERR_FATAL, "Failed to initialize graphics objects for Dear ImGUI\n");
+		}
 	}
 
 	void ShutDown(qbool destroyWindow)
 	{
 		// @TODO: account for destroyWindow
+
+		ImGui_ImplDX12_Shutdown();
 
 		WaitUntilDeviceIsIdle();
 
@@ -477,10 +486,11 @@ namespace RHI
 
 	void EndFrame()
 	{
-		// @TODO: move out of the RHI...
 		if(r_debugUI->integer)
 		{
-			
+			ImGui_ImplDX12_NewFrame();
+			ImGui::ShowDemoWindow();
+			ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), rhi.commandList);
 		}
 
 		D3D12_RESOURCE_BARRIER barrier = { 0 };
