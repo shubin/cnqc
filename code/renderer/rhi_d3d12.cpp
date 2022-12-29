@@ -25,7 +25,7 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 to do:
 - partial inits and shutdown
 - use ID3D12Object::SetName instead of SetPrivateData?
-- integrate Dear ImGui
+- move the Dear ImGui rendering outside of the RHI
 - integrate D3D12MA
 - compiler switch for GPU validation
 - D3DCOMPILE_DEBUG for shaders
