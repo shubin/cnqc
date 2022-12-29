@@ -602,7 +602,7 @@ static const void* RB_BeginFrame( const void* data )
 	const beginFrameCommand_t* cmd = (const beginFrameCommand_t*)data;
 
 	R_SetColorMappings();
-	//@TODO: gal.BeginFrame();
+	RHI::BeginFrame();
 
 	return (const void*)(cmd + 1);
 }
@@ -622,7 +622,7 @@ static const void* RB_SwapBuffers( const void* data )
 	backEnd.pc3D[RB_USEC] = (int)( endTime - startTime );
 
 	const swapBuffersCommand_t* cmd = (const swapBuffersCommand_t*)data;
-	//@TODO: gal.EndFrame();
+	RHI::EndFrame();
 	Sys_V_EndFrame();
 	const int64_t swapTime = ri.Microseconds();
 	backEnd.pc3D[RB_USEC_END] = (int)( swapTime - endTime );

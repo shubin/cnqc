@@ -314,11 +314,6 @@ static qbool GLW_SetMode()
 
 void Sys_V_EndFrame()
 {
-	if ( r_swapInterval->modified ) {
-		r_swapInterval->modified = qfalse;
-		// @TODO: do whatever needs to be done with r_swapInterval->integer
-	}
-	// @TODO: present
 }
 
 

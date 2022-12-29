@@ -1640,6 +1640,9 @@ namespace RHI
 {
 	void Init();
 	void ShutDown();
+
+	void BeginFrame();
+	void EndFrame();
 }
 
 
