@@ -21,6 +21,17 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 // Direct3D 12 Rendering Hardware Interface
 
 
+/*
+to do:
+- partial inits and shutdown
+- use ID3D12Object::SetName instead of SetPrivateData?
+- integrate Dear ImGui
+- integrate D3D12MA
+- compiler switch for GPU validation
+- D3DCOMPILE_DEBUG for shaders
+*/
+
+
 #include "tr_local.h"
 #include <Windows.h>
 #include <d3d12.h>
@@ -261,6 +272,11 @@ namespace RHI
 		D3D(CreateDXGIFactory1(IID_PPV_ARGS(&rhi.factory)));
 #endif
 
+		// D3D_FEATURE_LEVEL_12_0 is the minimum to ensure at least Resource Binding Tier 2:
+		// - unlimited SRVs
+		// - 14 CBVs
+		// - 64 UAVs
+		// - 2048 samplers
 		const D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_12_0;
 
 		// @TODO: enumerate adapters with the right feature levels and pick the right one
@@ -385,7 +401,7 @@ namespace RHI
 		WaitUntilDeviceIsIdle();
 
 		glInfo.maxTextureSize = 2048;
-		glInfo.maxAnisotropy = 0;
+		glInfo.maxAnisotropy = 16;
 		glInfo.depthFadeSupport = qfalse;
 		glInfo.mipGenSupport = qtrue;
 		glInfo.alphaToCoverageSupport = qfalse;
