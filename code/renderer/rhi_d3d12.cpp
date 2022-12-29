@@ -41,10 +41,14 @@ static const UINT FrameCount = 2;
 struct RHIPrivate
 {
 	ID3D12Debug* debug; // can be NULL
-	IDXGIFactory1* dxgiFactory1;
+#if defined(_DEBUG)
+	IDXGIFactory2* factory;
+#else
+	IDXGIFactory1* factory;
+#endif
 	ID3D12Device* device;
 	ID3D12CommandQueue* commandQueue;
-	IDXGISwapChain3* dxgiSwapChain3;
+	IDXGISwapChain3* swapChain;
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle;
 	UINT rtvIncSize;
 	ID3D12Resource* renderTargets[FrameCount];
@@ -149,7 +153,7 @@ namespace RHI
 		const UINT64 currentFenceValue = rhi.fenceValues[rhi.frameIndex];
 		D3D(rhi.commandQueue->Signal(rhi.fence, currentFenceValue));
 
-		rhi.frameIndex = rhi.dxgiSwapChain3->GetCurrentBackBufferIndex();
+		rhi.frameIndex = rhi.swapChain->GetCurrentBackBufferIndex();
 
 		// wait indefinitely to start rendering if needed
 		if(rhi.fence->GetCompletedValue() < rhi.fenceValues[rhi.frameIndex])
@@ -175,12 +179,6 @@ namespace RHI
 	{
 		Sys_V_Init();
 
-		/*
-		@TODO: use
-DXGI_CREATE_FACTORY_DEBUG
-D3D11_CREATE_DEVICE_DEBUG 
-		*/
-
 #if defined(_DEBUG)
 		if(SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&rhi.debug))))
 		{
@@ -192,21 +190,46 @@ D3D11_CREATE_DEVICE_DEBUG
 		}
 #endif
 
-		D3D(CreateDXGIFactory1(IID_PPV_ARGS(&rhi.dxgiFactory1)));
+#if defined(_DEBUG)
+		D3D(CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(&rhi.factory)));
+#else
+		D3D(CreateDXGIFactory1(IID_PPV_ARGS(&rhi.factory)));
+#endif
+
+		const D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_12_0;
+
+		// @TODO: enumerate adapters with the right feature levels and pick the right one
+		/*
+		You could also query a IDXGIFactory6 interface and use EnumAdapterByGpuPreference to prefer using discrete
+		(DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE) vs. integrated (DXGI_GPU_PREFERENCE_MINIMUM_POWER) graphics on hybrid systems.
+		This interface is supported on Windows 10 April 2018 Update (17134) or later.
+		*/
+#if 0
 		IDXGIAdapter1* adapter;
 		UINT i = 0;
-		while(rhi.dxgiFactory1->EnumAdapters1(i++, &adapter) != DXGI_ERROR_NOT_FOUND)
+		while(rhi.factory->EnumAdapters1(i++, &adapter) != DXGI_ERROR_NOT_FOUND)
 		{
 			DXGI_ADAPTER_DESC1 desc;
-			adapter->GetDesc1(&desc); // can fail
+			if(FAILED(adapter->GetDesc1(&desc)))
+			{
+				continue;
+			}
+			if(desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+			{
+				continue;
+			}
+			if(FAILED(D3D12CreateDevice(adapter, featureLevel, __uuidof(ID3D12Device), NULL)))
+			{
+				continue;
+			}
+			// we have a valid candidate, do something
 			//desc.Description;
 			//__debugbreak();
-			// can check if device supports D3D12:
-			//if(SUCCEEDED(D3D12CreateDevice(adapter, D3D_FEATURE_LEVEL_12_0, __uuidof(ID3D12Device), NULL)))
 		}
+#endif
 
 		// @TODO: first argument is the adapter, NULL is default
-		D3D(D3D12CreateDevice(NULL, D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&rhi.device)));
+		D3D(D3D12CreateDevice(NULL, featureLevel, IID_PPV_ARGS(&rhi.device)));
 
 		D3D12_COMMAND_QUEUE_DESC commandQueueDesc = { 0 };
 		commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
@@ -232,10 +255,10 @@ D3D11_CREATE_DEVICE_DEBUG
 		swapChainDesc.SampleDesc.Quality = 0;
 		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 		swapChainDesc.Windowed = TRUE;
-		D3D(rhi.dxgiFactory1->CreateSwapChain(rhi.commandQueue, &swapChainDesc, &dxgiSwapChain));
+		D3D(rhi.factory->CreateSwapChain(rhi.commandQueue, &swapChainDesc, &dxgiSwapChain));
 
-		D3D(dxgiSwapChain->QueryInterface(IID_PPV_ARGS(&rhi.dxgiSwapChain3)));
-		rhi.frameIndex = rhi.dxgiSwapChain3->GetCurrentBackBufferIndex();
+		D3D(dxgiSwapChain->QueryInterface(IID_PPV_ARGS(&rhi.swapChain)));
+		rhi.frameIndex = rhi.swapChain->GetCurrentBackBufferIndex();
 		COM_RELEASE(dxgiSwapChain);
 
 		ID3D12DescriptorHeap* rtvHeap;
@@ -252,7 +275,7 @@ D3D11_CREATE_DEVICE_DEBUG
 		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandleIt = rhi.rtvHandle;
 		for(UINT f = 0; f < FrameCount; ++f)
 		{
-			D3D(rhi.dxgiSwapChain3->GetBuffer(f, IID_PPV_ARGS(&rhi.renderTargets[f])));
+			D3D(rhi.swapChain->GetBuffer(f, IID_PPV_ARGS(&rhi.renderTargets[f])));
 			rhi.device->CreateRenderTargetView(rhi.renderTargets[f], NULL, rtvHandleIt);
 			rtvHandleIt.ptr += rhi.rtvIncSize;
 
@@ -333,7 +356,7 @@ D3D11_CREATE_DEVICE_DEBUG
 		rhi.commandQueue->ExecuteCommandLists(ARRAY_LEN(commandListArray), commandListArray);
 
 		// DXGI_PRESENT_ALLOW_TEARING
-		D3D(rhi.dxgiSwapChain3->Present(r_swapInterval->integer, 0));
+		D3D(rhi.swapChain->Present(r_swapInterval->integer, 0));
 
 		MoveToNextFrame();
 	}
