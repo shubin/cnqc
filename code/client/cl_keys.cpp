@@ -21,6 +21,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "client.h"
 #include "client_help.h"
+#include "../imgui/imgui.h"
 
 /*
 
@@ -1085,6 +1086,49 @@ void CL_KeyEvent( int key, qbool down, unsigned time )
 	}
 #endif
 
+#if defined(_DEBUG)
+	if ( down && key == K_F1 ) {
+		if ( Cvar_VariableIntegerValue( "r_debugUI" ) ) {
+			Cvar_Set( "r_debugUI", "0" );
+			Cvar_Set( "r_debugInput", "0" );
+		} else {
+			Cvar_Set( "r_debugUI", "1" );
+			Cvar_Set( "r_debugInput", "1" );
+		}
+		return;
+	}
+	if ( down && key == K_F2 ) {
+		if ( Cvar_VariableIntegerValue( "r_debugInput" ) ) {
+			Cvar_Set( "r_debugInput", "0" );
+		} else {
+			Cvar_Set( "r_debugInput", "1" );
+		}
+		return;
+	}
+#endif
+
+	if ( cls.keyCatchers & KEYCATCH_IMGUI ) {
+		if ( down && (key == '`' || key == '~') ) {
+			Cvar_Set( "r_debugUI", "0" );
+			Cvar_Set( "r_debugInput", "0" );
+			return;
+		}
+
+		ImGuiIO& io = ImGui::GetIO();
+		switch( key ) {
+			case K_MOUSE1: io.MouseDown[0] = !!down; break;
+			case K_MOUSE2: io.MouseDown[1] = !!down; break;
+			case K_MOUSE3: io.MouseDown[2] = !!down; break;
+			case K_MOUSE4: io.MouseDown[3] = !!down; break;
+			case K_MOUSE5: io.MouseDown[4] = !!down; break;
+			case K_MWHEELDOWN: io.MouseWheel -= 1.0f; break;
+			case K_MWHEELUP: io.MouseWheel += 1.0f; break;
+			default: io.KeysDown[key] = !!down; break;
+		}
+
+		return;
+	}
+
 	// console key is hardcoded, so the user can never unbind it
 	if (key == '`' || key == '~') {
 		if (!down) {
@@ -1217,6 +1261,11 @@ Normal keyboard characters, already shifted / capslocked / etc
 void CL_CharEvent( int key ) {
 	// the console key should never be used as a char
 	if ( key == '`' || key == '~' ) {
+		return;
+	}
+
+	if ( cls.keyCatchers & KEYCATCH_IMGUI ) {
+		ImGui::GetIO().AddInputCharacter( key );
 		return;
 	}
 

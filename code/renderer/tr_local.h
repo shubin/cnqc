@@ -1076,6 +1076,9 @@ extern	cvar_t	*r_debugSurface;
 
 extern	cvar_t	*r_debugSort;
 
+extern	cvar_t	*r_debugUI;
+extern	cvar_t	*r_debugInput;
+
 
 void  R_NoiseInit();
 double R_NoiseGet4f( double x, double y, double z, double t );

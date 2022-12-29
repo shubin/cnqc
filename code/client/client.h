@@ -591,3 +591,6 @@ typedef enum {
 } sysMatchAlertEvent_t;
 
 void Sys_MatchAlert( sysMatchAlertEvent_t event );
+
+// a private key catcher for the debugging UI that the mod doesn't know about
+#define KEYCATCH_IMGUI 0x0010

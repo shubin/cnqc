@@ -477,6 +477,12 @@ namespace RHI
 
 	void EndFrame()
 	{
+		// @TODO: move out of the RHI...
+		if(r_debugUI->integer)
+		{
+			
+		}
+
 		D3D12_RESOURCE_BARRIER barrier = { 0 };
 		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;

@@ -1116,6 +1116,9 @@ void QDECL	Sys_Error( PRINTF_FORMAT_STRING const char *error, ...);
 char	*Sys_GetClipboardData( void );
 void	Sys_SetClipboardData( const char* text );
 
+// relative to window's client rectangle
+void	Sys_GetCursorPosition( int* x, int* y );
+
 void	Sys_Print( const char *msg );
 
 // Sys_Milliseconds should only be used for profiling purposes,

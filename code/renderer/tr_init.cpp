@@ -122,6 +122,9 @@ cvar_t	*r_directedScale;
 cvar_t	*r_debugLight;
 cvar_t	*r_debugSort;
 
+cvar_t	*r_debugUI;
+cvar_t	*r_debugInput;
+
 // these limits apply to the sum of all scenes in a frame:
 // the main view, all the 3D icons, and even the console etc
 #define DEFAULT_MAX_POLYS		8192
@@ -450,7 +453,9 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_clear, "r_clear", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "clears to violet instead of black" },
 	{ &r_lockpvs, "r_lockpvs", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "helps visualize the current PVS' limits" },
 	{ &r_maxpolys, "r_maxpolys", XSTRING(DEFAULT_MAX_POLYS), 0, CVART_INTEGER, XSTRING(DEFAULT_MAX_POLYS), NULL, "maximum polygon count per frame" },
-	{ &r_maxpolyverts, "r_maxpolyverts", XSTRING(DEFAULT_MAX_POLYVERTS), 0, CVART_INTEGER, XSTRING(DEFAULT_MAX_POLYVERTS), NULL, "maximum polygon vertex count per frame" }
+	{ &r_maxpolyverts, "r_maxpolyverts", XSTRING(DEFAULT_MAX_POLYVERTS), 0, CVART_INTEGER, XSTRING(DEFAULT_MAX_POLYVERTS), NULL, "maximum polygon vertex count per frame" },
+	{ &r_debugUI, "r_debugUI", "0", CVAR_TEMP, CVART_BOOL, NULL, NULL, "displays the debug/profile GUI" },
+	{ &r_debugInput, "r_debugInput", "0", CVAR_TEMP, CVART_BOOL, NULL, NULL, "routes input to the debug/profile GUI" }
 };
 
 

@@ -23,6 +23,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "client.h"
 #include "client_help.h"
+#include "../imgui/imgui.h"
+#include "../imgui/ProggyClean.h"
 
 
 cvar_t	*cl_debugMove;
@@ -1580,6 +1582,32 @@ static void CL_CheckUserinfo()
 }
 
 
+static void CL_UpdateImGUI()
+{
+	if ( Cvar_VariableIntegerValue( "r_debugInput" ) ) {
+		cls.keyCatchers |= KEYCATCH_IMGUI;
+	} else {
+		cls.keyCatchers &= ~KEYCATCH_IMGUI;
+	}
+
+	static int64_t prevUS = 0;
+	const int64_t currUS = Sys_Microseconds();
+	const int64_t elapsedUS = currUS - prevUS;
+	prevUS = currUS;
+
+	int x, y;
+	Sys_GetCursorPosition(&x, &y);
+
+	ImGuiIO& io = ImGui::GetIO();
+	io.DeltaTime = (float)((double)elapsedUS / 1000000.0);
+	io.MousePos[0] = x;
+	io.MousePos[1] = y;
+	io.KeyCtrl = io.KeysDown[K_CTRL];
+	io.KeyShift = io.KeysDown[K_SHIFT];
+	io.KeyAlt = io.KeysDown[K_ALT];
+}
+
+
 void CL_Frame( int msec )
 {
 	if ( !com_cl_running->integer ) {
@@ -1619,6 +1647,9 @@ void CL_Frame( int msec )
 	if ( cl_timegraph->integer ) {
 		SCR_DebugGraph ( cls.realFrametime * 0.25, 0 );
 	}
+
+	// update the client's own GUI
+	CL_UpdateImGUI();
 
 	// advance the current map download, if any
 	CL_MapDownload_Continue();
@@ -2181,6 +2212,48 @@ static const cmdTableItem_t cl_cmds[] =
 };
 
 
+static void ImGUI_Init()
+{
+	ImGui::CreateContext();
+
+	ImGuiIO& io = ImGui::GetIO();
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+	io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+	//io.MouseDrawCursor = true;
+#if !defined(_DEBUG)
+	io.IniFilename = NULL; // don't pollute users' installs
+#endif
+
+	ImFontConfig fontConfig;
+	fontConfig.FontDataOwnedByAtlas = false;
+	io.Fonts->AddFontFromMemoryCompressedTTF(
+		ProggyClean_compressed_data, ProggyClean_compressed_size, 13.0f, &fontConfig);
+
+	io.KeyMap[ImGuiKey_Tab] = K_TAB;
+	io.KeyMap[ImGuiKey_LeftArrow] = K_LEFTARROW;
+	io.KeyMap[ImGuiKey_RightArrow] = K_RIGHTARROW;
+	io.KeyMap[ImGuiKey_UpArrow] = K_UPARROW;
+	io.KeyMap[ImGuiKey_DownArrow] = K_DOWNARROW;
+	io.KeyMap[ImGuiKey_PageUp] = K_PGUP;
+	io.KeyMap[ImGuiKey_PageDown] = K_PGDN;
+	io.KeyMap[ImGuiKey_Home] = K_HOME;
+	io.KeyMap[ImGuiKey_End] = K_END;
+	io.KeyMap[ImGuiKey_Insert] = K_INS;
+	io.KeyMap[ImGuiKey_Delete] = K_DEL;
+	io.KeyMap[ImGuiKey_Backspace] = K_BACKSPACE;
+	io.KeyMap[ImGuiKey_Space] = K_SPACE;
+	io.KeyMap[ImGuiKey_Enter] = K_ENTER;
+	io.KeyMap[ImGuiKey_Escape] = K_ESCAPE;
+	io.KeyMap[ImGuiKey_KeyPadEnter] = K_KP_ENTER;
+	io.KeyMap[ImGuiKey_A] = 'a';
+	io.KeyMap[ImGuiKey_C] = 'c';
+	io.KeyMap[ImGuiKey_V] = 'v';
+	io.KeyMap[ImGuiKey_X] = 'x';
+	io.KeyMap[ImGuiKey_Y] = 'y';
+	io.KeyMap[ImGuiKey_Z] = 'z';
+}
+
+
 void CL_Init()
 {
 	//QSUBSYSTEM_INIT_START( "Client" );
@@ -2206,6 +2279,8 @@ void CL_Init()
 	Cvar_Set( "cl_running", "1" );
 
 	CL_MapDownload_Init();
+
+	ImGUI_Init();
 
 	//QSUBSYSTEM_INIT_DONE( "Client" );
 }
@@ -2241,6 +2316,8 @@ void CL_Shutdown()
 	Cmd_UnregisterModule( MODULE_CLIENT );
 
 	CL_ConShutdown();
+
+	ImGui::DestroyContext();
 
 	Cvar_Set( "cl_running", "0" );
 

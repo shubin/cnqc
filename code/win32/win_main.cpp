@@ -359,6 +359,16 @@ void Sys_SetClipboardData( const char* text )
 }
 
 
+void Sys_GetCursorPosition( int* x, int* y )
+{
+	POINT point;
+	GetCursorPos( &point );
+	ScreenToClient( g_wv.hWnd, &point );
+	*x = point.x;
+	*y = point.y;
+}
+
+
 /*
 ========================================================================
 
