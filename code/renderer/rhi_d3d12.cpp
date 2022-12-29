@@ -69,7 +69,19 @@ static RHIPrivate rhi;
 #define COM_RELEASE(p)       do { if(p) { p->Release(); p = NULL; } } while((void)0,0)
 #define COM_RELEASE_ARRAY(a) do { for(int i = 0; i < ARRAY_LEN(a); ++i) { COM_RELEASE(a[i]); } } while((void)0,0)
 
-#define D3D(Exp)             Check((Exp), #Exp)
+#define D3D(Exp) Check((Exp), #Exp)
+
+#if defined(near)
+#	undef near
+#endif
+
+#if defined(far)
+#	undef far
+#endif
+
+#if !defined(D3DDDIERR_DEVICEREMOVED)
+#	define D3DDDIERR_DEVICEREMOVED ((HRESULT)0x88760870L)
+#endif
 
 
 static const char* GetSystemErrorString(HRESULT hr)
@@ -176,6 +188,47 @@ namespace RHI
 		WaitForSingleObjectEx(rhi.fenceEvent, INFINITE, FALSE);
 
 		rhi.fenceValues[rhi.frameIndex]++;
+	}
+
+	static void Present()
+	{
+		// DXGI_PRESENT_ALLOW_TEARING
+		const HRESULT hr = rhi.swapChain->Present(abs(r_swapInterval->integer), 0);
+
+		enum PresentError
+		{
+			PE_NONE,
+			PE_DEVICE_REMOVED,
+			PE_DEVICE_RESET
+		};
+		PresentError presentError = PE_NONE;
+		HRESULT deviceRemovedReason = S_OK;
+		if(hr == DXGI_ERROR_DEVICE_REMOVED || hr == D3DDDIERR_DEVICEREMOVED)
+		{
+			deviceRemovedReason = d3ds.device->GetDeviceRemovedReason();
+			if(deviceRemovedReason == DXGI_ERROR_DEVICE_RESET)
+			{
+				presentError = PE_DEVICE_RESET;
+			}
+			else
+			{
+				presentError = PE_DEVICE_REMOVED;
+			}
+		}
+		else if(hr == DXGI_ERROR_DEVICE_RESET)
+		{
+			presentError = PE_DEVICE_RESET;
+		}
+
+		if(presentError == PE_DEVICE_REMOVED)
+		{
+			ri.Error(ERR_FATAL, "Direct3D device was removed! Reason: %s", GetDeviceRemovedReasonString(deviceRemovedReason));
+		}
+		else if(presentError == PE_DEVICE_RESET)
+		{
+			ri.Printf(PRINT_ERROR, "Direct3D device was reset! Restarting the video system...");
+			Cmd_ExecuteString("vid_restart;");
+		}
 	}
 
 	void Init()
@@ -387,8 +440,7 @@ namespace RHI
 		ID3D12CommandList* commandListArray[] = { rhi.commandList };
 		rhi.commandQueue->ExecuteCommandLists(ARRAY_LEN(commandListArray), commandListArray);
 
-		// DXGI_PRESENT_ALLOW_TEARING
-		D3D(rhi.swapChain->Present(r_swapInterval->integer, 0));
+		Present();
 
 		MoveToNextFrame();
 	}
