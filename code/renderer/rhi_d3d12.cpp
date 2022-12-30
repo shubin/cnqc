@@ -45,6 +45,7 @@ to do:
 #include <d3d12.h>
 #include <dxgi1_4.h>
 #include <dxgidebug.h>
+#include "D3D12MemAlloc.h"
 // @TODO: move out of the RHI...
 #include "../imgui/imgui_impl_dx12.h"
 

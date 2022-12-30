@@ -227,6 +227,7 @@
     <ClInclude Include="..\..\code\renderer\tr_public.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\code\renderer\D3D12MemAlloc.cpp" />
     <ClCompile Include="..\..\code\renderer\rhi_d3d12.cpp" />
     <ClCompile Include="..\..\code\renderer\stb_image.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_backend.cpp" />
