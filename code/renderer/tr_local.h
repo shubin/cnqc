@@ -1641,11 +1641,149 @@ extern int					r_delayedScreenshotFrame;
 
 namespace RHI
 {
+	typedef uint32_t Handle;
+
+#define RHI_HANDLE_TYPE(TypeName) struct TypeName { Handle v; }; \
+	inline bool operator==(TypeName a, TypeName b) { return a.v == b.v; } \
+	inline bool operator!=(TypeName a, TypeName b) { return a.v != b.v; }
+	RHI_HANDLE_TYPE(HFence)
+	RHI_HANDLE_TYPE(HSemaphore)
+	RHI_HANDLE_TYPE(HTexture)
+	RHI_HANDLE_TYPE(HSampler)
+	RHI_HANDLE_TYPE(HBuffer)
+	RHI_HANDLE_TYPE(HShader)
+	RHI_HANDLE_TYPE(HDescriptorSetLayout)
+	RHI_HANDLE_TYPE(HPipelineLayout)
+	RHI_HANDLE_TYPE(HDescriptorSet)
+	RHI_HANDLE_TYPE(HPipeline)
+	RHI_HANDLE_TYPE(HCommandPool)
+	RHI_HANDLE_TYPE(HCommandBuffer)
+	RHI_HANDLE_TYPE(HDurationQuery)
+
+#define RHI_ENUM_OPERATORS(EnumType) \
+	inline EnumType operator|(EnumType a, EnumType b) { return (EnumType)((uint32_t)(a) | (uint32_t)(b)); } \
+	inline EnumType operator&(EnumType a, EnumType b) { return (EnumType)((uint32_t)(a) & (uint32_t)(b)); } \
+	inline EnumType operator|=(EnumType& a, EnumType b) { return a = (a | b); } \
+	inline EnumType operator&=(EnumType& a, EnumType b) { return a = (a & b); } \
+	inline EnumType operator~(EnumType a) { return (EnumType)(~(uint32_t)(a)); }
+
+	struct IndexType
+	{
+		enum Id
+		{
+			UInt32,
+			UInt16
+		};
+	};
+
+	struct BufferDesc
+	{
+		const char* name;
+		uint32_t byteCount;
+		//galResourceState::Flags initialState;
+		//galMemoryUsage::Id memoryUsage;
+	};
+
 	void Init();
 	void ShutDown(qbool destroyWindow);
 
 	void BeginFrame();
 	void EndFrame();
+
+	HBuffer CreateBuffer(const BufferDesc* desc);
+	void DestroyBuffer(HBuffer buffer);
+	void MapBuffer(void** data, HBuffer buffer);
+	void UnmapBuffer(HBuffer buffer);
+
+	void CmdBindVertexBuffers(uint32_t count, const HBuffer* vertexBuffers, const uint32_t* strides, const uint32_t* startOffsets);
+	void CmdBindIndexBuffer(HBuffer indexBuffer, IndexType::Id type, uint32_t startOffset);
+
+#if 0
+	Fence CreateFence(const char* name);
+	void DestroyFence(Fence fence);
+	void WaitForAllFences(uint32_t fenceCount, const Fence* fences);
+
+	Semaphore CreateSemaphore(const char* name);
+	void DestroySemaphore(Semaphore semaphore);
+
+	Texture CreateTexture(const TextureDesc* desc);
+	void UploadTextureData(Texture texture, const TextureUploadDesc* desc);
+	void DestroyTexture(Texture texture);
+
+	Sampler CreateSampler(const SamplerDesc* desc);
+	void DestroySampler(Sampler sampler);
+
+	Shader CreateShader(const ShaderDesc* desc);
+	void DestroyShader(Shader shader);
+
+	DescriptorSetLayout CreateDescriptorSetLayout(const DescriptorSetLayoutDesc* desc);
+	void DestroyDescriptorSetLayout(DescriptorSetLayout layout);
+
+	PipelineLayout CreatePipelineLayout(const PipelineLayoutDesc* desc);
+	void DestroyPipelineLayout(PipelineLayout layout);
+
+	// technically, DescriptorType::Flags is not needed but it's useful to check that you haven't messed up
+	DescriptorSet CreateDescriptorSet(const DescriptorSetDesc* desc);
+	void UpdateDescriptorSet(DescriptorSet set, uint32_t binding, DescriptorType::Flags type,
+		uint32_t handleCount, const void* handleArray);
+	void DestroyDescriptorSet(DescriptorSet set);
+
+	Pipeline CreateGraphicsPipeline(const GraphicsPipelineDesc* desc);
+	Pipeline CreateComputePipeline(const ComputePipelineDesc* desc);
+	void DestroyPipeline(Pipeline pipeline);
+
+	void GetSwapChainInfo(SwapChainInfo* desc);
+	void AcquireNextImage(uint32_t* outImageIndex, Semaphore signalSemaphore);
+	void WaitUntilDeviceIdle();
+
+	void SubmitGraphics(const SubmitGraphicsDesc* desc);
+	void SubmitPresent(const SubmitPresentDesc* desc);
+
+	// think of the command pool as a linear allocator and reset as a clear operation
+	// make sure to call reset to prevent the pool from growing too much
+	CommandPool CreateCommandPool(const CommandPoolDesc* desc);
+	void ResetCommandPool(CommandPool pool);
+	void DestroyCommandPool(CommandPool pool);
+
+	CommandBuffer CreateCommandBuffer(CommandPool pool);
+	void BindCommandBuffer(CommandBuffer cmdBuf);
+	void BeginCommandBuffer();
+	void EndCommandBuffer();
+	void DestroyCommandBuffer(CommandBuffer cmdBuf);
+
+	void CmdBeginRenderPass(uint32_t colorCount, const Texture* colors, Texture depthStencil = { 0 }, const LoadActions* loadActions = NULL);
+	void CmdBeginRenderPass(const RenderPassDesc* desc);
+	void CmdNextSubpass();
+	void CmdEndRenderPass();
+	void CmdBindPipeline(Pipeline pipeline);
+	void CmdBindDescriptorSet(uint32_t index, DescriptorSet descriptorSet, PipelineLayout pipelineLayout);
+	void CmdBindVertexBuffers(uint32_t count, const Buffer* vertexBuffers);
+	void CmdBindIndexBuffer(Buffer indexBuffer, IndexType::Id type);
+	void CmdSetViewport(uint32_t x, uint32_t y, uint32_t w, uint32_t h, float minDepth = 0.0f, float maxDepth = 1.0f);
+	void CmdSetScissor(uint32_t x, uint32_t y, uint32_t w, uint32_t h);
+	void CmdPushConstants(PipelineLayout layoutHandle, ShaderType::Id shaderStage, const void* constants);
+	void CmdDraw(uint32_t vertexCount, uint32_t firstVertex);
+	void CmdDrawIndexed(uint32_t indexCount, uint32_t firstIndex, uint32_t firstVertex);
+	void CmdBarriers(uint32_t buffCount, const BufferBarrier* buffDescs,
+		uint32_t texCount, const TextureBarrier* texDescs);
+
+	void CmdCopyBuffer(Buffer dst, uint32_t dstOffset, Buffer src, uint32_t srcOffset, uint32_t byteCount);
+	void CmdCopyBufferRegions(Buffer dst, Buffer src, uint32_t count, const BufferRegion* regions);
+
+	// @TODO: specify mip level, type union for clear color, ...
+	void CmdClearColorTexture(Texture texture, const uint32_t* clearColor);
+
+	void CmdInsertDebugLabel(const char* name, float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f);
+	void CmdBeginDebugLabel(const char* name, float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f);
+	void CmdEndDebugLabel();
+
+	// when resolving a query, said query must be from the oldest frame in flight
+	// if the query to resolve is a null handle, it will succeed with a 0 return value
+	DurationQuery CmdBeginDurationQuery();
+	void CmdEndDurationQuery(DurationQuery query);
+	void CmdResetDurationQueries();
+	void ResolveDurationQuery(uint32_t* microSeconds, DurationQuery query);
+#endif
 }
 
 
