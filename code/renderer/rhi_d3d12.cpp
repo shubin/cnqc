@@ -25,7 +25,7 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 to do:
 * partial inits and shutdown
 - move the Dear ImGui rendering outside of the RHI
-- integrate D3D12MA
+* integrate D3D12MA
 - compiler switch for GPU validation
 - D3DCOMPILE_DEBUG for shaders
 - use ID3D12Device4::CreateCommandList1 to create closed command lists
@@ -37,13 +37,14 @@ to do:
 	will enable true immediate independent flip mode and give us the lowest latency possible
 - NvAPI_D3D_GetLatency to get (simulated) input to display latency
 - NvAPI_D3D_IsGSyncCapable / NvAPI_D3D_IsGSyncActive for diagnostics
+- CVar for setting the gpuPreference_t
 */
 
 
 #include "tr_local.h"
 #include <Windows.h>
 #include <d3d12.h>
-#include <dxgi1_4.h>
+#include <dxgi1_6.h>
 #include <dxgidebug.h>
 #include "D3D12MemAlloc.h"
 // @TODO: move out of the RHI...
@@ -61,6 +62,13 @@ extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8".\\D3D12
 // 2. number of frames in the back buffer
 static const UINT FrameCount = 2;
 
+// D3D_FEATURE_LEVEL_12_0 is the minimum to ensure at least Resource Binding Tier 2:
+// - unlimited SRVs
+// - 14 CBVs
+// - 64 UAVs
+// - 2048 samplers
+static const D3D_FEATURE_LEVEL FeatureLevel = D3D_FEATURE_LEVEL_12_0;
+
 struct RHIPrivate
 {
 	ID3D12Debug* debug; // can be NULL
@@ -71,7 +79,9 @@ struct RHIPrivate
 #else
 	IDXGIFactory1* factory;
 #endif
+	IDXGIAdapter1* adapter;
 	ID3D12Device* device;
+	D3D12MA::Allocator* allocator;
 	ID3D12CommandQueue* commandQueue;
 	IDXGISwapChain3* swapChain;
 	ID3D12DescriptorHeap* rtvHeap;
@@ -174,6 +184,72 @@ static const char* GetDeviceRemovedReasonString(HRESULT reason)
 		case S_OK: return "no error";
 		default: return va("unknown error code 0x%08X", (unsigned int)reason);
 	}
+}
+
+static DXGI_GPU_PREFERENCE GetGPUPreference(gpuPreference_t preference)
+{
+	switch(preference)
+	{
+		case GPU_PREFERENCE_HIGH_PERFORMANCE: return DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE;
+		case GPU_PREFERENCE_LOW_POWER: return DXGI_GPU_PREFERENCE_MINIMUM_POWER;
+		default: return DXGI_GPU_PREFERENCE_UNSPECIFIED;
+	}
+}
+
+static qbool IsSuitableAdapter(IDXGIAdapter1* adapter)
+{
+	DXGI_ADAPTER_DESC1 desc;
+	if(FAILED(adapter->GetDesc1(&desc)))
+	{
+		return qfalse;
+	}
+
+	if(desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+	{
+		return qfalse;
+	}
+
+	if(FAILED(D3D12CreateDevice(adapter, FeatureLevel, __uuidof(ID3D12Device), NULL)))
+	{
+		return qfalse;
+	}
+
+	return qtrue;
+}
+
+static IDXGIAdapter1* FindMostSuitableAdapter(IDXGIFactory1* factory, gpuPreference_t enginePreference)
+{
+	IDXGIAdapter1* adapter = NULL;
+	IDXGIFactory6* factory6 = NULL;
+	if(SUCCEEDED(factory->QueryInterface(IID_PPV_ARGS(&factory6))))
+	{
+		const DXGI_GPU_PREFERENCE dxgiPreference = GetGPUPreference(enginePreference);
+
+		UINT i = 0;
+		while(SUCCEEDED(factory6->EnumAdapterByGpuPreference(i++, dxgiPreference, IID_PPV_ARGS(&adapter))))
+		{
+			if(IsSuitableAdapter(adapter))
+			{
+				COM_RELEASE(factory6);
+				return adapter;
+			}
+			COM_RELEASE(adapter);
+		}
+	}
+	COM_RELEASE(factory6);
+
+	UINT i = 0;
+	while(SUCCEEDED(rhi.factory->EnumAdapters1(i++, &adapter)))
+	{
+		if(IsSuitableAdapter(adapter))
+		{
+			return adapter;
+		}
+		COM_RELEASE(adapter);
+	}
+
+	ri.Error(ERR_FATAL, "No suitable DXGI adapter was found!\n");
+	return NULL;
 }
 
 
@@ -283,47 +359,17 @@ namespace RHI
 		D3D(CreateDXGIFactory1(IID_PPV_ARGS(&rhi.factory)));
 #endif
 
-		// D3D_FEATURE_LEVEL_12_0 is the minimum to ensure at least Resource Binding Tier 2:
-		// - unlimited SRVs
-		// - 14 CBVs
-		// - 64 UAVs
-		// - 2048 samplers
-		const D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_12_0;
+		rhi.adapter = FindMostSuitableAdapter(rhi.factory, GPU_PREFERENCE_HIGH_PERFORMANCE);
 
-		// @TODO: enumerate adapters with the right feature levels and pick the right one
-		/*
-		You could also query a IDXGIFactory6 interface and use EnumAdapterByGpuPreference to prefer using discrete
-		(DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE) vs. integrated (DXGI_GPU_PREFERENCE_MINIMUM_POWER) graphics on hybrid systems.
-		This interface is supported on Windows 10 April 2018 Update (17134) or later.
-		*/
-#if 0
+		D3D(D3D12CreateDevice(rhi.adapter, FeatureLevel, IID_PPV_ARGS(&rhi.device)));
+
 		{
-			IDXGIAdapter1* adapter;
-			UINT i = 0;
-			while(rhi.factory->EnumAdapters1(i++, &adapter) != DXGI_ERROR_NOT_FOUND)
-			{
-				DXGI_ADAPTER_DESC1 desc;
-				if(FAILED(adapter->GetDesc1(&desc)))
-				{
-					continue;
-				}
-				if(desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
-				{
-					continue;
-				}
-				if(FAILED(D3D12CreateDevice(adapter, featureLevel, __uuidof(ID3D12Device), NULL)))
-				{
-					continue;
-				}
-				// we have a valid candidate, do something
-				//desc.Description;
-				//__debugbreak();
-			}
+			D3D12MA::ALLOCATOR_DESC desc = {};
+			desc.pDevice = rhi.device;
+			desc.pAdapter = rhi.adapter;
+			desc.Flags = D3D12MA::ALLOCATOR_FLAG_SINGLETHREADED;
+			D3D(D3D12MA::CreateAllocator(&desc, &rhi.allocator));
 		}
-#endif
-
-		// @TODO: first argument is the adapter, NULL is default
-		D3D(D3D12CreateDevice(NULL, featureLevel, IID_PPV_ARGS(&rhi.device)));
 
 #if defined(_DEBUG)
 		if(rhi.debug)
@@ -476,7 +522,9 @@ namespace RHI
 		COM_RELEASE(rhi.swapChain);
 		COM_RELEASE(rhi.commandQueue);
 		COM_RELEASE(rhi.infoQueue);
+		COM_RELEASE(rhi.allocator);
 		COM_RELEASE(rhi.device);
+		COM_RELEASE(rhi.adapter);
 		COM_RELEASE(rhi.factory);
 		COM_RELEASE(rhi.dxgiInfoQueue);
 		COM_RELEASE(rhi.debug);

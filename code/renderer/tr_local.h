@@ -1639,6 +1639,13 @@ extern qbool				r_delayedScreenshotPending;
 extern int					r_delayedScreenshotFrame;
 
 
+enum gpuPreference_t {
+	GPU_PREFERENCE_HIGH_PERFORMANCE,
+	GPU_PREFERENCE_LOW_POWER,
+	GPU_PREFERENCE_NONE
+};
+
+
 namespace RHI
 {
 	typedef uint32_t Handle;
