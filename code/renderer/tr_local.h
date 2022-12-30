@@ -1854,6 +1854,164 @@ namespace RHI
 	void CmdResetDurationQueries();
 	void ResolveDurationQuery(uint32_t* microSeconds, DurationQuery query);
 #endif
+
+	// @TODO: move to rhi_local.h once we have more than 1 RHI
+
+#define GET_HANDLE_VALUE(Handle) (Handle.v)
+#define MAKE_HANDLE(Value) { Value }
+#define MAKE_NULL_HANDLE() { 0 }
+
+	template<typename T>
+	qbool IsNullHandle(T handle)
+	{
+		return GET_HANDLE_VALUE(handle) == 0;
+	}
+
+	template<typename T, typename HT, RHI::Handle RT, int N>
+	struct StaticPool
+	{
+	private:
+		struct Item
+		{
+			T item;
+			uint16_t generation;
+			uint16_t next : 15;
+			uint16_t used : 1;
+		};
+
+	public:
+		StaticPool()
+		{
+			Clear();
+		}
+
+		void Clear()
+		{
+			freeList = 0;
+			for(int i = 0; i < N; ++i)
+			{
+				items[i].generation = 0;
+				items[i].used = 0;
+				items[i].next = i + 1;
+			}
+			items[N - 1].next = uint16_t(~0);
+		}
+
+		HT Add(const T& item)
+		{
+			if(freeList >= N)
+			{
+				ri.Error(ERR_FATAL, "The memory pool is full\n");
+			}
+			items[freeList].item = item;
+			items[freeList].used = qtrue;
+			const Handle handle = CreateHandle(RT, freeList, items[freeList].generation);
+			freeList = items[freeList].next;
+			return MAKE_HANDLE(handle);
+		}
+
+		void Remove(HT handle)
+		{
+			Item& item = GetItemRef(handle);
+			if(!item.used)
+			{
+				ri.Error(ERR_FATAL, "Memory pool item was already freed\n");
+			}
+			item.generation = (item.generation + 1) & BIT_MASK(HandleGenBitCount);
+			item.used = 0;
+			item.next = freeList;
+			freeList = (uint16_t)(&item - items);
+		}
+
+		T& Get(HT handle)
+		{
+			return GetItemRef(handle).item;
+		}
+
+		T* TryGet(HT handle)
+		{
+			if(handle == 0)
+			{
+				return NULL;
+			}
+
+			return &GetItemRef(handle).item;
+		}
+
+		qbool FindNext(T** object, int* index)
+		{
+			assert(object);
+			assert(index);
+
+			for(int i = *index; i < N; ++i)
+			{
+				if(items[i].used)
+				{
+					*object = &items[i].item;
+					*index = i + 1;
+					return qtrue;
+				}
+			}
+
+			return qfalse;
+		}
+
+		qbool FindNext(Handle* handle, int* index)
+		{
+			assert(handle);
+			assert(index);
+
+			for(int i = *index; i < N; ++i)
+			{
+				if(items[i].used)
+				{
+					*handle = CreateHandle(RT, i, items[i].generation);
+					*index = i + 1;
+					return qtrue;
+				}
+			}
+
+			return qfalse;
+		}
+
+	private:
+		StaticPool(const StaticPool<T, HT, RT, N>&);
+		void operator=(const StaticPool<T, HT, RT, N>&);
+
+		Item& GetItemRef(HT handle)
+		{
+			Handle type, index, gen;
+			DecomposeHandle(&type, &index, &gen, GET_HANDLE_VALUE(handle));
+			if(type != RT)
+			{
+				ri.Error(ERR_FATAL, "Invalid memory pool handle (wrong resource type)\n");
+			}
+			if(index > (Handle)N)
+			{
+				ri.Error(ERR_FATAL, "Invalid memory pool handle (bad index)\n");
+			}
+
+			Item& item = items[index];
+			if(!item.used)
+			{
+				ri.Error(ERR_FATAL, "Invalid memory pool handle (unused slot)\n");
+			}
+
+			if(gen > (Handle)item.generation)
+			{
+				ri.Error(ERR_FATAL, "Invalid memory pool handle (allocation from the future)\n");
+			}
+			if(gen < (Handle)item.generation)
+			{
+				ri.Error(ERR_FATAL, "Invalid memory pool handle (the object has been freed)\n");
+			}
+
+			return item;
+		}
+
+		Item items[N];
+		uint16_t freeList;
+	};
 }
 
 

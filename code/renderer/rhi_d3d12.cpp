@@ -51,54 +51,57 @@ to do:
 #include "../imgui/imgui_impl_dx12.h"
 
 
-#if defined(_DEBUG) // @TODO: Q3 macro to specify D3D12SDKVersion
+// @TODO: Q3 macro to specify D3D12SDKVersion
+// OR... include our own Agility SDK and specify D3D12_SDK_VERSION
+#if defined(_DEBUG)
 extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 608; }
 extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8".\\D3D12\\"; }
 #endif
 
 
-// this has 2 meanings:
-// 1. maximum number of frames queued
-// 2. number of frames in the back buffer
-static const UINT FrameCount = 2;
-
-// D3D_FEATURE_LEVEL_12_0 is the minimum to ensure at least Resource Binding Tier 2:
-// - unlimited SRVs
-// - 14 CBVs
-// - 64 UAVs
-// - 2048 samplers
-static const D3D_FEATURE_LEVEL FeatureLevel = D3D_FEATURE_LEVEL_12_0;
-
-struct RHIPrivate
+namespace RHI
 {
-	ID3D12Debug* debug; // can be NULL
-	ID3D12InfoQueue* infoQueue; // can be NULL
-	IDXGIInfoQueue* dxgiInfoQueue; // can be NULL
-#if defined(_DEBUG)
-	IDXGIFactory2* factory;
-#else
-	IDXGIFactory1* factory;
-#endif
-	IDXGIAdapter1* adapter;
-	ID3D12Device* device;
-	D3D12MA::Allocator* allocator;
-	ID3D12CommandQueue* commandQueue;
-	IDXGISwapChain3* swapChain;
-	ID3D12DescriptorHeap* rtvHeap;
-	ID3D12DescriptorHeap* srvHeap; // SRV + UAV + CBV
-	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle;
-	UINT rtvIncSize;
-	ID3D12Resource* renderTargets[FrameCount];
-	ID3D12CommandAllocator* commandAllocators[FrameCount];
-	ID3D12GraphicsCommandList* commandList;
-	UINT frameIndex;
-	HANDLE fenceEvent;
-	ID3D12Fence* fence;
-	UINT64 fenceValues[FrameCount];
-};
+	// this has 2 meanings:
+	// 1. maximum number of frames queued
+	// 2. number of frames in the back buffer
+	static const UINT FrameCount = 2;
 
-static RHIPrivate rhi;
+	// D3D_FEATURE_LEVEL_12_0 is the minimum to ensure at least Resource Binding Tier 2:
+	// - unlimited SRVs
+	// - 14 CBVs
+	// - 64 UAVs
+	// - 2048 samplers
+	static const D3D_FEATURE_LEVEL FeatureLevel = D3D_FEATURE_LEVEL_12_0;
 
+	struct RHIPrivate
+	{
+		ID3D12Debug* debug; // can be NULL
+		ID3D12InfoQueue* infoQueue; // can be NULL
+		IDXGIInfoQueue* dxgiInfoQueue; // can be NULL
+	#if defined(_DEBUG)
+		IDXGIFactory2* factory;
+	#else
+		IDXGIFactory1* factory;
+	#endif
+		IDXGIAdapter1* adapter;
+		ID3D12Device* device;
+		D3D12MA::Allocator* allocator;
+		ID3D12CommandQueue* commandQueue;
+		IDXGISwapChain3* swapChain;
+		ID3D12DescriptorHeap* rtvHeap;
+		ID3D12DescriptorHeap* srvHeap; // SRV + UAV + CBV
+		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle;
+		UINT rtvIncSize;
+		ID3D12Resource* renderTargets[FrameCount];
+		ID3D12CommandAllocator* commandAllocators[FrameCount];
+		ID3D12GraphicsCommandList* commandList;
+		UINT frameIndex;
+		HANDLE fenceEvent;
+		ID3D12Fence* fence;
+		UINT64 fenceValues[FrameCount];
+	};
+
+	static RHIPrivate rhi;
 
 #define COM_RELEASE(p)       do { if(p) { p->Release(); p = NULL; } } while((void)0,0)
 #define COM_RELEASE_ARRAY(a) do { for(int i = 0; i < ARRAY_LEN(a); ++i) { COM_RELEASE(a[i]); } } while((void)0,0)
@@ -117,144 +120,140 @@ static RHIPrivate rhi;
 #	define D3DDDIERR_DEVICEREMOVED ((HRESULT)0x88760870L)
 #endif
 
-
-static const char* GetSystemErrorString(HRESULT hr)
-{
-	// FormatMessage might not always give us the string we want but that's ok,
-	// we always print the original error code anyhow
-	static char systemErrorStr[1024];
-	const DWORD written = FormatMessageA(
-		FORMAT_MESSAGE_FROM_SYSTEM, NULL, (DWORD)hr, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-		systemErrorStr, sizeof(systemErrorStr) - 1, NULL);
-	if(written == 0)
+	static const char* GetSystemErrorString(HRESULT hr)
 	{
-		// we have nothing valid
-		Q_strncpyz(systemErrorStr, "???", sizeof(systemErrorStr));
-	}
-	else
-	{
-		// remove the trailing whitespace
-		char* s = systemErrorStr + strlen(systemErrorStr) - 1;
-		while(s >= systemErrorStr)
+		// FormatMessage might not always give us the string we want but that's ok,
+		// we always print the original error code anyhow
+		static char systemErrorStr[1024];
+		const DWORD written = FormatMessageA(
+			FORMAT_MESSAGE_FROM_SYSTEM, NULL, (DWORD)hr, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+			systemErrorStr, sizeof(systemErrorStr) - 1, NULL);
+		if(written == 0)
 		{
-			if(*s == '\r' || *s == '\n' || *s == '\t' || *s == ' ')
+			// we have nothing valid
+			Q_strncpyz(systemErrorStr, "???", sizeof(systemErrorStr));
+		}
+		else
+		{
+			// remove the trailing whitespace
+			char* s = systemErrorStr + strlen(systemErrorStr) - 1;
+			while(s >= systemErrorStr)
 			{
-				*s-- = '\0';
+				if(*s == '\r' || *s == '\n' || *s == '\t' || *s == ' ')
+				{
+					*s-- = '\0';
+				}
+				else
+				{
+					break;
+				}
 			}
-			else
-			{
-				break;
-			}
+		}
+
+		return systemErrorStr;
+	}
+
+	static qbool Check(HRESULT hr, const char* function)
+	{
+		if(SUCCEEDED(hr))
+		{
+			return qtrue;
+		}
+
+		if(1) // @TODO: fatal error mode always on for now
+		{
+			ri.Error(ERR_FATAL, "'%s' failed with code 0x%08X (%s)\n", function, (unsigned int)hr, GetSystemErrorString(hr));
+		}
+		return qfalse;
+	}
+
+	static void SetDebugName(ID3D12DeviceChild* resource, const char* resourceName)
+	{
+		// ID3D12Object::SetName is a Unicode wrapper for
+		// ID3D12Object::SetPrivateData with WKPDID_D3DDebugObjectNameW
+		resource->SetPrivateData(WKPDID_D3DDebugObjectName, strlen(resourceName), resourceName);
+	}
+
+	static const char* GetDeviceRemovedReasonString(HRESULT reason)
+	{
+		switch(reason)
+		{
+			case DXGI_ERROR_DEVICE_HUNG: return "device hung";
+			case DXGI_ERROR_DEVICE_REMOVED: return "device removed";
+			case DXGI_ERROR_DEVICE_RESET: return "device reset";
+			case DXGI_ERROR_DRIVER_INTERNAL_ERROR: return "internal driver error";
+			case DXGI_ERROR_INVALID_CALL: return "invalid call";
+			case S_OK: return "no error";
+			default: return va("unknown error code 0x%08X", (unsigned int)reason);
 		}
 	}
 
-	return systemErrorStr;
-}
-
-static qbool Check(HRESULT hr, const char* function)
-{
-	if(SUCCEEDED(hr))
+	static DXGI_GPU_PREFERENCE GetGPUPreference(gpuPreference_t preference)
 	{
+		switch(preference)
+		{
+			case GPU_PREFERENCE_HIGH_PERFORMANCE: return DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE;
+			case GPU_PREFERENCE_LOW_POWER: return DXGI_GPU_PREFERENCE_MINIMUM_POWER;
+			default: return DXGI_GPU_PREFERENCE_UNSPECIFIED;
+		}
+	}
+
+	static qbool IsSuitableAdapter(IDXGIAdapter1* adapter)
+	{
+		DXGI_ADAPTER_DESC1 desc;
+		if(FAILED(adapter->GetDesc1(&desc)))
+		{
+			return qfalse;
+		}
+
+		if(desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+		{
+			return qfalse;
+		}
+
+		if(FAILED(D3D12CreateDevice(adapter, FeatureLevel, __uuidof(ID3D12Device), NULL)))
+		{
+			return qfalse;
+		}
+
 		return qtrue;
 	}
 
-	if(1) // @TODO: fatal error mode always on for now
+	static IDXGIAdapter1* FindMostSuitableAdapter(IDXGIFactory1* factory, gpuPreference_t enginePreference)
 	{
-		ri.Error(ERR_FATAL, "'%s' failed with code 0x%08X (%s)\n", function, (unsigned int)hr, GetSystemErrorString(hr));
-	}
-	return qfalse;
-}
+		IDXGIAdapter1* adapter = NULL;
+		IDXGIFactory6* factory6 = NULL;
+		if(SUCCEEDED(factory->QueryInterface(IID_PPV_ARGS(&factory6))))
+		{
+			const DXGI_GPU_PREFERENCE dxgiPreference = GetGPUPreference(enginePreference);
 
-static void SetDebugName(ID3D12DeviceChild* resource, const char* resourceName)
-{
-	// ID3D12Object::SetName is a Unicode wrapper for
-	// ID3D12Object::SetPrivateData with WKPDID_D3DDebugObjectNameW
-	resource->SetPrivateData(WKPDID_D3DDebugObjectName, strlen(resourceName), resourceName);
-}
-
-static const char* GetDeviceRemovedReasonString(HRESULT reason)
-{
-	switch(reason)
-	{
-		case DXGI_ERROR_DEVICE_HUNG: return "device hung";
-		case DXGI_ERROR_DEVICE_REMOVED: return "device removed";
-		case DXGI_ERROR_DEVICE_RESET: return "device reset";
-		case DXGI_ERROR_DRIVER_INTERNAL_ERROR: return "internal driver error";
-		case DXGI_ERROR_INVALID_CALL: return "invalid call";
-		case S_OK: return "no error";
-		default: return va("unknown error code 0x%08X", (unsigned int)reason);
-	}
-}
-
-static DXGI_GPU_PREFERENCE GetGPUPreference(gpuPreference_t preference)
-{
-	switch(preference)
-	{
-		case GPU_PREFERENCE_HIGH_PERFORMANCE: return DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE;
-		case GPU_PREFERENCE_LOW_POWER: return DXGI_GPU_PREFERENCE_MINIMUM_POWER;
-		default: return DXGI_GPU_PREFERENCE_UNSPECIFIED;
-	}
-}
-
-static qbool IsSuitableAdapter(IDXGIAdapter1* adapter)
-{
-	DXGI_ADAPTER_DESC1 desc;
-	if(FAILED(adapter->GetDesc1(&desc)))
-	{
-		return qfalse;
-	}
-
-	if(desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
-	{
-		return qfalse;
-	}
-
-	if(FAILED(D3D12CreateDevice(adapter, FeatureLevel, __uuidof(ID3D12Device), NULL)))
-	{
-		return qfalse;
-	}
-
-	return qtrue;
-}
-
-static IDXGIAdapter1* FindMostSuitableAdapter(IDXGIFactory1* factory, gpuPreference_t enginePreference)
-{
-	IDXGIAdapter1* adapter = NULL;
-	IDXGIFactory6* factory6 = NULL;
-	if(SUCCEEDED(factory->QueryInterface(IID_PPV_ARGS(&factory6))))
-	{
-		const DXGI_GPU_PREFERENCE dxgiPreference = GetGPUPreference(enginePreference);
+			UINT i = 0;
+			while(SUCCEEDED(factory6->EnumAdapterByGpuPreference(i++, dxgiPreference, IID_PPV_ARGS(&adapter))))
+			{
+				if(IsSuitableAdapter(adapter))
+				{
+					COM_RELEASE(factory6);
+					return adapter;
+				}
+				COM_RELEASE(adapter);
+			}
+		}
+		COM_RELEASE(factory6);
 
 		UINT i = 0;
-		while(SUCCEEDED(factory6->EnumAdapterByGpuPreference(i++, dxgiPreference, IID_PPV_ARGS(&adapter))))
+		while(SUCCEEDED(rhi.factory->EnumAdapters1(i++, &adapter)))
 		{
 			if(IsSuitableAdapter(adapter))
 			{
-				COM_RELEASE(factory6);
 				return adapter;
 			}
 			COM_RELEASE(adapter);
 		}
-	}
-	COM_RELEASE(factory6);
 
-	UINT i = 0;
-	while(SUCCEEDED(rhi.factory->EnumAdapters1(i++, &adapter)))
-	{
-		if(IsSuitableAdapter(adapter))
-		{
-			return adapter;
-		}
-		COM_RELEASE(adapter);
+		ri.Error(ERR_FATAL, "No suitable DXGI adapter was found!\n");
+		return NULL;
 	}
 
-	ri.Error(ERR_FATAL, "No suitable DXGI adapter was found!\n");
-	return NULL;
-}
-
-
-namespace RHI
-{
 	static void MoveToNextFrame()
 	{
 		const UINT64 currentFenceValue = rhi.fenceValues[rhi.frameIndex];
