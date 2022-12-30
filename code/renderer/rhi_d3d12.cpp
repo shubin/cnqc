@@ -88,14 +88,30 @@ namespace RHI
 		};
 	};
 
+	struct PipelineType
+	{
+		enum Id
+		{
+			Graphics,
+			Compute,
+			Raytracing,
+			Count
+		};
+	};
+
 	struct RootSignature
 	{
-		int temp;
+		ID3D12RootSignature* signature;
 	};
 
 	struct Pipeline
 	{
-		int temp;
+		union
+		{
+			GraphicsPipelineDesc graphicsDesc;
+		};
+		ID3D12PipelineState* pso;
+		PipelineType::Id type;
 	};
 
 	struct RHIPrivate
@@ -632,14 +648,25 @@ namespace RHI
 		MoveToNextFrame();
 	}
 
-	HRootSignature CreateRootSignature(const RootSignatureDesc& desc)
+	HRootSignature CreateRootSignature(const RootSignatureDesc& rhiDesc)
 	{
-		RootSignature signature = { 0 };
+		ID3DBlob* blob;
+		//ID3DBlob* errorBlob; // @TODO:
+		D3D12_ROOT_SIGNATURE_DESC desc = { 0 };
+		desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
+		desc.NumParameters = 0;
+		desc.pParameters = NULL;
+		desc.NumStaticSamplers = 0;
+		desc.pStaticSamplers = NULL;
+		D3D(D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &blob, NULL));
 
-		// D3D12SerializeRootSignature
-		// rhi.device->CreateRootSignature
+		ID3D12RootSignature* signature;
+		D3D(rhi.device->CreateRootSignature(0, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&signature)));
 
-		return rhi.rootSignatures.Add(signature);
+		RootSignature rhiSignature = { 0 };
+		rhiSignature.signature = signature;
+
+		return rhi.rootSignatures.Add(rhiSignature);
 	}
 
 	void DestroyRootSignature(HRootSignature signature)
@@ -648,11 +675,52 @@ namespace RHI
 		rhi.rootSignatures.Remove(signature);
 	}
 
-	HPipeline CreateGraphicsPipeline(const GraphicsPipelineDesc& desc)
+	HPipeline CreateGraphicsPipeline(const GraphicsPipelineDesc& rhiDesc)
 	{
-		Pipeline pipeline = { 0 };
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC desc = { 0 };
+		desc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE; // none available so far
+		desc.pRootSignature = rhi.rootSignatures.Get(rhiDesc.rootSignature).signature;
+		desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		desc.SampleDesc.Count = 1;
+		desc.SampleMask = UINT_MAX;
 
-		return rhi.pipelines.Add(pipeline);
+		desc.InputLayout.NumElements = 0;
+		desc.InputLayout.pInputElementDescs = NULL;
+
+		desc.NumRenderTargets = 1;
+		desc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL; // RGBA
+		desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+
+		desc.DepthStencilState.DepthEnable = FALSE; // toggles depth *testing*
+		desc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+		desc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO; // D3D12_DEPTH_WRITE_MASK_ALL to enable writes
+		desc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+		
+		//desc.VS.pShaderBytecode = ;
+		//desc.VS.BytecodeLength = ;
+		//desc.PS.pShaderBytecode = ;
+		//desc.PS.BytecodeLength = ;
+
+		desc.RasterizerState.AntialiasedLineEnable = FALSE;
+		desc.RasterizerState.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+		desc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+		desc.RasterizerState.FrontCounterClockwise = FALSE;
+		desc.RasterizerState.DepthBias = 0;
+		desc.RasterizerState.DepthBiasClamp = 0.0f;
+		desc.RasterizerState.SlopeScaledDepthBias = 0.0f;
+		desc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
+		desc.RasterizerState.ForcedSampleCount = 0;
+		desc.RasterizerState.MultisampleEnable = FALSE;
+
+		ID3D12PipelineState* pso;
+		D3D(rhi.device->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&pso)));
+
+		Pipeline rhiPipeline = { 0 };
+		rhiPipeline.type = PipelineType::Graphics;
+		rhiPipeline.graphicsDesc = rhiDesc;
+		rhiPipeline.pso = pso;
+
+		return rhi.pipelines.Add(rhiPipeline);
 	}
 
 	void DestroyPipeline(HPipeline pipeline)
