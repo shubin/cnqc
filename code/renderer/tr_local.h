@@ -1653,19 +1653,14 @@ namespace RHI
 #define RHI_HANDLE_TYPE(TypeName) struct TypeName { Handle v; }; \
 	inline bool operator==(TypeName a, TypeName b) { return a.v == b.v; } \
 	inline bool operator!=(TypeName a, TypeName b) { return a.v != b.v; }
-	RHI_HANDLE_TYPE(HFence)
-	RHI_HANDLE_TYPE(HSemaphore)
-	RHI_HANDLE_TYPE(HTexture)
-	RHI_HANDLE_TYPE(HSampler)
-	RHI_HANDLE_TYPE(HBuffer)
-	RHI_HANDLE_TYPE(HShader)
-	RHI_HANDLE_TYPE(HDescriptorSetLayout)
-	RHI_HANDLE_TYPE(HPipelineLayout)
-	RHI_HANDLE_TYPE(HDescriptorSet)
-	RHI_HANDLE_TYPE(HPipeline)
-	RHI_HANDLE_TYPE(HCommandPool)
-	RHI_HANDLE_TYPE(HCommandBuffer)
-	RHI_HANDLE_TYPE(HDurationQuery)
+	RHI_HANDLE_TYPE(HRootSignature);
+	RHI_HANDLE_TYPE(HPipelineStateObject);
+	/*
+	RHI_HANDLE_TYPE(HTexture);
+	RHI_HANDLE_TYPE(HSampler);
+	RHI_HANDLE_TYPE(HBuffer);
+	RHI_HANDLE_TYPE(HDurationQuery);
+	*/
 
 #define RHI_ENUM_OPERATORS(EnumType) \
 	inline EnumType operator|(EnumType a, EnumType b) { return (EnumType)((uint32_t)(a) | (uint32_t)(b)); } \
@@ -1674,21 +1669,74 @@ namespace RHI
 	inline EnumType operator&=(EnumType& a, EnumType b) { return a = (a & b); } \
 	inline EnumType operator~(EnumType a) { return (EnumType)(~(uint32_t)(a)); }
 
+#define RHI_BIT(Bit) (1 << Bit)
+
 	struct IndexType
 	{
 		enum Id
 		{
 			UInt32,
-			UInt16
+			UInt16,
+			Count
 		};
 	};
 
-	struct BufferDesc
+	struct ResourceState
+	{
+		enum Flags
+		{
+			// @TODO:
+			Undefined = 0,
+			VertexBufferBit = RHI_BIT(0),
+			IndexBufferBit = RHI_BIT(1),
+			RenderTargetBit = RHI_BIT(2),
+			PresentBit = RHI_BIT(3),
+			ShaderInputBit = RHI_BIT(4),
+			CopySourceBit = RHI_BIT(5),
+			CopyDestinationBit = RHI_BIT(6),
+			DepthWriteBit = RHI_BIT(7),
+			UnorderedAccessBit = RHI_BIT(8),
+			CommonBit = RHI_BIT(9),
+			IndirectCommandBit = RHI_BIT(10),
+			UniformBufferBit = RHI_BIT(11),
+			StorageBufferBit = RHI_BIT(12),
+			DepthReadBit = RHI_BIT(13)
+		};
+	};
+	RHI_ENUM_OPERATORS(ResourceState::Flags);
+
+	struct MemoryUsage
+	{
+		enum Id
+		{
+			HostOnly, // CPU
+			DeviceOnly, // GPU
+			HostToDevice, // CPU -> GPU, i.e. upload
+			DeviceToHost, // GPU -> CPU, i.e. readback
+			Count
+		};
+	};
+
+	struct ShaderStage
+	{
+		enum Flags
+		{
+			None = 0,
+			VertexBit = RHI_BIT(0),
+			PixelBit = RHI_BIT(1),
+			Count
+		};
+	};
+	RHI_ENUM_OPERATORS(ShaderStage::Flags);
+
+	struct RootSignatureDesc
+	{
+	};
+
+	struct GraphicsPipelineStateDesc
 	{
 		const char* name;
-		uint32_t byteCount;
-		//galResourceState::Flags initialState;
-		//galMemoryUsage::Id memoryUsage;
+		HRootSignature rootSignature;
 	};
 
 	void Init();
@@ -1696,6 +1744,22 @@ namespace RHI
 
 	void BeginFrame();
 	void EndFrame();
+
+	HRootSignature CreateRootSignature(const RootSignatureDesc* desc);
+	void DestroyRootSignature(HRootSignature layout);
+
+	HPipelineStateObject CreateGraphicsPipeline(const GraphicsPipelineStateDesc* desc);
+	void DestroyPipeline(HPipelineStateObject pipeline);
+
+#if 0
+	struct BufferDesc
+	{
+		// @TODO:
+		const char* name;
+		uint32_t byteCount;
+		ResourceState::Flags initialState;
+		MemoryUsage::Id memoryUsage;
+	};
 
 	HBuffer CreateBuffer(const BufferDesc* desc);
 	void DestroyBuffer(HBuffer buffer);
@@ -1705,7 +1769,6 @@ namespace RHI
 	void CmdBindVertexBuffers(uint32_t count, const HBuffer* vertexBuffers, const uint32_t* strides, const uint32_t* startOffsets);
 	void CmdBindIndexBuffer(HBuffer indexBuffer, IndexType::Id type, uint32_t startOffset);
 
-#if 0
 	Fence CreateFence(const char* name);
 	void DestroyFence(Fence fence);
 	void WaitForAllFences(uint32_t fenceCount, const Fence* fences);

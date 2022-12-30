@@ -602,4 +602,29 @@ namespace RHI
 
 		MoveToNextFrame();
 	}
+
+	HRootSignature CreateRootSignature(const RootSignatureDesc* desc)
+	{
+		// D3D12SerializeRootSignature
+		// rhi.device->CreateRootSignature
+
+		HRootSignature handle;
+		return handle;
+	}
+
+	void DestroyRootSignature(HRootSignature layout)
+	{
+
+	}
+
+	HPipelineStateObject CreateGraphicsPipeline(const GraphicsPipelineStateDesc* desc)
+	{
+		HPipelineStateObject handle;
+		return handle;
+	}
+
+	void DestroyPipeline(HPipelineStateObject pipeline)
+	{
+
+	}
 }
