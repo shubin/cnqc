@@ -73,6 +73,31 @@ namespace RHI
 	// - 2048 samplers
 	static const D3D_FEATURE_LEVEL FeatureLevel = D3D_FEATURE_LEVEL_12_0;
 
+	struct ResourceType
+	{
+		enum Id
+		{
+			// @NOTE: a valid type never being 0 means we can discard 0 handles right away
+			Invalid,
+			// public stuff
+			RootSignature,
+			Pipeline,
+			// private stuff
+			//
+			Count
+		};
+	};
+
+	struct RootSignature
+	{
+		int temp;
+	};
+
+	struct Pipeline
+	{
+		int temp;
+	};
+
 	struct RHIPrivate
 	{
 		ID3D12Debug* debug; // can be NULL
@@ -99,6 +124,11 @@ namespace RHI
 		HANDLE fenceEvent;
 		ID3D12Fence* fence;
 		UINT64 fenceValues[FrameCount];
+
+#define POOL(Type, Size) StaticPool<Type, H##Type, ResourceType::Type, Size>
+		POOL(RootSignature, 64) rootSignatures;
+		POOL(Pipeline, 64) pipelines;
+#undef POOL
 	};
 
 	static RHIPrivate rhi;
@@ -602,28 +632,31 @@ namespace RHI
 		MoveToNextFrame();
 	}
 
-	HRootSignature CreateRootSignature(const RootSignatureDesc* desc)
+	HRootSignature CreateRootSignature(const RootSignatureDesc& desc)
 	{
+		RootSignature signature = { 0 };
+
 		// D3D12SerializeRootSignature
 		// rhi.device->CreateRootSignature
 
-		HRootSignature handle;
-		return handle;
+		return rhi.rootSignatures.Add(signature);
 	}
 
-	void DestroyRootSignature(HRootSignature layout)
+	void DestroyRootSignature(HRootSignature signature)
 	{
-
+		//RootSignature& sig = rhi.rootSignatures.Get(signature);
+		rhi.rootSignatures.Remove(signature);
 	}
 
-	HPipelineStateObject CreateGraphicsPipeline(const GraphicsPipelineStateDesc* desc)
+	HPipeline CreateGraphicsPipeline(const GraphicsPipelineDesc& desc)
 	{
-		HPipelineStateObject handle;
-		return handle;
+		Pipeline pipeline = { 0 };
+
+		return rhi.pipelines.Add(pipeline);
 	}
 
-	void DestroyPipeline(HPipelineStateObject pipeline)
+	void DestroyPipeline(HPipeline pipeline)
 	{
-
+		rhi.pipelines.Remove(pipeline);
 	}
 }

@@ -1654,7 +1654,7 @@ namespace RHI
 	inline bool operator==(TypeName a, TypeName b) { return a.v == b.v; } \
 	inline bool operator!=(TypeName a, TypeName b) { return a.v != b.v; }
 	RHI_HANDLE_TYPE(HRootSignature);
-	RHI_HANDLE_TYPE(HPipelineStateObject);
+	RHI_HANDLE_TYPE(HPipeline);
 	/*
 	RHI_HANDLE_TYPE(HTexture);
 	RHI_HANDLE_TYPE(HSampler);
@@ -1670,6 +1670,7 @@ namespace RHI
 	inline EnumType operator~(EnumType a) { return (EnumType)(~(uint32_t)(a)); }
 
 #define RHI_BIT(Bit) (1 << Bit)
+#define RHI_BIT_MASK(BitCount) ((1 << BitCount) - 1)
 
 	struct IndexType
 	{
@@ -1733,7 +1734,7 @@ namespace RHI
 	{
 	};
 
-	struct GraphicsPipelineStateDesc
+	struct GraphicsPipelineDesc
 	{
 		const char* name;
 		HRootSignature rootSignature;
@@ -1745,11 +1746,11 @@ namespace RHI
 	void BeginFrame();
 	void EndFrame();
 
-	HRootSignature CreateRootSignature(const RootSignatureDesc* desc);
-	void DestroyRootSignature(HRootSignature layout);
+	HRootSignature CreateRootSignature(const RootSignatureDesc& desc);
+	void DestroyRootSignature(HRootSignature signature);
 
-	HPipelineStateObject CreateGraphicsPipeline(const GraphicsPipelineStateDesc* desc);
-	void DestroyPipeline(HPipelineStateObject pipeline);
+	HPipeline CreateGraphicsPipeline(const GraphicsPipelineDesc& desc);
+	void DestroyPipeline(HPipeline pipeline);
 
 #if 0
 	struct BufferDesc
@@ -1857,6 +1858,28 @@ namespace RHI
 
 	// @TODO: move to rhi_local.h once we have more than 1 RHI
 
+	const Handle HandleIndexBitCount = 16;
+	const Handle HandleIndexBitOffset = 0;
+	const Handle HandleGenBitCount = 10;
+	const Handle HandleGenBitOffset = 16;
+	const Handle HandleTypeBitCount = 6;
+	const Handle HandleTypeBitOffset = 26;
+
+	inline Handle CreateHandle(Handle type, Handle index, Handle generation)
+	{
+		return
+			(type << HandleTypeBitOffset) |
+			(index << HandleIndexBitOffset) |
+			(generation << HandleGenBitOffset);
+	}
+
+	inline void DecomposeHandle(Handle* type, Handle* index, Handle* generation, Handle handle)
+	{
+		*type = (handle >> HandleTypeBitOffset) & RHI_BIT_MASK(HandleTypeBitCount);
+		*index = (handle >> HandleIndexBitOffset) & RHI_BIT_MASK(HandleIndexBitCount);
+		*generation = (handle >> HandleGenBitOffset) & RHI_BIT_MASK(HandleGenBitCount);
+	}
+
 #define GET_HANDLE_VALUE(Handle) (Handle.v)
 #define MAKE_HANDLE(Value) { Value }
 #define MAKE_NULL_HANDLE() { 0 }
@@ -1894,7 +1917,7 @@ namespace RHI
 				items[i].used = 0;
 				items[i].next = i + 1;
 			}
-			items[N - 1].next = uint16_t(~0);
+			items[N - 1].next = RHI_BIT_MASK(15);
 		}
 
 		HT Add(const T& item)
@@ -1917,7 +1940,7 @@ namespace RHI
 			{
 				ri.Error(ERR_FATAL, "Memory pool item was already freed\n");
 			}
-			item.generation = (item.generation + 1) & BIT_MASK(HandleGenBitCount);
+			item.generation = (item.generation + 1) & RHI_BIT_MASK(HandleGenBitCount);
 			item.used = 0;
 			item.next = freeList;
 			freeList = (uint16_t)(&item - items);
@@ -1940,8 +1963,8 @@ namespace RHI
 
 		qbool FindNext(T** object, int* index)
 		{
-			assert(object);
-			assert(index);
+			Q_assert(object);
+			Q_assert(index);
 
 			for(int i = *index; i < N; ++i)
 			{
@@ -1958,8 +1981,8 @@ namespace RHI
 
 		qbool FindNext(Handle* handle, int* index)
 		{
-			assert(handle);
-			assert(index);
+			Q_assert(handle);
+			Q_assert(index);
 
 			for(int i = *index; i < N; ++i)
 			{
