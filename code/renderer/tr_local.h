@@ -142,6 +142,7 @@ namespace RHI
 	HPipeline CreateGraphicsPipeline(const GraphicsPipelineDesc& desc);
 	void DestroyPipeline(HPipeline pipeline);
 
+	void CmdBindRootSignature(HRootSignature rootSignature);
 	void CmdBindPipeline(HPipeline pipeline);
 	void CmdSetViewport(uint32_t x, uint32_t y, uint32_t w, uint32_t h, float minDepth = 0.0f, float maxDepth = 1.0f);
 	void CmdSetScissor(uint32_t x, uint32_t y, uint32_t w, uint32_t h);

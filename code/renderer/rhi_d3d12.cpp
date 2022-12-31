@@ -751,11 +751,22 @@ namespace RHI
 		rhi.pipelines.Remove(pipeline);
 	}
 
+	void CmdBindRootSignature(HRootSignature rootSignature)
+	{
+		Q_assert(CanWriteCommands());
+
+		const RootSignature sig = rhi.rootSignatures.Get(rootSignature);
+		// @TODO: decide between graphics and compute!
+		rhi.commandList->SetGraphicsRootSignature(sig.signature);
+	}
+
 	void CmdBindPipeline(HPipeline pipeline)
 	{
 		Q_assert(CanWriteCommands());
 
-		rhi.commandList->SetPipelineState(rhi.pipelines.Get(pipeline).pso);
+		const Pipeline pipe = rhi.pipelines.Get(pipeline);
+		rhi.commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // @TODO: grab from pipe!
+		rhi.commandList->SetPipelineState(pipe.pso);
 	}
 
 	void CmdSetViewport(uint32_t x, uint32_t y, uint32_t w, uint32_t h, float minDepth, float maxDepth)
