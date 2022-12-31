@@ -516,6 +516,7 @@ void R_Init()
 	R_InitMipFilter();
 
 	RHI::Init();
+	renderPipeline->Init();
 	GfxInfo_f();
 
 	R_InitImages();
@@ -536,6 +537,7 @@ static void RE_Shutdown( qbool destroyWindow )
 
 	if ( tr.registered ) {
 		ri.Cmd_UnregisterModule();
+		renderPipeline->ShutDown( destroyWindow );
 		RHI::ShutDown( destroyWindow );
 	}
 

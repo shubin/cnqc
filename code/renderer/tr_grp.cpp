@@ -55,7 +55,7 @@ float4 main(VOut input) : SV_TARGET
 )grml";
 
 
-struct uiData_t
+struct ui_t
 {
 	uint32_t indices[SHADER_MAX_INDEXES];
 	vec2_t positions[SHADER_MAX_VERTEXES];
@@ -63,12 +63,13 @@ struct uiData_t
 	color4ub_t colors[SHADER_MAX_VERTEXES];
 	int indexCount;
 	int vertexCount;
+	RHI::HRootSignature rootSignature;
+	RHI::HPipeline pipeline;
 };
 
 struct grp_t
 {
-	RHI::HRootSignature rootSignature;
-	RHI::HPipeline pipeline;
+	ui_t ui;
 };
 
 static grp_t grp;
@@ -92,25 +93,57 @@ static const void* SkipCommand(const void* data)
 	return (const void*)(cmd + 1);
 }
 
+static void Draw2D()
+{
+	// @TODO: grab the right rects...
+	RHI::CmdSetViewport(0, 0, glConfig.vidWidth, glConfig.vidHeight);
+	RHI::CmdSetScissor(0, 0, glConfig.vidWidth, glConfig.vidHeight);
+
+	RHI::CmdBindRootSignature(grp.ui.rootSignature);
+	RHI::CmdBindPipeline(grp.ui.pipeline);
+
+	// @TODO: use vertex buffers and an index buffer
+	RHI::CmdDraw(3, 0);
+}
+
+static void Draw3D()
+{
+}
+
+static void EndSurfaces()
+{
+	Draw2D();
+	Draw3D();
+}
+
 struct GameplayRenderPipeline : IRenderPipeline
 {
 	void Init() override
 	{
 		{
 			RHI::RootSignatureDesc desc;
-			grp.rootSignature = RHI::CreateRootSignature(desc);
+			grp.ui.rootSignature = RHI::CreateRootSignature(desc);
 		}
 		{
 			RHI::GraphicsPipelineDesc desc;
-			desc.rootSignature = grp.rootSignature;
+			desc.rootSignature = grp.ui.rootSignature;
 			desc.vertexShader = RHI::CompileVertexShader(vs);
 			desc.pixelShader = RHI::CompilePixelShader(ps);
-			grp.pipeline = RHI::CreateGraphicsPipeline(desc);
+			grp.ui.pipeline = RHI::CreateGraphicsPipeline(desc);
 		}
 	}
 
 	void ShutDown(qbool fullShutDown) override
 	{
+	}
+
+	void BeginFrame() override
+	{
+	}
+
+	void EndFrame() override
+	{
+		EndSurfaces();
 	}
 
 	void ExecuteRenderCommands(const void* data) override
@@ -131,6 +164,7 @@ struct GameplayRenderPipeline : IRenderPipeline
 					data = SkipCommand<triangleCommand_t>(data);
 					break;
 				case RC_DRAW_SURFS:
+					EndSurfaces();
 					data = SkipCommand<drawSurfsCommand_t>(data);
 					break;
 				case RC_BEGIN_FRAME:
