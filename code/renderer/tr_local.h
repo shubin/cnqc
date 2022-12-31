@@ -1686,22 +1686,19 @@ namespace RHI
 	{
 		enum Flags
 		{
-			// @TODO:
-			Undefined = 0,
+			Common = 0,
 			VertexBufferBit = RHI_BIT(0),
 			IndexBufferBit = RHI_BIT(1),
-			RenderTargetBit = RHI_BIT(2),
-			PresentBit = RHI_BIT(3),
-			ShaderInputBit = RHI_BIT(4),
-			CopySourceBit = RHI_BIT(5),
-			CopyDestinationBit = RHI_BIT(6),
-			DepthWriteBit = RHI_BIT(7),
-			UnorderedAccessBit = RHI_BIT(8),
-			CommonBit = RHI_BIT(9),
-			IndirectCommandBit = RHI_BIT(10),
-			UniformBufferBit = RHI_BIT(11),
-			StorageBufferBit = RHI_BIT(12),
-			DepthReadBit = RHI_BIT(13)
+			ConstantBufferBit = RHI_BIT(2),
+			RenderTargetBit = RHI_BIT(3),
+			VertexShaderAccessBit = RHI_BIT(4),
+			PixelShaderAccessBit = RHI_BIT(5),
+			ComputeShaderAccessBit = RHI_BIT(6),
+			CopySourceBit = RHI_BIT(7),
+			CopyDestinationBit = RHI_BIT(8),
+			DepthReadBit = RHI_BIT(9),
+			DepthWriteBit = RHI_BIT(10),
+			UnorderedAccessBit = RHI_BIT(11)
 		};
 	};
 	RHI_ENUM_OPERATORS(ResourceState::Flags);
