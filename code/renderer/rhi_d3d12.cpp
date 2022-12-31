@@ -113,6 +113,7 @@ namespace RHI
 		D3D12MA::Allocation* allocation;
 		ID3D12Resource* buffer;
 		D3D12_GPU_VIRTUAL_ADDRESS gpuAddress;
+		bool mapped;
 	};
 
 	struct RootSignature
@@ -752,24 +753,42 @@ namespace RHI
 	void DestroyBuffer(HBuffer handle)
 	{
 		Buffer& buffer = rhi.buffers.Get(handle);
+		if(buffer.mapped)
+		{
+			UnmapBuffer(handle);
+		}
 		COM_RELEASE(buffer.buffer);
 		COM_RELEASE(buffer.allocation);
 		rhi.buffers.Remove(handle);
 	}
 
-	void* MapBuffer(HBuffer buffer)
+	void* MapBuffer(HBuffer handle)
 	{
-		// @TODO: check if already mapped?
+		Buffer& buffer = rhi.buffers.Get(handle);
+		if(buffer.mapped)
+		{
+			ri.Error(ERR_FATAL, "Attempted to map buffer '%s' that is already mapped!\n", buffer.desc.name);
+			return NULL;
+		}
+
 		void* mappedPtr;
-		D3D(rhi.buffers.Get(buffer).buffer->Map(0, NULL, &mappedPtr));
+		D3D(buffer.buffer->Map(0, NULL, &mappedPtr));
+		buffer.mapped = true;
 
 		return mappedPtr;
 	}
 
-	void UnmapBuffer(HBuffer buffer)
+	void UnmapBuffer(HBuffer handle)
 	{
-		// @TODO: check if already unmapped?
-		rhi.buffers.Get(buffer).buffer->Unmap(0, NULL);
+		Buffer& buffer = rhi.buffers.Get(handle);
+		if(!buffer.mapped)
+		{
+			ri.Error(ERR_FATAL, "Attempted to unmap buffer '%s' that isn't mapped!\n", buffer.desc.name);
+			return;
+		}
+
+		buffer.buffer->Unmap(0, NULL);
+		buffer.mapped = false;
 	}
 
 	HRootSignature CreateRootSignature(const RootSignatureDesc& rhiDesc)

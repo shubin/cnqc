@@ -57,14 +57,27 @@ float4 main(VOut input) : SV_TARGET
 
 struct ui_t
 {
-	uint32_t indices[SHADER_MAX_INDEXES];
-	vec2_t positions[SHADER_MAX_VERTEXES];
-	vec2_t texCoords[SHADER_MAX_VERTEXES];
-	color4ub_t colors[SHADER_MAX_VERTEXES];
+	typedef uint32_t index_t;
+#pragma pack(push, 1)
+	struct vertex_t
+	{
+		vec2_t position;
+		vec2_t texCoords;
+		color4ub_t color;
+	};
+#pragma pack(pop)
+	//uint32_t indices[SHADER_MAX_INDEXES];
+	//vec2_t positions[SHADER_MAX_VERTEXES];
+	//vec2_t texCoords[SHADER_MAX_VERTEXES];
+	//color4ub_t colors[SHADER_MAX_VERTEXES];
 	int indexCount;
 	int vertexCount;
 	RHI::HRootSignature rootSignature;
 	RHI::HPipeline pipeline;
+	RHI::HBuffer indexBuffer;
+	RHI::HBuffer vertexBuffer;
+	index_t* indices; // @TODO: 16-bit indices
+	vertex_t* vertices;
 };
 
 struct grp_t
@@ -121,15 +134,33 @@ struct GameplayRenderPipeline : IRenderPipeline
 	void Init() override
 	{
 		{
-			RHI::RootSignatureDesc desc;
+			RHI::RootSignatureDesc desc = { 0 };
 			grp.ui.rootSignature = RHI::CreateRootSignature(desc);
 		}
 		{
-			RHI::GraphicsPipelineDesc desc;
+			RHI::GraphicsPipelineDesc desc = { 0 };
 			desc.rootSignature = grp.ui.rootSignature;
 			desc.vertexShader = RHI::CompileVertexShader(vs);
 			desc.pixelShader = RHI::CompilePixelShader(ps);
 			grp.ui.pipeline = RHI::CreateGraphicsPipeline(desc);
+		}
+		{
+			RHI::BufferDesc desc = { 0 };
+			desc.name = "UI index buffer";
+			desc.byteCount = sizeof(ui_t::index_t) * SHADER_MAX_INDEXES;
+			desc.memoryUsage = RHI::MemoryUsage::Upload;
+			desc.initialState = RHI::ResourceState::IndexBufferBit;
+			grp.ui.indexBuffer = RHI::CreateBuffer(desc);
+			grp.ui.indices = (ui_t::index_t*)RHI::MapBuffer(grp.ui.indexBuffer);
+		}
+		{
+			RHI::BufferDesc desc = { 0 };
+			desc.name = "UI vertex buffer";
+			desc.byteCount = sizeof(ui_t::vertex_t) * SHADER_MAX_VERTEXES;
+			desc.memoryUsage = RHI::MemoryUsage::Upload;
+			desc.initialState = RHI::ResourceState::VertexBufferBit;
+			grp.ui.vertexBuffer = RHI::CreateBuffer(desc);
+			grp.ui.vertices = (ui_t::vertex_t*)RHI::MapBuffer(grp.ui.vertexBuffer);
 		}
 	}
 

@@ -98,10 +98,10 @@ namespace RHI
 	{
 		enum Id
 		{
-			HostOnly, // CPU
-			DeviceOnly, // GPU
-			HostToDevice, // CPU -> GPU, i.e. upload
-			DeviceToHost, // GPU -> CPU, i.e. readback
+			CPU, // Host
+			GPU, // DeviceLocal
+			Upload, // CPU -> GPU
+			Readback, // GPU -> CPU
 			Count
 		};
 	};
