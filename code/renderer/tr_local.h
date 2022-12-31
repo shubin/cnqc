@@ -1729,12 +1729,21 @@ namespace RHI
 
 	struct RootSignatureDesc
 	{
+		const char* name;
+	};
+
+	struct ShaderByteCode
+	{
+		const void* data;
+		uint32_t byteCount;
 	};
 
 	struct GraphicsPipelineDesc
 	{
 		const char* name;
 		HRootSignature rootSignature;
+		ShaderByteCode vertexShader;
+		ShaderByteCode pixelShader;
 	};
 
 	void Init();

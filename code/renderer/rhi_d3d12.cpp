@@ -702,10 +702,10 @@ namespace RHI
 		desc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO; // D3D12_DEPTH_WRITE_MASK_ALL to enable writes
 		desc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 		
-		//desc.VS.pShaderBytecode = ;
-		//desc.VS.BytecodeLength = ;
-		//desc.PS.pShaderBytecode = ;
-		//desc.PS.BytecodeLength = ;
+		desc.VS.pShaderBytecode = rhiDesc.vertexShader.data;
+		desc.VS.BytecodeLength = rhiDesc.vertexShader.byteCount;
+		desc.PS.pShaderBytecode = rhiDesc.pixelShader.data;
+		desc.PS.BytecodeLength = rhiDesc.pixelShader.byteCount;
 
 		desc.RasterizerState.AntialiasedLineEnable = FALSE;
 		desc.RasterizerState.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
@@ -741,7 +741,7 @@ namespace RHI
 		rhi.commandList->SetPipelineState(rhi.pipelines.Get(pipeline).pso);
 	}
 
-	void CmdSetViewport(uint32_t x, uint32_t y, uint32_t w, uint32_t h, float minDepth = 0.0f, float maxDepth = 1.0f)
+	void CmdSetViewport(uint32_t x, uint32_t y, uint32_t w, uint32_t h, float minDepth, float maxDepth)
 	{
 		Q_assert(CanWriteCommands());
 
