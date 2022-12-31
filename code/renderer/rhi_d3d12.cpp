@@ -234,6 +234,11 @@ namespace RHI
 
 	static void SetDebugName(ID3D12DeviceChild* resource, const char* resourceName)
 	{
+		if(resourceName == NULL)
+		{
+			return;
+		}
+
 		// ID3D12Object::SetName is a Unicode wrapper for
 		// ID3D12Object::SetPrivateData with WKPDID_D3DDebugObjectNameW
 		resource->SetPrivateData(WKPDID_D3DDebugObjectName, strlen(resourceName), resourceName);
@@ -408,7 +413,8 @@ namespace RHI
 			return;
 		}
 
-		memset(&rhi, 0, sizeof(rhi));
+		// @NOTE: we can't use memset because of the StaticPool members
+		new (&rhi) RHIPrivate();
 
 #if defined(_DEBUG)
 		if(SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&rhi.debug))))
