@@ -597,7 +597,7 @@ static const void* RB_DrawSurfs( const void* data )
 }
 
 
-static const void* RB_BeginFrame( const void* data )
+const void* RB_BeginFrame( const void* data )
 {
 	const beginFrameCommand_t* cmd = (const beginFrameCommand_t*)data;
 
@@ -608,7 +608,7 @@ static const void* RB_BeginFrame( const void* data )
 }
 
 
-static const void* RB_SwapBuffers( const void* data )
+const void* RB_SwapBuffers( const void* data )
 {
 	// finish any 2D drawing if needed
 	if ( tess.numIndexes ) {

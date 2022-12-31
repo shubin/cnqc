@@ -119,7 +119,8 @@ struct GameplayRenderPipeline : IRenderPipeline
 		{
 			data = PADP(data, sizeof(void*));
 
-			switch(*(const int*)data) {
+			switch(*(const int*)data)
+			{
 				case RC_SET_COLOR:
 					data = SkipCommand<setColorCommand_t>(data);
 					break;
@@ -133,10 +134,10 @@ struct GameplayRenderPipeline : IRenderPipeline
 					data = SkipCommand<drawSurfsCommand_t>(data);
 					break;
 				case RC_BEGIN_FRAME:
-					data = SkipCommand<beginFrameCommand_t>(data);
+					data = RB_BeginFrame(data);
 					break;
 				case RC_SWAP_BUFFERS:
-					data = SkipCommand<swapBuffersCommand_t>(data);
+					data = RB_SwapBuffers(data);
 					break;
 				case RC_SCREENSHOT:
 					data = SkipCommand<screenshotCommand_t>(data);
@@ -144,10 +145,8 @@ struct GameplayRenderPipeline : IRenderPipeline
 				case RC_VIDEOFRAME:
 					data = SkipCommand<videoFrameCommand_t>(data);
 					break;
-
 				case RC_END_OF_LIST:
 					return;
-
 				default:
 					Q_assert(!"Invalid render command ID");
 					return;
