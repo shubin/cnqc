@@ -32,6 +32,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 namespace RHI
 {
+	// this has 2 meanings:
+	// 1. maximum number of frames queued
+	// 2. number of frames in the back buffer
+	const uint32_t FrameCount = 2;
+	const uint32_t MaxVertexBufferCount = 16;
+
 	typedef uint32_t Handle;
 
 #define RHI_HANDLE_TYPE(TypeName) struct TypeName { Handle v; }; \

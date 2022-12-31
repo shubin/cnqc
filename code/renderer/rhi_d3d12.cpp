@@ -23,9 +23,11 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 
 /*
 to do:
+
 * partial inits and shutdown
 - move the Dear ImGui rendering outside of the RHI
 * integrate D3D12MA
+- D3D12MA: defragment on partial inits?
 - compiler switch for GPU validation
 - use ID3D12Device4::CreateCommandList1 to create closed command lists
 - if a feature level below 12.0 is good enough,
@@ -64,11 +66,6 @@ extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8".\\D3D12
 
 namespace RHI
 {
-	// this has 2 meanings:
-	// 1. maximum number of frames queued
-	// 2. number of frames in the back buffer
-	static const UINT FrameCount = 2;
-
 	// D3D_FEATURE_LEVEL_12_0 is the minimum to ensure at least Resource Binding Tier 2:
 	// - unlimited SRVs
 	// - 14 CBVs
@@ -113,7 +110,9 @@ namespace RHI
 	struct Buffer
 	{
 		BufferDesc desc;
+		D3D12MA::Allocation* allocation;
 		ID3D12Resource* buffer;
+		D3D12_GPU_VIRTUAL_ADDRESS gpuAddress;
 	};
 
 	struct RootSignature
@@ -708,24 +707,69 @@ namespace RHI
 		// @TODO:
 	}
 
-	HBuffer CreateBuffer(const BufferDesc& desc)
+	HBuffer CreateBuffer(const BufferDesc& rhiDesc)
 	{
 		// @TODO:
+
+		// alignment must be 64KB (D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT) or 0, which is effectively 64KB.
+		// https://msdn.microsoft.com/en-us/library/windows/desktop/dn903813(v=vs.85).aspx
+		D3D12_RESOURCE_DESC desc = { 0 };
+		desc.Alignment = 0; // D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT
+		desc.DepthOrArraySize = 1;
+		desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+		desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+		desc.Format = DXGI_FORMAT_UNKNOWN;
+		desc.Width = rhiDesc.byteCount;
+		desc.Height = 1;
+		desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+		desc.MipLevels = 1;
+		desc.SampleDesc.Count = 1;
+		desc.SampleDesc.Quality = 0;
+		if(rhiDesc.initialState & ResourceState::UnorderedAccessBit)
+		{
+			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+		}
+
+		D3D12MA::ALLOCATION_DESC allocDesc = { 0 };
+		allocDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
+		allocDesc.Flags = D3D12MA::ALLOCATION_FLAG_STRATEGY_MIN_MEMORY;
+		// add D3D12MA::ALLOCATION_FLAG_COMMITTED for big resources
+
+		D3D12MA::Allocation* allocation;
+		ID3D12Resource* resource;
+		D3D(rhi.allocator->CreateResource(&allocDesc, &desc, D3D12_RESOURCE_STATE_COPY_DEST, NULL, &allocation, IID_PPV_ARGS(&resource)));
+		SetDebugName(resource, rhiDesc.name);
+
+		Buffer buffer = { 0 };
+		buffer.desc = rhiDesc;
+		buffer.allocation = allocation;
+		buffer.buffer = resource;
+		buffer.gpuAddress = resource->GetGPUVirtualAddress();
+
+		return rhi.buffers.Add(buffer);
 	}
 
-	void DestroyBuffer(HBuffer buffer)
+	void DestroyBuffer(HBuffer handle)
 	{
-		// @TODO:
+		Buffer& buffer = rhi.buffers.Get(handle);
+		COM_RELEASE(buffer.buffer);
+		COM_RELEASE(buffer.allocation);
+		rhi.buffers.Remove(handle);
 	}
 
 	void* MapBuffer(HBuffer buffer)
 	{
-		// @TODO:
+		// @TODO: check if already mapped?
+		void* mappedPtr;
+		D3D(rhi.buffers.Get(buffer).buffer->Map(0, NULL, &mappedPtr));
+
+		return mappedPtr;
 	}
 
 	void UnmapBuffer(HBuffer buffer)
 	{
-		// @TODO:
+		// @TODO: check if already unmapped?
+		rhi.buffers.Get(buffer).buffer->Unmap(0, NULL);
 	}
 
 	HRootSignature CreateRootSignature(const RootSignatureDesc& rhiDesc)
@@ -836,8 +880,20 @@ namespace RHI
 	void CmdBindVertexBuffers(uint32_t count, const HBuffer* vertexBuffers, const uint32_t* byteStrides, const uint32_t* startByteOffsets)
 	{
 		Q_assert(CanWriteCommands());
+		Q_assert(count <= MaxVertexBufferCount);
 
-		// @TODO:
+		count = max(count, MaxVertexBufferCount);
+
+		D3D12_VERTEX_BUFFER_VIEW views[MaxVertexBufferCount];
+		for(uint32_t v = 0; v < count; ++v)
+		{
+			const Buffer& buffer = rhi.buffers.Get(vertexBuffers[v]);
+			const uint32_t offset = startByteOffsets ? startByteOffsets[v] : 0;
+			views[v].BufferLocation = buffer.gpuAddress + offset;
+			views[v].SizeInBytes = buffer.desc.byteCount - offset;
+			views[v].StrideInBytes = byteStrides[v];
+		}
+		rhi.commandList->IASetVertexBuffers(0, count, views);
 	}
 
 	void CmdBindIndexBuffer(HBuffer indexBuffer, IndexType::Id type, uint32_t startByteOffset)
@@ -846,11 +902,10 @@ namespace RHI
 
 		const Buffer& buffer = rhi.buffers.Get(indexBuffer);
 
-		// @TODO:
 		D3D12_INDEX_BUFFER_VIEW view = { 0 };
-		//view.BufferLocation = buffer.gpuAddress + startByteOffset;
+		view.BufferLocation = buffer.gpuAddress + startByteOffset;
 		view.Format = GetD3DIndexFormat(type);
-		//view.SizeInBytes = (UINT)(buffer.byteCount - startByteOffset);
+		view.SizeInBytes = (UINT)(buffer.desc.byteCount - startByteOffset);
 		rhi.commandList->IASetIndexBuffer(&view);
 	}
 
