@@ -46,6 +46,10 @@ to do:
 #include <d3d12.h>
 #include <dxgi1_6.h>
 #include <dxgidebug.h>
+#if defined(_DEBUG)
+#include <d3dcompiler.h>
+#pragma comment(lib, "d3dcompiler")
+#endif
 #include "D3D12MemAlloc.h"
 // @TODO: move out of the RHI...
 #include "../imgui/imgui_impl_dx12.h"
@@ -786,4 +790,37 @@ namespace RHI
 
 		rhi.commandList->DrawInstanced(vertexCount, 1, firstVertex, 0);
 	}
+
+#if defined(_DEBUG)
+
+	static ShaderByteCode CompileShader(const char* source, const char* target)
+	{
+		// yup, this leaks memory but we don't care as it's for quick and dirty testing
+		// could write to a linear allocator instead...
+		ID3DBlob* blob;
+		ID3DBlob* error;
+		if(FAILED(D3DCompile(source, strlen(source), NULL, NULL, NULL, "main", target, 0, 0, &blob, &error)))
+		{
+			ri.Error(ERR_FATAL, "Shader compilation failed:\n%s\n", (const char*)error->GetBufferPointer());
+			return ShaderByteCode();
+		}
+
+		ShaderByteCode byteCode;
+		byteCode.data = blob->GetBufferPointer();
+		byteCode.byteCount = blob->GetBufferSize();
+
+		return byteCode;
+	}
+
+	ShaderByteCode CompileVertexShader(const char* source)
+	{
+		return CompileShader(source, "vs_5_0");
+	}
+
+	ShaderByteCode CompilePixelShader(const char* source)
+	{
+		return CompileShader(source, "ps_5_0");
+	}
+
+#endif
 }

@@ -530,15 +530,16 @@ void R_Init()
 		RHI::RootSignatureDesc desc;
 		tr.rootSignature = RHI::CreateRootSignature(desc);
 	}
-	/*{
+	{
+		const char* vs = "";
+		const char* ps = "";
+
 		RHI::GraphicsPipelineDesc desc;
 		desc.rootSignature = tr.rootSignature;
-		desc.vertexShader.data = ;
-		desc.vertexShader.byteCount = ;
-		desc.pixelShader.data = ;
-		desc.pixelShader.byteCount = ;
+		desc.vertexShader = RHI::CompileVertexShader(vs);
+		desc.pixelShader = RHI::CompilePixelShader(ps);
 		tr.pipeline = RHI::CreateGraphicsPipeline(desc);
-	}*/
+	}
 
 	QSUBSYSTEM_INIT_DONE( "Renderer" );
 }

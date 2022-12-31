@@ -147,6 +147,11 @@ namespace RHI
 	void CmdSetScissor(uint32_t x, uint32_t y, uint32_t w, uint32_t h);
 	void CmdDraw(uint32_t vertexCount, uint32_t firstVertex);
 
+#if defined(_DEBUG)
+	ShaderByteCode CompileVertexShader(const char* source);
+	ShaderByteCode CompilePixelShader(const char* source);
+#endif
+
 #if 0
 	struct BufferDesc
 	{
