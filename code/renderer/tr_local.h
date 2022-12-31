@@ -438,17 +438,6 @@ namespace RHI
 	};
 }
 
-struct IRenderPipeline
-{
-	virtual void Init() = 0;
-	virtual void ShutDown(qbool fullShutDown) = 0;
-	virtual void BeginFrame() = 0;
-	virtual void EndFrame() = 0;
-	virtual void ExecuteRenderCommands(const void* data) = 0;
-};
-
-extern IRenderPipeline* renderPipeline;
-
 
 extern const float s_flipMatrix[16];
 
@@ -2061,6 +2050,19 @@ extern int re_cameraMatrixTime;
 extern screenshotCommand_t	r_delayedScreenshot;
 extern qbool				r_delayedScreenshotPending;
 extern int					r_delayedScreenshotFrame;
+
+
+struct IRenderPipeline
+{
+	virtual void Init() = 0;
+	virtual void ShutDown(qbool fullShutDown) = 0;
+	virtual void BeginFrame() = 0;
+	virtual void EndFrame() = 0;
+	virtual void AddDrawSurface(const surfaceType_t* surface, const shader_t* shader) = 0;
+	virtual void ExecuteRenderCommands(const void* data) = 0;
+};
+
+extern IRenderPipeline* renderPipeline;
 
 
 #endif //TR_LOCAL_H

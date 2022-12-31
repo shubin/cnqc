@@ -146,6 +146,10 @@ struct GameplayRenderPipeline : IRenderPipeline
 		EndSurfaces();
 	}
 
+	void AddDrawSurface(const surfaceType_t* surface, const shader_t* shader) override
+	{
+	}
+
 	void ExecuteRenderCommands(const void* data) override
 	{
 		for(;;)
