@@ -37,12 +37,13 @@ namespace RHI
 #define RHI_HANDLE_TYPE(TypeName) struct TypeName { Handle v; }; \
 	inline bool operator==(TypeName a, TypeName b) { return a.v == b.v; } \
 	inline bool operator!=(TypeName a, TypeName b) { return a.v != b.v; }
+	RHI_HANDLE_TYPE(HFence);
+	RHI_HANDLE_TYPE(HBuffer);
 	RHI_HANDLE_TYPE(HRootSignature);
 	RHI_HANDLE_TYPE(HPipeline);
 	/*
 	RHI_HANDLE_TYPE(HTexture);
 	RHI_HANDLE_TYPE(HSampler);
-	RHI_HANDLE_TYPE(HBuffer);
 	RHI_HANDLE_TYPE(HDurationQuery);
 	*/
 
@@ -130,11 +131,28 @@ namespace RHI
 		ShaderByteCode pixelShader;
 	};
 
+	struct BufferDesc
+	{
+		const char* name;
+		uint32_t byteCount;
+		ResourceState::Flags initialState;
+		MemoryUsage::Id memoryUsage;
+	};
+
 	void Init();
 	void ShutDown(qbool destroyWindow);
 
 	void BeginFrame();
 	void EndFrame();
+
+	HFence CreateFence();
+	void DestroyFence(HFence fence);
+	void WaitForAllFences(uint32_t fenceCount, const HFence* fences);
+
+	HBuffer CreateBuffer(const BufferDesc& desc);
+	void DestroyBuffer(HBuffer buffer);
+	void* MapBuffer(HBuffer buffer);
+	void UnmapBuffer(HBuffer buffer);
 
 	HRootSignature CreateRootSignature(const RootSignatureDesc& desc);
 	void DestroyRootSignature(HRootSignature signature);
@@ -142,11 +160,17 @@ namespace RHI
 	HPipeline CreateGraphicsPipeline(const GraphicsPipelineDesc& desc);
 	void DestroyPipeline(HPipeline pipeline);
 
+	// Cmd* write commands to the main/graphics command queue
 	void CmdBindRootSignature(HRootSignature rootSignature);
 	void CmdBindPipeline(HPipeline pipeline);
+	void CmdBindVertexBuffers(uint32_t count, const HBuffer* vertexBuffers, const uint32_t* byteStrides, const uint32_t* startByteOffsets);
+	void CmdBindIndexBuffer(HBuffer indexBuffer, IndexType::Id type, uint32_t startByteOffset);
 	void CmdSetViewport(uint32_t x, uint32_t y, uint32_t w, uint32_t h, float minDepth = 0.0f, float maxDepth = 1.0f);
 	void CmdSetScissor(uint32_t x, uint32_t y, uint32_t w, uint32_t h);
 	void CmdDraw(uint32_t vertexCount, uint32_t firstVertex);
+
+	// Cpy* write commands to the copy command queue
+	//void SubmitCopy(HFence* signalFence);
 
 #if defined(_DEBUG)
 	ShaderByteCode CompileVertexShader(const char* source);
@@ -154,27 +178,6 @@ namespace RHI
 #endif
 
 #if 0
-	struct BufferDesc
-	{
-		// @TODO:
-		const char* name;
-		uint32_t byteCount;
-		ResourceState::Flags initialState;
-		MemoryUsage::Id memoryUsage;
-	};
-
-	HBuffer CreateBuffer(const BufferDesc* desc);
-	void DestroyBuffer(HBuffer buffer);
-	void MapBuffer(void** data, HBuffer buffer);
-	void UnmapBuffer(HBuffer buffer);
-
-	void CmdBindVertexBuffers(uint32_t count, const HBuffer* vertexBuffers, const uint32_t* strides, const uint32_t* startOffsets);
-	void CmdBindIndexBuffer(HBuffer indexBuffer, IndexType::Id type, uint32_t startOffset);
-
-	Fence CreateFence(const char* name);
-	void DestroyFence(Fence fence);
-	void WaitForAllFences(uint32_t fenceCount, const Fence* fences);
-
 	Semaphore CreateSemaphore(const char* name);
 	void DestroySemaphore(Semaphore semaphore);
 

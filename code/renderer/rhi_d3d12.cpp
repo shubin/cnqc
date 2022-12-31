@@ -83,6 +83,8 @@ namespace RHI
 			// @NOTE: a valid type never being 0 means we can discard 0 handles right away
 			Invalid,
 			// public stuff
+			Fence,
+			Buffer,
 			RootSignature,
 			Pipeline,
 			// private stuff
@@ -99,6 +101,19 @@ namespace RHI
 			Compute,
 			Count
 		};
+	};
+
+	struct Fence
+	{
+		ID3D12Fence* fence;
+		HANDLE fenceEvent;
+		UINT64 fenceValue;
+	};
+
+	struct Buffer
+	{
+		BufferDesc desc;
+		ID3D12Resource* buffer;
 	};
 
 	struct RootSignature
@@ -144,6 +159,8 @@ namespace RHI
 		UINT64 fenceValues[FrameCount];
 
 #define POOL(Type, Size) StaticPool<Type, H##Type, ResourceType::Type, Size>
+		POOL(Fence, 64) fences;
+		POOL(Buffer, 64) buffers;
 		POOL(RootSignature, 64) rootSignatures;
 		POOL(Pipeline, 64) pipelines;
 #undef POOL
@@ -377,6 +394,11 @@ namespace RHI
 		return rhi.commandList != NULL;
 	}
 
+	static DXGI_FORMAT GetD3DIndexFormat(IndexType::Id type)
+	{
+		return type == IndexType::UInt16 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT;
+	}
+
 	void Init()
 	{
 		Sys_V_Init();
@@ -565,6 +587,8 @@ namespace RHI
 		for(int i = 0; rhi.PoolName.FindNext(&handle, &i);) \
 			FuncName(MAKE_HANDLE(handle)); \
 		rhi.PoolName.Clear()
+		DESTROY_POOL(fences, DestroyFence);
+		DESTROY_POOL(buffers, DestroyBuffer);
 		DESTROY_POOL(rootSignatures, DestroyRootSignature);
 		DESTROY_POOL(pipelines, DestroyPipeline);
 #undef DESTROY_POOL
@@ -661,6 +685,47 @@ namespace RHI
 		Present();
 
 		MoveToNextFrame();
+	}
+
+	HFence CreateFence()
+	{
+		// @TODO:
+		Fence fence = { 0 };
+		//fence.fence = ;
+		//fence.fenceEvent = ;
+		//fence.fenceValue = ;
+
+		return rhi.fences.Add(fence);
+	}
+
+	void DestroyFence(HFence fence)
+	{
+		// @TODO:
+	}
+
+	void WaitForAllFences(uint32_t fenceCount, const HFence* fences)
+	{
+		// @TODO:
+	}
+
+	HBuffer CreateBuffer(const BufferDesc& desc)
+	{
+		// @TODO:
+	}
+
+	void DestroyBuffer(HBuffer buffer)
+	{
+		// @TODO:
+	}
+
+	void* MapBuffer(HBuffer buffer)
+	{
+		// @TODO:
+	}
+
+	void UnmapBuffer(HBuffer buffer)
+	{
+		// @TODO:
 	}
 
 	HRootSignature CreateRootSignature(const RootSignatureDesc& rhiDesc)
@@ -766,6 +831,27 @@ namespace RHI
 		const Pipeline pipe = rhi.pipelines.Get(pipeline);
 		rhi.commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // @TODO: grab from pipe!
 		rhi.commandList->SetPipelineState(pipe.pso);
+	}
+
+	void CmdBindVertexBuffers(uint32_t count, const HBuffer* vertexBuffers, const uint32_t* byteStrides, const uint32_t* startByteOffsets)
+	{
+		Q_assert(CanWriteCommands());
+
+		// @TODO:
+	}
+
+	void CmdBindIndexBuffer(HBuffer indexBuffer, IndexType::Id type, uint32_t startByteOffset)
+	{
+		Q_assert(CanWriteCommands());
+
+		const Buffer& buffer = rhi.buffers.Get(indexBuffer);
+
+		// @TODO:
+		D3D12_INDEX_BUFFER_VIEW view = { 0 };
+		//view.BufferLocation = buffer.gpuAddress + startByteOffset;
+		view.Format = GetD3DIndexFormat(type);
+		//view.SizeInBytes = (UINT)(buffer.byteCount - startByteOffset);
+		rhi.commandList->IASetIndexBuffer(&view);
 	}
 
 	void CmdSetViewport(uint32_t x, uint32_t y, uint32_t w, uint32_t h, float minDepth, float maxDepth)
