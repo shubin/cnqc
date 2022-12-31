@@ -31,9 +31,6 @@ screenshotCommand_t	r_delayedScreenshot;
 qbool				r_delayedScreenshotPending = qfalse;
 int					r_delayedScreenshotFrame = 0;
 
-cvar_t	*r_backend;
-cvar_t	*r_frameSleep;
-
 cvar_t	*r_verbose;
 
 cvar_t	*r_displayRefresh;
@@ -75,9 +72,6 @@ cvar_t	*r_mipGenFilter;
 cvar_t	*r_mipGenGamma;
 cvar_t	*r_ditherStrength;
 cvar_t	*r_transpSort;
-cvar_t	*r_gl3_geoStream;
-cvar_t	*r_d3d11_syncOffsets;
-cvar_t	*r_d3d11_presentMode;
 cvar_t	*r_ext_max_anisotropy;
 cvar_t	*r_msaa;
 
@@ -319,18 +313,11 @@ const void *RB_TakeVideoFrameCmd( const void *data )
 
 void GfxInfo_f( void )
 {
-	ri.Printf( PRINT_ALL, "Back-end: %s\n", r_backend->string );
 	if ( glConfig.vendor_string[0] != '\0' )
 		ri.Printf( PRINT_ALL, "Vendor: %s\n", glConfig.vendor_string );
 	if ( glConfig.renderer_string[0] != '\0' )
 		ri.Printf( PRINT_ALL, "Renderer: %s\n", glConfig.renderer_string );
-	if ( glConfig.version_string[0] != '\0' )
-		ri.Printf( PRINT_ALL, "OpenGL version: %s\n", glConfig.version_string );
-	ri.Printf( PRINT_ALL, "MSAA                  : %dx\n", glInfo.msaaSampleCount );
-	ri.Printf( PRINT_ALL, "MSAA alpha to coverage: %s\n", glInfo.alphaToCoverageSupport ? "ON" : "OFF" );
-	ri.Printf( PRINT_ALL, "Depth fade            : %s\n", glInfo.depthFadeSupport ? "ON" : "OFF" );
-	ri.Printf( PRINT_ALL, "GPU mip-map generation: %s\n", glInfo.mipGenSupport ? "ON" : "OFF" );
-	//@TODO: gal.PrintInfo();
+	//@TODO: RHI::PrintInfo();
 }
 
 
@@ -359,17 +346,8 @@ static const cvarTableItem_t r_cvars[] =
 	//
 	// latched and archived variables
 	//
-#if defined( _WIN32 )
-	{ &r_backend, "r_backend", "D3D11", CVAR_ARCHIVE | CVAR_LATCH, CVART_STRING, NULL, NULL, help_r_backend },
-#else
-	{ &r_backend, "r_backend", "GL3", CVAR_ARCHIVE | CVAR_LATCH, CVART_STRING,  NULL, NULL, help_r_backend },
-#endif
-	{ &r_frameSleep, "r_frameSleep", "2", CVAR_ARCHIVE, CVART_INTEGER, "0", "2", help_r_frameSleep },
 	{ &r_mipGenFilter, "r_mipGenFilter", "L4", CVAR_ARCHIVE | CVAR_LATCH, CVART_STRING, NULL, NULL, help_r_mipGenFilter },
 	{ &r_mipGenGamma, "r_mipGenGamma", "1.8", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "1.0", "3.0", help_r_mipGenGamma },
-	{ &r_gl3_geoStream, "r_gl3_geoStream", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", XSTRING(GL3MAP_MAX), help_r_gl3_geoStream },
-	{ &r_d3d11_syncOffsets, "r_d3d11_syncOffsets", "2", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", XSTRING(D3D11SO_MAX), help_r_d3d11_syncOffsets },
-	{ &r_d3d11_presentMode, "r_d3d11_presentMode", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", XSTRING(DXGIPM_MAX), help_r_d3d11_presentMode },
 	{ &r_ext_max_anisotropy, "r_ext_max_anisotropy", "16", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "16", help_r_ext_max_anisotropy },
 	{ &r_msaa, "r_msaa", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "32", "anti-aliasing sample count, " S_COLOR_VAL "0" S_COLOR_HELP "=off" },
 	{ &r_picmip, "r_picmip", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "16", help_r_picmip },
@@ -394,8 +372,6 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_lightmap, "r_lightmap", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_lightmap },
 	{ &r_lightmapGreyscale, "r_lightmapGreyscale", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "0", "1", "how desaturated the lightmap looks" },
 	{ &r_depthFade, "r_depthFade", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_depthFade },
-	{ &r_gpuMipGen, "r_gpuMipGen", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_gpuMipGen },
-	{ &r_alphaToCoverage, "r_alphaToCoverage", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_alphaToCoverage },
 	{ &r_dither, "r_dither", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_dither },
 	{ &r_rtColorFormat, "r_rtColorFormat", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", XSTRING(RTCF_MAX), help_r_rtColorFormat },
 	{ &r_depthClamp, "r_depthClamp", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_depthClamp },
@@ -550,6 +526,20 @@ void R_Init()
 
 	R_ModelInit();
 
+	{
+		RHI::RootSignatureDesc desc;
+		tr.rootSignature = RHI::CreateRootSignature(desc);
+	}
+	/*{
+		RHI::GraphicsPipelineDesc desc;
+		desc.rootSignature = tr.rootSignature;
+		desc.vertexShader.data = ;
+		desc.vertexShader.byteCount = ;
+		desc.pixelShader.data = ;
+		desc.pixelShader.byteCount = ;
+		tr.pipeline = RHI::CreateGraphicsPipeline(desc);
+	}*/
+
 	QSUBSYSTEM_INIT_DONE( "Renderer" );
 }
 
@@ -616,9 +606,6 @@ static qbool RE_Registered()
 
 static qbool RE_IsFrameSleepNeeded()
 {
-	if ( r_frameSleep->integer != 2 )
-		return r_frameSleep->integer;
-
 	return !Sys_V_IsVSynced();
 }
 

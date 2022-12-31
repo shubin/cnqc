@@ -30,6 +30,409 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_public.h"
 
 
+namespace RHI
+{
+	typedef uint32_t Handle;
+
+#define RHI_HANDLE_TYPE(TypeName) struct TypeName { Handle v; }; \
+	inline bool operator==(TypeName a, TypeName b) { return a.v == b.v; } \
+	inline bool operator!=(TypeName a, TypeName b) { return a.v != b.v; }
+	RHI_HANDLE_TYPE(HRootSignature);
+	RHI_HANDLE_TYPE(HPipeline);
+	/*
+	RHI_HANDLE_TYPE(HTexture);
+	RHI_HANDLE_TYPE(HSampler);
+	RHI_HANDLE_TYPE(HBuffer);
+	RHI_HANDLE_TYPE(HDurationQuery);
+	*/
+
+#define RHI_ENUM_OPERATORS(EnumType) \
+	inline EnumType operator|(EnumType a, EnumType b) { return (EnumType)((uint32_t)(a) | (uint32_t)(b)); } \
+	inline EnumType operator&(EnumType a, EnumType b) { return (EnumType)((uint32_t)(a) & (uint32_t)(b)); } \
+	inline EnumType operator|=(EnumType& a, EnumType b) { return a = (a | b); } \
+	inline EnumType operator&=(EnumType& a, EnumType b) { return a = (a & b); } \
+	inline EnumType operator~(EnumType a) { return (EnumType)(~(uint32_t)(a)); }
+
+#define RHI_BIT(Bit) (1 << Bit)
+#define RHI_BIT_MASK(BitCount) ((1 << BitCount) - 1)
+
+	struct IndexType
+	{
+		enum Id
+		{
+			UInt32,
+			UInt16,
+			Count
+		};
+	};
+
+	struct ResourceState
+	{
+		enum Flags
+		{
+			Common = 0,
+			VertexBufferBit = RHI_BIT(0),
+			IndexBufferBit = RHI_BIT(1),
+			ConstantBufferBit = RHI_BIT(2),
+			RenderTargetBit = RHI_BIT(3),
+			VertexShaderAccessBit = RHI_BIT(4),
+			PixelShaderAccessBit = RHI_BIT(5),
+			ComputeShaderAccessBit = RHI_BIT(6),
+			CopySourceBit = RHI_BIT(7),
+			CopyDestinationBit = RHI_BIT(8),
+			DepthReadBit = RHI_BIT(9),
+			DepthWriteBit = RHI_BIT(10),
+			UnorderedAccessBit = RHI_BIT(11)
+		};
+	};
+	RHI_ENUM_OPERATORS(ResourceState::Flags);
+
+	struct MemoryUsage
+	{
+		enum Id
+		{
+			HostOnly, // CPU
+			DeviceOnly, // GPU
+			HostToDevice, // CPU -> GPU, i.e. upload
+			DeviceToHost, // GPU -> CPU, i.e. readback
+			Count
+		};
+	};
+
+	struct ShaderStage
+	{
+		enum Flags
+		{
+			None = 0,
+			VertexBit = RHI_BIT(0),
+			PixelBit = RHI_BIT(1),
+			Count
+		};
+	};
+	RHI_ENUM_OPERATORS(ShaderStage::Flags);
+
+	struct RootSignatureDesc
+	{
+		const char* name;
+	};
+
+	struct ShaderByteCode
+	{
+		const void* data;
+		uint32_t byteCount;
+	};
+
+	struct GraphicsPipelineDesc
+	{
+		const char* name;
+		HRootSignature rootSignature;
+		ShaderByteCode vertexShader;
+		ShaderByteCode pixelShader;
+	};
+
+	void Init();
+	void ShutDown(qbool destroyWindow);
+
+	void BeginFrame();
+	void EndFrame();
+
+	HRootSignature CreateRootSignature(const RootSignatureDesc& desc);
+	void DestroyRootSignature(HRootSignature signature);
+
+	HPipeline CreateGraphicsPipeline(const GraphicsPipelineDesc& desc);
+	void DestroyPipeline(HPipeline pipeline);
+
+	void CmdBindPipeline(HPipeline pipeline);
+	void CmdSetViewport(uint32_t x, uint32_t y, uint32_t w, uint32_t h, float minDepth = 0.0f, float maxDepth = 1.0f);
+	void CmdSetScissor(uint32_t x, uint32_t y, uint32_t w, uint32_t h);
+	void CmdDraw(uint32_t vertexCount, uint32_t firstVertex);
+
+#if 0
+	struct BufferDesc
+	{
+		// @TODO:
+		const char* name;
+		uint32_t byteCount;
+		ResourceState::Flags initialState;
+		MemoryUsage::Id memoryUsage;
+	};
+
+	HBuffer CreateBuffer(const BufferDesc* desc);
+	void DestroyBuffer(HBuffer buffer);
+	void MapBuffer(void** data, HBuffer buffer);
+	void UnmapBuffer(HBuffer buffer);
+
+	void CmdBindVertexBuffers(uint32_t count, const HBuffer* vertexBuffers, const uint32_t* strides, const uint32_t* startOffsets);
+	void CmdBindIndexBuffer(HBuffer indexBuffer, IndexType::Id type, uint32_t startOffset);
+
+	Fence CreateFence(const char* name);
+	void DestroyFence(Fence fence);
+	void WaitForAllFences(uint32_t fenceCount, const Fence* fences);
+
+	Semaphore CreateSemaphore(const char* name);
+	void DestroySemaphore(Semaphore semaphore);
+
+	Texture CreateTexture(const TextureDesc* desc);
+	void UploadTextureData(Texture texture, const TextureUploadDesc* desc);
+	void DestroyTexture(Texture texture);
+
+	Sampler CreateSampler(const SamplerDesc* desc);
+	void DestroySampler(Sampler sampler);
+
+	Shader CreateShader(const ShaderDesc* desc);
+	void DestroyShader(Shader shader);
+
+	DescriptorSetLayout CreateDescriptorSetLayout(const DescriptorSetLayoutDesc* desc);
+	void DestroyDescriptorSetLayout(DescriptorSetLayout layout);
+
+	PipelineLayout CreatePipelineLayout(const PipelineLayoutDesc* desc);
+	void DestroyPipelineLayout(PipelineLayout layout);
+
+	// technically, DescriptorType::Flags is not needed but it's useful to check that you haven't messed up
+	DescriptorSet CreateDescriptorSet(const DescriptorSetDesc* desc);
+	void UpdateDescriptorSet(DescriptorSet set, uint32_t binding, DescriptorType::Flags type,
+		uint32_t handleCount, const void* handleArray);
+	void DestroyDescriptorSet(DescriptorSet set);
+
+	Pipeline CreateGraphicsPipeline(const GraphicsPipelineDesc* desc);
+	Pipeline CreateComputePipeline(const ComputePipelineDesc* desc);
+	void DestroyPipeline(Pipeline pipeline);
+
+	void GetSwapChainInfo(SwapChainInfo* desc);
+	void AcquireNextImage(uint32_t* outImageIndex, Semaphore signalSemaphore);
+	void WaitUntilDeviceIdle();
+
+	void SubmitGraphics(const SubmitGraphicsDesc* desc);
+	void SubmitPresent(const SubmitPresentDesc* desc);
+
+	// think of the command pool as a linear allocator and reset as a clear operation
+	// make sure to call reset to prevent the pool from growing too much
+	CommandPool CreateCommandPool(const CommandPoolDesc* desc);
+	void ResetCommandPool(CommandPool pool);
+	void DestroyCommandPool(CommandPool pool);
+
+	CommandBuffer CreateCommandBuffer(CommandPool pool);
+	void BindCommandBuffer(CommandBuffer cmdBuf);
+	void BeginCommandBuffer();
+	void EndCommandBuffer();
+	void DestroyCommandBuffer(CommandBuffer cmdBuf);
+
+	void CmdBeginRenderPass(uint32_t colorCount, const Texture* colors, Texture depthStencil = { 0 }, const LoadActions* loadActions = NULL);
+	void CmdBeginRenderPass(const RenderPassDesc* desc);
+	void CmdNextSubpass();
+	void CmdEndRenderPass();
+	void CmdBindPipeline(Pipeline pipeline);
+	void CmdBindDescriptorSet(uint32_t index, DescriptorSet descriptorSet, PipelineLayout pipelineLayout);
+	void CmdBindVertexBuffers(uint32_t count, const Buffer* vertexBuffers);
+	void CmdBindIndexBuffer(Buffer indexBuffer, IndexType::Id type);
+	void CmdSetViewport(uint32_t x, uint32_t y, uint32_t w, uint32_t h, float minDepth = 0.0f, float maxDepth = 1.0f);
+	void CmdSetScissor(uint32_t x, uint32_t y, uint32_t w, uint32_t h);
+	void CmdPushConstants(PipelineLayout layoutHandle, ShaderType::Id shaderStage, const void* constants);
+	void CmdDraw(uint32_t vertexCount, uint32_t firstVertex);
+	void CmdDrawIndexed(uint32_t indexCount, uint32_t firstIndex, uint32_t firstVertex);
+	void CmdBarriers(uint32_t buffCount, const BufferBarrier* buffDescs,
+		uint32_t texCount, const TextureBarrier* texDescs);
+
+	void CmdCopyBuffer(Buffer dst, uint32_t dstOffset, Buffer src, uint32_t srcOffset, uint32_t byteCount);
+	void CmdCopyBufferRegions(Buffer dst, Buffer src, uint32_t count, const BufferRegion* regions);
+
+	// @TODO: specify mip level, type union for clear color, ...
+	void CmdClearColorTexture(Texture texture, const uint32_t* clearColor);
+
+	void CmdInsertDebugLabel(const char* name, float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f);
+	void CmdBeginDebugLabel(const char* name, float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f);
+	void CmdEndDebugLabel();
+
+	// when resolving a query, said query must be from the oldest frame in flight
+	// if the query to resolve is a null handle, it will succeed with a 0 return value
+	DurationQuery CmdBeginDurationQuery();
+	void CmdEndDurationQuery(DurationQuery query);
+	void CmdResetDurationQueries();
+	void ResolveDurationQuery(uint32_t* microSeconds, DurationQuery query);
+#endif
+
+	// @TODO: move to rhi_local.h once we have more than 1 RHI
+
+	const Handle HandleIndexBitCount = 16;
+	const Handle HandleIndexBitOffset = 0;
+	const Handle HandleGenBitCount = 10;
+	const Handle HandleGenBitOffset = 16;
+	const Handle HandleTypeBitCount = 6;
+	const Handle HandleTypeBitOffset = 26;
+
+	inline Handle CreateHandle(Handle type, Handle index, Handle generation)
+	{
+		return
+			(type << HandleTypeBitOffset) |
+			(index << HandleIndexBitOffset) |
+			(generation << HandleGenBitOffset);
+	}
+
+	inline void DecomposeHandle(Handle* type, Handle* index, Handle* generation, Handle handle)
+	{
+		*type = (handle >> HandleTypeBitOffset) & RHI_BIT_MASK(HandleTypeBitCount);
+		*index = (handle >> HandleIndexBitOffset) & RHI_BIT_MASK(HandleIndexBitCount);
+		*generation = (handle >> HandleGenBitOffset) & RHI_BIT_MASK(HandleGenBitCount);
+	}
+
+#define GET_HANDLE_VALUE(Handle) (Handle.v)
+#define MAKE_HANDLE(Value) { Value }
+#define MAKE_NULL_HANDLE() { 0 }
+
+	template<typename T>
+	qbool IsNullHandle(T handle)
+	{
+		return GET_HANDLE_VALUE(handle) == 0;
+	}
+
+	template<typename T, typename HT, RHI::Handle RT, int N>
+	struct StaticPool
+	{
+	private:
+		struct Item
+		{
+			T item;
+			uint16_t generation;
+			uint16_t next : 15;
+			uint16_t used : 1;
+		};
+
+	public:
+		StaticPool()
+		{
+			Clear();
+		}
+
+		void Clear()
+		{
+			freeList = 0;
+			for(int i = 0; i < N; ++i)
+			{
+				items[i].generation = 0;
+				items[i].used = 0;
+				items[i].next = i + 1;
+			}
+			items[N - 1].next = RHI_BIT_MASK(15);
+		}
+
+		HT Add(const T& item)
+		{
+			if(freeList >= N)
+			{
+				ri.Error(ERR_FATAL, "The memory pool is full\n");
+			}
+			items[freeList].item = item;
+			items[freeList].used = qtrue;
+			const Handle handle = CreateHandle(RT, freeList, items[freeList].generation);
+			freeList = items[freeList].next;
+			return MAKE_HANDLE(handle);
+		}
+
+		void Remove(HT handle)
+		{
+			Item& item = GetItemRef(handle);
+			if(!item.used)
+			{
+				ri.Error(ERR_FATAL, "Memory pool item was already freed\n");
+			}
+			item.generation = (item.generation + 1) & RHI_BIT_MASK(HandleGenBitCount);
+			item.used = 0;
+			item.next = freeList;
+			freeList = (uint16_t)(&item - items);
+		}
+
+		T& Get(HT handle)
+		{
+			return GetItemRef(handle).item;
+		}
+
+		T* TryGet(HT handle)
+		{
+			if(handle == 0)
+			{
+				return NULL;
+			}
+
+			return &GetItemRef(handle).item;
+		}
+
+		qbool FindNext(T** object, int* index)
+		{
+			Q_assert(object);
+			Q_assert(index);
+
+			for(int i = *index; i < N; ++i)
+			{
+				if(items[i].used)
+				{
+					*object = &items[i].item;
+					*index = i + 1;
+					return qtrue;
+				}
+			}
+
+			return qfalse;
+		}
+
+		qbool FindNext(Handle* handle, int* index)
+		{
+			Q_assert(handle);
+			Q_assert(index);
+
+			for(int i = *index; i < N; ++i)
+			{
+				if(items[i].used)
+				{
+					*handle = CreateHandle(RT, i, items[i].generation);
+					*index = i + 1;
+					return qtrue;
+				}
+			}
+
+			return qfalse;
+		}
+
+	private:
+		StaticPool(const StaticPool<T, HT, RT, N>&);
+		void operator=(const StaticPool<T, HT, RT, N>&);
+
+		Item& GetItemRef(HT handle)
+		{
+			Handle type, index, gen;
+			DecomposeHandle(&type, &index, &gen, GET_HANDLE_VALUE(handle));
+			if(type != RT)
+			{
+				ri.Error(ERR_FATAL, "Invalid memory pool handle (wrong resource type)\n");
+			}
+			if(index > (Handle)N)
+			{
+				ri.Error(ERR_FATAL, "Invalid memory pool handle (bad index)\n");
+			}
+
+			Item& item = items[index];
+			if(!item.used)
+			{
+				ri.Error(ERR_FATAL, "Invalid memory pool handle (unused slot)\n");
+			}
+
+			if(gen > (Handle)item.generation)
+			{
+				ri.Error(ERR_FATAL, "Invalid memory pool handle (allocation from the future)\n");
+			}
+			if(gen < (Handle)item.generation)
+			{
+				ri.Error(ERR_FATAL, "Invalid memory pool handle (the object has been freed)\n");
+			}
+
+			return item;
+		}
+
+		Item items[N];
+		uint16_t freeList;
+	};
+}
+
+
 extern const float s_flipMatrix[16];
 
 #pragma pack(push, 1)
@@ -936,6 +1339,9 @@ typedef struct {
 	float		mipFilter[4]; // only used by the GPU generators
 
 	qbool		worldSurface; // is the currently added draw surface a world surface?
+
+	RHI::HRootSignature rootSignature;
+	RHI::HPipeline pipeline;
 } trGlobals_t;
 
 extern backEndState_t	backEnd;
@@ -991,7 +1397,14 @@ extern trGlobals_t	tr;
 #define SHOWTRIS_VERTEX_ALPHA_BIT	16
 #define SHOWTRIS_MAX				31
 
-extern cvar_t	*r_backend;
+// @TODO: r_gpuPreference
+enum gpuPreference_t {
+	GPU_PREFERENCE_HIGH_PERFORMANCE,
+	GPU_PREFERENCE_LOW_POWER,
+	GPU_PREFERENCE_NONE,
+	CPU_PREFERENCE_COUNT
+};
+
 
 extern cvar_t	*r_verbose;				// used for verbose debug spew
 
@@ -1035,9 +1448,6 @@ extern cvar_t	*r_depthClamp;			// disables clipping vertices against the near an
 
 extern cvar_t	*r_mipGenFilter;			// if the string is invalid, Lanczos 4 is used
 extern cvar_t	*r_mipGenGamma;				// what gamma-space do we consider the textures to be in
-extern cvar_t	*r_gl3_geoStream;			// vertex/index streaming strategy, see GL3MAP_*
-extern cvar_t	*r_d3d11_syncOffsets;		// vertex attribute streaming strategy, see D3D11SO_*
-extern cvar_t	*r_d3d11_presentMode;		// DXGI presentation model, see DXGIPM_*
 extern cvar_t	*r_ext_max_anisotropy;
 extern cvar_t	*r_msaa;
 
@@ -1606,9 +2016,6 @@ struct glinfo_t {
 	int		maxTextureSize;
 	int		maxAnisotropy;
 	qbool	depthFadeSupport;
-	qbool	mipGenSupport;
-	qbool	alphaToCoverageSupport;
-	int		msaaSampleCount;		// active number of samples, can differ from r_msaa->integer
 };
 
 extern glinfo_t glInfo;
@@ -1637,416 +2044,6 @@ extern int re_cameraMatrixTime;
 extern screenshotCommand_t	r_delayedScreenshot;
 extern qbool				r_delayedScreenshotPending;
 extern int					r_delayedScreenshotFrame;
-
-
-enum gpuPreference_t {
-	GPU_PREFERENCE_HIGH_PERFORMANCE,
-	GPU_PREFERENCE_LOW_POWER,
-	GPU_PREFERENCE_NONE
-};
-
-
-namespace RHI
-{
-	typedef uint32_t Handle;
-
-#define RHI_HANDLE_TYPE(TypeName) struct TypeName { Handle v; }; \
-	inline bool operator==(TypeName a, TypeName b) { return a.v == b.v; } \
-	inline bool operator!=(TypeName a, TypeName b) { return a.v != b.v; }
-	RHI_HANDLE_TYPE(HRootSignature);
-	RHI_HANDLE_TYPE(HPipeline);
-	/*
-	RHI_HANDLE_TYPE(HTexture);
-	RHI_HANDLE_TYPE(HSampler);
-	RHI_HANDLE_TYPE(HBuffer);
-	RHI_HANDLE_TYPE(HDurationQuery);
-	*/
-
-#define RHI_ENUM_OPERATORS(EnumType) \
-	inline EnumType operator|(EnumType a, EnumType b) { return (EnumType)((uint32_t)(a) | (uint32_t)(b)); } \
-	inline EnumType operator&(EnumType a, EnumType b) { return (EnumType)((uint32_t)(a) & (uint32_t)(b)); } \
-	inline EnumType operator|=(EnumType& a, EnumType b) { return a = (a | b); } \
-	inline EnumType operator&=(EnumType& a, EnumType b) { return a = (a & b); } \
-	inline EnumType operator~(EnumType a) { return (EnumType)(~(uint32_t)(a)); }
-
-#define RHI_BIT(Bit) (1 << Bit)
-#define RHI_BIT_MASK(BitCount) ((1 << BitCount) - 1)
-
-	struct IndexType
-	{
-		enum Id
-		{
-			UInt32,
-			UInt16,
-			Count
-		};
-	};
-
-	struct ResourceState
-	{
-		enum Flags
-		{
-			Common = 0,
-			VertexBufferBit = RHI_BIT(0),
-			IndexBufferBit = RHI_BIT(1),
-			ConstantBufferBit = RHI_BIT(2),
-			RenderTargetBit = RHI_BIT(3),
-			VertexShaderAccessBit = RHI_BIT(4),
-			PixelShaderAccessBit = RHI_BIT(5),
-			ComputeShaderAccessBit = RHI_BIT(6),
-			CopySourceBit = RHI_BIT(7),
-			CopyDestinationBit = RHI_BIT(8),
-			DepthReadBit = RHI_BIT(9),
-			DepthWriteBit = RHI_BIT(10),
-			UnorderedAccessBit = RHI_BIT(11)
-		};
-	};
-	RHI_ENUM_OPERATORS(ResourceState::Flags);
-
-	struct MemoryUsage
-	{
-		enum Id
-		{
-			HostOnly, // CPU
-			DeviceOnly, // GPU
-			HostToDevice, // CPU -> GPU, i.e. upload
-			DeviceToHost, // GPU -> CPU, i.e. readback
-			Count
-		};
-	};
-
-	struct ShaderStage
-	{
-		enum Flags
-		{
-			None = 0,
-			VertexBit = RHI_BIT(0),
-			PixelBit = RHI_BIT(1),
-			Count
-		};
-	};
-	RHI_ENUM_OPERATORS(ShaderStage::Flags);
-
-	struct RootSignatureDesc
-	{
-		const char* name;
-	};
-
-	struct ShaderByteCode
-	{
-		const void* data;
-		uint32_t byteCount;
-	};
-
-	struct GraphicsPipelineDesc
-	{
-		const char* name;
-		HRootSignature rootSignature;
-		ShaderByteCode vertexShader;
-		ShaderByteCode pixelShader;
-	};
-
-	void Init();
-	void ShutDown(qbool destroyWindow);
-
-	void BeginFrame();
-	void EndFrame();
-
-	HRootSignature CreateRootSignature(const RootSignatureDesc& desc);
-	void DestroyRootSignature(HRootSignature signature);
-
-	HPipeline CreateGraphicsPipeline(const GraphicsPipelineDesc& desc);
-	void DestroyPipeline(HPipeline pipeline);
-
-	void CmdBindPipeline(HPipeline pipeline);
-	void CmdSetViewport(uint32_t x, uint32_t y, uint32_t w, uint32_t h, float minDepth = 0.0f, float maxDepth = 1.0f);
-	void CmdSetScissor(uint32_t x, uint32_t y, uint32_t w, uint32_t h);
-	void CmdDraw(uint32_t vertexCount, uint32_t firstVertex);
-
-#if 0
-	struct BufferDesc
-	{
-		// @TODO:
-		const char* name;
-		uint32_t byteCount;
-		ResourceState::Flags initialState;
-		MemoryUsage::Id memoryUsage;
-	};
-
-	HBuffer CreateBuffer(const BufferDesc* desc);
-	void DestroyBuffer(HBuffer buffer);
-	void MapBuffer(void** data, HBuffer buffer);
-	void UnmapBuffer(HBuffer buffer);
-
-	void CmdBindVertexBuffers(uint32_t count, const HBuffer* vertexBuffers, const uint32_t* strides, const uint32_t* startOffsets);
-	void CmdBindIndexBuffer(HBuffer indexBuffer, IndexType::Id type, uint32_t startOffset);
-
-	Fence CreateFence(const char* name);
-	void DestroyFence(Fence fence);
-	void WaitForAllFences(uint32_t fenceCount, const Fence* fences);
-
-	Semaphore CreateSemaphore(const char* name);
-	void DestroySemaphore(Semaphore semaphore);
-
-	Texture CreateTexture(const TextureDesc* desc);
-	void UploadTextureData(Texture texture, const TextureUploadDesc* desc);
-	void DestroyTexture(Texture texture);
-
-	Sampler CreateSampler(const SamplerDesc* desc);
-	void DestroySampler(Sampler sampler);
-
-	Shader CreateShader(const ShaderDesc* desc);
-	void DestroyShader(Shader shader);
-
-	DescriptorSetLayout CreateDescriptorSetLayout(const DescriptorSetLayoutDesc* desc);
-	void DestroyDescriptorSetLayout(DescriptorSetLayout layout);
-
-	PipelineLayout CreatePipelineLayout(const PipelineLayoutDesc* desc);
-	void DestroyPipelineLayout(PipelineLayout layout);
-
-	// technically, DescriptorType::Flags is not needed but it's useful to check that you haven't messed up
-	DescriptorSet CreateDescriptorSet(const DescriptorSetDesc* desc);
-	void UpdateDescriptorSet(DescriptorSet set, uint32_t binding, DescriptorType::Flags type,
-		uint32_t handleCount, const void* handleArray);
-	void DestroyDescriptorSet(DescriptorSet set);
-
-	Pipeline CreateGraphicsPipeline(const GraphicsPipelineDesc* desc);
-	Pipeline CreateComputePipeline(const ComputePipelineDesc* desc);
-	void DestroyPipeline(Pipeline pipeline);
-
-	void GetSwapChainInfo(SwapChainInfo* desc);
-	void AcquireNextImage(uint32_t* outImageIndex, Semaphore signalSemaphore);
-	void WaitUntilDeviceIdle();
-
-	void SubmitGraphics(const SubmitGraphicsDesc* desc);
-	void SubmitPresent(const SubmitPresentDesc* desc);
-
-	// think of the command pool as a linear allocator and reset as a clear operation
-	// make sure to call reset to prevent the pool from growing too much
-	CommandPool CreateCommandPool(const CommandPoolDesc* desc);
-	void ResetCommandPool(CommandPool pool);
-	void DestroyCommandPool(CommandPool pool);
-
-	CommandBuffer CreateCommandBuffer(CommandPool pool);
-	void BindCommandBuffer(CommandBuffer cmdBuf);
-	void BeginCommandBuffer();
-	void EndCommandBuffer();
-	void DestroyCommandBuffer(CommandBuffer cmdBuf);
-
-	void CmdBeginRenderPass(uint32_t colorCount, const Texture* colors, Texture depthStencil = { 0 }, const LoadActions* loadActions = NULL);
-	void CmdBeginRenderPass(const RenderPassDesc* desc);
-	void CmdNextSubpass();
-	void CmdEndRenderPass();
-	void CmdBindPipeline(Pipeline pipeline);
-	void CmdBindDescriptorSet(uint32_t index, DescriptorSet descriptorSet, PipelineLayout pipelineLayout);
-	void CmdBindVertexBuffers(uint32_t count, const Buffer* vertexBuffers);
-	void CmdBindIndexBuffer(Buffer indexBuffer, IndexType::Id type);
-	void CmdSetViewport(uint32_t x, uint32_t y, uint32_t w, uint32_t h, float minDepth = 0.0f, float maxDepth = 1.0f);
-	void CmdSetScissor(uint32_t x, uint32_t y, uint32_t w, uint32_t h);
-	void CmdPushConstants(PipelineLayout layoutHandle, ShaderType::Id shaderStage, const void* constants);
-	void CmdDraw(uint32_t vertexCount, uint32_t firstVertex);
-	void CmdDrawIndexed(uint32_t indexCount, uint32_t firstIndex, uint32_t firstVertex);
-	void CmdBarriers(uint32_t buffCount, const BufferBarrier* buffDescs,
-		uint32_t texCount, const TextureBarrier* texDescs);
-
-	void CmdCopyBuffer(Buffer dst, uint32_t dstOffset, Buffer src, uint32_t srcOffset, uint32_t byteCount);
-	void CmdCopyBufferRegions(Buffer dst, Buffer src, uint32_t count, const BufferRegion* regions);
-
-	// @TODO: specify mip level, type union for clear color, ...
-	void CmdClearColorTexture(Texture texture, const uint32_t* clearColor);
-
-	void CmdInsertDebugLabel(const char* name, float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f);
-	void CmdBeginDebugLabel(const char* name, float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f);
-	void CmdEndDebugLabel();
-
-	// when resolving a query, said query must be from the oldest frame in flight
-	// if the query to resolve is a null handle, it will succeed with a 0 return value
-	DurationQuery CmdBeginDurationQuery();
-	void CmdEndDurationQuery(DurationQuery query);
-	void CmdResetDurationQueries();
-	void ResolveDurationQuery(uint32_t* microSeconds, DurationQuery query);
-#endif
-
-	// @TODO: move to rhi_local.h once we have more than 1 RHI
-
-	const Handle HandleIndexBitCount = 16;
-	const Handle HandleIndexBitOffset = 0;
-	const Handle HandleGenBitCount = 10;
-	const Handle HandleGenBitOffset = 16;
-	const Handle HandleTypeBitCount = 6;
-	const Handle HandleTypeBitOffset = 26;
-
-	inline Handle CreateHandle(Handle type, Handle index, Handle generation)
-	{
-		return
-			(type << HandleTypeBitOffset) |
-			(index << HandleIndexBitOffset) |
-			(generation << HandleGenBitOffset);
-	}
-
-	inline void DecomposeHandle(Handle* type, Handle* index, Handle* generation, Handle handle)
-	{
-		*type = (handle >> HandleTypeBitOffset) & RHI_BIT_MASK(HandleTypeBitCount);
-		*index = (handle >> HandleIndexBitOffset) & RHI_BIT_MASK(HandleIndexBitCount);
-		*generation = (handle >> HandleGenBitOffset) & RHI_BIT_MASK(HandleGenBitCount);
-	}
-
-#define GET_HANDLE_VALUE(Handle) (Handle.v)
-#define MAKE_HANDLE(Value) { Value }
-#define MAKE_NULL_HANDLE() { 0 }
-
-	template<typename T>
-	qbool IsNullHandle(T handle)
-	{
-		return GET_HANDLE_VALUE(handle) == 0;
-	}
-
-	template<typename T, typename HT, RHI::Handle RT, int N>
-	struct StaticPool
-	{
-	private:
-		struct Item
-		{
-			T item;
-			uint16_t generation;
-			uint16_t next : 15;
-			uint16_t used : 1;
-		};
-
-	public:
-		StaticPool()
-		{
-			Clear();
-		}
-
-		void Clear()
-		{
-			freeList = 0;
-			for(int i = 0; i < N; ++i)
-			{
-				items[i].generation = 0;
-				items[i].used = 0;
-				items[i].next = i + 1;
-			}
-			items[N - 1].next = RHI_BIT_MASK(15);
-		}
-
-		HT Add(const T& item)
-		{
-			if(freeList >= N)
-			{
-				ri.Error(ERR_FATAL, "The memory pool is full\n");
-			}
-			items[freeList].item = item;
-			items[freeList].used = qtrue;
-			const Handle handle = CreateHandle(RT, freeList, items[freeList].generation);
-			freeList = items[freeList].next;
-			return MAKE_HANDLE(handle);
-		}
-
-		void Remove(HT handle)
-		{
-			Item& item = GetItemRef(handle);
-			if(!item.used)
-			{
-				ri.Error(ERR_FATAL, "Memory pool item was already freed\n");
-			}
-			item.generation = (item.generation + 1) & RHI_BIT_MASK(HandleGenBitCount);
-			item.used = 0;
-			item.next = freeList;
-			freeList = (uint16_t)(&item - items);
-		}
-
-		T& Get(HT handle)
-		{
-			return GetItemRef(handle).item;
-		}
-
-		T* TryGet(HT handle)
-		{
-			if(handle == 0)
-			{
-				return NULL;
-			}
-
-			return &GetItemRef(handle).item;
-		}
-
-		qbool FindNext(T** object, int* index)
-		{
-			Q_assert(object);
-			Q_assert(index);
-
-			for(int i = *index; i < N; ++i)
-			{
-				if(items[i].used)
-				{
-					*object = &items[i].item;
-					*index = i + 1;
-					return qtrue;
-				}
-			}
-
-			return qfalse;
-		}
-
-		qbool FindNext(Handle* handle, int* index)
-		{
-			Q_assert(handle);
-			Q_assert(index);
-
-			for(int i = *index; i < N; ++i)
-			{
-				if(items[i].used)
-				{
-					*handle = CreateHandle(RT, i, items[i].generation);
-					*index = i + 1;
-					return qtrue;
-				}
-			}
-
-			return qfalse;
-		}
-
-	private:
-		StaticPool(const StaticPool<T, HT, RT, N>&);
-		void operator=(const StaticPool<T, HT, RT, N>&);
-
-		Item& GetItemRef(HT handle)
-		{
-			Handle type, index, gen;
-			DecomposeHandle(&type, &index, &gen, GET_HANDLE_VALUE(handle));
-			if(type != RT)
-			{
-				ri.Error(ERR_FATAL, "Invalid memory pool handle (wrong resource type)\n");
-			}
-			if(index > (Handle)N)
-			{
-				ri.Error(ERR_FATAL, "Invalid memory pool handle (bad index)\n");
-			}
-
-			Item& item = items[index];
-			if(!item.used)
-			{
-				ri.Error(ERR_FATAL, "Invalid memory pool handle (unused slot)\n");
-			}
-
-			if(gen > (Handle)item.generation)
-			{
-				ri.Error(ERR_FATAL, "Invalid memory pool handle (allocation from the future)\n");
-			}
-			if(gen < (Handle)item.generation)
-			{
-				ri.Error(ERR_FATAL, "Invalid memory pool handle (the object has been freed)\n");
-			}
-
-			return item;
-		}
-
-		Item items[N];
-		uint16_t freeList;
-	};
-}
 
 
 #endif //TR_LOCAL_H

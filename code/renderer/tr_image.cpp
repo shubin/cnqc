@@ -309,7 +309,9 @@ static void Upload32( image_t* image, unsigned int* data )
 		scaled_height >>= 1;
 	}
 
-	if ( glInfo.mipGenSupport && image->format == TF_RGBA8 && ( image->flags & IMG_NOMIPMAP ) == 0 ) {
+	// @TODO: only do mip map generation in a compute shader
+	// --> kill the old crappy code that follows when done
+	if ( qtrue && image->format == TF_RGBA8 && ( image->flags & IMG_NOMIPMAP ) == 0 ) {
 		const int w = image->width;
 		const int h = image->height;
 		const int mipCount = ComputeMipCount( w, h );

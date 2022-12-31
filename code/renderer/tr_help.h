@@ -1,35 +1,3 @@
-#define help_r_backend \
-"renderer back-end to use\n" \
-S_COLOR_VAL "    GL2   " S_COLOR_HELP "= OpenGL 2.0\n" \
-S_COLOR_VAL "    GL3   " S_COLOR_HELP "= OpenGL 3.2\n" \
-S_COLOR_VAL "    D3D11 " S_COLOR_HELP "= Direct3D 11"
-
-#define help_r_gl3_geoStream \
-"geometry streaming strategy\n" \
-"This only applies to the GL3 back-end. See " S_COLOR_CVAR "r_backend" S_COLOR_HELP " for details.\n" \
-S_COLOR_VAL "    0 " S_COLOR_HELP "= Decide automatically\n" \
-S_COLOR_VAL "    1 " S_COLOR_HELP "= BufferSubData\n" \
-S_COLOR_VAL "    2 " S_COLOR_HELP "= Map Unsychronized\n" \
-S_COLOR_VAL "    3 " S_COLOR_HELP "= Map Persistent when possible, else automatic\n" \
-S_COLOR_VAL "    4 " S_COLOR_HELP "= AMD pinned memory when available, else automatic"
-
-#define help_r_d3d11_syncOffsets \
-"synchronizes vertex buffer offsets\n" \
-"This only applies to the D3D11 back-end. See " S_COLOR_CVAR "r_backend" S_COLOR_HELP " for details.\n" \
-S_COLOR_VAL "    0 " S_COLOR_HELP "= Split  buffer offsets (more API calls)\n" \
-S_COLOR_VAL "    1 " S_COLOR_HELP "= Sync'd buffer offsets (more data transferred)\n" \
-S_COLOR_VAL "    2 " S_COLOR_HELP "= Decide automatically"
-
-#define help_r_d3d11_presentMode \
-"presentation mode\n" \
-S_COLOR_VAL "    0 " S_COLOR_HELP "= Blit + Discard\n" \
-S_COLOR_VAL "    1 " S_COLOR_HELP "= Flip + Discard when available, else Blit + Discard\n" \
-"About the 'Flip + Discard' presentation mode:\n" \
-"- Windows 10 is required and tearing must be supported.\n" \
-"- It should help performance by sharing buffer data (less copying).\n" \
-"- It allows for V-Sync to be disabled with variable refresh rate displays.\n" \
-"- Performance issues were observed on some machines, so it's off by default."
-
 #define help_r_ext_max_anisotropy \
 "max. allowed anisotropy ratio\n" \
 "For anisotropic filtering to be enabled, this needs to be 2 or higher.\n" \
@@ -93,20 +61,8 @@ S_COLOR_VAL "    GL_NEAREST    " S_COLOR_HELP "= LEGO(R) mode\n" \
 
 #define help_r_swapInterval \
 "Screen refresh periods to wait for before swapping buffers\n" \
-S_COLOR_VAL "    N < 0 " S_COLOR_HELP "= Adaptive V-Sync: tears when too late\n" \
 S_COLOR_VAL "    N = 0 " S_COLOR_HELP "= No V-Sync\n" \
-S_COLOR_VAL "    N > 0 " S_COLOR_HELP "= Standard V-Sync: never tears\n" \
-"Adaptive V-Sync is not available when " S_COLOR_CVAR "r_backend " S_COLOR_HELP "is " S_COLOR_VAL "D3D11" S_COLOR_HELP ".\n" \
-"When adaptive V-Sync is not available, standard V-Sync is requested instead.\n" \
-"Please note that with OpenGL, your driver settings can override any of this."
-
-#define help_r_frameSleep \
-"whether the client should sleep to maintain the FPS cap\n" \
-S_COLOR_VAL "    0 " S_COLOR_HELP "= Forced OFF (when V-Sync is enabled)\n" \
-S_COLOR_VAL "    1 " S_COLOR_HELP "= Forced ON  (when V-Sync is disabled)\n" \
-S_COLOR_VAL "    2 " S_COLOR_HELP "= Automatic  (detects V-Sync status)\n" \
-"This only applies to OpenGL rendering back-ends:\n" \
-"For Direct3D 11, the mode is always 'automatic'."
+S_COLOR_VAL "    N > 0 " S_COLOR_HELP "= Standard V-Sync: never tears\n"
 
 #define help_r_lightmap \
 "renders the lightmaps only\n" \
@@ -143,16 +99,6 @@ S_COLOR_VAL "    T2  " S_COLOR_HELP "= Tent 2 (1/3 2/3, same as the CPU version)
 #define help_r_depthFade \
 "enables depth fade rendering\n" \
 "With it, surfaces like blood, smoke, etc don't 'cut' through geometry sharply."
-
-#define help_r_gpuMipGen \
-"enables GPU mip-map generation\n" \
-"This will both improve map load times and image quality.\n" \
-"Only disable if the feature isn't working for whatever reason."
-
-#define help_r_alphaToCoverage \
-"enables alpha to coverage\n" \
-"This enables anti-aliasing of alpha-tested surfaces when MSAA is enabled.\n" \
-"Therefore, this requires " S_COLOR_CVAR "r_msaa " S_COLOR_HELP "to be greater than 1."
 
 #define help_r_dither \
 "enables dithering\n" \

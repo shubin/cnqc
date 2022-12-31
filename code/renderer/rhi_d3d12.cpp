@@ -538,9 +538,6 @@ namespace RHI
 		glInfo.maxTextureSize = 2048;
 		glInfo.maxAnisotropy = 16;
 		glInfo.depthFadeSupport = qfalse;
-		glInfo.mipGenSupport = qtrue;
-		glInfo.alphaToCoverageSupport = qfalse;
-		glInfo.msaaSampleCount = 1;
 
 		if(!ImGui_ImplDX12_Init(rhi.device, FrameCount, DXGI_FORMAT_R8G8B8A8_UNORM, rhi.srvHeap,
 			rhi.srvHeap->GetCPUDescriptorHandleForHeapStart(),
@@ -559,6 +556,15 @@ namespace RHI
 		}
 
 		ImGui_ImplDX12_Shutdown();
+
+		Handle handle;
+#define DESTROY_POOL(PoolName, FuncName) \
+		for(int i = 0; rhi.PoolName.FindNext(&handle, &i);) \
+			FuncName(MAKE_HANDLE(handle)); \
+		rhi.PoolName.Clear()
+		DESTROY_POOL(rootSignatures, DestroyRootSignature);
+		DESTROY_POOL(pipelines, DestroyPipeline);
+#undef DESTROY_POOL
 
 		WaitUntilDeviceIsIdle();
 
@@ -656,10 +662,16 @@ namespace RHI
 
 	HRootSignature CreateRootSignature(const RootSignatureDesc& rhiDesc)
 	{
+		// @TODO: flags for vertex and pixel shader access etc.
 		ID3DBlob* blob;
 		//ID3DBlob* errorBlob; // @TODO:
 		D3D12_ROOT_SIGNATURE_DESC desc = { 0 };
-		desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
+		desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE |
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_AMPLIFICATION_SHADER_ROOT_ACCESS |
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_MESH_SHADER_ROOT_ACCESS;
 		desc.NumParameters = 0;
 		desc.pParameters = NULL;
 		desc.NumStaticSamplers = 0;
@@ -668,6 +680,7 @@ namespace RHI
 
 		ID3D12RootSignature* signature;
 		D3D(rhi.device->CreateRootSignature(0, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&signature)));
+		COM_RELEASE(blob);
 
 		RootSignature rhiSignature = { 0 };
 		rhiSignature.signature = signature;
@@ -677,7 +690,7 @@ namespace RHI
 
 	void DestroyRootSignature(HRootSignature signature)
 	{
-		//RootSignature& sig = rhi.rootSignatures.Get(signature);
+		COM_RELEASE(rhi.rootSignatures.Get(signature).signature);
 		rhi.rootSignatures.Remove(signature);
 	}
 

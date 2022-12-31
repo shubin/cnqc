@@ -2000,7 +2000,7 @@ static void ProcessDepthFade()
 	shader.dfType = DFT_NONE;
 
 	if (!glInfo.depthFadeSupport)
-	   return;
+		return;
 
 	if (shader.sort <= SS_OPAQUE)
 		return;
