@@ -27,7 +27,6 @@ to do:
 - move the Dear ImGui rendering outside of the RHI
 * integrate D3D12MA
 - compiler switch for GPU validation
-- D3DCOMPILE_DEBUG for shaders
 - use ID3D12Device4::CreateCommandList1 to create closed command lists
 - if a feature level below 12.0 is good enough,
 	use ID3D12Device::CheckFeatureSupport with D3D12_FEATURE_D3D12_OPTIONS / D3D12_FEATURE_DATA_D3D12_OPTIONS
@@ -810,7 +809,8 @@ namespace RHI
 		// could write to a linear allocator instead...
 		ID3DBlob* blob;
 		ID3DBlob* error;
-		if(FAILED(D3DCompile(source, strlen(source), NULL, NULL, NULL, "main", target, 0, 0, &blob, &error)))
+		const UINT flags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+		if(FAILED(D3DCompile(source, strlen(source), NULL, NULL, NULL, "main", target, flags, 0, &blob, &error)))
 		{
 			ri.Error(ERR_FATAL, "Shader compilation failed:\n%s\n", (const char*)error->GetBufferPointer());
 			return ShaderByteCode();
