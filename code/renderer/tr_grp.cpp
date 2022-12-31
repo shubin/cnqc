@@ -55,6 +55,16 @@ float4 main(VOut input) : SV_TARGET
 )grml";
 
 
+struct uiData_t
+{
+	uint32_t indices[SHADER_MAX_INDEXES];
+	vec2_t positions[SHADER_MAX_VERTEXES];
+	vec2_t texCoords[SHADER_MAX_VERTEXES];
+	color4ub_t colors[SHADER_MAX_VERTEXES];
+	int indexCount;
+	int vertexCount;
+};
+
 struct grp_t
 {
 	RHI::HRootSignature rootSignature;
@@ -73,6 +83,14 @@ static void DrawTriangle()
 	RHI::CmdDraw(3, 0);
 }
 #endif
+
+template<typename T>
+static const void* SkipCommand(const void* data)
+{
+	const T* const cmd = (const T*)data;
+
+	return (const void*)(cmd + 1);
+}
 
 struct GameplayRenderPipeline : IRenderPipeline
 {
@@ -93,6 +111,48 @@ struct GameplayRenderPipeline : IRenderPipeline
 
 	void ShutDown(qbool fullShutDown) override
 	{
+	}
+
+	void ExecuteRenderCommands(const void* data) override
+	{
+		for(;;)
+		{
+			data = PADP(data, sizeof(void*));
+
+			switch(*(const int*)data) {
+				case RC_SET_COLOR:
+					data = SkipCommand<setColorCommand_t>(data);
+					break;
+				case RC_STRETCH_PIC:
+					data = SkipCommand<stretchPicCommand_t>(data);
+					break;
+				case RC_TRIANGLE:
+					data = SkipCommand<triangleCommand_t>(data);
+					break;
+				case RC_DRAW_SURFS:
+					data = SkipCommand<drawSurfsCommand_t>(data);
+					break;
+				case RC_BEGIN_FRAME:
+					data = SkipCommand<beginFrameCommand_t>(data);
+					break;
+				case RC_SWAP_BUFFERS:
+					data = SkipCommand<swapBuffersCommand_t>(data);
+					break;
+				case RC_SCREENSHOT:
+					data = SkipCommand<screenshotCommand_t>(data);
+					break;
+				case RC_VIDEOFRAME:
+					data = SkipCommand<videoFrameCommand_t>(data);
+					break;
+
+				case RC_END_OF_LIST:
+					return;
+
+				default:
+					Q_assert(!"Invalid render command ID");
+					return;
+			}
+		}
 	}
 };
 

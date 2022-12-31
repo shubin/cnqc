@@ -32,7 +32,8 @@ void R_IssueRenderCommands()
 	// clear it out, in case this is a sync and not a buffer flip
 	cmdList->used = 0;
 
-    RB_ExecuteRenderCommands( cmdList->cmds );
+	//RB_ExecuteRenderCommands( cmdList->cmds );
+	renderPipeline->ExecuteRenderCommands( cmdList->cmds );
 }
 
 

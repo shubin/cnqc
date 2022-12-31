@@ -442,6 +442,7 @@ struct IRenderPipeline
 {
 	virtual void Init() = 0;
 	virtual void ShutDown(qbool fullShutDown) = 0;
+	virtual void ExecuteRenderCommands(const void* data) = 0;
 };
 
 extern IRenderPipeline* renderPipeline;
