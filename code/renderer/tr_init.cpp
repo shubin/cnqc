@@ -526,47 +526,6 @@ void R_Init()
 
 	R_ModelInit();
 
-	{
-		RHI::RootSignatureDesc desc;
-		tr.rootSignature = RHI::CreateRootSignature(desc);
-	}
-	{
-		const char* vs = R"grml(
-		struct VOut
-		{
-			float4 position : SV_Position;
-		};
-
-		VOut main(uint id : SV_VertexID)
-		{
-			VOut output;
-			output.position.x = 1.0 * ((float)(id / 2) * 4.0 - 1.0);
-			output.position.y = 1.0 * ((float)(id % 2) * 4.0 - 1.0);
-			output.position.z = 0.0;
-			output.position.w = 1.0;
-
-			return output;
-		}
-		)grml";
-		const char* ps = R"grml(
-		struct VOut
-		{
-			float4 position : SV_Position;
-		};
-
-		float4 main(VOut input) : SV_TARGET
-		{
-			return float4(1, 0, 0, 1);
-		}
-		)grml";
-
-		RHI::GraphicsPipelineDesc desc;
-		desc.rootSignature = tr.rootSignature;
-		desc.vertexShader = RHI::CompileVertexShader(vs);
-		desc.pixelShader = RHI::CompilePixelShader(ps);
-		tr.pipeline = RHI::CreateGraphicsPipeline(desc);
-	}
-
 	QSUBSYSTEM_INIT_DONE( "Renderer" );
 }
 

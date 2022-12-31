@@ -438,6 +438,14 @@ namespace RHI
 	};
 }
 
+struct IRenderPipeline
+{
+	virtual void Init() = 0;
+	virtual void ShutDown(qbool fullShutDown) = 0;
+};
+
+extern IRenderPipeline* renderPipeline;
+
 
 extern const float s_flipMatrix[16];
 
@@ -1345,9 +1353,6 @@ typedef struct {
 	float		mipFilter[4]; // only used by the GPU generators
 
 	qbool		worldSurface; // is the currently added draw surface a world surface?
-
-	RHI::HRootSignature rootSignature;
-	RHI::HPipeline pipeline;
 } trGlobals_t;
 
 extern backEndState_t	backEnd;

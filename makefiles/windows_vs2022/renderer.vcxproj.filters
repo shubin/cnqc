@@ -35,5 +35,6 @@
     <ClCompile Include="..\..\code\renderer\tr_world.cpp" />
     <ClCompile Include="..\..\code\renderer\rhi_d3d12.cpp" />
     <ClCompile Include="..\..\code\renderer\D3D12MemAlloc.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_grp.cpp" />
   </ItemGroup>
 </Project>

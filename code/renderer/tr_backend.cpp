@@ -615,12 +615,6 @@ static const void* RB_SwapBuffers( const void* data )
 		RB_EndSurface();
 	}
 
-	RHI::CmdSetViewport(0, 0, glConfig.vidWidth, glConfig.vidHeight);
-	RHI::CmdSetScissor(0, 0, glConfig.vidWidth, glConfig.vidHeight);
-	RHI::CmdBindRootSignature(tr.rootSignature);
-	RHI::CmdBindPipeline(tr.pipeline);
-	RHI::CmdDraw(3, 0);
-
 	// This has been moved here to make sure the Present/SwapBuffer
 	// call gets ignored for CPU timing as V-Sync would mess it all up.
 	// We can't really "charge" 2D/3D properly, so it all counts as 3D.
