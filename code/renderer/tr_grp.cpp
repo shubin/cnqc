@@ -147,17 +147,50 @@ static const void* SkipCommand(const void* data)
 	return (const void*)(cmd + 1);
 }
 
+static void Draw2D()
+{
+	if(grp.ui.indexCount <= 0)
+	{
+		return;
+	}
+
+	// @TODO: grab the right rects...
+	RHI::CmdSetViewport(0, 0, glConfig.vidWidth, glConfig.vidHeight);
+	RHI::CmdSetScissor(0, 0, glConfig.vidWidth, glConfig.vidHeight);
+
+	RHI::CmdBindRootSignature(grp.ui.rootSignature);
+	RHI::CmdBindPipeline(grp.ui.pipeline);
+	const uint32_t stride = sizeof(ui_t::vertex_t);
+	RHI::CmdBindVertexBuffers(1, &grp.ui.vertexBuffer, &stride, NULL);
+	RHI::CmdBindIndexBuffer(grp.ui.indexBuffer, RHI::IndexType::UInt32, 0);
+
+	// @TODO: use vertex buffers and an index buffer
+	RHI::CmdDrawIndexed(grp.ui.indexCount, 0, 0);
+	grp.ui.indexCount = 0;
+	grp.ui.vertexCount = 0;
+}
+
+static void Draw3D()
+{
+}
+
+static void EndSurfaces()
+{
+	Draw2D();
+	Draw3D();
+}
+
 static const void* StretchPic(const void* data)
 {
 	const stretchPicCommand_t* cmd = (const stretchPicCommand_t*)data;
 
+	if(grp.ui.vertexCount + 4 > SHADER_MAX_VERTEXES ||
+		grp.ui.indexCount + 6 > SHADER_MAX_INDEXES)
+	{
+		Draw2D();
+	}
 	int numVerts = grp.ui.vertexCount;
 	int numIndexes = grp.ui.indexCount;
-	if(numVerts + 4 > SHADER_MAX_VERTEXES ||
-		numIndexes + 6 > SHADER_MAX_INDEXES)
-	{
-		return (const void*)(cmd + 1);
-	}
 	grp.ui.vertexCount += 4;
 	grp.ui.indexCount += 6;
 
@@ -193,35 +226,6 @@ static const void* StretchPic(const void* data)
 	grp.ui.vertices[numVerts + 3].color = 0xFFFFFFFF;
 
 	return (const void*)(cmd + 1);
-}
-
-static void Draw2D()
-{
-	if(grp.ui.indexCount <= 0)
-	{
-		return;
-	}
-
-	// @TODO: grab the right rects...
-	RHI::CmdSetViewport(0, 0, glConfig.vidWidth, glConfig.vidHeight);
-	RHI::CmdSetScissor(0, 0, glConfig.vidWidth, glConfig.vidHeight);
-
-	RHI::CmdBindRootSignature(grp.ui.rootSignature);
-	RHI::CmdBindPipeline(grp.ui.pipeline);
-
-	// @TODO: use vertex buffers and an index buffer
-	RHI::CmdDrawIndexed(grp.ui.indexCount, 0, 0);
-	grp.ui.indexCount = 0;
-}
-
-static void Draw3D()
-{
-}
-
-static void EndSurfaces()
-{
-	Draw2D();
-	Draw3D();
 }
 
 struct GameplayRenderPipeline : IRenderPipeline
