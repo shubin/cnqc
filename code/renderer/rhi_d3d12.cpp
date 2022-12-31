@@ -94,7 +94,6 @@ namespace RHI
 		{
 			Graphics,
 			Compute,
-			Raytracing,
 			Count
 		};
 	};
@@ -199,18 +198,18 @@ namespace RHI
 		return systemErrorStr;
 	}
 
-	static qbool Check(HRESULT hr, const char* function)
+	static bool Check(HRESULT hr, const char* function)
 	{
 		if(SUCCEEDED(hr))
 		{
-			return qtrue;
+			return true;
 		}
 
 		if(1) // @TODO: fatal error mode always on for now
 		{
 			ri.Error(ERR_FATAL, "'%s' failed with code 0x%08X (%s)\n", function, (unsigned int)hr, GetSystemErrorString(hr));
 		}
-		return qfalse;
+		return false;
 	}
 
 	static void SetDebugName(ID3D12DeviceChild* resource, const char* resourceName)
@@ -244,25 +243,25 @@ namespace RHI
 		}
 	}
 
-	static qbool IsSuitableAdapter(IDXGIAdapter1* adapter)
+	static bool IsSuitableAdapter(IDXGIAdapter1* adapter)
 	{
 		DXGI_ADAPTER_DESC1 desc;
 		if(FAILED(adapter->GetDesc1(&desc)))
 		{
-			return qfalse;
+			return false;
 		}
 
 		if(desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
 		{
-			return qfalse;
+			return false;
 		}
 
 		if(FAILED(D3D12CreateDevice(adapter, FeatureLevel, __uuidof(ID3D12Device), NULL)))
 		{
-			return qfalse;
+			return false;
 		}
 
-		return qtrue;
+		return true;
 	}
 
 	static IDXGIAdapter1* FindMostSuitableAdapter(IDXGIFactory1* factory, gpuPreference_t enginePreference)
@@ -366,6 +365,13 @@ namespace RHI
 			ri.Printf(PRINT_ERROR, "Direct3D device was reset! Restarting the video system...");
 			Cmd_ExecuteString("vid_restart;");
 		}
+	}
+
+	static bool CanWriteCommands()
+	{
+		// @TODO:
+		//return rhi.commandList != NULL && rhi.commandList->???
+		return rhi.commandList != NULL;
 	}
 
 	void Init()
@@ -726,5 +732,45 @@ namespace RHI
 	void DestroyPipeline(HPipeline pipeline)
 	{
 		rhi.pipelines.Remove(pipeline);
+	}
+
+	void CmdBindPipeline(HPipeline pipeline)
+	{
+		Q_assert(CanWriteCommands());
+
+		rhi.commandList->SetPipelineState(rhi.pipelines.Get(pipeline).pso);
+	}
+
+	void CmdSetViewport(uint32_t x, uint32_t y, uint32_t w, uint32_t h, float minDepth = 0.0f, float maxDepth = 1.0f)
+	{
+		Q_assert(CanWriteCommands());
+
+		D3D12_VIEWPORT viewport;
+		viewport.TopLeftX = x;
+		viewport.TopLeftY = y;
+		viewport.Width = w;
+		viewport.Height = h;
+		viewport.MinDepth = minDepth;
+		viewport.MaxDepth = maxDepth;
+		rhi.commandList->RSSetViewports(1, &viewport);
+	}
+
+	void CmdSetScissor(uint32_t x, uint32_t y, uint32_t w, uint32_t h)
+	{
+		Q_assert(CanWriteCommands());
+
+		D3D12_RECT rect;
+		rect.left = x;
+		rect.top = y;
+		rect.right = x + w;
+		rect.bottom = y + h;
+		rhi.commandList->RSSetScissorRects(1, &rect);
+	}
+
+	void CmdDraw(uint32_t vertexCount, uint32_t firstVertex)
+	{
+		Q_assert(CanWriteCommands());
+
+		rhi.commandList->DrawInstanced(vertexCount, 1, firstVertex, 0);
 	}
 }
