@@ -917,7 +917,7 @@ namespace RHI
 		Q_assert(CanWriteCommands());
 		Q_assert(count <= MaxVertexBufferCount);
 
-		count = max(count, MaxVertexBufferCount);
+		count = min(count, MaxVertexBufferCount);
 
 		D3D12_VERTEX_BUFFER_VIEW views[MaxVertexBufferCount];
 		for(uint32_t v = 0; v < count; ++v)
