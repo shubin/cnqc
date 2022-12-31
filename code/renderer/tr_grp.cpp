@@ -25,6 +25,47 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 
 
 const char* vs = R"grml(
+struct VIn
+{
+	float2 position : POSITION;
+	float2 texCoords : TEXCOORD0;
+	float4 color : COLOR0;
+};
+
+struct VOut
+{
+	float4 position : SV_Position;
+	float2 texCoords : TEXCOORD0;
+	float4 color : COLOR0;
+};
+
+VOut main(VIn input)
+{
+	VOut output;
+	output.position = float4(input.position, 0.0, 1.0);
+	output.texCoords = input.texCoords;
+	output.color = input.color;
+
+	return output;
+}
+)grml";
+
+const char* ps = R"grml(
+struct VOut
+{
+	float4 position : SV_Position;
+	float2 texCoords : TEXCOORD0;
+	float4 color : COLOR0;
+};
+
+float4 main(VOut input) : SV_TARGET
+{
+	return input.color;
+}
+)grml";
+
+#if 0
+const char* vs = R"grml(
 struct VOut
 {
 	float4 position : SV_Position;
@@ -53,6 +94,7 @@ float4 main(VOut input) : SV_TARGET
 	return float4(1, 0, 0, 1);
 }
 )grml";
+#endif
 
 
 struct ui_t
@@ -63,13 +105,12 @@ struct ui_t
 	{
 		vec2_t position;
 		vec2_t texCoords;
-		color4ub_t color;
+		uint32_t color;
 	};
 #pragma pack(pop)
-	//uint32_t indices[SHADER_MAX_INDEXES];
-	//vec2_t positions[SHADER_MAX_VERTEXES];
-	//vec2_t texCoords[SHADER_MAX_VERTEXES];
-	//color4ub_t colors[SHADER_MAX_VERTEXES];
+	// limits:
+	// SHADER_MAX_INDEXES
+	// SHADER_MAX_VERTEXES
 	int indexCount;
 	int vertexCount;
 	RHI::HRootSignature rootSignature;
@@ -106,8 +147,61 @@ static const void* SkipCommand(const void* data)
 	return (const void*)(cmd + 1);
 }
 
+static const void* StretchPic(const void* data)
+{
+	const stretchPicCommand_t* cmd = (const stretchPicCommand_t*)data;
+
+	int numVerts = grp.ui.vertexCount;
+	int numIndexes = grp.ui.indexCount;
+	if(numVerts + 4 > SHADER_MAX_VERTEXES ||
+		numIndexes + 6 > SHADER_MAX_INDEXES)
+	{
+		return (const void*)(cmd + 1);
+	}
+	grp.ui.vertexCount += 4;
+	grp.ui.indexCount += 6;
+
+	grp.ui.indices[numIndexes] = numVerts + 3;
+	grp.ui.indices[numIndexes + 1] = numVerts + 0;
+	grp.ui.indices[numIndexes + 2] = numVerts + 2;
+	grp.ui.indices[numIndexes + 3] = numVerts + 2;
+	grp.ui.indices[numIndexes + 4] = numVerts + 0;
+	grp.ui.indices[numIndexes + 5] = numVerts + 1;
+
+	grp.ui.vertices[numVerts].position[0] = cmd->x;
+	grp.ui.vertices[numVerts].position[1] = cmd->y;
+	grp.ui.vertices[numVerts].texCoords[0] = cmd->s1;
+	grp.ui.vertices[numVerts].texCoords[1] = cmd->t1;
+	grp.ui.vertices[numVerts].color = 0xFFFFFFFF;
+
+	grp.ui.vertices[numVerts + 1].position[0] = cmd->x + cmd->w;
+	grp.ui.vertices[numVerts + 1].position[1] = cmd->y;
+	grp.ui.vertices[numVerts + 1].texCoords[0] = cmd->s2;
+	grp.ui.vertices[numVerts + 1].texCoords[1] = cmd->t1;
+	grp.ui.vertices[numVerts + 1].color = 0xFFFFFFFF;
+
+	grp.ui.vertices[numVerts + 2].position[0] = cmd->x + cmd->w;
+	grp.ui.vertices[numVerts + 2].position[1] = cmd->y + cmd->h;
+	grp.ui.vertices[numVerts + 2].texCoords[0] = cmd->s2;
+	grp.ui.vertices[numVerts + 2].texCoords[1] = cmd->t2;
+	grp.ui.vertices[numVerts + 2].color = 0xFFFFFFFF;
+
+	grp.ui.vertices[numVerts + 3].position[0] = cmd->x;
+	grp.ui.vertices[numVerts + 3].position[1] = cmd->y + cmd->h;
+	grp.ui.vertices[numVerts + 3].texCoords[0] = cmd->s1;
+	grp.ui.vertices[numVerts + 3].texCoords[1] = cmd->t2;
+	grp.ui.vertices[numVerts + 3].color = 0xFFFFFFFF;
+
+	return (const void*)(cmd + 1);
+}
+
 static void Draw2D()
 {
+	if(grp.ui.indexCount <= 0)
+	{
+		return;
+	}
+
 	// @TODO: grab the right rects...
 	RHI::CmdSetViewport(0, 0, glConfig.vidWidth, glConfig.vidHeight);
 	RHI::CmdSetScissor(0, 0, glConfig.vidWidth, glConfig.vidHeight);
@@ -116,7 +210,8 @@ static void Draw2D()
 	RHI::CmdBindPipeline(grp.ui.pipeline);
 
 	// @TODO: use vertex buffers and an index buffer
-	RHI::CmdDraw(3, 0);
+	RHI::CmdDrawIndexed(grp.ui.indexCount, 0, 0);
+	grp.ui.indexCount = 0;
 }
 
 static void Draw3D()
@@ -193,7 +288,8 @@ struct GameplayRenderPipeline : IRenderPipeline
 					data = SkipCommand<setColorCommand_t>(data);
 					break;
 				case RC_STRETCH_PIC:
-					data = SkipCommand<stretchPicCommand_t>(data);
+					//data = SkipCommand<stretchPicCommand_t>(data);
+					data = StretchPic(data);
 					break;
 				case RC_TRIANGLE:
 					data = SkipCommand<triangleCommand_t>(data);

@@ -809,6 +809,10 @@ namespace RHI
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_AMPLIFICATION_SHADER_ROOT_ACCESS |
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_MESH_SHADER_ROOT_ACCESS;
+		// @TODO:
+		desc.Flags |= D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+		//desc.Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS;
+		//desc.Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
 		desc.NumParameters = 0;
 		desc.pParameters = NULL;
 		desc.NumStaticSamplers = 0;
@@ -840,8 +844,14 @@ namespace RHI
 		desc.SampleDesc.Count = 1;
 		desc.SampleMask = UINT_MAX;
 
-		desc.InputLayout.NumElements = 0;
-		desc.InputLayout.pInputElementDescs = NULL;
+		const D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
+		{
+			{ "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 8, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			{ "COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 16, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+		};
+		desc.InputLayout.NumElements = ARRAY_LEN(inputElementDescs);
+		desc.InputLayout.pInputElementDescs = inputElementDescs;
 
 		desc.NumRenderTargets = 1;
 		desc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL; // RGBA
@@ -967,6 +977,13 @@ namespace RHI
 		rhi.commandList->DrawInstanced(vertexCount, 1, firstVertex, 0);
 	}
 
+	void CmdDrawIndexed(uint32_t indexCount, uint32_t firstIndex, uint32_t firstVertex)
+	{
+		Q_assert(CanWriteCommands());
+
+		rhi.commandList->DrawIndexedInstanced(indexCount, 1, firstIndex, firstVertex, 0);
+	}
+
 #if defined(_DEBUG)
 
 	static ShaderByteCode CompileShader(const char* source, const char* target)
@@ -978,7 +995,7 @@ namespace RHI
 		const UINT flags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 		if(FAILED(D3DCompile(source, strlen(source), NULL, NULL, NULL, "main", target, flags, 0, &blob, &error)))
 		{
-			ri.Error(ERR_FATAL, "Shader compilation failed:\n%s\n", (const char*)error->GetBufferPointer());
+			ri.Error(ERR_FATAL, "Shader (%s) compilation failed:\n%s\n", target, (const char*)error->GetBufferPointer());
 			return ShaderByteCode();
 		}
 
