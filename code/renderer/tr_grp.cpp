@@ -45,7 +45,6 @@ struct VOut
 	float4 color : COLOR0;
 };
 
-//[RootConstants(num32BitConstants=2, b0)]
 VOut main(VIn input)
 {
 	const float2 position = input.position * rc.scale;
@@ -258,7 +257,6 @@ struct GameplayRenderPipeline : IRenderPipeline
 		{
 			RHI::RootSignatureDesc desc = { 0 };
 			desc.name = "UI root signature";
-			desc.shaderStages = RHI::ShaderStage::VertexBit;
 			desc.usingVertexBuffers = true;
 			desc.constants[RHI::ShaderType::Vertex].count = 2;
 			grp.ui.rootSignature = RHI::CreateRootSignature(desc);

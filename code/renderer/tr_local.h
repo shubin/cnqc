@@ -131,15 +131,13 @@ namespace RHI
 
 	struct RootSignatureDesc
 	{
-		struct ConstantsRange
+		struct PerStageConstants
 		{
-			uint32_t offset; // in multiples of 4 bytes
-			uint32_t count;  // in multiples of 4 bytes
+			uint32_t count; // in multiples of 4 bytes
 		};
 		const char* name;
-		ShaderStage::Flags shaderStages;
 		bool usingVertexBuffers;
-		ConstantsRange constants[ShaderType::Count];
+		PerStageConstants constants[ShaderType::Count];
 	};
 
 	struct ShaderByteCode

@@ -822,7 +822,6 @@ namespace RHI
 		D3D12_ROOT_PARAMETER parameters[16];
 		for(int s = 0; s < ShaderType::Count; ++s)
 		{
-			// @TODO: what to do with rhiDesc.constants[s].offset ?
 			if(rhiDesc.constants[s].count > 0)
 			{
 				rhiSignature.constants[s].parameterIndex = parameterCount;
@@ -846,11 +845,11 @@ namespace RHI
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_AMPLIFICATION_SHADER_ROOT_ACCESS |
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_MESH_SHADER_ROOT_ACCESS;
-		if((rhiDesc.shaderStages & ShaderStage::VertexBit) == 0)
+		if(rhiDesc.constants[ShaderType::Vertex].count == 0)
 		{
 			desc.Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS;
 		}
-		if((rhiDesc.shaderStages & ShaderStage::PixelBit) == 0)
+		if(rhiDesc.constants[ShaderType::Pixel].count == 0)
 		{
 			desc.Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
 		}
