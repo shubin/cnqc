@@ -163,6 +163,7 @@ static void Draw2D()
 	}
 
 	// @TODO: grab the right rects...
+	// @TODO: only set all this crap when switching to 2D rendering
 	RHI::CmdSetViewport(0, 0, glConfig.vidWidth, glConfig.vidHeight);
 	RHI::CmdSetScissor(0, 0, glConfig.vidWidth, glConfig.vidHeight);
 	RHI::CmdBindRootSignature(grp.ui.rootSignature);
@@ -173,7 +174,6 @@ static void Draw2D()
 	const float scale[2] = { 2.0f / glConfig.vidWidth, 2.0f / glConfig.vidHeight };
 	RHI::CmdSetRootConstants(grp.ui.rootSignature, RHI::ShaderType::Vertex, scale);
 
-	// @TODO: use vertex buffers and an index buffer
 	RHI::CmdDrawIndexed(grp.ui.indexCount, 0, 0);
 	grp.ui.indexCount = 0;
 	grp.ui.vertexCount = 0;
@@ -267,9 +267,12 @@ struct GameplayRenderPipeline : IRenderPipeline
 			desc.vertexShader = RHI::CompileVertexShader(vs);
 			desc.pixelShader = RHI::CompilePixelShader(ps);
 			desc.vertexLayout.bindingStrides[0] = sizeof(ui_t::vertex_t);
-			desc.vertexLayout.AddAttribute(0, RHI::ShaderSemantic::Position, RHI::DataType::Float32, 2, offsetof(ui_t::vertex_t, position));
-			desc.vertexLayout.AddAttribute(0, RHI::ShaderSemantic::TexCoord, RHI::DataType::Float32, 2, offsetof(ui_t::vertex_t, texCoords));
-			desc.vertexLayout.AddAttribute(0, RHI::ShaderSemantic::Color, RHI::DataType::UNorm8, 4, offsetof(ui_t::vertex_t, color));
+			desc.vertexLayout.AddAttribute(0, RHI::ShaderSemantic::Position,
+				RHI::DataType::Float32, 2, offsetof(ui_t::vertex_t, position));
+			desc.vertexLayout.AddAttribute(0, RHI::ShaderSemantic::TexCoord,
+				RHI::DataType::Float32, 2, offsetof(ui_t::vertex_t, texCoords));
+			desc.vertexLayout.AddAttribute(0, RHI::ShaderSemantic::Color,
+				RHI::DataType::UNorm8, 4, offsetof(ui_t::vertex_t, color));
 			grp.ui.pipeline = RHI::CreateGraphicsPipeline(desc);
 		}
 		{
