@@ -25,6 +25,12 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 
 
 const char* vs = R"grml(
+struct RootConstants
+{
+	float2 scale;
+};
+ConstantBuffer<RootConstants> rc : register(b0, space0);
+
 struct VIn
 {
 	float2 position : POSITION;
@@ -39,10 +45,12 @@ struct VOut
 	float4 color : COLOR0;
 };
 
+//[RootConstants(num32BitConstants=2, b0)]
 VOut main(VIn input)
 {
+	const float2 position = input.position * rc.scale;
 	VOut output;
-	output.position = float4(input.position, 0.0, 1.0);
+	output.position = float4(position.x - 1.0, 1.0 - position.y, 0.0, 1.0);
 	output.texCoords = input.texCoords;
 	output.color = input.color;
 
@@ -119,6 +127,7 @@ struct ui_t
 	RHI::HBuffer vertexBuffer;
 	index_t* indices; // @TODO: 16-bit indices
 	vertex_t* vertices;
+	uint32_t color;
 };
 
 struct grp_t
@@ -180,6 +189,19 @@ static void EndSurfaces()
 	Draw3D();
 }
 
+static const void* SetColor(const void* data)
+{
+	const setColorCommand_t* cmd = (const setColorCommand_t*)data;
+
+	byte* const colors = (byte*)&grp.ui.color;
+	colors[0] = (byte)(cmd->color[0] * 255.0f);
+	colors[1] = (byte)(cmd->color[1] * 255.0f);
+	colors[2] = (byte)(cmd->color[2] * 255.0f);
+	colors[3] = (byte)(cmd->color[3] * 255.0f);
+
+	return (const void*)(cmd + 1);
+}
+
 static const void* StretchPic(const void* data)
 {
 	const stretchPicCommand_t* cmd = (const stretchPicCommand_t*)data;
@@ -205,25 +227,25 @@ static const void* StretchPic(const void* data)
 	grp.ui.vertices[numVerts].position[1] = cmd->y;
 	grp.ui.vertices[numVerts].texCoords[0] = cmd->s1;
 	grp.ui.vertices[numVerts].texCoords[1] = cmd->t1;
-	grp.ui.vertices[numVerts].color = 0xFFFFFFFF;
+	grp.ui.vertices[numVerts].color = grp.ui.color;
 
 	grp.ui.vertices[numVerts + 1].position[0] = cmd->x + cmd->w;
 	grp.ui.vertices[numVerts + 1].position[1] = cmd->y;
 	grp.ui.vertices[numVerts + 1].texCoords[0] = cmd->s2;
 	grp.ui.vertices[numVerts + 1].texCoords[1] = cmd->t1;
-	grp.ui.vertices[numVerts + 1].color = 0xFFFFFFFF;
+	grp.ui.vertices[numVerts + 1].color = grp.ui.color;
 
 	grp.ui.vertices[numVerts + 2].position[0] = cmd->x + cmd->w;
 	grp.ui.vertices[numVerts + 2].position[1] = cmd->y + cmd->h;
 	grp.ui.vertices[numVerts + 2].texCoords[0] = cmd->s2;
 	grp.ui.vertices[numVerts + 2].texCoords[1] = cmd->t2;
-	grp.ui.vertices[numVerts + 2].color = 0xFFFFFFFF;
+	grp.ui.vertices[numVerts + 2].color = grp.ui.color;
 
 	grp.ui.vertices[numVerts + 3].position[0] = cmd->x;
 	grp.ui.vertices[numVerts + 3].position[1] = cmd->y + cmd->h;
 	grp.ui.vertices[numVerts + 3].texCoords[0] = cmd->s1;
 	grp.ui.vertices[numVerts + 3].texCoords[1] = cmd->t2;
-	grp.ui.vertices[numVerts + 3].color = 0xFFFFFFFF;
+	grp.ui.vertices[numVerts + 3].color = grp.ui.color;
 
 	return (const void*)(cmd + 1);
 }
@@ -289,10 +311,9 @@ struct GameplayRenderPipeline : IRenderPipeline
 			switch(*(const int*)data)
 			{
 				case RC_SET_COLOR:
-					data = SkipCommand<setColorCommand_t>(data);
+					data = SetColor(data);
 					break;
 				case RC_STRETCH_PIC:
-					//data = SkipCommand<stretchPicCommand_t>(data);
 					data = StretchPic(data);
 					break;
 				case RC_TRIANGLE:
