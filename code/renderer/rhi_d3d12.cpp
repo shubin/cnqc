@@ -799,9 +799,14 @@ namespace RHI
 
 	HRootSignature CreateRootSignature(const RootSignatureDesc& rhiDesc)
 	{
+		D3D12_ROOT_PARAMETER param;
+		param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+		param.Constants.Num32BitValues = 2;
+		param.Constants.RegisterSpace = 0;
+		param.Constants.ShaderRegister = 0;
+		param.ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+
 		// @TODO: flags for vertex and pixel shader access etc.
-		ID3DBlob* blob;
-		//ID3DBlob* errorBlob; // @TODO:
 		D3D12_ROOT_SIGNATURE_DESC desc = { 0 };
 		desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE |
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
@@ -813,10 +818,13 @@ namespace RHI
 		desc.Flags |= D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 		//desc.Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS;
 		//desc.Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
-		desc.NumParameters = 0;
-		desc.pParameters = NULL;
+		desc.NumParameters = 1;
+		desc.pParameters = &param;
 		desc.NumStaticSamplers = 0;
 		desc.pStaticSamplers = NULL;
+
+		ID3DBlob* blob;
+		//ID3DBlob* errorBlob; // @TODO:
 		D3D(D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &blob, NULL));
 
 		ID3D12RootSignature* signature;
@@ -901,6 +909,10 @@ namespace RHI
 		const RootSignature sig = rhi.rootSignatures.Get(rootSignature);
 		// @TODO: decide between graphics and compute!
 		rhi.commandList->SetGraphicsRootSignature(sig.signature);
+
+		// @TODO: move to a dedicated function etc.
+		const float constants[2] = { 2.0f / glConfig.vidWidth, 2.0f / glConfig.vidHeight };
+		rhi.commandList->SetGraphicsRoot32BitConstants(0, ARRAY_LEN(constants), constants, 0);
 	}
 
 	void CmdBindPipeline(HPipeline pipeline)
@@ -1008,12 +1020,12 @@ namespace RHI
 
 	ShaderByteCode CompileVertexShader(const char* source)
 	{
-		return CompileShader(source, "vs_5_0");
+		return CompileShader(source, "vs_5_1");
 	}
 
 	ShaderByteCode CompilePixelShader(const char* source)
 	{
-		return CompileShader(source, "ps_5_0");
+		return CompileShader(source, "ps_5_1");
 	}
 
 #endif
