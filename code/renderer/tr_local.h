@@ -37,6 +37,7 @@ namespace RHI
 	// 2. number of frames in the back buffer
 	const uint32_t FrameCount = 2;
 	const uint32_t MaxVertexBufferCount = 16;
+	const uint32_t MaxVertexAttributeCount = 16;
 
 	typedef uint32_t Handle;
 
@@ -129,15 +130,38 @@ namespace RHI
 	};
 	RHI_ENUM_OPERATORS(ShaderStage::Flags);
 
+	struct DataType
+	{
+		enum Id
+		{
+			Float32,
+			UNorm8,
+			UInt32,
+			Count
+		};
+	};
+
+	struct ShaderSemantic
+	{
+		enum Id
+		{
+			Position,
+			Normal,
+			TexCoord,
+			Color,
+			Count
+		};
+	};
+
 	struct RootSignatureDesc
 	{
+		const char* name;
+		qbool usingVertexBuffers;
 		struct PerStageConstants
 		{
 			uint32_t count; // in multiples of 4 bytes
-		};
-		const char* name;
-		bool usingVertexBuffers;
-		PerStageConstants constants[ShaderType::Count];
+		}
+		constants[ShaderType::Count];
 	};
 
 	struct ShaderByteCode
@@ -146,12 +170,44 @@ namespace RHI
 		uint32_t byteCount;
 	};
 
+	struct VertexAttribute
+	{
+		uint32_t vertexBufferIndex; // also called "binding" or "input slot"
+		ShaderSemantic::Id semantic; // intended usage
+		DataType::Id dataType; // for a single component of the vector
+		uint32_t vectorLength; // number of components per vector
+		uint32_t structByteOffset; // where in the struct to look when using interleaved data
+	};
+
 	struct GraphicsPipelineDesc
 	{
 		const char* name;
 		HRootSignature rootSignature;
 		ShaderByteCode vertexShader;
 		ShaderByteCode pixelShader;
+		struct VertexLayout
+		{
+			VertexAttribute attributes[MaxVertexAttributeCount];
+			uint32_t attributeCount;
+			uint32_t bindingStrides[MaxVertexBufferCount]; // total byte size of a vertex for each buffer
+
+			void AddAttribute(
+				uint32_t vertexBufferIndex,
+				ShaderSemantic::Id semantic,
+				DataType::Id dataType,
+				uint32_t vectorLength,
+				uint32_t structByteOffset)
+			{
+				Q_assert(attributeCount < MaxVertexAttributeCount);
+				VertexAttribute& va = attributes[attributeCount++];
+				va.dataType = dataType;
+				va.semantic = semantic;
+				va.structByteOffset = structByteOffset;
+				va.vectorLength = vectorLength;
+				va.vertexBufferIndex = vertexBufferIndex;
+			}
+		}
+		vertexLayout;
 	};
 
 	struct BufferDesc

@@ -421,6 +421,56 @@ namespace RHI
 		}
 	}
 
+	static const char* GetD3DSemanticName(ShaderSemantic::Id semantic)
+	{
+		switch(semantic)
+		{
+			case ShaderSemantic::Position: return "POSITION";
+			case ShaderSemantic::Normal: return "NORMAL";
+			case ShaderSemantic::TexCoord: return "TEXCOORD";
+			case ShaderSemantic::Color: return "COLOR";
+			default: Q_assert(!"Unsupported shader semantic"); return "";
+		}
+	}
+
+	static DXGI_FORMAT GetD3DFormat(DataType::Id dataType, uint32_t vectorLength)
+	{
+		if(vectorLength < 1 || vectorLength > 4)
+		{
+			Q_assert(!"Invalid vector length");
+			return DXGI_FORMAT_UNKNOWN;
+		}
+
+		switch(dataType)
+		{
+			case DataType::Float32:
+				switch(vectorLength)
+				{
+					case 1: return DXGI_FORMAT_R32_FLOAT;
+					case 2: return DXGI_FORMAT_R32G32_FLOAT;
+					case 3: return DXGI_FORMAT_R32G32B32_FLOAT;
+					case 4: return DXGI_FORMAT_R32G32B32A32_FLOAT;
+				}
+			case DataType::UInt32:
+				switch(vectorLength)
+				{
+					case 1: return DXGI_FORMAT_R32_UINT;
+					case 2: return DXGI_FORMAT_R32G32_UINT;
+					case 3: return DXGI_FORMAT_R32G32B32_UINT;
+					case 4: return DXGI_FORMAT_R32G32B32A32_UINT;
+				}
+			case DataType::UNorm8:
+				switch(vectorLength)
+				{
+					case 1: return DXGI_FORMAT_R8_UNORM;
+					case 2: return DXGI_FORMAT_R8G8_UNORM;
+					case 3: Q_assert(!"Unsupported format"); return DXGI_FORMAT_UNKNOWN;
+					case 4: return DXGI_FORMAT_R8G8B8A8_UNORM;
+				}
+			default: Q_assert(!"Unsupported data type"); return DXGI_FORMAT_UNKNOWN;
+		}
+	}
+
 	void Init()
 	{
 		Sys_V_Init();
@@ -891,13 +941,20 @@ namespace RHI
 		desc.SampleDesc.Count = 1;
 		desc.SampleMask = UINT_MAX;
 
-		const D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
+		D3D12_INPUT_ELEMENT_DESC inputElementDescs[MaxVertexAttributeCount];
+		for(int a = 0; a < rhiDesc.vertexLayout.attributeCount; ++a)
 		{
-			{ "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 8, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-			{ "COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 16, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-		};
-		desc.InputLayout.NumElements = ARRAY_LEN(inputElementDescs);
+			const VertexAttribute& va = rhiDesc.vertexLayout.attributes[a];
+			D3D12_INPUT_ELEMENT_DESC& ied = inputElementDescs[a];
+			ied.SemanticName = GetD3DSemanticName(va.semantic);
+			ied.SemanticIndex = 0; // @TODO: need this if we want e.g. 2+ texture coordinates when interleaving
+			ied.Format = GetD3DFormat(va.dataType, va.vectorLength);
+			ied.InputSlot = va.vertexBufferIndex;
+			ied.AlignedByteOffset = va.structByteOffset;
+			ied.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+			ied.InstanceDataStepRate = 0;
+		}
+		desc.InputLayout.NumElements = rhiDesc.vertexLayout.attributeCount;
 		desc.InputLayout.pInputElementDescs = inputElementDescs;
 
 		desc.NumRenderTargets = 1;

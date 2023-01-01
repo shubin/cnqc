@@ -257,7 +257,7 @@ struct GameplayRenderPipeline : IRenderPipeline
 		{
 			RHI::RootSignatureDesc desc = { 0 };
 			desc.name = "UI root signature";
-			desc.usingVertexBuffers = true;
+			desc.usingVertexBuffers = qtrue;
 			desc.constants[RHI::ShaderType::Vertex].count = 2;
 			grp.ui.rootSignature = RHI::CreateRootSignature(desc);
 		}
@@ -266,6 +266,10 @@ struct GameplayRenderPipeline : IRenderPipeline
 			desc.rootSignature = grp.ui.rootSignature;
 			desc.vertexShader = RHI::CompileVertexShader(vs);
 			desc.pixelShader = RHI::CompilePixelShader(ps);
+			desc.vertexLayout.bindingStrides[0] = sizeof(ui_t::vertex_t);
+			desc.vertexLayout.AddAttribute(0, RHI::ShaderSemantic::Position, RHI::DataType::Float32, 2, offsetof(ui_t::vertex_t, position));
+			desc.vertexLayout.AddAttribute(0, RHI::ShaderSemantic::TexCoord, RHI::DataType::Float32, 2, offsetof(ui_t::vertex_t, texCoords));
+			desc.vertexLayout.AddAttribute(0, RHI::ShaderSemantic::Color, RHI::DataType::UNorm8, 4, offsetof(ui_t::vertex_t, color));
 			grp.ui.pipeline = RHI::CreateGraphicsPipeline(desc);
 		}
 		{
