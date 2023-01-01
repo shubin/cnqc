@@ -166,12 +166,13 @@ static void Draw2D()
 	// @TODO: grab the right rects...
 	RHI::CmdSetViewport(0, 0, glConfig.vidWidth, glConfig.vidHeight);
 	RHI::CmdSetScissor(0, 0, glConfig.vidWidth, glConfig.vidHeight);
-
 	RHI::CmdBindRootSignature(grp.ui.rootSignature);
 	RHI::CmdBindPipeline(grp.ui.pipeline);
 	const uint32_t stride = sizeof(ui_t::vertex_t);
 	RHI::CmdBindVertexBuffers(1, &grp.ui.vertexBuffer, &stride, NULL);
 	RHI::CmdBindIndexBuffer(grp.ui.indexBuffer, RHI::IndexType::UInt32, 0);
+	const float scale[2] = { 2.0f / glConfig.vidWidth, 2.0f / glConfig.vidHeight };
+	RHI::CmdSetRootConstants(grp.ui.rootSignature, RHI::ShaderType::Vertex, scale);
 
 	// @TODO: use vertex buffers and an index buffer
 	RHI::CmdDrawIndexed(grp.ui.indexCount, 0, 0);
@@ -256,6 +257,10 @@ struct GameplayRenderPipeline : IRenderPipeline
 	{
 		{
 			RHI::RootSignatureDesc desc = { 0 };
+			desc.name = "UI root signature";
+			desc.shaderStages = RHI::ShaderStage::VertexBit;
+			desc.usingVertexBuffers = true;
+			desc.constants[RHI::ShaderType::Vertex].count = 2;
 			grp.ui.rootSignature = RHI::CreateRootSignature(desc);
 		}
 		{

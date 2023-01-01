@@ -106,6 +106,17 @@ namespace RHI
 		};
 	};
 
+	struct ShaderType
+	{
+		enum Id
+		{
+			Vertex,
+			Pixel,
+			Compute,
+			Count
+		};
+	};
+
 	struct ShaderStage
 	{
 		enum Flags
@@ -113,14 +124,22 @@ namespace RHI
 			None = 0,
 			VertexBit = RHI_BIT(0),
 			PixelBit = RHI_BIT(1),
-			Count
+			ComputeBit = RHI_BIT(2)
 		};
 	};
 	RHI_ENUM_OPERATORS(ShaderStage::Flags);
 
 	struct RootSignatureDesc
 	{
+		struct ConstantsRange
+		{
+			uint32_t offset; // in multiples of 4 bytes
+			uint32_t count;  // in multiples of 4 bytes
+		};
 		const char* name;
+		ShaderStage::Flags shaderStages;
+		bool usingVertexBuffers;
+		ConstantsRange constants[ShaderType::Count];
 	};
 
 	struct ShaderByteCode
@@ -173,6 +192,7 @@ namespace RHI
 	void CmdBindIndexBuffer(HBuffer indexBuffer, IndexType::Id type, uint32_t startByteOffset);
 	void CmdSetViewport(uint32_t x, uint32_t y, uint32_t w, uint32_t h, float minDepth = 0.0f, float maxDepth = 1.0f);
 	void CmdSetScissor(uint32_t x, uint32_t y, uint32_t w, uint32_t h);
+	void CmdSetRootConstants(HRootSignature rootSignature, ShaderType::Id shaderType, const void* constants);
 	void CmdDraw(uint32_t vertexCount, uint32_t firstVertex);
 	void CmdDrawIndexed(uint32_t indexCount, uint32_t firstIndex, uint32_t firstVertex);
 

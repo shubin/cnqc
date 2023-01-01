@@ -118,7 +118,13 @@ namespace RHI
 
 	struct RootSignature
 	{
+		struct PerStageConstants
+		{
+			UINT parameterIndex;
+		};
+		RootSignatureDesc desc;
 		ID3D12RootSignature* signature;
+		PerStageConstants constants[ShaderType::Count];
 	};
 
 	struct Pipeline
@@ -402,6 +408,17 @@ namespace RHI
 	static DXGI_FORMAT GetD3DIndexFormat(IndexType::Id type)
 	{
 		return type == IndexType::UInt16 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT;
+	}
+
+	static D3D12_SHADER_VISIBILITY GetD3DVisibility(ShaderType::Id shaderType)
+	{
+		switch(shaderType)
+		{
+			case ShaderType::Vertex: return D3D12_SHADER_VISIBILITY_VERTEX;
+			case ShaderType::Pixel: return D3D12_SHADER_VISIBILITY_PIXEL;
+			case ShaderType::Compute: return (D3D12_SHADER_VISIBILITY)0; // @TODO: assert here too?
+			default: Q_assert(!"Unsupported shader type"); return (D3D12_SHADER_VISIBILITY)0;
+		}
 	}
 
 	void Init()
@@ -799,14 +816,29 @@ namespace RHI
 
 	HRootSignature CreateRootSignature(const RootSignatureDesc& rhiDesc)
 	{
-		D3D12_ROOT_PARAMETER param;
-		param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-		param.Constants.Num32BitValues = 2;
-		param.Constants.RegisterSpace = 0;
-		param.Constants.ShaderRegister = 0;
-		param.ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+		RootSignature rhiSignature = { 0 };
 
-		// @TODO: flags for vertex and pixel shader access etc.
+		int parameterCount = 0;
+		D3D12_ROOT_PARAMETER parameters[16];
+		for(int s = 0; s < ShaderType::Count; ++s)
+		{
+			// @TODO: what to do with rhiDesc.constants[s].offset ?
+			if(rhiDesc.constants[s].count > 0)
+			{
+				rhiSignature.constants[s].parameterIndex = parameterCount;
+
+				D3D12_ROOT_PARAMETER& p = parameters[parameterCount];
+				p.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+				p.Constants.Num32BitValues = rhiDesc.constants[s].count;
+				p.Constants.RegisterSpace = 0;
+				p.Constants.ShaderRegister = 0;
+				p.ShaderVisibility = GetD3DVisibility((ShaderType::Id)s);
+
+				parameterCount++;
+			}
+		}
+		Q_assert(parameterCount <= ShaderType::Count);
+
 		D3D12_ROOT_SIGNATURE_DESC desc = { 0 };
 		desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE |
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
@@ -814,12 +846,20 @@ namespace RHI
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_AMPLIFICATION_SHADER_ROOT_ACCESS |
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_MESH_SHADER_ROOT_ACCESS;
-		// @TODO:
-		desc.Flags |= D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-		//desc.Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS;
-		//desc.Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
-		desc.NumParameters = 1;
-		desc.pParameters = &param;
+		if((rhiDesc.shaderStages & ShaderStage::VertexBit) == 0)
+		{
+			desc.Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS;
+		}
+		if((rhiDesc.shaderStages & ShaderStage::PixelBit) == 0)
+		{
+			desc.Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
+		}
+		if(rhiDesc.usingVertexBuffers)
+		{
+			desc.Flags |= D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+		}
+		desc.NumParameters = parameterCount;
+		desc.pParameters = parameters;
 		desc.NumStaticSamplers = 0;
 		desc.pStaticSamplers = NULL;
 
@@ -831,7 +871,7 @@ namespace RHI
 		D3D(rhi.device->CreateRootSignature(0, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&signature)));
 		COM_RELEASE(blob);
 
-		RootSignature rhiSignature = { 0 };
+		rhiSignature.desc = rhiDesc;
 		rhiSignature.signature = signature;
 
 		return rhi.rootSignatures.Add(rhiSignature);
@@ -909,10 +949,6 @@ namespace RHI
 		const RootSignature sig = rhi.rootSignatures.Get(rootSignature);
 		// @TODO: decide between graphics and compute!
 		rhi.commandList->SetGraphicsRootSignature(sig.signature);
-
-		// @TODO: move to a dedicated function etc.
-		const float constants[2] = { 2.0f / glConfig.vidWidth, 2.0f / glConfig.vidHeight };
-		rhi.commandList->SetGraphicsRoot32BitConstants(0, ARRAY_LEN(constants), constants, 0);
 	}
 
 	void CmdBindPipeline(HPipeline pipeline)
@@ -980,6 +1016,20 @@ namespace RHI
 		rect.right = x + w;
 		rect.bottom = y + h;
 		rhi.commandList->RSSetScissorRects(1, &rect);
+	}
+
+	void CmdSetRootConstants(HRootSignature rootSignature, ShaderType::Id shaderType, const void* constants)
+	{
+		Q_assert(CanWriteCommands());
+		Q_assert(constants);
+
+		// @TODO: check that the rootSignature specified is already set
+		const RootSignature& sig = rhi.rootSignatures.Get(rootSignature);
+		const UINT parameterIndex = sig.constants[shaderType].parameterIndex;
+		const UINT constantCount = sig.desc.constants[shaderType].count;
+
+		// @TODO: decide between graphics and compute!
+		rhi.commandList->SetGraphicsRoot32BitConstants(parameterIndex, constantCount, constants, 0);
 	}
 
 	void CmdDraw(uint32_t vertexCount, uint32_t firstVertex)
