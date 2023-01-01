@@ -153,10 +153,46 @@ namespace RHI
 		};
 	};
 
+	struct TextureFormat
+	{
+		enum Id
+		{
+			DepthStencil32_UNorm24_UInt8,
+			Count
+		};
+	};
+
+	struct ComparisonFunction
+	{
+		enum Id
+		{
+			Never,
+			Less,
+			Equal,
+			LessEqual,
+			Greater,
+			NotEqual,
+			GreaterEqual,
+			Always,
+			Count
+		};
+	};
+
+	struct CullMode
+	{
+		enum Id
+		{
+			None,
+			Front,
+			Back,
+			Count
+		};
+	};
+
 	struct RootSignatureDesc
 	{
 		const char* name;
-		qbool usingVertexBuffers;
+		bool usingVertexBuffers;
 		struct PerStageConstants
 		{
 			uint32_t count; // in multiples of 4 bytes
@@ -208,6 +244,20 @@ namespace RHI
 			}
 		}
 		vertexLayout;
+		struct DepthStencil
+		{
+			bool enableDepthTest;
+			bool enableDepthWrites;
+			ComparisonFunction::Id depthComparison;
+			TextureFormat::Id depthStencilFormat;
+		}
+		depthStencil;
+		struct Rasterizer
+		{
+			CullMode::Id cullMode;
+			// @TODO: depth bias options for polygonOffset
+		}
+		rasterizer;
 	};
 
 	struct BufferDesc
@@ -370,7 +420,7 @@ namespace RHI
 #define MAKE_NULL_HANDLE() { 0 }
 
 	template<typename T>
-	qbool IsNullHandle(T handle)
+	bool IsNullHandle(T handle)
 	{
 		return GET_HANDLE_VALUE(handle) == 0;
 	}
@@ -446,7 +496,7 @@ namespace RHI
 			return &GetItemRef(handle).item;
 		}
 
-		qbool FindNext(T** object, int* index)
+		bool FindNext(T** object, int* index)
 		{
 			Q_assert(object);
 			Q_assert(index);
@@ -457,14 +507,14 @@ namespace RHI
 				{
 					*object = &items[i].item;
 					*index = i + 1;
-					return qtrue;
+					return true;
 				}
 			}
 
-			return qfalse;
+			return false;
 		}
 
-		qbool FindNext(Handle* handle, int* index)
+		bool FindNext(Handle* handle, int* index)
 		{
 			Q_assert(handle);
 			Q_assert(index);
@@ -475,11 +525,11 @@ namespace RHI
 				{
 					*handle = CreateHandle(RT, i, items[i].generation);
 					*index = i + 1;
-					return qtrue;
+					return true;
 				}
 			}
 
-			return qfalse;
+			return false;
 		}
 
 	private:
@@ -2139,7 +2189,7 @@ extern int					r_delayedScreenshotFrame;
 struct IRenderPipeline
 {
 	virtual void Init() = 0;
-	virtual void ShutDown(qbool fullShutDown) = 0;
+	virtual void ShutDown(bool fullShutDown) = 0;
 	virtual void BeginFrame() = 0;
 	virtual void EndFrame() = 0;
 	virtual void AddDrawSurface(const surfaceType_t* surface, const shader_t* shader) = 0;

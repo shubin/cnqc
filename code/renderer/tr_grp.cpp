@@ -274,6 +274,11 @@ struct GameplayRenderPipeline : IRenderPipeline
 				RHI::DataType::Float32, 2, offsetof(ui_t::vertex_t, texCoords));
 			desc.vertexLayout.AddAttribute(0, RHI::ShaderSemantic::Color,
 				RHI::DataType::UNorm8, 4, offsetof(ui_t::vertex_t, color));
+			desc.depthStencil.depthComparison = RHI::ComparisonFunction::Always;
+			desc.depthStencil.depthStencilFormat = RHI::TextureFormat::DepthStencil32_UNorm24_UInt8;
+			desc.depthStencil.enableDepthTest = false;
+			desc.depthStencil.enableDepthWrites = false;
+			desc.rasterizer.cullMode = RHI::CullMode::None;
 			grp.ui.pipeline = RHI::CreateGraphicsPipeline(desc);
 		}
 		{
@@ -296,7 +301,7 @@ struct GameplayRenderPipeline : IRenderPipeline
 		}
 	}
 
-	void ShutDown(qbool fullShutDown) override
+	void ShutDown(bool fullShutDown) override
 	{
 	}
 

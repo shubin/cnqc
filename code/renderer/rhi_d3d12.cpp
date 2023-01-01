@@ -471,6 +471,42 @@ namespace RHI
 		}
 	}
 
+	static D3D12_COMPARISON_FUNC GetD3DComparisonFunction(ComparisonFunction::Id function)
+	{
+		switch(function)
+		{
+			case ComparisonFunction::Always: return D3D12_COMPARISON_FUNC_ALWAYS;
+			case ComparisonFunction::Equal: return D3D12_COMPARISON_FUNC_EQUAL;
+			case ComparisonFunction::Greater: return D3D12_COMPARISON_FUNC_GREATER;
+			case ComparisonFunction::GreaterEqual: return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+			case ComparisonFunction::Less: return D3D12_COMPARISON_FUNC_LESS;
+			case ComparisonFunction::LessEqual: return D3D12_COMPARISON_FUNC_LESS_EQUAL;
+			case ComparisonFunction::Never: return D3D12_COMPARISON_FUNC_NEVER;
+			case ComparisonFunction::NotEqual: return D3D12_COMPARISON_FUNC_NOT_EQUAL;
+			default: Q_assert(!"Unsupported comparison function"); return D3D12_COMPARISON_FUNC_ALWAYS;
+		}
+	}
+
+	static DXGI_FORMAT GetD3DFormat(TextureFormat::Id format)
+	{
+		switch(format)
+		{
+			case TextureFormat::DepthStencil32_UNorm24_UInt8: return DXGI_FORMAT_D24_UNORM_S8_UINT;
+			default: Q_assert(!"Unsupported texture format"); return DXGI_FORMAT_R8G8B8A8_UNORM;
+		}
+	}
+
+	static D3D12_CULL_MODE GetD3DCullMode(CullMode::Id cullMode)
+	{
+		switch(cullMode)
+		{
+			case CullMode::None: return D3D12_CULL_MODE_NONE;
+			case CullMode::Front: return D3D12_CULL_MODE_FRONT;
+			case CullMode::Back: return D3D12_CULL_MODE_BACK;
+			default: Q_assert(!"Unsupported cull mode"); return D3D12_CULL_MODE_NONE;
+		}
+	}
+
 	void Init()
 	{
 		Sys_V_Init();
@@ -961,10 +997,10 @@ namespace RHI
 		desc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL; // RGBA
 		desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 
-		desc.DepthStencilState.DepthEnable = FALSE; // toggles depth *testing*
-		desc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
-		desc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO; // D3D12_DEPTH_WRITE_MASK_ALL to enable writes
-		desc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+		desc.DepthStencilState.DepthEnable = rhiDesc.depthStencil.enableDepthTest ? TRUE : FALSE;
+		desc.DepthStencilState.DepthFunc = GetD3DComparisonFunction(rhiDesc.depthStencil.depthComparison);
+		desc.DepthStencilState.DepthWriteMask = rhiDesc.depthStencil.enableDepthWrites ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
+		desc.DSVFormat = GetD3DFormat(rhiDesc.depthStencil.depthStencilFormat);
 		
 		desc.VS.pShaderBytecode = rhiDesc.vertexShader.data;
 		desc.VS.BytecodeLength = rhiDesc.vertexShader.byteCount;
@@ -973,7 +1009,7 @@ namespace RHI
 
 		desc.RasterizerState.AntialiasedLineEnable = FALSE;
 		desc.RasterizerState.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
-		desc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+		desc.RasterizerState.CullMode = GetD3DCullMode(rhiDesc.rasterizer.cullMode);
 		desc.RasterizerState.FrontCounterClockwise = FALSE;
 		desc.RasterizerState.DepthBias = 0;
 		desc.RasterizerState.DepthBiasClamp = 0.0f;
