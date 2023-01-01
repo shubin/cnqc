@@ -263,6 +263,7 @@ struct GameplayRenderPipeline : IRenderPipeline
 		}
 		{
 			RHI::GraphicsPipelineDesc desc = { 0 };
+			desc.name = "UI PSO";
 			desc.rootSignature = grp.ui.rootSignature;
 			desc.vertexShader = RHI::CompileVertexShader(vs);
 			desc.pixelShader = RHI::CompilePixelShader(ps);

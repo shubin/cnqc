@@ -691,9 +691,9 @@ namespace RHI
 		if(SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&debug))))
 		{
 			// DXGI_DEBUG_RLO_ALL is DXGI_DEBUG_RLO_SUMMARY | DXGI_DEBUG_RLO_DETAIL | DXGI_DEBUG_RLO_IGNORE_INTERNAL
-			OutputDebugStringA("CNQ3: calling ReportLiveObjects\n");
+			OutputDebugStringA("**** >>>> CNQ3: calling ReportLiveObjects\n");
 			const HRESULT hr = debug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL);
-			OutputDebugStringA(va("CNQ3: ReportLiveObjects returned 0x%08X (%s)\n", (unsigned int)hr, GetSystemErrorString(hr)));
+			OutputDebugStringA(va("**** >>>> CNQ3: ReportLiveObjects returned 0x%08X (%s)\n", (unsigned int)hr, GetSystemErrorString(hr)));
 			debug->Release();
 		}
 #endif
@@ -984,6 +984,7 @@ namespace RHI
 
 		ID3D12PipelineState* pso;
 		D3D(rhi.device->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&pso)));
+		SetDebugName(pso, rhiDesc.name);
 
 		Pipeline rhiPipeline = { 0 };
 		rhiPipeline.type = PipelineType::Graphics;
@@ -995,6 +996,7 @@ namespace RHI
 
 	void DestroyPipeline(HPipeline pipeline)
 	{
+		COM_RELEASE(rhi.pipelines.Get(pipeline).pso);
 		rhi.pipelines.Remove(pipeline);
 	}
 
