@@ -491,6 +491,7 @@ namespace RHI
 	{
 		switch(format)
 		{
+			case TextureFormat::RGBA32_UNorm: return DXGI_FORMAT_R8G8B8A8_UNORM;
 			case TextureFormat::DepthStencil32_UNorm24_UInt8: return DXGI_FORMAT_D24_UNORM_S8_UINT;
 			default: Q_assert(!"Unsupported texture format"); return DXGI_FORMAT_R8G8B8A8_UNORM;
 		}
@@ -504,6 +505,51 @@ namespace RHI
 			case CullMode::Front: return D3D12_CULL_MODE_FRONT;
 			case CullMode::Back: return D3D12_CULL_MODE_BACK;
 			default: Q_assert(!"Unsupported cull mode"); return D3D12_CULL_MODE_NONE;
+		}
+	}
+
+	static D3D12_BLEND GetD3DSourceBlend(uint32_t stateBits)
+	{
+		switch(stateBits & GLS_SRCBLEND_BITS)
+		{
+			case GLS_SRCBLEND_ZERO: return D3D12_BLEND_ZERO;
+			case GLS_SRCBLEND_ONE: return D3D12_BLEND_ONE;
+			case GLS_SRCBLEND_DST_COLOR: return D3D12_BLEND_DEST_COLOR;
+			case GLS_SRCBLEND_ONE_MINUS_DST_COLOR: return D3D12_BLEND_INV_DEST_COLOR;
+			case GLS_SRCBLEND_SRC_ALPHA: return D3D12_BLEND_SRC_ALPHA;
+			case GLS_SRCBLEND_ONE_MINUS_SRC_ALPHA: return D3D12_BLEND_INV_SRC_ALPHA;
+			case GLS_SRCBLEND_DST_ALPHA: return D3D12_BLEND_DEST_ALPHA;
+			case GLS_SRCBLEND_ONE_MINUS_DST_ALPHA: return D3D12_BLEND_INV_DEST_ALPHA;
+			case GLS_SRCBLEND_ALPHA_SATURATE: return D3D12_BLEND_SRC_ALPHA_SAT;
+			default: Q_assert(!"Unsupported source blend mode"); return D3D12_BLEND_ONE;
+		}
+	}
+
+	static D3D12_BLEND GetD3DDestBlend(uint32_t stateBits)
+	{
+		switch(stateBits & GLS_DSTBLEND_BITS)
+		{
+			case GLS_DSTBLEND_ZERO: return D3D12_BLEND_ZERO;
+			case GLS_DSTBLEND_ONE: return D3D12_BLEND_ONE;
+			case GLS_DSTBLEND_SRC_COLOR: return D3D12_BLEND_SRC_COLOR;
+			case GLS_DSTBLEND_ONE_MINUS_SRC_COLOR: return D3D12_BLEND_INV_SRC_COLOR;
+			case GLS_DSTBLEND_SRC_ALPHA: return D3D12_BLEND_SRC_ALPHA;
+			case GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA: return D3D12_BLEND_INV_SRC_ALPHA;
+			case GLS_DSTBLEND_DST_ALPHA: return D3D12_BLEND_DEST_ALPHA;
+			case GLS_DSTBLEND_ONE_MINUS_DST_ALPHA: return D3D12_BLEND_INV_DEST_ALPHA;
+			default: Q_assert(!"Unsupported dest blend mode"); return D3D12_BLEND_ONE;
+		}
+	}
+
+	static D3D12_BLEND GetAlphaBlendFromColorBlend(D3D12_BLEND colorBlend)
+	{
+		switch(colorBlend)
+		{
+			case D3D12_BLEND_SRC_COLOR: return D3D12_BLEND_SRC_ALPHA;
+			case D3D12_BLEND_INV_SRC_COLOR: return D3D12_BLEND_INV_SRC_ALPHA;
+			case D3D12_BLEND_DEST_COLOR: return D3D12_BLEND_DEST_ALPHA;
+			case D3D12_BLEND_INV_DEST_COLOR: return D3D12_BLEND_INV_DEST_ALPHA;
+			default: return colorBlend;
 		}
 	}
 
@@ -993,9 +1039,22 @@ namespace RHI
 		desc.InputLayout.NumElements = rhiDesc.vertexLayout.attributeCount;
 		desc.InputLayout.pInputElementDescs = inputElementDescs;
 
-		desc.NumRenderTargets = 1;
-		desc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL; // RGBA
-		desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+		for(int t = 0; t < rhiDesc.renderTargetCount; ++t)
+		{
+			const GraphicsPipelineDesc::RenderTarget& rtIn = rhiDesc.renderTargets[t];
+			D3D12_RENDER_TARGET_BLEND_DESC& rtOut = desc.BlendState.RenderTarget[t];
+			rtOut.BlendEnable = TRUE;
+			rtOut.BlendOp = D3D12_BLEND_OP_ADD;
+			rtOut.BlendOpAlpha = D3D12_BLEND_OP_ADD;
+			rtOut.LogicOpEnable = FALSE;
+			rtOut.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL; // RGBA
+			rtOut.SrcBlend = GetD3DSourceBlend(rtIn.q3BlendMode);
+			rtOut.DestBlend = GetD3DDestBlend(rtIn.q3BlendMode);
+			rtOut.SrcBlendAlpha = GetAlphaBlendFromColorBlend(rtOut.SrcBlend);
+			rtOut.DestBlendAlpha = GetAlphaBlendFromColorBlend(rtOut.DestBlend);
+			desc.RTVFormats[t] = GetD3DFormat(rtIn.format);
+		}
+		desc.NumRenderTargets = rhiDesc.renderTargetCount;
 
 		desc.DepthStencilState.DepthEnable = rhiDesc.depthStencil.enableDepthTest ? TRUE : FALSE;
 		desc.DepthStencilState.DepthFunc = GetD3DComparisonFunction(rhiDesc.depthStencil.depthComparison);

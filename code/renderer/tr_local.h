@@ -38,6 +38,7 @@ namespace RHI
 	const uint32_t FrameCount = 2;
 	const uint32_t MaxVertexBufferCount = 16;
 	const uint32_t MaxVertexAttributeCount = 16;
+	const uint32_t MaxRenderTargetCount = 8;
 
 	typedef uint32_t Handle;
 
@@ -157,6 +158,7 @@ namespace RHI
 	{
 		enum Id
 		{
+			RGBA32_UNorm,
 			DepthStencil32_UNorm24_UInt8,
 			Count
 		};
@@ -258,6 +260,21 @@ namespace RHI
 			// @TODO: depth bias options for polygonOffset
 		}
 		rasterizer;
+		struct RenderTarget
+		{
+			uint32_t q3BlendMode; // GLS_SRCBLEND_BITS and GLS_DSTBLEND_BITS combined
+			TextureFormat::Id format;
+		}
+		renderTargets[MaxRenderTargetCount];
+		uint32_t renderTargetCount;
+
+		void AddRenderTarget(uint32_t q3BlendMode, TextureFormat::Id format)
+		{
+			Q_assert(renderTargetCount < MaxRenderTargetCount);
+			RenderTarget& rt = renderTargets[renderTargetCount++];
+			rt.q3BlendMode = q3BlendMode;
+			rt.format = format;
+		}
 	};
 
 	struct BufferDesc

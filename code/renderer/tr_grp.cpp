@@ -279,6 +279,7 @@ struct GameplayRenderPipeline : IRenderPipeline
 			desc.depthStencil.enableDepthTest = false;
 			desc.depthStencil.enableDepthWrites = false;
 			desc.rasterizer.cullMode = RHI::CullMode::None;
+			desc.AddRenderTarget(GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, RHI::TextureFormat::RGBA32_UNorm);
 			grp.ui.pipeline = RHI::CreateGraphicsPipeline(desc);
 		}
 		{
