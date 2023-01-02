@@ -1009,8 +1009,9 @@ namespace RHI
 			desc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 		}
 
+		// @TODO: leverage D3D12_HEAP_TYPE_CUSTOM for a UMA architecture?
 		D3D12MA::ALLOCATION_DESC allocDesc = { 0 };
-		allocDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD; // @TODO:
+		allocDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 		allocDesc.Flags = D3D12MA::ALLOCATION_FLAG_STRATEGY_MIN_MEMORY;
 		// add D3D12MA::ALLOCATION_FLAG_COMMITTED for big resources
 
