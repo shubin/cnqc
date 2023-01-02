@@ -223,7 +223,9 @@ namespace RHI
 		ID3D12CommandQueue* commandQueue;
 		IDXGISwapChain3* swapChain;
 		ID3D12DescriptorHeap* rtvHeap;
-		ID3D12DescriptorHeap* srvHeap; // SRV + UAV + CBV
+		ID3D12DescriptorHeap* srvHeap; // all of the game's textures
+		ID3D12DescriptorHeap* samplerHeap; // all samplers
+		ID3D12DescriptorHeap* imguiHeap;
 		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle;
 		UINT rtvIncSize;
 		ID3D12Resource* renderTargets[FrameCount];
@@ -810,10 +812,30 @@ namespace RHI
 			D3D12_DESCRIPTOR_HEAP_DESC heapDesc = { 0 };
 			heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 			heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-			heapDesc.NumDescriptors = MAX_DRAWIMAGES * 2;
+			heapDesc.NumDescriptors = 64;
+			heapDesc.NodeMask = 0;
+			D3D(rhi.device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&rhi.imguiHeap)));
+			SetDebugName(rhi.imguiHeap, "Dear ImGUI Descriptor Heap");
+		}
+
+		{
+			D3D12_DESCRIPTOR_HEAP_DESC heapDesc = { 0 };
+			heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+			heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+			heapDesc.NumDescriptors = MAX_DRAWIMAGES;
 			heapDesc.NodeMask = 0;
 			D3D(rhi.device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&rhi.srvHeap)));
-			SetDebugName(rhi.srvHeap, "CBV SRV UAV Descriptor Heap");
+			SetDebugName(rhi.srvHeap, "Texture Descriptor Heap");
+		}
+
+		{
+			D3D12_DESCRIPTOR_HEAP_DESC heapDesc = { 0 };
+			heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+			heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+			heapDesc.NumDescriptors = 1; // @TODO:
+			heapDesc.NodeMask = 0;
+			D3D(rhi.device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&rhi.samplerHeap)));
+			SetDebugName(rhi.samplerHeap, "Sampler Descriptor Heap");
 		}
 
 		{
@@ -863,9 +885,9 @@ namespace RHI
 		glInfo.maxAnisotropy = 16;
 		glInfo.depthFadeSupport = qfalse;
 
-		if(!ImGui_ImplDX12_Init(rhi.device, FrameCount, DXGI_FORMAT_R8G8B8A8_UNORM, rhi.srvHeap,
-			rhi.srvHeap->GetCPUDescriptorHandleForHeapStart(),
-			rhi.srvHeap->GetGPUDescriptorHandleForHeapStart()))
+		if(!ImGui_ImplDX12_Init(rhi.device, FrameCount, DXGI_FORMAT_R8G8B8A8_UNORM, rhi.imguiHeap,
+			rhi.imguiHeap->GetCPUDescriptorHandleForHeapStart(),
+			rhi.imguiHeap->GetGPUDescriptorHandleForHeapStart()))
 		{
 			ri.Error(ERR_FATAL, "Failed to initialize graphics objects for Dear ImGUI\n");
 		}
@@ -906,6 +928,8 @@ namespace RHI
 		COM_RELEASE(rhi.commandList);
 		COM_RELEASE_ARRAY(rhi.commandAllocators);
 		COM_RELEASE_ARRAY(rhi.renderTargets);
+		COM_RELEASE(rhi.imguiHeap);
+		COM_RELEASE(rhi.samplerHeap);
 		COM_RELEASE(rhi.srvHeap);
 		COM_RELEASE(rhi.rtvHeap);
 		COM_RELEASE(rhi.swapChain);
@@ -948,7 +972,8 @@ namespace RHI
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		rhi.commandList->ResourceBarrier(1, &barrier);
 
-		rhi.commandList->SetDescriptorHeaps(1, &rhi.srvHeap);
+		ID3D12DescriptorHeap* heaps[2] = {rhi.srvHeap, rhi.samplerHeap};
+		rhi.commandList->SetDescriptorHeaps(ARRAY_LEN(heaps), heaps);
 
 		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = { 0 };
 		rtvHandle.ptr = rhi.rtvHandle.ptr + rhi.frameIndex * rhi.rtvIncSize;
@@ -969,6 +994,8 @@ namespace RHI
 			ImGui::ShowDemoWindow();
 			ImGui::EndFrame();
 			ImGui::Render();
+			rhi.commandList->SetDescriptorHeaps(1, &rhi.imguiHeap);
+			// the following call will set SetGraphicsRootDescriptorTable itself
 			ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), rhi.commandList);
 		}
 
@@ -1122,7 +1149,7 @@ namespace RHI
 		desc.Alignment = 0;
 		desc.DepthOrArraySize = 1;
 		desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-		desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+		desc.Flags = D3D12_RESOURCE_FLAG_NONE;
 		desc.Format = GetD3DFormat(rhiDesc.format);
 		desc.Width = rhiDesc.width;
 		desc.Height = rhiDesc.height;
@@ -1239,6 +1266,18 @@ namespace RHI
 		srcLoc.pResource = buffer.buffer;
 		srcLoc.PlacedFootprint = layouts[0];
 		rhi.upload.commandList->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, NULL);
+
+#if 0
+		D3D12_RESOURCE_BARRIER barrier = { 0 };
+		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+		barrier.Transition.pResource = texture.texture;
+		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+		barrier.Transition.Subresource = 0;
+		rhi.upload.commandList->ResourceBarrier(1, &barrier);
+		texture.subResources[0].state = ResourceState::PixelShaderAccessBit;
+#endif
 
 		ID3D12CommandList* commandLists[] = { rhi.upload.commandList };
 		D3D(rhi.upload.commandList->Close());
@@ -1541,13 +1580,19 @@ namespace RHI
 		Q_assert(CanWriteCommands());
 		Q_assert(constants);
 
-		// @TODO: check that the rootSignature specified is already set
 		const RootSignature& sig = rhi.rootSignatures.Get(rootSignature);
 		const UINT parameterIndex = sig.constants[shaderType].parameterIndex;
 		const UINT constantCount = sig.desc.constants[shaderType].count;
 
+		// @TODO: check that the rootSignature specified is already set
+		//rhi.commandList->SetGraphicsRootSignature(sig.signature);
+
 		// @TODO: decide between graphics and compute!
 		rhi.commandList->SetGraphicsRoot32BitConstants(parameterIndex, constantCount, constants, 0);
+
+		// @TODO: move out, etc
+		rhi.commandList->SetGraphicsRootDescriptorTable(1, rhi.srvHeap->GetGPUDescriptorHandleForHeapStart());
+		rhi.commandList->SetGraphicsRootDescriptorTable(2, rhi.samplerHeap->GetGPUDescriptorHandleForHeapStart());
 	}
 
 	void CmdDraw(uint32_t vertexCount, uint32_t firstVertex)
