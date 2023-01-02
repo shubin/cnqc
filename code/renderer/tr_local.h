@@ -299,6 +299,16 @@ namespace RHI
 		// @TODO: clear value?
 	};
 
+	struct TextureUploadDesc
+	{
+		const void* data;
+		uint32_t mipLevel;
+		uint32_t x;
+		uint32_t y;
+		uint32_t width;
+		uint32_t height;
+	};
+
 	void Init();
 	void ShutDown(qbool destroyWindow);
 
@@ -315,7 +325,7 @@ namespace RHI
 	void UnmapBuffer(HBuffer buffer);
 
 	HTexture CreateTexture(const TextureDesc& desc);
-	//void UploadTextureData(HTexture texture, const TextureUploadDesc& desc);
+	void UploadTextureData(HTexture texture, const TextureUploadDesc& desc);
 	void DestroyTexture(HTexture texture);
 
 	HRootSignature CreateRootSignature(const RootSignatureDesc& desc);

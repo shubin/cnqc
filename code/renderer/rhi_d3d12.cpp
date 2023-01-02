@@ -27,6 +27,7 @@ to do:
 * partial inits and shutdown
 - move the Dear ImGui rendering outside of the RHI
 * integrate D3D12MA
+- D3D12MA: leverage rhi.allocator->IsUMA() & rhi.allocator->IsCacheCoherentUMA()
 - D3D12MA: defragment on partial inits?
 - compiler switch for GPU validation
 - use ID3D12Device4::CreateCommandList1 to create closed command lists
@@ -39,6 +40,39 @@ to do:
 - NvAPI_D3D_GetLatency to get (simulated) input to display latency
 - NvAPI_D3D_IsGSyncCapable / NvAPI_D3D_IsGSyncActive for diagnostics
 - CVar for setting the gpuPreference_t
+*/
+
+/*
+All three types of command list use the ID3D12GraphicsCommandList interface,
+however only a subset of the methods are supported for copy and compute.
+
+Copy and compute command lists can use the following methods:
+Close
+CopyBufferRegion
+CopyResource
+CopyTextureRegion
+CopyTiles
+Reset
+ResourceBarrier
+
+Compute command lists can also use the following methods:
+ClearState
+ClearUnorderedAccessViewFloat
+ClearUnorderedAccessViewUint
+DiscardResource
+Dispatch
+ExecuteIndirect
+SetComputeRoot32BitConstant
+SetComputeRoot32BitConstants
+SetComputeRootConstantBufferView
+SetComputeRootDescriptorTable
+SetComputeRootShaderResourceView
+SetComputeRootSignature
+SetComputeRootUnorderedAccessView
+SetDescriptorHeaps
+SetPipelineState
+SetPredication
+EndQuery
 */
 
 
@@ -568,6 +602,15 @@ namespace RHI
 		}
 	}
 
+	static UINT64 GetUploadBufferSize(ID3D12Resource* resource, UINT firstSubresource, UINT subresourceCount)
+	{
+		UINT64 requiredSize = 0;
+		const D3D12_RESOURCE_DESC desc = resource->GetDesc();
+		rhi.device->GetCopyableFootprints(&desc, firstSubresource, subresourceCount, 0, NULL, NULL, NULL, &requiredSize);
+
+		return requiredSize;
+	}
+
 	void Init()
 	{
 		Sys_V_Init();
@@ -723,6 +766,19 @@ namespace RHI
 			D3D(rhi.device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&rhi.srvHeap)));
 			SetDebugName(rhi.srvHeap, "CBV SRV UAV Descriptor Heap");
 		}
+
+		// @TODO: create the upload buffer and save its size
+		// @TODO: create an open command list for the copy queue
+#if 0
+		{
+			BufferDesc bufferDesc = { 0 };
+			bufferDesc.name = "texture staging buffer";
+			bufferDesc.byteCount = 64 << 20;
+			bufferDesc.memoryUsage = MemoryUsage::Upload;
+			bufferDesc.initialState = ResourceState::CopyDestinationBit;
+			HBuffer uploadBuffer = CreateBuffer(bufferDesc);
+		}
+#endif
 
 		// queue some actual work...
 
@@ -1032,6 +1088,21 @@ namespace RHI
 		}
 
 		return rhi.textures.Add(texture);
+	}
+
+	void UploadTextureData(HTexture handle, const TextureUploadDesc& desc)
+	{
+		// @TODO:
+		// check that GetUploadBufferSize is <= upload buffer size
+		// wait for fence
+		// map upload buffer
+		// copy texture data in it
+		// unmap
+		// CopyTextureRegion from upload buffer to actual texture
+		// close copy queue
+		// execute copy queue & signal fence
+
+		//Texture& texture = rhi.textures.Get(handle);
 	}
 
 	void DestroyTexture(HTexture handle)
