@@ -1,6 +1,6 @@
 /*
 ===========================================================================
-Copyright (C) 2022 Gian 'myT' Schellenbaum
+Copyright (C) 2022-2023 Gian 'myT' Schellenbaum
 
 This file is part of Challenge Quake 3 (CNQ3).
 
@@ -219,6 +219,17 @@ namespace RHI
 		POOL(RootSignature, 64) rootSignatures;
 		POOL(Pipeline, 64) pipelines;
 #undef POOL
+
+		struct Upload
+		{
+			ID3D12CommandQueue* commandQueue;
+			ID3D12CommandAllocator* commandAllocator;
+			ID3D12GraphicsCommandList* commandList;
+			HBuffer buffer;
+			uint32_t bufferByteCount;
+			HFence fences[FrameCount];
+		};
+		Upload upload;
 	};
 
 	static RHIPrivate rhi;
@@ -767,18 +778,33 @@ namespace RHI
 			SetDebugName(rhi.srvHeap, "CBV SRV UAV Descriptor Heap");
 		}
 
-		// @TODO: create the upload buffer and save its size
-		// @TODO: create an open command list for the copy queue
-#if 0
 		{
 			BufferDesc bufferDesc = { 0 };
-			bufferDesc.name = "texture staging buffer";
+			bufferDesc.name = "upload buffer";
 			bufferDesc.byteCount = 64 << 20;
 			bufferDesc.memoryUsage = MemoryUsage::Upload;
 			bufferDesc.initialState = ResourceState::CopyDestinationBit;
-			HBuffer uploadBuffer = CreateBuffer(bufferDesc);
+			bufferDesc.committedResource = true;
+			rhi.upload.buffer = CreateBuffer(bufferDesc);
+			rhi.upload.bufferByteCount = bufferDesc.byteCount;
 		}
-#endif
+
+		{
+			D3D12_COMMAND_QUEUE_DESC desc = { 0 };
+			desc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
+			desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+			desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+			desc.NodeMask = 0;
+			D3D(rhi.device->CreateCommandQueue(&desc, IID_PPV_ARGS(&rhi.upload.commandQueue)));
+			SetDebugName(rhi.upload.commandQueue, "copy command queue");
+		}
+
+		D3D(rhi.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(&rhi.upload.commandAllocator)));
+		SetDebugName(rhi.upload.commandAllocator, "copy command allocator");
+
+		D3D(rhi.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, rhi.upload.commandAllocator, NULL, IID_PPV_ARGS(&rhi.upload.commandList)));
+		SetDebugName(rhi.upload.commandList, "copy command list");
+		D3D(rhi.upload.commandList->Close());
 
 		// queue some actual work...
 
@@ -808,6 +834,8 @@ namespace RHI
 
 		ImGui_ImplDX12_Shutdown();
 
+		WaitUntilDeviceIsIdle();
+
 		Handle handle;
 #define DESTROY_POOL(PoolName, FuncName) \
 		for(int i = 0; rhi.PoolName.FindNext(&handle, &i);) \
@@ -820,7 +848,9 @@ namespace RHI
 		DESTROY_POOL(pipelines, DestroyPipeline);
 #undef DESTROY_POOL
 
-		WaitUntilDeviceIsIdle();
+		COM_RELEASE(rhi.upload.commandList);
+		COM_RELEASE(rhi.upload.commandAllocator);
+		COM_RELEASE(rhi.upload.commandQueue);
 
 		CloseHandle(rhi.fenceEvent);
 
@@ -956,11 +986,13 @@ namespace RHI
 			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		}
 
+		D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_COPY_DEST;
 		D3D12MA::ALLOCATION_DESC allocDesc = { 0 };
 		allocDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 		if(rhiDesc.memoryUsage == MemoryUsage::CPU || rhiDesc.memoryUsage == MemoryUsage::Upload)
 		{
 			allocDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
+			resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
 		}
 		else if(rhiDesc.memoryUsage == MemoryUsage::Readback)
 		{
@@ -968,12 +1000,14 @@ namespace RHI
 			desc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 		}
 		allocDesc.Flags = D3D12MA::ALLOCATION_FLAG_STRATEGY_MIN_MEMORY;
-		// add D3D12MA::ALLOCATION_FLAG_COMMITTED for big resources
+		if(rhiDesc.committedResource)
+		{
+			allocDesc.Flags = (D3D12MA::ALLOCATION_FLAGS)(allocDesc.Flags | D3D12MA::ALLOCATION_FLAG_COMMITTED);
+		}
 
-		// @TODO: initial state -> D3D12_RESOURCE_STATE
 		D3D12MA::Allocation* allocation;
 		ID3D12Resource* resource;
-		D3D(rhi.allocator->CreateResource(&allocDesc, &desc, D3D12_RESOURCE_STATE_COPY_DEST, NULL, &allocation, IID_PPV_ARGS(&resource)));
+		D3D(rhi.allocator->CreateResource(&allocDesc, &desc, resourceState, NULL, &allocation, IID_PPV_ARGS(&resource)));
 		SetDebugName(resource, rhiDesc.name);
 
 		Buffer buffer = { 0 };
@@ -1069,7 +1103,10 @@ namespace RHI
 		D3D12MA::ALLOCATION_DESC allocDesc = { 0 };
 		allocDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 		allocDesc.Flags = D3D12MA::ALLOCATION_FLAG_STRATEGY_MIN_MEMORY;
-		// add D3D12MA::ALLOCATION_FLAG_COMMITTED for big resources
+		if(rhiDesc.committedResource)
+		{
+			allocDesc.Flags = (D3D12MA::ALLOCATION_FLAGS)(allocDesc.Flags | D3D12MA::ALLOCATION_FLAG_COMMITTED);
+		}
 
 		// @TODO: initial state -> D3D12_RESOURCE_STATE
 		// @TODO: clear value
@@ -1090,19 +1127,47 @@ namespace RHI
 		return rhi.textures.Add(texture);
 	}
 
-	void UploadTextureData(HTexture handle, const TextureUploadDesc& desc)
+	void UploadTextureMip0(HTexture handle, const TextureUploadDesc& desc)
+	{
+		// @TODO: support for sub-regions so that internal lightmaps get handled right
+
+		Texture& texture = rhi.textures.Get(handle);
+		if(GetUploadBufferSize(texture.texture, 0, 1) > rhi.upload.bufferByteCount)
+		{
+			ri.Error(ERR_FATAL, "Upload request too large!\n");
+		}
+
+		// @TODO: wait for fence
+		WaitUntilDeviceIsIdle();
+
+		void* data = MapBuffer(rhi.upload.buffer);
+		memcpy(data, desc.data, desc.width * desc.height * 4); // @TODO: fix this!!!
+		UnmapBuffer(rhi.upload.buffer);
+
+		D3D(rhi.upload.commandAllocator->Reset());
+		D3D(rhi.upload.commandList->Reset(rhi.upload.commandAllocator, NULL));
+
+		Buffer& buffer = rhi.buffers.Get(rhi.upload.buffer);
+		D3D12_TEXTURE_COPY_LOCATION dstLoc = { 0 };
+		D3D12_TEXTURE_COPY_LOCATION srcLoc = { 0 };
+		dstLoc.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+		dstLoc.SubresourceIndex = 0;
+		dstLoc.pResource = texture.texture;
+		srcLoc.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+		srcLoc.SubresourceIndex = 0;
+		srcLoc.pResource = buffer.buffer;
+		rhi.upload.commandList->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, NULL);
+
+		ID3D12CommandList* commandLists[] = { rhi.upload.commandList };
+		D3D(rhi.upload.commandList->Close());
+		rhi.upload.commandQueue->ExecuteCommandLists(ARRAY_LEN(commandLists), commandLists);
+
+		// @TODO: signal fence
+	}
+
+	void GenerateTextureMips(HTexture texture)
 	{
 		// @TODO:
-		// check that GetUploadBufferSize is <= upload buffer size
-		// wait for fence
-		// map upload buffer
-		// copy texture data in it
-		// unmap
-		// CopyTextureRegion from upload buffer to actual texture
-		// close copy queue
-		// execute copy queue & signal fence
-
-		//Texture& texture = rhi.textures.Get(handle);
 	}
 
 	void DestroyTexture(HTexture handle)

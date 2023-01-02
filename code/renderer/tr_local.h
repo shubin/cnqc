@@ -285,6 +285,7 @@ namespace RHI
 		uint32_t byteCount;
 		ResourceState::Flags initialState;
 		MemoryUsage::Id memoryUsage;
+		bool committedResource;
 	};
 
 	struct TextureDesc
@@ -296,13 +297,13 @@ namespace RHI
 		uint32_t sampleCount;
 		ResourceState::Flags initialState;
 		TextureFormat::Id format;
+		bool committedResource;
 		// @TODO: clear value?
 	};
 
 	struct TextureUploadDesc
 	{
 		const void* data;
-		uint32_t mipLevel;
 		uint32_t x;
 		uint32_t y;
 		uint32_t width;
@@ -325,7 +326,8 @@ namespace RHI
 	void UnmapBuffer(HBuffer buffer);
 
 	HTexture CreateTexture(const TextureDesc& desc);
-	void UploadTextureData(HTexture texture, const TextureUploadDesc& desc);
+	void UploadTextureMip0(HTexture texture, const TextureUploadDesc& desc);
+	void GenerateTextureMips(HTexture texture);
 	void DestroyTexture(HTexture texture);
 
 	HRootSignature CreateRootSignature(const RootSignatureDesc& desc);

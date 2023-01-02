@@ -330,6 +330,13 @@ static void Upload32( image_t* image, unsigned int* data )
 		desc.sampleCount = 1;
 		desc.initialState = RHI::ResourceState::ShaderAccessBits;
 		image->texture = RHI::CreateTexture(desc);
+		RHI::TextureUploadDesc upload = { 0 };
+		upload.data = data;
+		upload.x = 0;
+		upload.y = 0;
+		upload.width = w;
+		upload.height = h;
+		RHI::UploadTextureMip0(image->texture, upload);
 		//@TODO: gal.CreateTextureEx( image, mipCount, mipOffset, w, h, data );
 		return;
 	}
