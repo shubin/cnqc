@@ -24,6 +24,7 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 /*
 to do:
 
+- get rid of d3dx12.h
 * partial inits and shutdown
 - move the Dear ImGui rendering outside of the RHI
 * integrate D3D12MA
@@ -81,10 +82,12 @@ EndQuery
 #include <d3d12.h>
 #include <dxgi1_6.h>
 #include <dxgidebug.h>
+//#include <d3dx12.h>
 #if defined(_DEBUG)
 #include <d3dcompiler.h>
 #pragma comment(lib, "d3dcompiler")
 #endif
+#define D3D12MA_D3D12_HEADERS_ALREADY_INCLUDED
 #include "D3D12MemAlloc.h"
 // @TODO: move out of the RHI...
 #include "../imgui/imgui_impl_dx12.h"
@@ -93,7 +96,7 @@ EndQuery
 // @TODO: Q3 macro to specify D3D12SDKVersion
 // OR... include our own Agility SDK and specify D3D12_SDK_VERSION
 #if defined(_DEBUG)
-extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 608; }
+extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = D3D12_SDK_VERSION; }
 extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8".\\D3D12\\"; }
 #endif
 
@@ -1132,22 +1135,54 @@ namespace RHI
 		// @TODO: support for sub-regions so that internal lightmaps get handled right
 
 		Texture& texture = rhi.textures.Get(handle);
-		if(GetUploadBufferSize(texture.texture, 0, 1) > rhi.upload.bufferByteCount)
+		const UINT64 uploadByteCount = GetUploadBufferSize(texture.texture, 0, 1);
+		if(uploadByteCount > rhi.upload.bufferByteCount)
 		{
 			ri.Error(ERR_FATAL, "Upload request too large!\n");
 		}
 
-		// @TODO: wait for fence
-		WaitUntilDeviceIsIdle();
+		D3D12_RESOURCE_DESC textureDesc = texture.texture->GetDesc();
+		uint64_t textureMemorySize = 0;
+		UINT numRows[16];
+		UINT64 rowSizesInBytes[16];
+		D3D12_PLACED_SUBRESOURCE_FOOTPRINT layouts[16];
+		const uint64_t numSubResources = texture.desc.mipCount;
+		rhi.device->GetCopyableFootprints(&textureDesc, 0, (uint32_t)numSubResources, 0, layouts, numRows, rowSizesInBytes, &textureMemorySize);
 
-		void* data = MapBuffer(rhi.upload.buffer);
-		memcpy(data, desc.data, desc.width * desc.height * 4); // @TODO: fix this!!!
-		UnmapBuffer(rhi.upload.buffer);
+		// @TODO: wait for fence
+		//Sleep(100);
+
+		/*void* uploadMemory = MapBuffer(rhi.upload.buffer);
+		memcpy(uploadMemory, desc.data, desc.width * desc.height * 4); // @TODO: fix this!!!
+		UnmapBuffer(rhi.upload.buffer);*/
+
+#define Align(Val, Al) ((Val + Al - 1) & (~(Al - 1)))
+		{
+			byte* const uploadMemory = (byte*)MapBuffer(rhi.upload.buffer);
+
+			const byte* sourceSubResourceMemory = (const byte*)desc.data;
+			const uint64_t subResourceIndex = 0;
+			const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& subResourceLayout = layouts[subResourceIndex];
+			const uint64_t subResourceHeight = numRows[subResourceIndex];
+			const uint64_t subResourcePitch = Align(subResourceLayout.Footprint.RowPitch, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
+			const uint64_t sourceRowPitch = desc.width * 4; // @TODO: compute the pitch properly baded on the format...
+			uint8_t* destinationSubResourceMemory = uploadMemory + subResourceLayout.Offset;
+
+			for(uint64_t height = 0; height < subResourceHeight; height++)
+			{
+				memcpy(destinationSubResourceMemory, sourceSubResourceMemory, min(subResourcePitch, sourceRowPitch));
+				destinationSubResourceMemory += subResourcePitch;
+				sourceSubResourceMemory += sourceRowPitch;
+			}
+
+			UnmapBuffer(rhi.upload.buffer);
+		}
+#undef Align
 
 		D3D(rhi.upload.commandAllocator->Reset());
 		D3D(rhi.upload.commandList->Reset(rhi.upload.commandAllocator, NULL));
 
-		Buffer& buffer = rhi.buffers.Get(rhi.upload.buffer);
+		/*Buffer& buffer = rhi.buffers.Get(rhi.upload.buffer);
 		D3D12_TEXTURE_COPY_LOCATION dstLoc = { 0 };
 		D3D12_TEXTURE_COPY_LOCATION srcLoc = { 0 };
 		dstLoc.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
@@ -1156,7 +1191,7 @@ namespace RHI
 		srcLoc.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
 		srcLoc.SubresourceIndex = 0;
 		srcLoc.pResource = buffer.buffer;
-		rhi.upload.commandList->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, NULL);
+		rhi.upload.commandList->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, NULL);*/
 
 		ID3D12CommandList* commandLists[] = { rhi.upload.commandList };
 		D3D(rhi.upload.commandList->Close());
