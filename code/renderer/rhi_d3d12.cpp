@@ -839,6 +839,18 @@ namespace RHI
 		}
 
 		{
+			D3D12_SAMPLER_DESC desc = { 0 };
+			desc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+			desc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+			desc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+			desc.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+			desc.MaxAnisotropy = 1;
+			desc.MaxLOD = D3D12_FLOAT32_MAX;
+			desc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+			rhi.device->CreateSampler(&desc, rhi.samplerHeap->GetCPUDescriptorHandleForHeapStart());
+		}
+
+		{
 			BufferDesc bufferDesc = { 0 };
 			bufferDesc.name = "upload buffer";
 			bufferDesc.byteCount = 64 << 20;
