@@ -202,6 +202,37 @@ namespace RHI
 			uint32_t count; // in multiples of 4 bytes
 		}
 		constants[ShaderType::Count];
+		struct Table
+		{
+			uint32_t cbvCount;
+			uint32_t srvCount;
+			uint32_t uavCount;
+			uint32_t samplerCount;
+		}
+		tables[16];
+		uint32_t tableCount;
+
+		void AddDescriptorTable(uint32_t cbvCount, uint32_t srvCount, uint32_t uavCount)
+		{
+			Q_assert(tableCount < ARRAY_LEN(tables));
+
+			Table& t = tables[tableCount++];
+			t.cbvCount = cbvCount;
+			t.srvCount = srvCount;
+			t.uavCount = uavCount;
+			t.samplerCount = 0;
+		}
+
+		void AddSamplerTable(uint32_t samplerCount)
+		{
+			Q_assert(tableCount < ARRAY_LEN(tables));
+
+			Table& t = tables[tableCount++];
+			t.cbvCount = 0;
+			t.srvCount = 0;
+			t.uavCount = 0;
+			t.samplerCount = samplerCount;
+		}
 	};
 
 	struct ShaderByteCode

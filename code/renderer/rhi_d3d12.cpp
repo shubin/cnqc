@@ -188,6 +188,25 @@ namespace RHI
 		PipelineType::Id type;
 	};
 
+	/*struct Queue
+	{
+		void Create();
+		void Release();
+
+		ID3D12CommandQueue* commandQueue;
+		ID3D12CommandAllocator* commandAllocator;
+		ID3D12GraphicsCommandList* commandList;
+	};
+
+	struct Fence
+	{
+		void Create();
+		void Release();
+
+		ID3D12Fence* fence;
+		HANDLE fenceEvent;
+	};*/
+
 	struct RHIPrivate
 	{
 		ID3D12Debug* debug; // can be NULL
@@ -1264,6 +1283,54 @@ namespace RHI
 		}
 		Q_assert(parameterCount <= ShaderType::Count);
 
+		D3D12_DESCRIPTOR_RANGE ranges[ARRAY_LEN(rhiDesc.tables) * 4] = {};
+		uint32_t firstRangeIndex = 0;
+		uint32_t numDescriptors = 0;
+		for(int t = 0; t < rhiDesc.tableCount; ++t)
+		{
+			Q_assert(parameterCount < ARRAY_LEN(parameters));
+
+			const RootSignatureDesc::Table& table = rhiDesc.tables[t];
+
+			struct RangeDesc
+			{
+				D3D12_DESCRIPTOR_RANGE_TYPE type;
+				uint32_t count;
+			};
+			const RangeDesc rangeDescs[4] =
+			{
+				{ D3D12_DESCRIPTOR_RANGE_TYPE_CBV, table.cbvCount },
+				{ D3D12_DESCRIPTOR_RANGE_TYPE_SRV, table.srvCount },
+				{ D3D12_DESCRIPTOR_RANGE_TYPE_UAV, table.uavCount },
+				{ D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, table.samplerCount }
+			};
+
+			uint32_t rangeCount = 0;
+			for(int r = 0; r < ARRAY_LEN(rangeDescs); ++r)
+			{
+				if(rangeDescs[r].count <= 0)
+				{
+					continue;
+				}
+				D3D12_DESCRIPTOR_RANGE& range = ranges[firstRangeIndex + rangeCount];
+				range.RangeType = rangeDescs[r].type;
+				range.OffsetInDescriptorsFromTableStart = 0; // @TODO: numDescriptors
+				range.NumDescriptors = rangeDescs[r].count;
+				range.RegisterSpace = 0;
+				range.BaseShaderRegister = 0;
+				rangeCount++;
+				numDescriptors += rangeDescs[r].count;
+			}
+
+			D3D12_ROOT_PARAMETER& p = parameters[parameterCount++];
+			p.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+			p.DescriptorTable.NumDescriptorRanges = rangeCount;
+			p.DescriptorTable.pDescriptorRanges = ranges + firstRangeIndex;
+			p.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL; // @TODO:
+
+			firstRangeIndex += rangeCount;
+		}
+
 		D3D12_ROOT_SIGNATURE_DESC desc = { 0 };
 		desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE |
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
@@ -1289,8 +1356,12 @@ namespace RHI
 		desc.pStaticSamplers = NULL;
 
 		ID3DBlob* blob;
-		//ID3DBlob* errorBlob; // @TODO:
-		D3D(D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &blob, NULL));
+		ID3DBlob* errorBlob;
+		if(FAILED(D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &blob, &errorBlob)))
+		{
+			ri.Error(ERR_FATAL, "Root signature creation failed!\n%s\n", (const char*)errorBlob->GetBufferPointer());
+		}
+		COM_RELEASE(errorBlob);
 
 		ID3D12RootSignature* signature;
 		D3D(rhi.device->CreateRootSignature(0, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&signature)));
