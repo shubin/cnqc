@@ -316,9 +316,11 @@ namespace RHI
 	void BeginFrame();
 	void EndFrame();
 
-	HFence CreateFence();
-	void DestroyFence(HFence fence);
-	void WaitForAllFences(uint32_t fenceCount, const HFence* fences);
+	//HFence CreateFence();
+	//void GetCompletedValue(HFence fence);
+	//void Signal(HFence fence, CommandQueue::Id queue, uint64_t value);
+	//void Wait(HFence fence, uint64_t value);
+	//void DestroyFence(HFence fence);
 
 	HBuffer CreateBuffer(const BufferDesc& desc);
 	void DestroyBuffer(HBuffer buffer);

@@ -627,6 +627,20 @@ namespace RHI
 		return requiredSize;
 	}
 
+	static UINT IsPowerOfTwo(UINT x)
+	{
+		return x > 0 && (x & (x - 1)) == 0;
+	}
+
+	static UINT AlignUp(UINT value, UINT alignment)
+	{
+		Q_assert(IsPowerOfTwo(alignment));
+
+		const UINT mask = alignment - 1;
+
+		return (value + mask) & (~mask);
+	}
+
 	void Init()
 	{
 		Sys_V_Init();
@@ -855,7 +869,7 @@ namespace RHI
 		for(int i = 0; rhi.PoolName.FindNext(&handle, &i);) \
 			FuncName(MAKE_HANDLE(handle)); \
 		rhi.PoolName.Clear()
-		DESTROY_POOL(fences, DestroyFence);
+		//DESTROY_POOL(fences, DestroyFence);
 		DESTROY_POOL(buffers, DestroyBuffer);
 		DESTROY_POOL(textures, DestroyTexture);
 		DESTROY_POOL(rootSignatures, DestroyRootSignature);
@@ -1147,6 +1161,10 @@ namespace RHI
 		// @TODO: support for sub-regions so that internal lightmaps get handled right
 
 		Texture& texture = rhi.textures.Get(handle);
+
+		// otherwise the pitch is computed wrong!
+		Q_assert(texture.desc.format == TextureFormat::RGBA32_UNorm);
+
 		const UINT64 uploadByteCount = GetUploadBufferSize(texture.texture, 0, 1);
 		if(uploadByteCount > rhi.upload.bufferByteCount)
 		{
@@ -1168,11 +1186,6 @@ namespace RHI
 		}
 		rhi.upload.fenceValue++;
 
-		/*void* uploadMemory = MapBuffer(rhi.upload.buffer);
-		memcpy(uploadMemory, desc.data, desc.width * desc.height * 4); // @TODO: fix this!!!
-		UnmapBuffer(rhi.upload.buffer);*/
-
-#define Align(Val, Al) ((Val + Al - 1) & (~(Al - 1)))
 		{
 			byte* const uploadMemory = (byte*)MapBuffer(rhi.upload.buffer);
 
@@ -1180,7 +1193,7 @@ namespace RHI
 			const uint64_t subResourceIndex = 0;
 			const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& subResourceLayout = layouts[subResourceIndex];
 			const uint64_t subResourceHeight = numRows[subResourceIndex];
-			const uint64_t subResourcePitch = Align(subResourceLayout.Footprint.RowPitch, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
+			const uint64_t subResourcePitch = AlignUp(subResourceLayout.Footprint.RowPitch, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
 			const uint64_t sourceRowPitch = desc.width * 4; // @TODO: compute the pitch properly baded on the format...
 			uint8_t* destinationSubResourceMemory = uploadMemory + subResourceLayout.Offset;
 
@@ -1193,7 +1206,6 @@ namespace RHI
 
 			UnmapBuffer(rhi.upload.buffer);
 		}
-#undef Align
 
 		D3D(rhi.upload.commandAllocator->Reset());
 		D3D(rhi.upload.commandList->Reset(rhi.upload.commandAllocator, NULL));
