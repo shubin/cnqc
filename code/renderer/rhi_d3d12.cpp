@@ -230,7 +230,9 @@ namespace RHI
 			ID3D12GraphicsCommandList* commandList;
 			HBuffer buffer;
 			uint32_t bufferByteCount;
-			HFence fences[FrameCount];
+			ID3D12Fence* fence;
+			UINT64 fenceValue;
+			HANDLE fenceEvent;
 		};
 		Upload upload;
 	};
@@ -809,6 +811,15 @@ namespace RHI
 		SetDebugName(rhi.upload.commandList, "copy command list");
 		D3D(rhi.upload.commandList->Close());
 
+		D3D(rhi.device->CreateFence(rhi.upload.fenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&rhi.upload.fence)));
+		SetDebugName(rhi.fence, "Copy Queue Fence");
+
+		rhi.upload.fenceEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+		if(rhi.upload.fenceEvent == NULL)
+		{
+			Check(HRESULT_FROM_WIN32(GetLastError()), "CreateEvent");
+		}
+
 		// queue some actual work...
 
 		D3D(rhi.commandList->Close());
@@ -851,12 +862,13 @@ namespace RHI
 		DESTROY_POOL(pipelines, DestroyPipeline);
 #undef DESTROY_POOL
 
+		CloseHandle(rhi.upload.fenceEvent);
+		COM_RELEASE(rhi.upload.fence);
 		COM_RELEASE(rhi.upload.commandList);
 		COM_RELEASE(rhi.upload.commandAllocator);
 		COM_RELEASE(rhi.upload.commandQueue);
 
 		CloseHandle(rhi.fenceEvent);
-
 		COM_RELEASE(rhi.fence);
 		COM_RELEASE(rhi.commandList);
 		COM_RELEASE_ARRAY(rhi.commandAllocators);
@@ -1149,8 +1161,12 @@ namespace RHI
 		const uint64_t numSubResources = texture.desc.mipCount;
 		rhi.device->GetCopyableFootprints(&textureDesc, 0, (uint32_t)numSubResources, 0, layouts, numRows, rowSizesInBytes, &textureMemorySize);
 
-		// @TODO: wait for fence
-		//Sleep(100);
+		if(rhi.upload.fence->GetCompletedValue() < rhi.upload.fenceValue)
+		{
+			D3D(rhi.upload.fence->SetEventOnCompletion(rhi.upload.fenceValue, rhi.upload.fenceEvent));
+			WaitForSingleObjectEx(rhi.upload.fenceEvent, INFINITE, FALSE);
+		}
+		rhi.upload.fenceValue++;
 
 		/*void* uploadMemory = MapBuffer(rhi.upload.buffer);
 		memcpy(uploadMemory, desc.data, desc.width * desc.height * 4); // @TODO: fix this!!!
@@ -1182,22 +1198,21 @@ namespace RHI
 		D3D(rhi.upload.commandAllocator->Reset());
 		D3D(rhi.upload.commandList->Reset(rhi.upload.commandAllocator, NULL));
 
-		/*Buffer& buffer = rhi.buffers.Get(rhi.upload.buffer);
+		Buffer& buffer = rhi.buffers.Get(rhi.upload.buffer);
 		D3D12_TEXTURE_COPY_LOCATION dstLoc = { 0 };
 		D3D12_TEXTURE_COPY_LOCATION srcLoc = { 0 };
 		dstLoc.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-		dstLoc.SubresourceIndex = 0;
 		dstLoc.pResource = texture.texture;
-		srcLoc.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-		srcLoc.SubresourceIndex = 0;
+		dstLoc.SubresourceIndex = 0;
+		srcLoc.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
 		srcLoc.pResource = buffer.buffer;
-		rhi.upload.commandList->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, NULL);*/
+		srcLoc.PlacedFootprint = layouts[0];
+		rhi.upload.commandList->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, NULL);
 
 		ID3D12CommandList* commandLists[] = { rhi.upload.commandList };
 		D3D(rhi.upload.commandList->Close());
 		rhi.upload.commandQueue->ExecuteCommandLists(ARRAY_LEN(commandLists), commandLists);
-
-		// @TODO: signal fence
+		rhi.upload.commandQueue->Signal(rhi.upload.fence, rhi.upload.fenceValue);
 	}
 
 	void GenerateTextureMips(HTexture texture)
