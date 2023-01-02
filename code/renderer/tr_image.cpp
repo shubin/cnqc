@@ -321,6 +321,15 @@ static void Upload32( image_t* image, unsigned int* data )
 			image->height = max( image->height >> 1, 1 );
 			mipOffset++;
 		}
+		RHI::TextureDesc desc = { 0 };
+		desc.format = RHI::TextureFormat::RGBA32_UNorm;
+		desc.width = w;
+		desc.height = h;
+		desc.mipCount = mipCount;
+		desc.name = image->name;
+		desc.sampleCount = 1;
+		desc.initialState = RHI::ResourceState::ShaderAccessBits;
+		image->texture = RHI::CreateTexture(desc);
 		//@TODO: gal.CreateTextureEx( image, mipCount, mipOffset, w, h, data );
 		return;
 	}

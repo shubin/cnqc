@@ -82,6 +82,7 @@ namespace RHI
 			// public stuff
 			Fence,
 			Buffer,
+			Texture,
 			RootSignature,
 			Pipeline,
 			// private stuff
@@ -114,6 +115,19 @@ namespace RHI
 		ID3D12Resource* buffer;
 		D3D12_GPU_VIRTUAL_ADDRESS gpuAddress;
 		bool mapped;
+	};
+
+	struct Texture
+	{
+		TextureDesc desc;
+		D3D12MA::Allocation* allocation;
+		ID3D12Resource* texture;
+		struct SubResource
+		{
+			ResourceState::Flags state;
+			// additional views here?
+		}
+		subResources[16];
 	};
 
 	struct RootSignature
@@ -167,6 +181,7 @@ namespace RHI
 #define POOL(Type, Size) StaticPool<Type, H##Type, ResourceType::Type, Size>
 		POOL(Fence, 64) fences;
 		POOL(Buffer, 64) buffers;
+		POOL(Texture, MAX_DRAWIMAGES * 2) textures;
 		POOL(RootSignature, 64) rootSignatures;
 		POOL(Pipeline, 64) pipelines;
 #undef POOL
@@ -744,6 +759,7 @@ namespace RHI
 		rhi.PoolName.Clear()
 		DESTROY_POOL(fences, DestroyFence);
 		DESTROY_POOL(buffers, DestroyBuffer);
+		DESTROY_POOL(textures, DestroyTexture);
 		DESTROY_POOL(rootSignatures, DestroyRootSignature);
 		DESTROY_POOL(pipelines, DestroyPipeline);
 #undef DESTROY_POOL
@@ -865,8 +881,6 @@ namespace RHI
 
 	HBuffer CreateBuffer(const BufferDesc& rhiDesc)
 	{
-		// @TODO:
-
 		// alignment must be 64KB (D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT) or 0, which is effectively 64KB.
 		// https://msdn.microsoft.com/en-us/library/windows/desktop/dn903813(v=vs.85).aspx
 		D3D12_RESOURCE_DESC desc = { 0 };
@@ -887,10 +901,20 @@ namespace RHI
 		}
 
 		D3D12MA::ALLOCATION_DESC allocDesc = { 0 };
-		allocDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
+		allocDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+		if(rhiDesc.memoryUsage == MemoryUsage::CPU || rhiDesc.memoryUsage == MemoryUsage::Upload)
+		{
+			allocDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
+		}
+		else if(rhiDesc.memoryUsage == MemoryUsage::Readback)
+		{
+			allocDesc.HeapType = D3D12_HEAP_TYPE_READBACK;
+			desc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
+		}
 		allocDesc.Flags = D3D12MA::ALLOCATION_FLAG_STRATEGY_MIN_MEMORY;
 		// add D3D12MA::ALLOCATION_FLAG_COMMITTED for big resources
 
+		// @TODO: initial state -> D3D12_RESOURCE_STATE
 		D3D12MA::Allocation* allocation;
 		ID3D12Resource* resource;
 		D3D(rhi.allocator->CreateResource(&allocDesc, &desc, D3D12_RESOURCE_STATE_COPY_DEST, NULL, &allocation, IID_PPV_ARGS(&resource)));
@@ -944,6 +968,77 @@ namespace RHI
 
 		buffer.buffer->Unmap(0, NULL);
 		buffer.mapped = false;
+	}
+
+	HTexture CreateTexture(const TextureDesc& rhiDesc)
+	{
+		Q_assert(rhiDesc.width > 0);
+		Q_assert(rhiDesc.height > 0);
+		Q_assert(rhiDesc.sampleCount > 0);
+		Q_assert(rhiDesc.mipCount > 0);
+		Q_assert(rhiDesc.mipCount <= ARRAY_LEN(Texture::subResources));
+
+		// alignment must be 64KB (D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT) or 0, which is effectively 64KB.
+		// https://msdn.microsoft.com/en-us/library/windows/desktop/dn903813(v=vs.85).aspx
+		D3D12_RESOURCE_DESC desc = { 0 };
+		desc.Alignment = 0;
+		desc.DepthOrArraySize = 1;
+		desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+		desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+		desc.Format = GetD3DFormat(rhiDesc.format);
+		desc.Width = rhiDesc.width;
+		desc.Height = rhiDesc.height;
+		desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+		desc.MipLevels = rhiDesc.mipCount;
+		desc.SampleDesc.Count = rhiDesc.sampleCount;
+		desc.SampleDesc.Quality = 0;
+		if(rhiDesc.initialState & ResourceState::UnorderedAccessBit)
+		{
+			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+		}
+		if(rhiDesc.initialState & ResourceState::RenderTargetBit)
+		{
+			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+		}
+		if(rhiDesc.initialState & ResourceState::DepthAccessBits)
+		{
+			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+		}
+		if((rhiDesc.initialState & ResourceState::ShaderAccessBits) == 0)
+		{
+			desc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
+		}
+
+		D3D12MA::ALLOCATION_DESC allocDesc = { 0 };
+		allocDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD; // @TODO:
+		allocDesc.Flags = D3D12MA::ALLOCATION_FLAG_STRATEGY_MIN_MEMORY;
+		// add D3D12MA::ALLOCATION_FLAG_COMMITTED for big resources
+
+		// @TODO: initial state -> D3D12_RESOURCE_STATE
+		// @TODO: clear value
+		D3D12MA::Allocation* allocation;
+		ID3D12Resource* resource;
+		D3D(rhi.allocator->CreateResource(&allocDesc, &desc, D3D12_RESOURCE_STATE_COPY_DEST, NULL, &allocation, IID_PPV_ARGS(&resource)));
+		SetDebugName(resource, rhiDesc.name);
+
+		Texture texture = { 0 };
+		texture.desc = rhiDesc;
+		texture.allocation = allocation;
+		texture.texture = resource;
+		for(int m = 0; m < rhiDesc.mipCount; ++m)
+		{
+			texture.subResources[m].state = rhiDesc.initialState;
+		}
+
+		return rhi.textures.Add(texture);
+	}
+
+	void DestroyTexture(HTexture handle)
+	{
+		Texture& texture = rhi.textures.Get(handle);
+		COM_RELEASE(texture.texture);
+		COM_RELEASE(texture.allocation);
+		rhi.textures.Remove(handle);
 	}
 
 	HRootSignature CreateRootSignature(const RootSignatureDesc& rhiDesc)

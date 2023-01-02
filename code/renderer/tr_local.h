@@ -49,8 +49,8 @@ namespace RHI
 	RHI_HANDLE_TYPE(HBuffer);
 	RHI_HANDLE_TYPE(HRootSignature);
 	RHI_HANDLE_TYPE(HPipeline);
-	/*
 	RHI_HANDLE_TYPE(HTexture);
+	/*
 	RHI_HANDLE_TYPE(HSampler);
 	RHI_HANDLE_TYPE(HDurationQuery);
 	*/
@@ -91,7 +91,9 @@ namespace RHI
 			CopyDestinationBit = RHI_BIT(8),
 			DepthReadBit = RHI_BIT(9),
 			DepthWriteBit = RHI_BIT(10),
-			UnorderedAccessBit = RHI_BIT(11)
+			UnorderedAccessBit = RHI_BIT(11),
+			ShaderAccessBits = VertexShaderAccessBit | PixelShaderAccessBit | ComputeShaderAccessBit,
+			DepthAccessBits = DepthReadBit | DepthWriteBit
 		};
 	};
 	RHI_ENUM_OPERATORS(ResourceState::Flags);
@@ -285,6 +287,18 @@ namespace RHI
 		MemoryUsage::Id memoryUsage;
 	};
 
+	struct TextureDesc
+	{
+		const char* name;
+		uint32_t width;
+		uint32_t height;
+		uint32_t mipCount;
+		uint32_t sampleCount;
+		ResourceState::Flags initialState;
+		TextureFormat::Id format;
+		// @TODO: clear value?
+	};
+
 	void Init();
 	void ShutDown(qbool destroyWindow);
 
@@ -299,6 +313,10 @@ namespace RHI
 	void DestroyBuffer(HBuffer buffer);
 	void* MapBuffer(HBuffer buffer);
 	void UnmapBuffer(HBuffer buffer);
+
+	HTexture CreateTexture(const TextureDesc& desc);
+	//void UploadTextureData(HTexture texture, const TextureUploadDesc& desc);
+	void DestroyTexture(HTexture texture);
 
 	HRootSignature CreateRootSignature(const RootSignatureDesc& desc);
 	void DestroyRootSignature(HRootSignature signature);
@@ -642,8 +660,6 @@ enum textureWrap_t {
 };
 
 
-typedef unsigned int textureHandle_t; // what this number actually means is up to the GAL
-
 #define MAX_TEXTURE_SIZE 2048
 
 
@@ -655,7 +671,7 @@ struct image_t {
 	int		width, height;		// actual, ie after power of two, picmip, and clamp to MAX_TEXTURE_SIZE
 	int		flags;				// IMG_ bits
 
-	textureHandle_t	texnum;		// GAL handle (never use directly)
+	RHI::HTexture	texture;
 	textureFormat_t	format;
 	textureWrap_t	wrapClampMode;
 
