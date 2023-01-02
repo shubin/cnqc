@@ -2809,6 +2809,17 @@ static void GAL_PrintInfo()
 	ri.Printf(PRINT_ALL, "Geometry upload strategy: %s\n", GetMappingTypeName(gl.mappingType));
 }
 
+#if defined( RML )
+
+static void GAL_GetScissor( int* x, int* y, int* w, int* h )
+{
+}
+
+static void GAL_SetScissor( int x, int y, int w, int h ) {
+}
+
+#endif
+
 qbool GAL_GetGL3(graphicsAPILayer_t* rb)
 {
 	rb->Init = &GAL_Init;
@@ -2829,6 +2840,10 @@ qbool GAL_GetGL3(graphicsAPILayer_t* rb)
 	rb->SetDepthRange = &GAL_SetDepthRange;
 	rb->BeginDynamicLight = &GAL_BeginDynamicLight;
 	rb->PrintInfo = &GAL_PrintInfo;
+#if defined( RML )
+	rb->GetScissor = &GAL_GetScissor;
+	rb->SetScissor = &GAL_SetScissor;
+#endif
 
 	return qtrue;
 }

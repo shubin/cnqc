@@ -129,14 +129,18 @@ static const char *vmName[ VM_COUNT ] = {
 };
 
 
-#if !defined( QC ) || 1
 static const cvarTableItem_t vm_cvars[] =
 {
 	{ NULL, "vm_cgame", "2", CVAR_ARCHIVE, CVART_INTEGER, "0", "2", "how to load the cgame VM" help_vm_load },
 	{ NULL, "vm_game", "2", CVAR_ARCHIVE, CVART_INTEGER, "0", "2", "how to load the qagame VM" help_vm_load },
-	{ NULL, "vm_ui", "2", CVAR_ARCHIVE, CVART_INTEGER, "0", "2", "how to load the ui VM" help_vm_load }
-};
+	{ NULL, "vm_ui", "2", CVAR_ARCHIVE, CVART_INTEGER, "0", "2", "how to load the ui VM" help_vm_load },
+#if defined( QC )
+	{ NULL, "vm_qcui", "1", CVAR_ARCHIVE, CVART_INTEGER, "0", "1",
+		S_COLOR_VAL " 0" S_COLOR_HELP "= load Quake III Arena ui\n"
+		S_COLOR_VAL " 1" S_COLOR_HELP "= load Quake III Champions ui"
+	},
 #endif
+};
 
 
 /*
@@ -145,9 +149,7 @@ VM_Init
 ==============
 */
 void VM_Init( void ) {
-#if !defined( QC )
 	Cvar_RegisterArray( vm_cvars, MODULE_COMMON );
-#endif
 
 	Com_Memset( vmTable, 0, sizeof( vmTable ) );
 }
@@ -932,12 +934,19 @@ vm_t *VM_Create( vmIndex_t index, syscall_t systemCalls, vmInterpret_t interpret
 	vm->index = index;
 	vm->systemCall = systemCalls;
 
-#if !defined( QC ) || 1
+#if !defined( QC )
 	// never allow dll loading with a demo
 	if ( interpret == VMI_NATIVE ) {
 		if ( Cvar_VariableValue( "fs_restrict" ) ) {
 			interpret = VMI_COMPILED;
 		}
+	}
+#endif
+
+#if defined( QC )
+	if ( index == VM_UI && Cvar_VariableIntegerValue( "vm_qcui" ) ) {
+		name = "qcui";
+		interpret = VMI_NATIVE;
 	}
 #endif
 

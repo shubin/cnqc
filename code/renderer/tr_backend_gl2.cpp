@@ -1683,6 +1683,16 @@ static void GAL_PrintInfo()
 {
 }
 
+#if defined( RML )
+
+static void GAL_GetScissor( int* x, int* y, int* w, int* h )
+{
+}
+
+static void GAL_SetScissor( int x, int y, int w, int h ) {
+}
+
+#endif
 
 qbool GAL_GetGL2( graphicsAPILayer_t* rb )
 {
@@ -1704,6 +1714,10 @@ qbool GAL_GetGL2( graphicsAPILayer_t* rb )
 	rb->SetDepthRange = &GAL_SetDepthRange;
 	rb->BeginDynamicLight = &GAL_BeginDynamicLight;
 	rb->PrintInfo = &GAL_PrintInfo;
+#if defined( RML )
+	rb->GetScissor = &GAL_GetScissor;
+	rb->SetScissor = &GAL_SetScissor;
+#endif
 
 	return qtrue;
 }

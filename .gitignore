@@ -18,3 +18,5 @@ makefiles/*/obj
 .build
 .bin
 /.project
+*.bak
+*.orig

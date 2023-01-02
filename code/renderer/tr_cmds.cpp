@@ -21,7 +21,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "tr_local.h"
 
-
 void R_IssueRenderCommands()
 {
 	renderCommandList_t* cmdList = &backEndData->commands;
@@ -61,6 +60,17 @@ void* R_FindRenderCommand( renderCommand_t type )
 		case RC_TRIANGLE:
 			data = (char*)data + sizeof(triangleCommand_t);
 			break;
+#if defined( RML )
+		case RC_GEOMETRY:
+			data = (char*)data + sizeof(geometryCommand_t);
+			break;
+		case RC_SCISSOR:
+			data = (char*)data + sizeof(scissorCommand_t);
+			break;
+		case RC_MATRIX:
+			data = (char*)data + sizeof(matrixCommand_t);
+			break;
+#endif
 		case RC_DRAW_SURFS:
 			data = (char*)data + sizeof(drawSurfsCommand_t);
 			break;
@@ -268,6 +278,10 @@ void RE_EndFrame( int* pcFE, int* pc2D, int* pc3D, qbool render )
 
 	R_ClearFrame();
 
+#if defined( RML )
+	R_ClearRmlFrame();
+#endif
+
 	if (pcFE)
 		Com_Memcpy( pcFE, &tr.pc, sizeof( tr.pc ) );
 
@@ -293,9 +307,3 @@ void RE_TakeVideoFrame( int width, int height, byte *captureBuffer, byte *encode
 	cmd->encodeBuffer = encodeBuffer;
 	cmd->motionJpeg = motionJpeg;
 }
-
-#if defined( QC )
-void RE_GetAdvertisements( int *num, float *verts, void *shaders ) {
-	*num = 0;
-}
-#endif

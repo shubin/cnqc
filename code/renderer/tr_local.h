@@ -873,6 +873,9 @@ typedef struct {
 
 	shader_t*		defaultShader;
 	shader_t*		scratchShader;	// used for cinematic playback
+#if defined( RML )
+	shader_t*		defaultRmlShader; // used for non-textured RML rendering
+#endif
 
 	int						numLightmaps;
 	image_t					*lightmaps[MAX_LIGHTMAPS];
@@ -1464,6 +1467,39 @@ typedef struct {
 	float	s2, t2;
 } triangleCommand_t;
 
+#if defined( RML )
+typedef struct {
+	int		commandId;
+	const shader_t*	shader;
+	rmlvertex_t		*vertices;
+	int	  	numVertices;
+	int	  	*indices;
+	int	  	numIndices;
+	vec2_t	translation;
+} geometryCommand_t;
+
+typedef struct {
+	int		commandId;
+	int		op;
+	int		x, y, w, h;
+} scissorCommand_t;
+
+typedef struct {
+	int		commandId;
+	float	matrix[16];
+} matrixCommand_t;
+
+typedef enum
+{
+	SCISSOR_OP_SAVE,
+	SCISSOR_OP_RESTORE,
+	SCISSOR_OP_ENABLE,
+	SCISSOR_OP_DISABLE,
+	SCISSOR_OP_SET,
+} ScissorOp_t;
+
+#endif
+
 typedef struct {
 	int		commandId;
 	trRefdef_t	refdef;
@@ -1502,6 +1538,11 @@ typedef enum {
 	RC_SET_COLOR,
 	RC_STRETCH_PIC,
 	RC_TRIANGLE,
+#if defined( RML )
+	RC_GEOMETRY,
+	RC_SCISSOR,
+	RC_MATRIX,
+#endif
 	RC_DRAW_SURFS,
 	RC_BEGIN_FRAME,
 	RC_SWAP_BUFFERS,
@@ -1588,6 +1629,11 @@ typedef struct {
 	void	(*BeginDynamicLight)();
 
 	void	(*PrintInfo)();
+
+#if defined( RML )
+	void	(*GetScissor)( int *x, int *y, int *w, int *h );
+	void	(*SetScissor)( int x, int y, int w, int h );
+#endif
 } graphicsAPILayer_t;
 
 extern	int		max_polys;
@@ -1629,14 +1675,21 @@ void RE_DrawTriangle( float x0, float y0, float x1, float y1, float x2, float y2
 int SaveJPGToBuffer( byte* out, int quality, int image_width, int image_height, byte* image_buffer );
 void RE_TakeVideoFrame( int width, int height,
 		byte *captureBuffer, byte *encodeBuffer, qbool motionJpeg );
-#if defined( QC )
-void RE_GetAdvertisements(int *num, float *verts, void *shaders);
-#endif
 
 void R_MultMatrix( const float *a, const float *b, float *out );
 void R_MakeIdentityMatrix( float* m );
 void R_MakeOrthoProjectionMatrix( float* m, float w, float h );
 
+#if defined( RML )
+void R_ClearRmlFrame();
+void RE_RenderGeometry( const rmlvertex_t* vertices, int num_vertices, const int* indices, int num_indices, qhandle_t hShader, const vec2_t translation );
+void RE_SaveScissor( qboolean save );
+void RE_EnableScissor( qboolean enable );
+void RE_SetScissor( int x, int y, int width, int height );
+qhandle_t RE_LoadTexture( const char *source, int* w, int* h );
+qhandle_t RE_UploadTexture( const byte* source, int w, int h );
+void RE_SetMatrix( const float *matrix );
+#endif
 
 ///////////////////////////////////////////////////////////////
 

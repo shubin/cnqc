@@ -679,6 +679,12 @@ static qbool RE_IsDepthClampEnabled()
 	return r_depthClamp->integer != 0;
 }
 
+#if defined( QC )
+static void RE_GetAdvertisements( int* num, float* verts, void* shaders )
+{
+	*num = 0;
+}
+#endif
 
 const refexport_t* GetRefAPI( const refimport_t* rimp )
 {
@@ -735,6 +741,16 @@ const refexport_t* GetRefAPI( const refimport_t* rimp )
 	re.DepthClamp = RE_IsDepthClampEnabled;
 #if defined( QC )
 	re.GetAdvertisements = RE_GetAdvertisements;
+#endif
+
+#if defined( RML )
+	re.RenderGeometry = RE_RenderGeometry;
+	re.SaveScissor = RE_SaveScissor;
+	re.EnableScissor = RE_EnableScissor;
+	re.SetScissor = RE_SetScissor;
+	re.LoadTexture = RE_LoadTexture;
+	re.UploadTexture = RE_UploadTexture;
+	re.SetMatrix = RE_SetMatrix;
 #endif
 
 	return &re;

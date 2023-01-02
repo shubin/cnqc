@@ -91,6 +91,14 @@ enum {
 	RB_STATS_MAX
 };
 
+#if defined( RML )
+typedef struct {
+	float		x, y;
+	byte		color[4];
+	float		s, t;
+} rmlvertex_t;
+#endif
+
 //
 // these are the functions exported by the refresh module
 //
@@ -172,7 +180,17 @@ typedef struct {
 	qbool	(*DepthClamp)();
 
 #if defined( QC )
-	void (*GetAdvertisements)(int *num, float *verts, void *shaders);
+	void	(*GetAdvertisements)(int *num, float *verts, void *shaders);
+#endif
+
+#if defined( RML )
+	void		(*RenderGeometry)( const rmlvertex_t *vertices, int num_vertices, const int *indices, int num_indices, int textureHandle, const vec2_t translation );
+	void		(*SaveScissor)( qboolean save );
+	void		(*EnableScissor)( qboolean enable );
+	void		(*SetScissor)( int x, int y, int width, int height );
+	qhandle_t	(*LoadTexture)( const char* source, int* w, int* h );
+	qhandle_t	(*UploadTexture)( const byte *source, int w, int h );
+	void		(*SetMatrix)( const float *matrix );
 #endif
 } refexport_t;
 

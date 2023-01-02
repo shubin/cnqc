@@ -3110,6 +3110,17 @@ static void CreateInternalShaders()
 
 	Q_strncpyz( shader.name, "<scratch>", sizeof( shader.name ) );
 	tr.scratchShader = FinishShader();
+
+#if defined( RML )
+	Q_strncpyz( shader.name, "<rml>", sizeof( shader.name ) );
+	shader.lightmapIndex = LIGHTMAP_2D;
+	stages[0].bundle.image[0] = tr.whiteImage;
+	stages[0].stateBits = GLS_DEFAULT_2D;
+	stages[0].rgbGen = CGEN_VERTEX;
+	stages[0].alphaGen = AGEN_VERTEX;
+	shader.cullType = CT_TWO_SIDED;
+	tr.defaultRmlShader = FinishShader();
+#endif
 }
 
 

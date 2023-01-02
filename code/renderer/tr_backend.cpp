@@ -121,6 +121,102 @@ static const void* RB_StretchPic( const void* data )
 	return (const void*)(cmd + 1);
 }
 
+#if defined( RML )
+
+static const void* RB_Matrix( const void *data )
+{
+	const matrixCommand_t* cmd = (const matrixCommand_t*)data;
+	const shader_t* shader = tess.shader;
+	if ( tess.numIndexes ) {
+		RB_EndSurface();
+	}
+	gal.SetModelViewMatrix( cmd->matrix );
+	RB_BeginSurface( shader, 0 );
+	tess.greyscale = 0.0f;
+	return (const void*)(cmd + 1);
+}
+
+static const void* RB_Geometry( const void *data )
+{
+	const geometryCommand_t* cmd = (const geometryCommand_t*)data;
+
+	if (!backEnd.projection2D)
+		RB_Set2D();
+
+	const shader_t* shader = cmd->shader;
+	if (shader != tess.shader) {
+		if (tess.numIndexes) {
+			RB_EndSurface();
+		}
+		backEnd.currentEntity = &backEnd.entity2D;
+		RB_BeginSurface(shader, 0);
+		tess.greyscale = 0.0f;
+	}
+
+	RB_CHECKOVERFLOW( cmd->numVertices, cmd->numIndices );
+	int numVerts = tess.numVertexes;
+	int numIndexes = tess.numIndexes;
+
+	tess.numVertexes += cmd->numVertices;
+	tess.numIndexes += cmd->numIndices;
+
+	for ( int i = 0; i < cmd->numIndices; i++ ) {
+		tess.indexes[numIndexes + i] = numVerts + cmd->indices[i];
+	}
+
+	for ( int i = 0; i < cmd->numVertices; i++ ) {
+		*(int*)tess.vertexColors[numVerts + i] = *(int*)cmd->vertices[i].color;
+		tess.xyz[numVerts + i][0] = cmd->vertices[i].x + cmd->translation[0];
+		tess.xyz[numVerts + i][1] = cmd->vertices[i].y + cmd->translation[1];
+		tess.xyz[numVerts + i][2] = 0;
+		tess.texCoords[numVerts + i][0] = cmd->vertices[i].s;
+		tess.texCoords[numVerts + i][1] = cmd->vertices[i].t;
+	}
+
+	return (const void*)(cmd + 1);
+}
+
+static int scissorX, scissorY, scissorWidth, scissorHeight;
+
+static const void* RB_Scissor( const void* data )
+{
+	const scissorCommand_t* cmd = (const scissorCommand_t*)data;
+
+	if ( tess.numIndexes && 
+		( cmd->op == SCISSOR_OP_RESTORE || 
+			cmd->op == SCISSOR_OP_DISABLE || 
+			cmd->op == SCISSOR_OP_ENABLE ||
+			cmd->op == SCISSOR_OP_SET
+			) ) 
+	{
+		RB_EndSurface();
+		backEnd.currentEntity = &backEnd.entity2D;
+		RB_BeginSurface( tess.shader, 0 );
+		tess.greyscale = 0.0f;
+	}
+
+	switch ( cmd->op ) {
+		case SCISSOR_OP_SAVE:
+			gal.GetScissor( &scissorX, &scissorY, &scissorWidth, &scissorHeight );
+			break;
+		case SCISSOR_OP_RESTORE:
+			gal.SetScissor( scissorX, scissorY, scissorWidth, scissorHeight );
+			break;
+		case SCISSOR_OP_ENABLE:
+			break;
+		case SCISSOR_OP_DISABLE:
+			gal.SetScissor( 0, 0, glInfo.winWidth, glInfo.winHeight );
+			break;
+		case SCISSOR_OP_SET:
+			gal.SetScissor( cmd->x, cmd->y, cmd->w, cmd->h );
+			break;
+	}
+
+	return (const void*)(cmd + 1);
+}
+
+#endif
+
 static const void* RB_Triangle( const void* data )
 {
 	const triangleCommand_t* cmd = (const triangleCommand_t*)data;
@@ -648,6 +744,17 @@ void RB_ExecuteRenderCommands( const void *data )
 		case RC_TRIANGLE:
 			data = RB_Triangle( data );
 			break;
+#if defined( RML )
+		case RC_GEOMETRY:
+			data = RB_Geometry( data );
+			break;
+		case RC_SCISSOR:
+			data = RB_Scissor( data );
+			break;
+		case RC_MATRIX:
+			data = RB_Matrix( data );
+			break;
+#endif
 		case RC_DRAW_SURFS:
 			data = RB_DrawSurfs( data );
 			break;

@@ -139,8 +139,17 @@ typedef enum {
 	UI_FLOOR,
 	UI_CEIL,
 
-#if defined(QC)
+#if defined( QC )
 	UI_R_DRAWTRIANGLE = 500,
+#endif
+#if defined( RML )
+	UI_R_RENDERGEOMETRY,
+	UI_R_SAVESCISSOR,
+	UI_R_ENABLESCISSOR,
+	UI_R_SETSCISSOR,
+	UI_R_LOADTEXTURE,
+	UI_R_UPLOADTEXTURE,
+	UI_R_SETMATRIX,
 #endif
 
 	// engine extensions

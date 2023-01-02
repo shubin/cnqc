@@ -2809,6 +2809,49 @@ static void GAL_PrintInfo()
 	}
 }
 
+#if defined( RML )
+
+static void GAL_GetScissor( int* x, int* y, int* w, int* h )
+{
+	UINT numRects = 1;
+	RECT scissorRect;
+	d3ds.context->RSGetScissorRects( &numRects, &scissorRect );
+	if ( numRects > 0 ) {
+		*x = scissorRect.left;
+		*y = scissorRect.top;
+		*w = scissorRect.right - scissorRect.left;
+		*h = scissorRect.bottom - scissorRect.top;
+	} else {
+		*x = *y = 0;
+		*x = glInfo.winWidth;
+		*y = glInfo.winHeight;
+	}
+}
+
+static void GAL_SetScissor( int x, int y, int w, int h )
+{
+//#define YFLIP 
+#if defined( YFLIP )
+	int th = glInfo.winHeight;
+	const int top = th - y - h;
+	const int bottom = th - y;
+#endif
+
+	RECT scissorRect;
+	scissorRect.left = x;
+	scissorRect.right = x + w;
+#if defined( YFLIP )
+	scissorRect.top = top;
+	scissorRect.bottom = bottom;
+#else
+	scissorRect.top = y;
+	scissorRect.bottom = y + h;
+#endif
+	d3ds.context->RSSetScissorRects( 1, &scissorRect );
+}
+
+#endif
+
 qbool GAL_GetD3D11(graphicsAPILayer_t* rb)
 {
 	rb->Init = &GAL_Init;
@@ -2829,6 +2872,10 @@ qbool GAL_GetD3D11(graphicsAPILayer_t* rb)
 	rb->SetDepthRange = &GAL_SetDepthRange;
 	rb->BeginDynamicLight = &GAL_BeginDynamicLight;
 	rb->PrintInfo = &GAL_PrintInfo;
+#if defined( RML )
+	rb->GetScissor = &GAL_GetScissor;
+	rb->SetScissor = &GAL_SetScissor;
+#endif
 
 	return qtrue;
 }

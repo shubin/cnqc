@@ -911,12 +911,6 @@ static intptr_t CL_UISystemCalls( intptr_t* args )
 		re.DrawStretchPic( VMF(1), VMF(2), VMF(3), VMF(4), VMF(5), VMF(6), VMF(7), VMF(8), args[9] );
 		return 0;
 
-#if defined( QC )
-	case UI_R_DRAWTRIANGLE:
-		re.DrawTriangle( VMF(1), VMF(2), VMF(3), VMF(4), VMF(5), VMF(6), VMF(7), VMF(8), VMF(9), VMF(10), VMF(11), VMF(12), args[13] );
-		return 0;
-#endif
-
 	case UI_R_MODELBOUNDS:
 		re.ModelBounds( args[1], VMA(2), VMA(3) );
 		return 0;
@@ -1122,6 +1116,44 @@ static intptr_t CL_UISystemCalls( intptr_t* args )
 
 	case UI_VERIFY_CDKEY:
 		return CL_CDKeyValidate(VMA(1), VMA(2));
+
+#if defined( QC )
+	case UI_R_DRAWTRIANGLE:
+		re.DrawTriangle(VMF(1), VMF(2), VMF(3), VMF(4), VMF(5), VMF(6), VMF(7), VMF(8), VMF(9), VMF(10), VMF(11), VMF(12), args[13]);
+		return 0;
+#endif
+
+#if defined( RML )
+	case UI_R_RENDERGEOMETRY:
+		re.RenderGeometry( (rmlvertex_t*)(void*)VMA(1), args[2], VMA(3), args[4], args[5], VMA(6) );
+		return 0;
+
+	case UI_R_SAVESCISSOR:
+		re.SaveScissor( args[1] );
+		return 0;
+
+	case UI_R_ENABLESCISSOR:
+		re.EnableScissor( args[1] );
+		return 0;
+
+	case UI_R_SETSCISSOR:
+		re.SetScissor( args[1], args[2], args[3], args[4] );
+		return 0;
+
+	case UI_R_LOADTEXTURE:
+		return re.LoadTexture( VMA(1), VMA(2), VMA(3) );
+
+	case UI_R_UPLOADTEXTURE:
+		return re.UploadTexture( VMA(1), args[2], args[3] );
+
+	case UI_R_SETMATRIX:
+		if (args[1]) {
+			re.SetMatrix( VMA(1) );
+		} else {
+			re.SetMatrix( NULL );
+		}
+		return 0;
+#endif
 
 	// extensions
 
