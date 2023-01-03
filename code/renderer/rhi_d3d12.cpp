@@ -24,6 +24,8 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 /*
 to do:
 
+- fix map (un)load re-creating the window
+- fix full-screen toggle (missing swap chain resize?)
 - get rid of d3dx12.h
 * partial inits and shutdown
 - move the Dear ImGui rendering outside of the RHI
@@ -670,6 +672,49 @@ namespace RHI
 
 		if(rhi.device != NULL)
 		{
+			DXGI_SWAP_CHAIN_DESC desc;
+			D3D(rhi.swapChain->GetDesc(&desc));
+
+			if(glConfig.vidWidth != desc.BufferDesc.Width ||
+				glConfig.vidHeight != desc.BufferDesc.Height)
+			{
+				WaitUntilDeviceIsIdle();
+
+				for(uint32_t f = 0; f < FrameCount; ++f)
+				{
+					COM_RELEASE(rhi.renderTargets[f]);
+				}
+				
+				D3D(rhi.swapChain->ResizeBuffers(desc.BufferCount, glConfig.vidWidth, glConfig.vidHeight, desc.BufferDesc.Format, desc.Flags));				
+
+				D3D12_CPU_DESCRIPTOR_HANDLE rtvHandleIt = rhi.rtvHandle;
+				for(uint32_t f = 0; f < FrameCount; ++f)
+				{
+					D3D(rhi.swapChain->GetBuffer(f, IID_PPV_ARGS(&rhi.renderTargets[f])));
+					rhi.device->CreateRenderTargetView(rhi.renderTargets[f], NULL, rtvHandleIt);
+					SetDebugName(rhi.renderTargets[f], va("Swap Chain RTV #%d", f + 1));
+					rtvHandleIt.ptr += rhi.rtvIncSize;
+				}
+
+				rhi.frameIndex = rhi.swapChain->GetCurrentBackBufferIndex();
+
+				COM_RELEASE(rhi.fence);
+				D3D(rhi.device->CreateFence(rhi.fenceValues[rhi.frameIndex], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&rhi.fence)));
+				SetDebugName(rhi.fence, "Command Queue Fence");
+				for(uint32_t f = 0; f < FrameCount; ++f)
+				{
+					rhi.fenceValues[f] = 0;
+				}
+				rhi.fenceValues[rhi.frameIndex]++;
+
+				CloseHandle(rhi.fenceEvent);
+				rhi.fenceEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+				if(rhi.fenceEvent == NULL)
+				{
+					Check(HRESULT_FROM_WIN32(GetLastError()), "CreateEvent");
+				}
+			}
+
 			return;
 		}
 
