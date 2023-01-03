@@ -386,7 +386,7 @@ namespace RHI
 	// Cpy* write commands to the copy command queue
 	//void SubmitCopy(HFence* signalFence);
 
-	void ResolveDurationQuery(uint32_t* microSeconds, HDurationQuery query);
+	//void ResolveDurationQuery(uint32_t* microSeconds, HDurationQuery query);
 
 #define CNQ3_DEV
 #if defined(_DEBUG) || defined(CNQ3_DEV)

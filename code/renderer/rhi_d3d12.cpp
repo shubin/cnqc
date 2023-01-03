@@ -245,8 +245,9 @@ namespace RHI
 		ID3D12Fence* fence;
 		UINT64 fenceValues[FrameCount];
 		ID3D12QueryHeap* timeStampHeap;
-		uint32_t maxTimeStampQueries;
-		uint32_t timeStampQueryIndex;
+		HBuffer timeStampBuffer;
+		uint32_t maxDurationQueries;
+		uint32_t durationQueryIndex;
 
 #define POOL(Type, Size) StaticPool<Type, H##Type, ResourceType::Type, Size>
 		POOL(Fence, 64) fences;
@@ -936,13 +937,22 @@ namespace RHI
 		}
 
 		{
+			rhi.maxDurationQueries = 64;
+			rhi.durationQueryIndex = 0;
 			D3D12_QUERY_HEAP_DESC desc = { 0 };
 			desc.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
-			desc.Count = 64;
+			desc.Count = rhi.maxDurationQueries * 2;
 			desc.NodeMask = 0;
 			D3D(rhi.device->CreateQueryHeap(&desc, IID_PPV_ARGS(&rhi.timeStampHeap)));
-			rhi.maxTimeStampQueries = desc.Count;
-			rhi.timeStampQueryIndex = 0;
+		}
+
+		{
+			BufferDesc desc = { 0 };
+			desc.name = "TimeStamp Readback Buffer";
+			desc.byteCount = rhi.maxDurationQueries * 2 * FrameCount * sizeof(UINT64);
+			desc.initialState = ResourceState::CopyDestinationBit;
+			desc.memoryUsage = MemoryUsage::Readback;
+			rhi.timeStampBuffer = CreateBuffer(desc);
 		}
 
 		// queue some actual work...
@@ -1735,13 +1745,14 @@ namespace RHI
 	{
 		Q_assert(CanWriteCommands());
 
-		rhi.commandList->BeginQuery(rhi.timeStampHeap, D3D12_QUERY_TYPE_TIMESTAMP, rhi.timeStampQueryIndex);
+		const UINT beginIndex = rhi.durationQueryIndex * 2;
+		rhi.commandList->BeginQuery(rhi.timeStampHeap, D3D12_QUERY_TYPE_TIMESTAMP, beginIndex);
 
 		DurationQuery query = { 0 };
 		query.frameIndex = rhi.frameIndex;
-		query.queryIndex = rhi.timeStampQueryIndex;
+		query.queryIndex = rhi.durationQueryIndex;
 
-		rhi.timeStampQueryIndex = (rhi.timeStampQueryIndex + 2) % rhi.maxTimeStampQueries;
+		rhi.durationQueryIndex = (rhi.durationQueryIndex + 1) % rhi.maxDurationQueries;
 
 		return rhi.durationQueries.Add(query);
 	}
@@ -1751,10 +1762,11 @@ namespace RHI
 		Q_assert(CanWriteCommands());
 
 		const DurationQuery& query = rhi.durationQueries.Get(handle);
-		Q_assert(query.queryIndex < rhi.maxTimeStampQueries);
+		Q_assert(query.queryIndex < rhi.maxDurationQueries);
 		Q_assert(query.frameIndex == rhi.frameIndex);
 
-		rhi.commandList->EndQuery(rhi.timeStampHeap, D3D12_QUERY_TYPE_TIMESTAMP, query.queryIndex);
+		const UINT endIndex = query.queryIndex * 2 + 1;
+		rhi.commandList->EndQuery(rhi.timeStampHeap, D3D12_QUERY_TYPE_TIMESTAMP, endIndex);
 	}
 
 	void ResolveDurationQuery(uint32_t* microSeconds, HDurationQuery handle)
@@ -1762,7 +1774,10 @@ namespace RHI
 		const DurationQuery& query = rhi.durationQueries.Get(handle);
 		Q_assert(query.frameIndex != rhi.frameIndex);
 
-		rhi.commandList->ResolveQueryData(rhi.timeStampHeap, D3D12_QUERY_TYPE_TIMESTAMP, query.queryIndex, 2, NULL, query.queryIndex * 2 * sizeof(uint64_t));
+		const Buffer& buffer = rhi.buffers.Get(rhi.timeStampBuffer);
+		const UINT64 destIndex = (query.frameIndex * rhi.maxDurationQueries * 2) + query.queryIndex;
+		const UINT64 destByteOffset = destIndex * sizeof(UINT64);
+		rhi.commandList->ResolveQueryData(rhi.timeStampHeap, D3D12_QUERY_TYPE_TIMESTAMP, query.queryIndex, 2, buffer.buffer, destByteOffset);
 		//D3D(rhi.commandQueue->GetClockCalibration());
 	}
 
