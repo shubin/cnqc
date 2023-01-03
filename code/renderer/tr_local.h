@@ -656,6 +656,60 @@ namespace RHI
 	};
 }
 
+template<typename T, uint32_t N>
+struct StaticUnorderedArray
+{
+	StaticUnorderedArray()
+	{
+		Clear();
+	}
+
+	void Add(const T& value)
+	{
+		Q_assert(count < N);
+
+		items[count++] = value;
+	}
+
+	void Remove(uint32_t index)
+	{
+		Q_assert(index < N);
+
+		if(index < count - 1)
+		{
+			items[index] = items[count - 1];
+		}
+		count--;
+	}
+
+	void Clear()
+	{
+		count = 0;
+	}
+
+	T& operator[](uint32_t index)
+	{
+		Q_assert(index < N);
+
+		return items[index];
+	}
+
+	const T& operator[](uint32_t index) const
+	{
+		Q_assert(index < N);
+
+		return items[index];
+	}
+
+private:
+	StaticUnorderedArray(const StaticUnorderedArray<T, N>&);
+	void operator=(const StaticUnorderedArray<T, N>&);
+
+public:
+	T items[N];
+	uint32_t count;
+};
+
 
 extern const float s_flipMatrix[16];
 

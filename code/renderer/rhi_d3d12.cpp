@@ -258,6 +258,8 @@ namespace RHI
 			HANDLE fenceEvent;
 		};
 		Upload upload;
+
+		StaticUnorderedArray<HTexture, MAX_DRAWIMAGES> texturesToTransition;
 	};
 
 	static RHIPrivate rhi;
@@ -1034,6 +1036,23 @@ namespace RHI
 		rhi.commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, NULL);
 		const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 		rhi.commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, NULL);
+
+		// @TODO: keep this? run through compute queue first?
+		for(uint32_t t = 0; t < rhi.texturesToTransition.count; ++t)
+		{
+			// @TODO: transition all mips anyway?
+			Texture& texture = rhi.textures.Get(rhi.texturesToTransition[t]);
+			D3D12_RESOURCE_BARRIER b = { 0 };
+			b.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			b.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+			b.Transition.pResource = texture.texture;
+			b.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+			b.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+			b.Transition.Subresource = 0;
+			rhi.commandList->ResourceBarrier(1, &b);
+			texture.subResources[0].state = ResourceState::PixelShaderAccessBit;
+		}
+		rhi.texturesToTransition.Clear();
 	}
 
 	void EndFrame()
@@ -1340,6 +1359,7 @@ namespace RHI
 		srcLoc.PlacedFootprint = layouts[0];
 		rhi.upload.commandList->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, NULL);
 
+		// @TODO:
 #if 0
 		D3D12_RESOURCE_BARRIER barrier = { 0 };
 		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -1356,6 +1376,8 @@ namespace RHI
 		D3D(rhi.upload.commandList->Close());
 		rhi.upload.commandQueue->ExecuteCommandLists(ARRAY_LEN(commandLists), commandLists);
 		rhi.upload.commandQueue->Signal(rhi.upload.fence, rhi.upload.fenceValue);
+
+		rhi.texturesToTransition.Add(handle);
 	}
 
 	void GenerateTextureMips(HTexture texture)
