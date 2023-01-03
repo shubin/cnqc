@@ -58,6 +58,16 @@ VOut main(VIn input)
 )grml";
 
 const char* ps = R"grml(
+struct RootConstants
+{
+	uint textureIndex;
+	uint samplerIndex;
+};
+ConstantBuffer<RootConstants> rc : register(b0, space0);
+
+Texture2D textureX[2048] : register(t0);
+SamplerState samplerX : register(s0);
+
 struct VOut
 {
 	float4 position : SV_Position;
@@ -67,7 +77,7 @@ struct VOut
 
 float4 main(VOut input) : SV_TARGET
 {
-	return input.color;
+	return textureX[rc.textureIndex].Sample(samplerX, input.texCoords) * input.color;
 }
 )grml";
 
@@ -127,6 +137,7 @@ struct ui_t
 	index_t* indices; // @TODO: 16-bit indices
 	vertex_t* vertices;
 	uint32_t color;
+	const shader_t* shader;
 };
 
 struct grp_t
@@ -163,7 +174,7 @@ static void Draw2D()
 	}
 
 	// @TODO: grab the right rects...
-	// @TODO: only set all this crap when switching to 2D rendering
+	// @TODO: only set most of this crap when switching to 2D rendering
 	RHI::CmdSetViewport(0, 0, glConfig.vidWidth, glConfig.vidHeight);
 	RHI::CmdSetScissor(0, 0, glConfig.vidWidth, glConfig.vidHeight);
 	RHI::CmdBindRootSignature(grp.ui.rootSignature);
@@ -173,6 +184,9 @@ static void Draw2D()
 	RHI::CmdBindIndexBuffer(grp.ui.indexBuffer, RHI::IndexType::UInt32, 0);
 	const float scale[2] = { 2.0f / glConfig.vidWidth, 2.0f / glConfig.vidHeight };
 	RHI::CmdSetRootConstants(grp.ui.rootSignature, RHI::ShaderType::Vertex, scale);
+	const uint32_t textureIndex = grp.ui.shader->stages[0]->bundle.image[0]->textureIndex;
+	const uint32_t pixelConstants[2] = {textureIndex, 0}; // second one is the sampler index
+	RHI::CmdSetRootConstants(grp.ui.rootSignature, RHI::ShaderType::Pixel, pixelConstants);
 
 	RHI::CmdDrawIndexed(grp.ui.indexCount, 0, 0);
 	grp.ui.indexCount = 0;
@@ -207,10 +221,14 @@ static const void* StretchPic(const void* data)
 	const stretchPicCommand_t* cmd = (const stretchPicCommand_t*)data;
 
 	if(grp.ui.vertexCount + 4 > SHADER_MAX_VERTEXES ||
-		grp.ui.indexCount + 6 > SHADER_MAX_INDEXES)
+		grp.ui.indexCount + 6 > SHADER_MAX_INDEXES ||
+		grp.ui.shader != cmd->shader)
 	{
 		Draw2D();
 	}
+
+	grp.ui.shader = cmd->shader;
+
 	int numVerts = grp.ui.vertexCount;
 	int numIndexes = grp.ui.indexCount;
 	grp.ui.vertexCount += 4;
@@ -259,6 +277,7 @@ struct GameplayRenderPipeline : IRenderPipeline
 			desc.name = "UI root signature";
 			desc.usingVertexBuffers = qtrue;
 			desc.constants[RHI::ShaderType::Vertex].count = 2;
+			desc.constants[RHI::ShaderType::Pixel].count = 2;
 			desc.AddDescriptorTable(0, MAX_DRAWIMAGES, 0);
 			desc.AddSamplerTable(1);
 			grp.ui.rootSignature = RHI::CreateRootSignature(desc);

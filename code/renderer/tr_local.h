@@ -361,6 +361,7 @@ namespace RHI
 	HTexture CreateTexture(const TextureDesc& desc);
 	void UploadTextureMip0(HTexture texture, const TextureUploadDesc& desc);
 	void GenerateTextureMips(HTexture texture);
+	uint32_t GetTextureSRV(HTexture texture);
 	void DestroyTexture(HTexture texture);
 
 	HRootSignature CreateRootSignature(const RootSignatureDesc& desc);
@@ -717,6 +718,7 @@ struct image_t {
 	int		flags;				// IMG_ bits
 
 	RHI::HTexture	texture;
+	uint32_t		textureIndex;
 	textureFormat_t	format;
 	textureWrap_t	wrapClampMode;
 

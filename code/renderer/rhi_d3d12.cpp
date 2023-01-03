@@ -159,6 +159,7 @@ namespace RHI
 		TextureDesc desc;
 		D3D12MA::Allocation* allocation;
 		ID3D12Resource* texture;
+		uint32_t srvIndex;
 		struct SubResource
 		{
 			ResourceState::Flags state;
@@ -224,6 +225,7 @@ namespace RHI
 		IDXGISwapChain3* swapChain;
 		ID3D12DescriptorHeap* rtvHeap;
 		ID3D12DescriptorHeap* srvHeap; // all of the game's textures
+		uint32_t srvCount;
 		ID3D12DescriptorHeap* samplerHeap; // all samplers
 		ID3D12DescriptorHeap* imguiHeap;
 		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle;
@@ -843,7 +845,7 @@ namespace RHI
 			desc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 			desc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 			desc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-			desc.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+			desc.ComparisonFunc = D3D12_COMPARISON_FUNC_NONE;
 			desc.MaxAnisotropy = 1;
 			desc.MaxLOD = D3D12_FLOAT32_MAX;
 			desc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -1202,10 +1204,24 @@ namespace RHI
 		D3D(rhi.allocator->CreateResource(&allocDesc, &desc, D3D12_RESOURCE_STATE_COPY_DEST, NULL, &allocation, IID_PPV_ARGS(&resource)));
 		SetDebugName(resource, rhiDesc.name);
 
+		D3D12_SHADER_RESOURCE_VIEW_DESC srv = { 0 };
+		srv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srv.Format = desc.Format;
+		srv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		//srv.Texture2D.MipLevels = desc.MipLevels;
+		srv.Texture2D.MipLevels = 1; // @TODO:
+		srv.Texture2D.MostDetailedMip = 0;
+		srv.Texture2D.PlaneSlice = 0;
+		srv.Texture2D.ResourceMinLODClamp = 0.0f;
+		D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = rhi.srvHeap->GetCPUDescriptorHandleForHeapStart();
+		srvHandle.ptr += rhi.srvCount * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		rhi.device->CreateShaderResourceView(resource, &srv, srvHandle);
+
 		Texture texture = { 0 };
 		texture.desc = rhiDesc;
 		texture.allocation = allocation;
 		texture.texture = resource;
+		texture.srvIndex = rhi.srvCount++;
 		for(int m = 0; m < rhiDesc.mipCount; ++m)
 		{
 			texture.subResources[m].state = rhiDesc.initialState;
@@ -1300,6 +1316,11 @@ namespace RHI
 	void GenerateTextureMips(HTexture texture)
 	{
 		// @TODO:
+	}
+
+	uint32_t GetTextureSRV(HTexture texture)
+	{
+		return rhi.textures.Get(texture).srvIndex;
 	}
 
 	void DestroyTexture(HTexture handle)
@@ -1603,8 +1624,8 @@ namespace RHI
 		rhi.commandList->SetGraphicsRoot32BitConstants(parameterIndex, constantCount, constants, 0);
 
 		// @TODO: move out, etc
-		rhi.commandList->SetGraphicsRootDescriptorTable(1, rhi.srvHeap->GetGPUDescriptorHandleForHeapStart());
-		rhi.commandList->SetGraphicsRootDescriptorTable(2, rhi.samplerHeap->GetGPUDescriptorHandleForHeapStart());
+		rhi.commandList->SetGraphicsRootDescriptorTable(2, rhi.srvHeap->GetGPUDescriptorHandleForHeapStart());
+		rhi.commandList->SetGraphicsRootDescriptorTable(3, rhi.samplerHeap->GetGPUDescriptorHandleForHeapStart());
 	}
 
 	void CmdDraw(uint32_t vertexCount, uint32_t firstVertex)

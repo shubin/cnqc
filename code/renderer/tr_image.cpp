@@ -330,6 +330,7 @@ static void Upload32( image_t* image, unsigned int* data )
 		desc.sampleCount = 1;
 		desc.initialState = RHI::ResourceState::ShaderAccessBits;
 		image->texture = RHI::CreateTexture(desc);
+		image->textureIndex = RHI::GetTextureSRV(image->texture);
 		RHI::TextureUploadDesc upload = { 0 };
 		upload.data = data;
 		upload.x = 0;
