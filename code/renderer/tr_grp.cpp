@@ -185,7 +185,7 @@ static void Draw2D()
 	const float scale[2] = { 2.0f / glConfig.vidWidth, 2.0f / glConfig.vidHeight };
 	RHI::CmdSetRootConstants(grp.ui.rootSignature, RHI::ShaderType::Vertex, scale);
 	const uint32_t textureIndex = grp.ui.shader->stages[0]->bundle.image[0]->textureIndex;
-	const uint32_t pixelConstants[2] = {textureIndex, 0}; // second one is the sampler index
+	const uint32_t pixelConstants[2] = { textureIndex, 0 }; // second one is the sampler index
 	RHI::CmdSetRootConstants(grp.ui.rootSignature, RHI::ShaderType::Pixel, pixelConstants);
 
 	RHI::CmdDrawIndexed(grp.ui.indexCount, 0, 0);

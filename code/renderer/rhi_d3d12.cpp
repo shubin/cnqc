@@ -992,7 +992,7 @@ namespace RHI
 		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = { 0 };
 		rtvHandle.ptr = rhi.rtvHandle.ptr + rhi.frameIndex * rhi.rtvIncSize;
 		rhi.commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, NULL);
-		const FLOAT clearColor[4] = { 0.0f, 1.0f, 0.0f, 1.0f };
+		const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 		rhi.commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, NULL);
 	}
 
