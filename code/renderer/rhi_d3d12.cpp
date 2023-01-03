@@ -122,6 +122,7 @@ namespace RHI
 			Texture,
 			RootSignature,
 			Pipeline,
+			DurationQuery,
 			// private stuff
 			//
 			Count
@@ -189,6 +190,12 @@ namespace RHI
 		PipelineType::Id type;
 	};
 
+	struct DurationQuery
+	{
+		uint32_t frameIndex;
+		uint32_t queryIndex;
+	};
+
 	/*struct Queue
 	{
 		void Create();
@@ -237,6 +244,9 @@ namespace RHI
 		HANDLE fenceEvent;
 		ID3D12Fence* fence;
 		UINT64 fenceValues[FrameCount];
+		ID3D12QueryHeap* timeStampHeap;
+		uint32_t maxTimeStampQueries;
+		uint32_t timeStampQueryIndex;
 
 #define POOL(Type, Size) StaticPool<Type, H##Type, ResourceType::Type, Size>
 		POOL(Fence, 64) fences;
@@ -244,6 +254,7 @@ namespace RHI
 		POOL(Texture, MAX_DRAWIMAGES * 2) textures;
 		POOL(RootSignature, 64) rootSignatures;
 		POOL(Pipeline, 64) pipelines;
+		POOL(DurationQuery, 64) durationQueries;
 #undef POOL
 
 		struct Upload
@@ -916,12 +927,22 @@ namespace RHI
 		D3D(rhi.upload.commandList->Close());
 
 		D3D(rhi.device->CreateFence(rhi.upload.fenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&rhi.upload.fence)));
-		SetDebugName(rhi.fence, "Copy Queue Fence");
+		SetDebugName(rhi.upload.fence, "Copy Queue Fence");
 
 		rhi.upload.fenceEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 		if(rhi.upload.fenceEvent == NULL)
 		{
 			Check(HRESULT_FROM_WIN32(GetLastError()), "CreateEvent");
+		}
+
+		{
+			D3D12_QUERY_HEAP_DESC desc = { 0 };
+			desc.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
+			desc.Count = 64;
+			desc.NodeMask = 0;
+			D3D(rhi.device->CreateQueryHeap(&desc, IID_PPV_ARGS(&rhi.timeStampHeap)));
+			rhi.maxTimeStampQueries = desc.Count;
+			rhi.timeStampQueryIndex = 0;
 		}
 
 		// queue some actual work...
@@ -977,6 +998,7 @@ namespace RHI
 		COM_RELEASE(rhi.upload.commandAllocator);
 		COM_RELEASE(rhi.upload.commandQueue);
 
+		COM_RELEASE(rhi.timeStampHeap);
 		CloseHandle(rhi.fenceEvent);
 		COM_RELEASE(rhi.fence);
 		COM_RELEASE(rhi.commandList);
@@ -1707,6 +1729,41 @@ namespace RHI
 		Q_assert(CanWriteCommands());
 
 		rhi.commandList->DrawIndexedInstanced(indexCount, 1, firstIndex, firstVertex, 0);
+	}
+
+	HDurationQuery CmdBeginDurationQuery()
+	{
+		Q_assert(CanWriteCommands());
+
+		rhi.commandList->BeginQuery(rhi.timeStampHeap, D3D12_QUERY_TYPE_TIMESTAMP, rhi.timeStampQueryIndex);
+
+		DurationQuery query = { 0 };
+		query.frameIndex = rhi.frameIndex;
+		query.queryIndex = rhi.timeStampQueryIndex;
+
+		rhi.timeStampQueryIndex = (rhi.timeStampQueryIndex + 2) % rhi.maxTimeStampQueries;
+
+		return rhi.durationQueries.Add(query);
+	}
+
+	void CmdEndDurationQuery(HDurationQuery handle)
+	{
+		Q_assert(CanWriteCommands());
+
+		const DurationQuery& query = rhi.durationQueries.Get(handle);
+		Q_assert(query.queryIndex < rhi.maxTimeStampQueries);
+		Q_assert(query.frameIndex == rhi.frameIndex);
+
+		rhi.commandList->EndQuery(rhi.timeStampHeap, D3D12_QUERY_TYPE_TIMESTAMP, query.queryIndex);
+	}
+
+	void ResolveDurationQuery(uint32_t* microSeconds, HDurationQuery handle)
+	{
+		const DurationQuery& query = rhi.durationQueries.Get(handle);
+		Q_assert(query.frameIndex != rhi.frameIndex);
+
+		rhi.commandList->ResolveQueryData(rhi.timeStampHeap, D3D12_QUERY_TYPE_TIMESTAMP, query.queryIndex, 2, NULL, query.queryIndex * 2 * sizeof(uint64_t));
+		//D3D(rhi.commandQueue->GetClockCalibration());
 	}
 
 #if defined(_DEBUG) || defined(CNQ3_DEV)

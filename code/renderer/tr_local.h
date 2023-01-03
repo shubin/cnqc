@@ -50,10 +50,8 @@ namespace RHI
 	RHI_HANDLE_TYPE(HRootSignature);
 	RHI_HANDLE_TYPE(HPipeline);
 	RHI_HANDLE_TYPE(HTexture);
-	/*
-	RHI_HANDLE_TYPE(HSampler);
+	//RHI_HANDLE_TYPE(HSampler);
 	RHI_HANDLE_TYPE(HDurationQuery);
-	*/
 
 #define RHI_ENUM_OPERATORS(EnumType) \
 	inline EnumType operator|(EnumType a, EnumType b) { return (EnumType)((uint32_t)(a) | (uint32_t)(b)); } \
@@ -382,9 +380,13 @@ namespace RHI
 	void CmdSetRootConstants(HRootSignature rootSignature, ShaderType::Id shaderType, const void* constants);
 	void CmdDraw(uint32_t vertexCount, uint32_t firstVertex);
 	void CmdDrawIndexed(uint32_t indexCount, uint32_t firstIndex, uint32_t firstVertex);
+	HDurationQuery CmdBeginDurationQuery();
+	void CmdEndDurationQuery(HDurationQuery query);
 
 	// Cpy* write commands to the copy command queue
 	//void SubmitCopy(HFence* signalFence);
+
+	void ResolveDurationQuery(uint32_t* microSeconds, HDurationQuery query);
 
 #define CNQ3_DEV
 #if defined(_DEBUG) || defined(CNQ3_DEV)
