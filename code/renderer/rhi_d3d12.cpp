@@ -696,21 +696,11 @@ namespace RHI
 
 				rhi.frameIndex = rhi.swapChain->GetCurrentBackBufferIndex();
 
-				COM_RELEASE(rhi.fence);
-				D3D(rhi.device->CreateFence(rhi.fenceValues[rhi.frameIndex], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&rhi.fence)));
-				SetDebugName(rhi.fence, "Command Queue Fence");
 				for(uint32_t f = 0; f < FrameCount; ++f)
 				{
 					rhi.fenceValues[f] = 0;
 				}
 				rhi.fenceValues[rhi.frameIndex]++;
-
-				CloseHandle(rhi.fenceEvent);
-				rhi.fenceEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-				if(rhi.fenceEvent == NULL)
-				{
-					Check(HRESULT_FROM_WIN32(GetLastError()), "CreateEvent");
-				}
 			}
 
 			return;
