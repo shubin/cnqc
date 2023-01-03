@@ -125,9 +125,10 @@ struct ui_t
 		uint32_t color;
 	};
 #pragma pack(pop)
-	// limits:
-	// SHADER_MAX_INDEXES
-	// SHADER_MAX_VERTEXES
+	int maxIndexCount;
+	int maxVertexCount;
+	int firstIndex;
+	int firstVertex;
 	int indexCount;
 	int vertexCount;
 	RHI::HRootSignature rootSignature;
@@ -188,7 +189,9 @@ static void Draw2D()
 	const uint32_t pixelConstants[2] = { textureIndex, 0 }; // second one is the sampler index
 	RHI::CmdSetRootConstants(grp.ui.rootSignature, RHI::ShaderType::Pixel, pixelConstants);
 
-	RHI::CmdDrawIndexed(grp.ui.indexCount, 0, 0);
+	RHI::CmdDrawIndexed(grp.ui.indexCount, grp.ui.firstIndex, 0);
+	grp.ui.firstIndex += grp.ui.indexCount;
+	grp.ui.firstVertex += grp.ui.vertexCount;
 	grp.ui.indexCount = 0;
 	grp.ui.vertexCount = 0;
 }
@@ -220,50 +223,56 @@ static const void* StretchPic(const void* data)
 {
 	const stretchPicCommand_t* cmd = (const stretchPicCommand_t*)data;
 
-	if(grp.ui.vertexCount + 4 > SHADER_MAX_VERTEXES ||
-		grp.ui.indexCount + 6 > SHADER_MAX_INDEXES ||
-		grp.ui.shader != cmd->shader)
+	if(grp.ui.firstVertex + grp.ui.vertexCount + 4 > SHADER_MAX_VERTEXES ||
+		grp.ui.firstIndex + grp.ui.indexCount + 6 > SHADER_MAX_INDEXES)
+	{
+		Draw2D();
+		grp.ui.firstIndex = 0;
+		grp.ui.firstVertex = 0;
+	}
+
+	if(grp.ui.shader != cmd->shader)
 	{
 		Draw2D();
 	}
 
 	grp.ui.shader = cmd->shader;
 
-	int numVerts = grp.ui.vertexCount;
-	int numIndexes = grp.ui.indexCount;
+	const int v = grp.ui.firstVertex + grp.ui.vertexCount;
+	const int i = grp.ui.firstIndex + grp.ui.indexCount;
 	grp.ui.vertexCount += 4;
 	grp.ui.indexCount += 6;
 
-	grp.ui.indices[numIndexes] = numVerts + 3;
-	grp.ui.indices[numIndexes + 1] = numVerts + 0;
-	grp.ui.indices[numIndexes + 2] = numVerts + 2;
-	grp.ui.indices[numIndexes + 3] = numVerts + 2;
-	grp.ui.indices[numIndexes + 4] = numVerts + 0;
-	grp.ui.indices[numIndexes + 5] = numVerts + 1;
+	grp.ui.indices[i + 0] = v + 3;
+	grp.ui.indices[i + 1] = v + 0;
+	grp.ui.indices[i + 2] = v + 2;
+	grp.ui.indices[i + 3] = v + 2;
+	grp.ui.indices[i + 4] = v + 0;
+	grp.ui.indices[i + 5] = v + 1;
 
-	grp.ui.vertices[numVerts].position[0] = cmd->x;
-	grp.ui.vertices[numVerts].position[1] = cmd->y;
-	grp.ui.vertices[numVerts].texCoords[0] = cmd->s1;
-	grp.ui.vertices[numVerts].texCoords[1] = cmd->t1;
-	grp.ui.vertices[numVerts].color = grp.ui.color;
+	grp.ui.vertices[v + 0].position[0] = cmd->x;
+	grp.ui.vertices[v + 0].position[1] = cmd->y;
+	grp.ui.vertices[v + 0].texCoords[0] = cmd->s1;
+	grp.ui.vertices[v + 0].texCoords[1] = cmd->t1;
+	grp.ui.vertices[v + 0].color = grp.ui.color;
 
-	grp.ui.vertices[numVerts + 1].position[0] = cmd->x + cmd->w;
-	grp.ui.vertices[numVerts + 1].position[1] = cmd->y;
-	grp.ui.vertices[numVerts + 1].texCoords[0] = cmd->s2;
-	grp.ui.vertices[numVerts + 1].texCoords[1] = cmd->t1;
-	grp.ui.vertices[numVerts + 1].color = grp.ui.color;
+	grp.ui.vertices[v + 1].position[0] = cmd->x + cmd->w;
+	grp.ui.vertices[v + 1].position[1] = cmd->y;
+	grp.ui.vertices[v + 1].texCoords[0] = cmd->s2;
+	grp.ui.vertices[v + 1].texCoords[1] = cmd->t1;
+	grp.ui.vertices[v + 1].color = grp.ui.color;
 
-	grp.ui.vertices[numVerts + 2].position[0] = cmd->x + cmd->w;
-	grp.ui.vertices[numVerts + 2].position[1] = cmd->y + cmd->h;
-	grp.ui.vertices[numVerts + 2].texCoords[0] = cmd->s2;
-	grp.ui.vertices[numVerts + 2].texCoords[1] = cmd->t2;
-	grp.ui.vertices[numVerts + 2].color = grp.ui.color;
+	grp.ui.vertices[v + 2].position[0] = cmd->x + cmd->w;
+	grp.ui.vertices[v + 2].position[1] = cmd->y + cmd->h;
+	grp.ui.vertices[v + 2].texCoords[0] = cmd->s2;
+	grp.ui.vertices[v + 2].texCoords[1] = cmd->t2;
+	grp.ui.vertices[v + 2].color = grp.ui.color;
 
-	grp.ui.vertices[numVerts + 3].position[0] = cmd->x;
-	grp.ui.vertices[numVerts + 3].position[1] = cmd->y + cmd->h;
-	grp.ui.vertices[numVerts + 3].texCoords[0] = cmd->s1;
-	grp.ui.vertices[numVerts + 3].texCoords[1] = cmd->t2;
-	grp.ui.vertices[numVerts + 3].color = grp.ui.color;
+	grp.ui.vertices[v + 3].position[0] = cmd->x;
+	grp.ui.vertices[v + 3].position[1] = cmd->y + cmd->h;
+	grp.ui.vertices[v + 3].texCoords[0] = cmd->s1;
+	grp.ui.vertices[v + 3].texCoords[1] = cmd->t2;
+	grp.ui.vertices[v + 3].color = grp.ui.color;
 
 	return (const void*)(cmd + 1);
 }
