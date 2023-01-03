@@ -275,6 +275,53 @@ static const void* StretchPic(const void* data)
 	return (const void*)(cmd + 1);
 }
 
+static const void* Triangle(const void* data)
+{
+	const triangleCommand_t* cmd = (const triangleCommand_t*)data;
+
+	if(grp.ui.vertexCount + 3 > grp.ui.maxVertexCount ||
+		grp.ui.indexCount + 3 > grp.ui.maxIndexCount)
+	{
+		return (const void*)(cmd + 1);
+	}
+
+	if(grp.ui.shader != cmd->shader)
+	{
+		Draw2D();
+	}
+
+	grp.ui.shader = cmd->shader;
+
+	const int v = grp.ui.firstVertex + grp.ui.vertexCount;
+	const int i = grp.ui.firstIndex + grp.ui.indexCount;
+	grp.ui.vertexCount += 3;
+	grp.ui.indexCount += 3;
+
+	grp.ui.indices[i + 0] = v + 0;
+	grp.ui.indices[i + 1] = v + 1;
+	grp.ui.indices[i + 2] = v + 2;
+
+	grp.ui.vertices[v + 0].position[0] = cmd->x0;
+	grp.ui.vertices[v + 0].position[1] = cmd->y0;
+	grp.ui.vertices[v + 0].texCoords[0] = cmd->s0;
+	grp.ui.vertices[v + 0].texCoords[1] = cmd->t0;
+	grp.ui.vertices[v + 0].color = grp.ui.color;
+
+	grp.ui.vertices[v + 1].position[0] = cmd->x1;
+	grp.ui.vertices[v + 1].position[1] = cmd->y1;
+	grp.ui.vertices[v + 1].texCoords[0] = cmd->s1;
+	grp.ui.vertices[v + 1].texCoords[1] = cmd->t1;
+	grp.ui.vertices[v + 1].color = grp.ui.color;
+
+	grp.ui.vertices[v + 2].position[0] = cmd->x2;
+	grp.ui.vertices[v + 2].position[1] = cmd->y2;
+	grp.ui.vertices[v + 2].texCoords[0] = cmd->s2;
+	grp.ui.vertices[v + 2].texCoords[1] = cmd->t2;
+	grp.ui.vertices[v + 2].color = grp.ui.color;
+
+	return (const void*)(cmd + 1);
+}
+
 struct GameplayRenderPipeline : IRenderPipeline
 {
 	void Init() override
@@ -369,7 +416,7 @@ struct GameplayRenderPipeline : IRenderPipeline
 					data = StretchPic(data);
 					break;
 				case RC_TRIANGLE:
-					data = SkipCommand<triangleCommand_t>(data);
+					data = Triangle(data);
 					break;
 				case RC_DRAW_SURFS:
 					EndSurfaces();
