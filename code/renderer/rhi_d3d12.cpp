@@ -83,7 +83,7 @@ EndQuery
 #include <dxgi1_6.h>
 #include <dxgidebug.h>
 //#include <d3dx12.h>
-#if defined(_DEBUG)
+#if defined(_DEBUG) || defined(CNQ3_DEV)
 #include <d3dcompiler.h>
 #pragma comment(lib, "d3dcompiler")
 #endif
@@ -1113,7 +1113,7 @@ namespace RHI
 			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		}
 
-		D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_COPY_DEST;
+		D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_COMMON;
 		D3D12MA::ALLOCATION_DESC allocDesc = { 0 };
 		allocDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 		if(rhiDesc.memoryUsage == MemoryUsage::CPU || rhiDesc.memoryUsage == MemoryUsage::Upload)
@@ -1680,7 +1680,7 @@ namespace RHI
 		rhi.commandList->DrawIndexedInstanced(indexCount, 1, firstIndex, firstVertex, 0);
 	}
 
-#if defined(_DEBUG)
+#if defined(_DEBUG) || defined(CNQ3_DEV)
 
 	static ShaderByteCode CompileShader(const char* source, const char* target)
 	{
@@ -1688,7 +1688,11 @@ namespace RHI
 		// could write to a linear allocator instead...
 		ID3DBlob* blob;
 		ID3DBlob* error;
+#if defined(_DEBUG)
 		const UINT flags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#else
+		const UINT flags = D3DCOMPILE_OPTIMIZATION_LEVEL3;
+#endif
 		if(FAILED(D3DCompile(source, strlen(source), NULL, NULL, NULL, "main", target, flags, 0, &blob, &error)))
 		{
 			ri.Error(ERR_FATAL, "Shader (%s) compilation failed:\n%s\n", target, (const char*)error->GetBufferPointer());

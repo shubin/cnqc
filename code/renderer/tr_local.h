@@ -386,7 +386,8 @@ namespace RHI
 	// Cpy* write commands to the copy command queue
 	//void SubmitCopy(HFence* signalFence);
 
-#if defined(_DEBUG)
+#define CNQ3_DEV
+#if defined(_DEBUG) || defined(CNQ3_DEV)
 	ShaderByteCode CompileVertexShader(const char* source);
 	ShaderByteCode CompilePixelShader(const char* source);
 #endif
