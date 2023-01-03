@@ -141,9 +141,17 @@ struct ui_t
 	const shader_t* shader;
 };
 
+enum projection_t
+{
+	PROJECTION_NONE,
+	PROJECTION_2D,
+	PROJECTION_3D
+};
+
 struct grp_t
 {
 	ui_t ui;
+	projection_t projection;
 };
 
 static grp_t grp;
@@ -167,15 +175,14 @@ static const void* SkipCommand(const void* data)
 	return (const void*)(cmd + 1);
 }
 
-static void Draw2D()
+static void Begin2D()
 {
-	if(grp.ui.indexCount <= 0)
+	if(grp.projection == PROJECTION_2D)
 	{
 		return;
 	}
 
 	// @TODO: grab the right rects...
-	// @TODO: only set most of this crap when switching to 2D rendering
 	RHI::CmdSetViewport(0, 0, glConfig.vidWidth, glConfig.vidHeight);
 	RHI::CmdSetScissor(0, 0, glConfig.vidWidth, glConfig.vidHeight);
 	RHI::CmdBindRootSignature(grp.ui.rootSignature);
@@ -185,10 +192,20 @@ static void Draw2D()
 	RHI::CmdBindIndexBuffer(grp.ui.indexBuffer, RHI::IndexType::UInt32, 0);
 	const float scale[2] = { 2.0f / glConfig.vidWidth, 2.0f / glConfig.vidHeight };
 	RHI::CmdSetRootConstants(grp.ui.rootSignature, RHI::ShaderType::Vertex, scale);
+
+	grp.projection = PROJECTION_2D;
+}
+
+static void Draw2D()
+{
+	if(grp.ui.indexCount <= 0)
+	{
+		return;
+	}
+
 	const uint32_t textureIndex = grp.ui.shader->stages[0]->bundle.image[0]->textureIndex;
 	const uint32_t pixelConstants[2] = { textureIndex, 0 }; // second one is the sampler index
 	RHI::CmdSetRootConstants(grp.ui.rootSignature, RHI::ShaderType::Pixel, pixelConstants);
-
 	RHI::CmdDrawIndexed(grp.ui.indexCount, grp.ui.firstIndex, 0);
 	grp.ui.firstIndex += grp.ui.indexCount;
 	grp.ui.firstVertex += grp.ui.vertexCount;
@@ -228,6 +245,8 @@ static const void* StretchPic(const void* data)
 	{
 		return (const void*)(cmd + 1);
 	}
+
+	Begin2D();
 
 	if(grp.ui.shader != cmd->shader)
 	{
@@ -284,6 +303,8 @@ static const void* Triangle(const void* data)
 	{
 		return (const void*)(cmd + 1);
 	}
+
+	Begin2D();
 
 	if(grp.ui.shader != cmd->shader)
 	{
@@ -390,6 +411,9 @@ struct GameplayRenderPipeline : IRenderPipeline
 		const uint32_t frameIndex = RHI::GetFrameIndex();
 		grp.ui.firstIndex = frameIndex * grp.ui.maxIndexCount;
 		grp.ui.firstVertex = frameIndex * grp.ui.maxVertexCount;
+
+		// nothing is bound to the command list yet!
+		grp.projection = PROJECTION_NONE;
 	}
 
 	void EndFrame() override
