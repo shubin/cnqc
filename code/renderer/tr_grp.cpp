@@ -223,8 +223,8 @@ static const void* StretchPic(const void* data)
 {
 	const stretchPicCommand_t* cmd = (const stretchPicCommand_t*)data;
 
-	if(grp.ui.firstVertex + grp.ui.vertexCount + 4 > SHADER_MAX_VERTEXES ||
-		grp.ui.firstIndex + grp.ui.indexCount + 6 > SHADER_MAX_INDEXES)
+	if(grp.ui.firstVertex + grp.ui.vertexCount + 4 > grp.ui.maxVertexCount ||
+		grp.ui.firstIndex + grp.ui.indexCount + 6 > grp.ui.maxIndexCount)
 	{
 		Draw2D();
 		grp.ui.firstIndex = 0;
@@ -312,19 +312,22 @@ struct GameplayRenderPipeline : IRenderPipeline
 			desc.AddRenderTarget(GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, RHI::TextureFormat::RGBA32_UNorm);
 			grp.ui.pipeline = RHI::CreateGraphicsPipeline(desc);
 		}
+		grp.ui.maxIndexCount = SHADER_MAX_INDEXES * 16;
+		grp.ui.maxVertexCount = SHADER_MAX_VERTEXES * 16;
 		{
 			RHI::BufferDesc desc = { 0 };
 			desc.name = "UI index buffer";
-			desc.byteCount = sizeof(ui_t::index_t) * SHADER_MAX_INDEXES;
+			desc.byteCount = sizeof(ui_t::index_t) * grp.ui.maxIndexCount;
 			desc.memoryUsage = RHI::MemoryUsage::Upload;
 			desc.initialState = RHI::ResourceState::IndexBufferBit;
 			grp.ui.indexBuffer = RHI::CreateBuffer(desc);
 			grp.ui.indices = (ui_t::index_t*)RHI::MapBuffer(grp.ui.indexBuffer);
+			
 		}
 		{
 			RHI::BufferDesc desc = { 0 };
 			desc.name = "UI vertex buffer";
-			desc.byteCount = sizeof(ui_t::vertex_t) * SHADER_MAX_VERTEXES;
+			desc.byteCount = sizeof(ui_t::vertex_t) * grp.ui.maxVertexCount;
 			desc.memoryUsage = RHI::MemoryUsage::Upload;
 			desc.initialState = RHI::ResourceState::VertexBufferBit;
 			grp.ui.vertexBuffer = RHI::CreateBuffer(desc);
