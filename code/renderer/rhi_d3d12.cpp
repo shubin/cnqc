@@ -190,10 +190,15 @@ namespace RHI
 		PipelineType::Id type;
 	};
 
-	struct DurationQuery
+	struct QueryState
 	{
-		uint32_t frameIndex;
-		uint32_t queryIndex;
+		enum Id
+		{
+			Free,  // ready to be (re-)used
+			Begun, // Begin called, but not End
+			Ended, // End called, but not resolved yet
+			Count
+		};
 	};
 
 	/*struct Queue
@@ -214,6 +219,44 @@ namespace RHI
 		ID3D12Fence* fence;
 		HANDLE fenceEvent;
 	};*/
+
+	struct Upload
+	{
+		ID3D12CommandQueue* commandQueue;
+		ID3D12CommandAllocator* commandAllocator;
+		ID3D12GraphicsCommandList* commandList;
+		HBuffer buffer;
+		uint32_t bufferByteCount;
+		ID3D12Fence* fence;
+		UINT64 fenceValue;
+		HANDLE fenceEvent;
+	};
+
+	struct DurationQuery
+	{
+		char name[64];
+		Handle handle;
+		uint32_t queryIndex; // indexes the heap
+		QueryState::Id state;
+	};
+
+	struct FrameQueries
+	{
+		DurationQuery durationQueries[MaxDurationQueries];
+		uint32_t durationQueryCount;
+	};
+
+	struct ResolvedDurationQuery
+	{
+		char name[64];
+		uint32_t gpuMicroSeconds;
+	};
+
+	struct ResolvedQueries
+	{
+		ResolvedDurationQuery durationQueries[MaxDurationQueries];
+		uint32_t durationQueryCount;
+	};
 
 	struct RHIPrivate
 	{
@@ -246,7 +289,7 @@ namespace RHI
 		UINT64 fenceValues[FrameCount];
 		ID3D12QueryHeap* timeStampHeap;
 		HBuffer timeStampBuffer;
-		uint32_t maxDurationQueries;
+		UINT64* mappedTimeStamps;
 		uint32_t durationQueryIndex;
 
 #define POOL(Type, Size) StaticPool<Type, H##Type, ResourceType::Type, Size>
@@ -255,23 +298,12 @@ namespace RHI
 		POOL(Texture, MAX_DRAWIMAGES * 2) textures;
 		POOL(RootSignature, 64) rootSignatures;
 		POOL(Pipeline, 64) pipelines;
-		POOL(DurationQuery, 64) durationQueries;
 #undef POOL
 
-		struct Upload
-		{
-			ID3D12CommandQueue* commandQueue;
-			ID3D12CommandAllocator* commandAllocator;
-			ID3D12GraphicsCommandList* commandList;
-			HBuffer buffer;
-			uint32_t bufferByteCount;
-			ID3D12Fence* fence;
-			UINT64 fenceValue;
-			HANDLE fenceEvent;
-		};
 		Upload upload;
-
 		StaticUnorderedArray<HTexture, MAX_DRAWIMAGES> texturesToTransition;
+		FrameQueries frameQueries[FrameCount];
+		ResolvedQueries resolvedQueries;
 	};
 
 	static RHIPrivate rhi;
@@ -678,6 +710,32 @@ namespace RHI
 		return (value + mask) & (~mask);
 	}
 
+	static void ResolveDurationQueries()
+	{
+		const uint32_t frameIndex = rhi.frameIndex ^ 1;
+		FrameQueries& fq = rhi.frameQueries[frameIndex];
+		ResolvedQueries& rq = rhi.resolvedQueries;
+
+		const Buffer& buffer = rhi.buffers.Get(rhi.timeStampBuffer);
+
+		for(uint32_t q = 0; q < fq.durationQueryCount; ++q)
+		{
+			DurationQuery& dq = fq.durationQueries[q];
+			ResolvedDurationQuery& rdq = rq.durationQueries[q];
+
+			const UINT64 destIndex = (frameIndex * MaxDurationQueries * 2) + dq.queryIndex;
+			const UINT64 destByteOffset = destIndex * sizeof(UINT64);
+			rhi.commandList->ResolveQueryData(rhi.timeStampHeap, D3D12_QUERY_TYPE_TIMESTAMP, dq.queryIndex, 2, buffer.buffer, destByteOffset);
+
+			//D3D(rhi.commandQueue->GetClockCalibration());
+
+			rdq.gpuMicroSeconds = 0; // @TODO:
+			Q_strncpyz(rdq.name, dq.name, sizeof(rdq.name));
+
+			dq.state = QueryState::Free;
+		}
+	}
+
 	void Init()
 	{
 		Sys_V_Init();
@@ -937,11 +995,10 @@ namespace RHI
 		}
 
 		{
-			rhi.maxDurationQueries = 64;
 			rhi.durationQueryIndex = 0;
 			D3D12_QUERY_HEAP_DESC desc = { 0 };
 			desc.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
-			desc.Count = rhi.maxDurationQueries * 2;
+			desc.Count = MaxDurationQueries * 2;
 			desc.NodeMask = 0;
 			D3D(rhi.device->CreateQueryHeap(&desc, IID_PPV_ARGS(&rhi.timeStampHeap)));
 		}
@@ -949,10 +1006,11 @@ namespace RHI
 		{
 			BufferDesc desc = { 0 };
 			desc.name = "TimeStamp Readback Buffer";
-			desc.byteCount = rhi.maxDurationQueries * 2 * FrameCount * sizeof(UINT64);
+			desc.byteCount = MaxDurationQueries * 2 * FrameCount * sizeof(UINT64);
 			desc.initialState = ResourceState::CopyDestinationBit;
 			desc.memoryUsage = MemoryUsage::Readback;
 			rhi.timeStampBuffer = CreateBuffer(desc);
+			rhi.mappedTimeStamps = (UINT64*)MapBuffer(rhi.timeStampBuffer);
 		}
 
 		// queue some actual work...
@@ -1122,6 +1180,8 @@ namespace RHI
 		Present();
 
 		MoveToNextFrame();
+
+		ResolveDurationQueries();
 	}
 
 	uint32_t GetFrameIndex()
@@ -1741,44 +1801,60 @@ namespace RHI
 		rhi.commandList->DrawIndexedInstanced(indexCount, 1, firstIndex, firstVertex, 0);
 	}
 
-	HDurationQuery CmdBeginDurationQuery()
+	HDurationQuery CmdBeginDurationQuery(const char* name)
 	{
 		Q_assert(CanWriteCommands());
+
+		FrameQueries& fq = rhi.frameQueries[rhi.frameIndex];
+		Q_assert(fq.durationQueryCount < MaxDurationQueries);
+		if(fq.durationQueryCount >= MaxDurationQueries)
+		{
+			return MAKE_NULL_HANDLE();
+		}
 
 		const UINT beginIndex = rhi.durationQueryIndex * 2;
 		rhi.commandList->BeginQuery(rhi.timeStampHeap, D3D12_QUERY_TYPE_TIMESTAMP, beginIndex);
 
-		DurationQuery query = { 0 };
-		query.frameIndex = rhi.frameIndex;
+		DurationQuery& query = fq.durationQueries[fq.durationQueryCount];
+		Q_assert(query.state == QueryState::Free);
+		Handle type, index, generation;
+		DecomposeHandle(&type, &index, &generation, query.handle);
+		query.handle = CreateHandle(ResourceType::DurationQuery, fq.durationQueryCount, generation);
 		query.queryIndex = rhi.durationQueryIndex;
+		query.state = QueryState::Begun;
+		Q_strncpyz(query.name, name, sizeof(query.name));
 
-		rhi.durationQueryIndex = (rhi.durationQueryIndex + 1) % rhi.maxDurationQueries;
+		fq.durationQueryCount++;
+		rhi.durationQueryIndex = (rhi.durationQueryIndex + 1) % MaxDurationQueries;
 
-		return rhi.durationQueries.Add(query);
+		return MAKE_HANDLE(query.handle);
 	}
 
 	void CmdEndDurationQuery(HDurationQuery handle)
 	{
 		Q_assert(CanWriteCommands());
 
-		const DurationQuery& query = rhi.durationQueries.Get(handle);
-		Q_assert(query.queryIndex < rhi.maxDurationQueries);
-		Q_assert(query.frameIndex == rhi.frameIndex);
+		Handle type, index, gen;
+		DecomposeHandle(&type, &index, &gen, handle.v);
 
+		FrameQueries& fq = rhi.frameQueries[rhi.frameIndex];
+		Q_assert(index < fq.durationQueryCount);
+		if(index >= fq.durationQueryCount)
+		{
+			return;
+		}
+
+		DurationQuery& query = fq.durationQueries[index];
+		Q_assert(handle.v != query.handle);
+		if(handle.v != query.handle)
+		{
+			return;
+		}
+
+		Q_assert(query.state == QueryState::Begun);
 		const UINT endIndex = query.queryIndex * 2 + 1;
 		rhi.commandList->EndQuery(rhi.timeStampHeap, D3D12_QUERY_TYPE_TIMESTAMP, endIndex);
-	}
-
-	void ResolveDurationQuery(uint32_t* microSeconds, HDurationQuery handle)
-	{
-		const DurationQuery& query = rhi.durationQueries.Get(handle);
-		Q_assert(query.frameIndex != rhi.frameIndex);
-
-		const Buffer& buffer = rhi.buffers.Get(rhi.timeStampBuffer);
-		const UINT64 destIndex = (query.frameIndex * rhi.maxDurationQueries * 2) + query.queryIndex;
-		const UINT64 destByteOffset = destIndex * sizeof(UINT64);
-		rhi.commandList->ResolveQueryData(rhi.timeStampHeap, D3D12_QUERY_TYPE_TIMESTAMP, query.queryIndex, 2, buffer.buffer, destByteOffset);
-		//D3D(rhi.commandQueue->GetClockCalibration());
+		query.state = QueryState::Ended;
 	}
 
 #if defined(_DEBUG) || defined(CNQ3_DEV)

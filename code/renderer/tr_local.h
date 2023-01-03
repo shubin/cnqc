@@ -39,6 +39,7 @@ namespace RHI
 	const uint32_t MaxVertexBufferCount = 16;
 	const uint32_t MaxVertexAttributeCount = 16;
 	const uint32_t MaxRenderTargetCount = 8;
+	const uint32_t MaxDurationQueries = 64;
 
 	typedef uint32_t Handle;
 
@@ -380,7 +381,7 @@ namespace RHI
 	void CmdSetRootConstants(HRootSignature rootSignature, ShaderType::Id shaderType, const void* constants);
 	void CmdDraw(uint32_t vertexCount, uint32_t firstVertex);
 	void CmdDrawIndexed(uint32_t indexCount, uint32_t firstIndex, uint32_t firstVertex);
-	HDurationQuery CmdBeginDurationQuery();
+	HDurationQuery CmdBeginDurationQuery(const char* name);
 	void CmdEndDurationQuery(HDurationQuery query);
 
 	// Cpy* write commands to the copy command queue
@@ -669,6 +670,10 @@ struct StaticUnorderedArray
 	void Add(const T& value)
 	{
 		Q_assert(count < N);
+		if(count >= N)
+		{
+			return;
+		}
 
 		items[count++] = value;
 	}
@@ -676,6 +681,10 @@ struct StaticUnorderedArray
 	void Remove(uint32_t index)
 	{
 		Q_assert(index < N);
+		if(count >= N)
+		{
+			return;
+		}
 
 		if(index < count - 1)
 		{
