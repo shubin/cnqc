@@ -223,12 +223,10 @@ static const void* StretchPic(const void* data)
 {
 	const stretchPicCommand_t* cmd = (const stretchPicCommand_t*)data;
 
-	if(grp.ui.firstVertex + grp.ui.vertexCount + 4 > grp.ui.maxVertexCount ||
-		grp.ui.firstIndex + grp.ui.indexCount + 6 > grp.ui.maxIndexCount)
+	if(grp.ui.vertexCount + 4 > grp.ui.maxVertexCount ||
+		grp.ui.indexCount + 6 > grp.ui.maxIndexCount)
 	{
-		Draw2D();
-		grp.ui.firstIndex = 0;
-		grp.ui.firstVertex = 0;
+		return (const void*)(cmd + 1);
 	}
 
 	if(grp.ui.shader != cmd->shader)
@@ -312,12 +310,12 @@ struct GameplayRenderPipeline : IRenderPipeline
 			desc.AddRenderTarget(GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, RHI::TextureFormat::RGBA32_UNorm);
 			grp.ui.pipeline = RHI::CreateGraphicsPipeline(desc);
 		}
-		grp.ui.maxIndexCount = SHADER_MAX_INDEXES * 16;
-		grp.ui.maxVertexCount = SHADER_MAX_VERTEXES * 16;
+		grp.ui.maxVertexCount = 64 << 10;
+		grp.ui.maxIndexCount = 8 * grp.ui.maxVertexCount;
 		{
 			RHI::BufferDesc desc = { 0 };
 			desc.name = "UI index buffer";
-			desc.byteCount = sizeof(ui_t::index_t) * grp.ui.maxIndexCount;
+			desc.byteCount = sizeof(ui_t::index_t) * grp.ui.maxIndexCount * RHI::FrameCount;
 			desc.memoryUsage = RHI::MemoryUsage::Upload;
 			desc.initialState = RHI::ResourceState::IndexBufferBit;
 			grp.ui.indexBuffer = RHI::CreateBuffer(desc);
@@ -327,7 +325,7 @@ struct GameplayRenderPipeline : IRenderPipeline
 		{
 			RHI::BufferDesc desc = { 0 };
 			desc.name = "UI vertex buffer";
-			desc.byteCount = sizeof(ui_t::vertex_t) * grp.ui.maxVertexCount;
+			desc.byteCount = sizeof(ui_t::vertex_t) * grp.ui.maxVertexCount * RHI::FrameCount;
 			desc.memoryUsage = RHI::MemoryUsage::Upload;
 			desc.initialState = RHI::ResourceState::VertexBufferBit;
 			grp.ui.vertexBuffer = RHI::CreateBuffer(desc);
@@ -341,6 +339,10 @@ struct GameplayRenderPipeline : IRenderPipeline
 
 	void BeginFrame() override
 	{
+		// move to this frame's dedicated buffer section
+		const uint32_t frameIndex = RHI::GetFrameIndex();
+		grp.ui.firstIndex = frameIndex * grp.ui.maxIndexCount;
+		grp.ui.firstVertex = frameIndex * grp.ui.maxVertexCount;
 	}
 
 	void EndFrame() override

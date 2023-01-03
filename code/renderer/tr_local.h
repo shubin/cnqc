@@ -347,6 +347,8 @@ namespace RHI
 	void BeginFrame();
 	void EndFrame();
 
+	uint32_t GetFrameIndex();
+
 	//HFence CreateFence();
 	//void GetCompletedValue(HFence fence);
 	//void Signal(HFence fence, CommandQueue::Id queue, uint64_t value);

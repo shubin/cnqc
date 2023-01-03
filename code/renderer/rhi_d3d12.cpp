@@ -1066,6 +1066,11 @@ namespace RHI
 		MoveToNextFrame();
 	}
 
+	uint32_t GetFrameIndex()
+	{
+		return rhi.frameIndex;
+	}
+
 	HFence CreateFence()
 	{
 		// @TODO:
