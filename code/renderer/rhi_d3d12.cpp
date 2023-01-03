@@ -24,8 +24,6 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 /*
 to do:
 
-- fix map (un)load re-creating the window
-- fix full-screen toggle (missing swap chain resize?)
 - get rid of d3dx12.h
 * partial inits and shutdown
 - move the Dear ImGui rendering outside of the RHI

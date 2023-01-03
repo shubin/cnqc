@@ -487,7 +487,7 @@ void CL_ShutdownAll(void)
 
 	// shutdown the renderer
 	if ( re.Shutdown ) {
-		re.Shutdown( qtrue );
+		re.Shutdown( qfalse );
 	}
 
 	cls.uiStarted = qfalse;
