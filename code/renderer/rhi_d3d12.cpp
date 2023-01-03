@@ -942,9 +942,20 @@ namespace RHI
 
 	void ShutDown(qbool destroyWindow)
 	{
+#define DESTROY_POOL(PoolName, FuncName) \
+		for(int i = 0; rhi.PoolName.FindNext(&handle, &i);) \
+			FuncName(MAKE_HANDLE(handle)); \
+		rhi.PoolName.Clear()
+
+		Handle handle;
+
 		if(!destroyWindow)
 		{
 			WaitUntilDeviceIsIdle();
+
+			DESTROY_POOL(textures, DestroyTexture);
+			rhi.srvCount = 0;
+
 			return;
 		}
 
@@ -952,17 +963,11 @@ namespace RHI
 
 		WaitUntilDeviceIsIdle();
 
-		Handle handle;
-#define DESTROY_POOL(PoolName, FuncName) \
-		for(int i = 0; rhi.PoolName.FindNext(&handle, &i);) \
-			FuncName(MAKE_HANDLE(handle)); \
-		rhi.PoolName.Clear()
 		//DESTROY_POOL(fences, DestroyFence);
 		DESTROY_POOL(buffers, DestroyBuffer);
 		DESTROY_POOL(textures, DestroyTexture);
 		DESTROY_POOL(rootSignatures, DestroyRootSignature);
 		DESTROY_POOL(pipelines, DestroyPipeline);
-#undef DESTROY_POOL
 
 		CloseHandle(rhi.upload.fenceEvent);
 		COM_RELEASE(rhi.upload.fence);
@@ -1000,6 +1005,8 @@ namespace RHI
 			debug->Release();
 		}
 #endif
+
+#undef DESTROY_POOL
 	}
 
 	void BeginFrame()
