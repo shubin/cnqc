@@ -738,7 +738,6 @@ namespace RHI
 			{
 				const UINT64 delta = end - begin;
 				rdq.gpuMicroSeconds = (uint32_t)((delta / frequency) * 1000000.0);
-				//OutputDebugStringA(va("%s: %d us\n", dq.name, (int)rdq.gpuMicroSeconds));
 			}
 			else
 			{
@@ -751,6 +750,33 @@ namespace RHI
 
 		rq.durationQueryCount = fq.durationQueryCount;
 		fq.durationQueryCount = 0;
+	}
+
+	static void DrawPerfStats()
+	{
+		if(ImGui::Begin("Performance"))
+		{
+			if(ImGui::BeginTable("GPU timings", 2))
+			{
+				ImGui::TableSetupColumn("Pass");
+				ImGui::TableSetupColumn("Micro-seconds");
+				ImGui::TableHeadersRow();
+
+				const ResolvedQueries& rq = rhi.resolvedQueries;
+				for(uint32_t q = 0; q < rq.durationQueryCount; ++q)
+				{
+					const ResolvedDurationQuery& rdq = rq.durationQueries[q];
+					ImGui::TableNextRow();
+					ImGui::TableSetColumnIndex(0);
+					ImGui::Text(rdq.name);
+					ImGui::TableSetColumnIndex(1);
+					ImGui::Text("%d", (int)rdq.gpuMicroSeconds);
+				}
+
+				ImGui::EndTable();
+			}
+		}
+		ImGui::End();
 	}
 
 	void Init()
@@ -1175,7 +1201,8 @@ namespace RHI
 			io.DisplaySize.y = glConfig.vidHeight;
 			ImGui_ImplDX12_NewFrame();
 			ImGui::NewFrame();
-			ImGui::ShowDemoWindow();
+			DrawPerfStats();
+			//ImGui::ShowDemoWindow();
 			ImGui::EndFrame();
 			ImGui::Render();
 			rhi.commandList->SetDescriptorHeaps(1, &rhi.imguiHeap);
