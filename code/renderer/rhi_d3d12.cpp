@@ -256,6 +256,19 @@ namespace RHI
 		uint32_t durationQueryCount;
 	};
 
+	struct ShaderVisibleDescriptorHeap
+	{
+		void Init(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t* descriptors, uint32_t count, const char* name);
+		void Release();
+		uint32_t AllocateDescriptor();
+		void FreeDescriptor(uint32_t index);
+
+		ID3D12DescriptorHeap* mHeap;
+		uint32_t* mDescriptors;
+		uint32_t mDescriptorFreeList;
+		uint32_t mCount;
+	};
+
 	struct RHIPrivate
 	{
 		ID3D12Debug* debug; // can be NULL
@@ -302,6 +315,11 @@ namespace RHI
 		StaticUnorderedArray<HTexture, MAX_DRAWIMAGES> texturesToTransition;
 		FrameQueries frameQueries[FrameCount];
 		ResolvedQueries resolvedQueries;
+
+		uint32_t descTex2D[RHI_MAX_TEXTURES_2D];
+		uint32_t descSamplers[RHI_MAX_SAMPLERS];
+		ShaderVisibleDescriptorHeap descHeapTex2D;
+		ShaderVisibleDescriptorHeap descHeapSamplers;
 	};
 
 	static RHIPrivate rhi;
@@ -380,6 +398,52 @@ namespace RHI
 		// ID3D12Object::SetName is a Unicode wrapper for
 		// ID3D12Object::SetPrivateData with WKPDID_D3DDebugObjectNameW
 		resource->SetPrivateData(WKPDID_D3DDebugObjectName, strlen(resourceName), resourceName);
+	}
+
+	void ShaderVisibleDescriptorHeap::Init(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t* descriptors, uint32_t count, const char* name)
+	{
+		D3D12_DESCRIPTOR_HEAP_DESC heapDesc = { 0 };
+		heapDesc.Type = type;
+		heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+		heapDesc.NumDescriptors = count;
+		heapDesc.NodeMask = 0;
+		D3D(rhi.device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&mHeap)));
+		SetDebugName(mHeap, name);
+
+		for(uint32_t d = 0; d < count; ++d)
+		{
+			descriptors[d] = d + 1;
+		}
+		mDescriptorFreeList = 0;
+		mDescriptors = descriptors;
+		mCount = count;
+	}
+
+	void ShaderVisibleDescriptorHeap::Release()
+	{
+		COM_RELEASE(mHeap);
+	}
+
+	uint32_t ShaderVisibleDescriptorHeap::AllocateDescriptor()
+	{
+		Q_assert(mDescriptorFreeList != UINT32_MAX);
+		// @TODO: fatal error in release
+
+		const uint32_t index = mDescriptorFreeList;
+		mDescriptorFreeList = mDescriptors[index];
+		mDescriptors[index] = UINT32_MAX;
+
+		return index;
+	}
+
+	void ShaderVisibleDescriptorHeap::FreeDescriptor(uint32_t index)
+	{
+		Q_assert(index < mCount);
+		// @TODO: fatal error in release
+
+		const uint32_t oldList = mDescriptorFreeList;
+		mDescriptorFreeList = index;
+		mDescriptors[index] = oldList;
 	}
 
 	static const char* GetDeviceRemovedReasonString(HRESULT reason)
@@ -874,6 +938,9 @@ namespace RHI
 		}
 #endif
 
+		rhi.descHeapTex2D.Init(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, rhi.descTex2D, ARRAY_LEN(rhi.descTex2D), "Texture2D heap");
+		rhi.descHeapSamplers.Init(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, rhi.descSamplers, ARRAY_LEN(rhi.descSamplers), "Sampler heap");
+
 		{
 			D3D12_COMMAND_QUEUE_DESC commandQueueDesc = { 0 };
 			commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
@@ -1089,6 +1156,9 @@ namespace RHI
 		ImGui_ImplDX12_Shutdown();
 
 		WaitUntilDeviceIsIdle();
+
+		rhi.descHeapTex2D.Release();
+		rhi.descHeapSamplers.Release();
 
 		//DESTROY_POOL(fences, DestroyFence);
 		DESTROY_POOL(buffers, DestroyBuffer);
