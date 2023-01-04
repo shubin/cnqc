@@ -1606,52 +1606,35 @@ namespace RHI
 		}
 		Q_assert(parameterCount <= ShaderType::Count);
 
-		D3D12_DESCRIPTOR_RANGE ranges[ARRAY_LEN(rhiDesc.tables) * 4] = {};
-		uint32_t firstRangeIndex = 0;
-		uint32_t numDescriptors = 0;
-		for(int t = 0; t < rhiDesc.tableCount; ++t)
+		D3D12_DESCRIPTOR_RANGE ranges[64] = {};
+		int rangeCount = 0;
+
 		{
-			Q_assert(parameterCount < ARRAY_LEN(parameters));
-
-			const RootSignatureDesc::Table& table = rhiDesc.tables[t];
-
-			struct RangeDesc
-			{
-				D3D12_DESCRIPTOR_RANGE_TYPE type;
-				uint32_t count;
-			};
-			const RangeDesc rangeDescs[4] =
-			{
-				{ D3D12_DESCRIPTOR_RANGE_TYPE_CBV, table.cbvCount },
-				{ D3D12_DESCRIPTOR_RANGE_TYPE_SRV, table.srvCount },
-				{ D3D12_DESCRIPTOR_RANGE_TYPE_UAV, table.uavCount },
-				{ D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, table.samplerCount }
-			};
-
-			uint32_t rangeCount = 0;
-			for(int r = 0; r < ARRAY_LEN(rangeDescs); ++r)
-			{
-				if(rangeDescs[r].count <= 0)
-				{
-					continue;
-				}
-				D3D12_DESCRIPTOR_RANGE& range = ranges[firstRangeIndex + rangeCount];
-				range.RangeType = rangeDescs[r].type;
-				range.OffsetInDescriptorsFromTableStart = 0; // @TODO: numDescriptors
-				range.NumDescriptors = rangeDescs[r].count;
-				range.RegisterSpace = 0;
-				range.BaseShaderRegister = 0;
-				rangeCount++;
-				numDescriptors += rangeDescs[r].count;
-			}
-
+			D3D12_DESCRIPTOR_RANGE& r = ranges[rangeCount++];
+			r.BaseShaderRegister = 0;
+			r.NumDescriptors = RHI_MAX_TEXTURES_2D;
+			r.OffsetInDescriptorsFromTableStart = 0;
+			r.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+			r.RegisterSpace = RHI_SPACE_TEXTURE2D;
 			D3D12_ROOT_PARAMETER& p = parameters[parameterCount++];
 			p.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-			p.DescriptorTable.NumDescriptorRanges = rangeCount;
-			p.DescriptorTable.pDescriptorRanges = ranges + firstRangeIndex;
-			p.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL; // @TODO:
+			p.DescriptorTable.NumDescriptorRanges = 1;
+			p.DescriptorTable.pDescriptorRanges = &r;
+			p.ShaderVisibility = (D3D12_SHADER_VISIBILITY)(D3D12_SHADER_VISIBILITY_VERTEX | D3D12_SHADER_VISIBILITY_PIXEL);
+		}
 
-			firstRangeIndex += rangeCount;
+		{
+			D3D12_DESCRIPTOR_RANGE& r = ranges[rangeCount++];
+			r.BaseShaderRegister = 0;
+			r.NumDescriptors = RHI_MAX_SAMPLERS;
+			r.OffsetInDescriptorsFromTableStart = 0;
+			r.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
+			r.RegisterSpace = RHI_SPACE_SAMPLERS;
+			D3D12_ROOT_PARAMETER& p = parameters[parameterCount++];
+			p.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+			p.DescriptorTable.NumDescriptorRanges = 1;
+			p.DescriptorTable.pDescriptorRanges = &r;
+			p.ShaderVisibility = (D3D12_SHADER_VISIBILITY)(D3D12_SHADER_VISIBILITY_VERTEX | D3D12_SHADER_VISIBILITY_PIXEL);
 		}
 
 		D3D12_ROOT_SIGNATURE_DESC desc = { 0 };

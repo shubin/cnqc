@@ -351,8 +351,6 @@ struct GameplayRenderPipeline : IRenderPipeline
 			desc.usingVertexBuffers = qtrue;
 			desc.constants[RHI::ShaderType::Vertex].count = 2;
 			desc.constants[RHI::ShaderType::Pixel].count = 2;
-			desc.AddDescriptorTable(0, MAX_DRAWIMAGES, 0);
-			desc.AddSamplerTable(1);
 			grp.ui.rootSignature = RHI::CreateRootSignature(desc);
 		}
 		{

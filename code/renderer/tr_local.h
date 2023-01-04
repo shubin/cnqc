@@ -35,8 +35,8 @@ namespace RHI
 	// @TODO: move to own header file to be included by both C++ and HLSL code
 #define RHI_MAX_TEXTURES_2D 4096 // real max: unlimited
 #define RHI_MAX_SAMPLERS 64 // real max: 2048
-#define RHI_SPACE_TEXTURE2D space0
-#define RHI_SPACE_SAMPLERS space0
+#define RHI_SPACE_TEXTURE2D 0
+#define RHI_SPACE_SAMPLERS 0
 
 	// this has 2 meanings:
 	// 1. maximum number of frames queued
@@ -207,37 +207,6 @@ namespace RHI
 			uint32_t count; // in multiples of 4 bytes
 		}
 		constants[ShaderType::Count];
-		struct Table
-		{
-			uint32_t cbvCount;
-			uint32_t srvCount;
-			uint32_t uavCount;
-			uint32_t samplerCount;
-		}
-		tables[16];
-		uint32_t tableCount;
-
-		void AddDescriptorTable(uint32_t cbvCount, uint32_t srvCount, uint32_t uavCount)
-		{
-			Q_assert(tableCount < ARRAY_LEN(tables));
-
-			Table& t = tables[tableCount++];
-			t.cbvCount = cbvCount;
-			t.srvCount = srvCount;
-			t.uavCount = uavCount;
-			t.samplerCount = 0;
-		}
-
-		void AddSamplerTable(uint32_t samplerCount)
-		{
-			Q_assert(tableCount < ARRAY_LEN(tables));
-
-			Table& t = tables[tableCount++];
-			t.cbvCount = 0;
-			t.srvCount = 0;
-			t.uavCount = 0;
-			t.samplerCount = samplerCount;
-		}
 	};
 
 	struct ShaderByteCode
@@ -390,11 +359,6 @@ namespace RHI
 	void CmdDrawIndexed(uint32_t indexCount, uint32_t firstIndex, uint32_t firstVertex);
 	HDurationQuery CmdBeginDurationQuery(const char* name);
 	void CmdEndDurationQuery(HDurationQuery query);
-
-	// Cpy* write commands to the copy command queue
-	//void SubmitCopy(HFence* signalFence);
-
-	//void ResolveDurationQuery(uint32_t* microSeconds, HDurationQuery query);
 
 #define CNQ3_DEV
 #if defined(_DEBUG) || defined(CNQ3_DEV)
