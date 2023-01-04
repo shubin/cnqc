@@ -1044,6 +1044,7 @@ namespace RHI
 			desc.byteCount = MaxDurationQueries * 2 * FrameCount * sizeof(UINT64);
 			desc.initialState = ResourceState::CopySourceBit;
 			desc.memoryUsage = MemoryUsage::Readback;
+			desc.committedResource = true;
 			rhi.timeStampBuffer = CreateBuffer(desc);
 			rhi.mappedTimeStamps = (UINT64*)MapBuffer(rhi.timeStampBuffer);
 		}
@@ -1284,7 +1285,7 @@ namespace RHI
 		else if(rhiDesc.memoryUsage == MemoryUsage::Readback)
 		{
 			allocDesc.HeapType = D3D12_HEAP_TYPE_READBACK;
-			resourceState = D3D12_RESOURCE_STATE_COPY_SOURCE;
+			//resourceState = D3D12_RESOURCE_STATE_COPY_SOURCE;
 			desc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 		}
 		allocDesc.Flags = D3D12MA::ALLOCATION_FLAG_STRATEGY_MIN_MEMORY;
@@ -1829,6 +1830,18 @@ namespace RHI
 		rhi.commandList->SetGraphicsRootDescriptorTable(2, rhi.srvHeap->GetGPUDescriptorHandleForHeapStart());
 		rhi.commandList->SetGraphicsRootDescriptorTable(3, rhi.samplerHeap->GetGPUDescriptorHandleForHeapStart());
 	}
+
+	/*void CmdSetRootDescriptorTable(uint32_t tableIndex, HDescriptorTable descriptorTable)
+	{
+		Q_assert(CanWriteCommands());
+
+		//const DescriptorTable& table = rhi.descriptorTables.Get(descriptorTable);
+		//const RootSignature& sig = rhi.rootSignatures.Get(table.rootSignature);
+		//const uint32_t index = 2 + tableIndex; // @TODO: grab the real offset
+
+		// @TODO: decide between graphics and compute!
+		//rhi.commandList->SetGraphicsRootDescriptorTable(index, );
+	}*/
 
 	void CmdDraw(uint32_t vertexCount, uint32_t firstVertex)
 	{

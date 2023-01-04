@@ -237,6 +237,7 @@ static void CreateTexture( image_t* image, int mipCount, int width, int height )
 	desc.name = image->name;
 	desc.sampleCount = 1;
 	desc.initialState = RHI::ResourceState::ShaderAccessBits;
+	desc.committedResource = true;
 	image->texture = RHI::CreateTexture(desc);
 	image->textureIndex = RHI::GetTextureSRV(image->texture);
 }

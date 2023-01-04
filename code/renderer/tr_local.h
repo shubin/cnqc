@@ -379,6 +379,7 @@ namespace RHI
 	void CmdSetViewport(uint32_t x, uint32_t y, uint32_t w, uint32_t h, float minDepth = 0.0f, float maxDepth = 1.0f);
 	void CmdSetScissor(uint32_t x, uint32_t y, uint32_t w, uint32_t h);
 	void CmdSetRootConstants(HRootSignature rootSignature, ShaderType::Id shaderType, const void* constants);
+	//void CmdSetRootDescriptorTable(HRootSignature rootSignature, HDescriptorTable table);
 	void CmdDraw(uint32_t vertexCount, uint32_t firstVertex);
 	void CmdDrawIndexed(uint32_t indexCount, uint32_t firstIndex, uint32_t firstVertex);
 	HDurationQuery CmdBeginDurationQuery(const char* name);
