@@ -35,8 +35,8 @@ namespace RHI
 	// @TODO: move to own header file to be included by both C++ and HLSL code
 #define RHI_MAX_TEXTURES_2D 4096 // real max: unlimited
 #define RHI_MAX_SAMPLERS 64 // real max: 2048
-#define RHI_SPACE_TEXTURE2D 0
-#define RHI_SPACE_SAMPLERS 0
+#define RHI_SPACE_TEXTURE2D space0
+#define RHI_SPACE_SAMPLERS space0
 
 	// this has 2 meanings:
 	// 1. maximum number of frames queued
