@@ -93,9 +93,7 @@ EndQuery
 #include "../imgui/imgui_impl_dx12.h"
 
 
-// @TODO: Q3 macro to specify D3D12SDKVersion
-// OR... include our own Agility SDK and specify D3D12_SDK_VERSION
-#if defined(_DEBUG)
+#if defined(_DEBUG) || defined(CNQ3_DEV)
 extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = D3D12_SDK_VERSION; }
 extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8".\\D3D12\\"; }
 #endif
@@ -1044,7 +1042,7 @@ namespace RHI
 			BufferDesc desc = { 0 };
 			desc.name = "TimeStamp Readback Buffer";
 			desc.byteCount = MaxDurationQueries * 2 * FrameCount * sizeof(UINT64);
-			desc.initialState = ResourceState::CopyDestinationBit;
+			desc.initialState = ResourceState::CopySourceBit;
 			desc.memoryUsage = MemoryUsage::Readback;
 			rhi.timeStampBuffer = CreateBuffer(desc);
 			rhi.mappedTimeStamps = (UINT64*)MapBuffer(rhi.timeStampBuffer);
@@ -1281,11 +1279,12 @@ namespace RHI
 		if(rhiDesc.memoryUsage == MemoryUsage::CPU || rhiDesc.memoryUsage == MemoryUsage::Upload)
 		{
 			allocDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
-			resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
+			resourceState = D3D12_RESOURCE_STATE_GENERIC_READ; // @TODO: specialize this
 		}
 		else if(rhiDesc.memoryUsage == MemoryUsage::Readback)
 		{
 			allocDesc.HeapType = D3D12_HEAP_TYPE_READBACK;
+			resourceState = D3D12_RESOURCE_STATE_COPY_SOURCE;
 			desc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 		}
 		allocDesc.Flags = D3D12MA::ALLOCATION_FLAG_STRATEGY_MIN_MEMORY;
