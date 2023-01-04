@@ -295,6 +295,7 @@ namespace RHI
 		const UINT64* mappedTimeStamps;
 		uint32_t durationQueryIndex;
 		HRootSignature currentRootSignature;
+		HDurationQuery frameDuration;
 
 #define POOL(Type, Size) StaticPool<Type, H##Type, ResourceType::Type, Size>
 		POOL(Buffer, 64) buffers;
@@ -1189,8 +1190,6 @@ namespace RHI
 #undef DESTROY_POOL
 	}
 
-	static HDurationQuery frameDuration;
-
 	void BeginFrame()
 	{
 		rhi.currentRootSignature = MAKE_NULL_HANDLE();
@@ -1204,7 +1203,7 @@ namespace RHI
 		// start recording
 		D3D(rhi.commandList->Reset(rhi.commandAllocators[rhi.frameIndex], NULL));
 
-		frameDuration = CmdBeginDurationQuery("Whole frame");
+		rhi.frameDuration = CmdBeginDurationQuery("Whole frame");
 
 		D3D12_RESOURCE_BARRIER barrier = { 0 };
 		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -1269,7 +1268,7 @@ namespace RHI
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 		rhi.commandList->ResourceBarrier(1, &barrier);
 
-		CmdEndDurationQuery(frameDuration);
+		CmdEndDurationQuery(rhi.frameDuration);
 
 		// stop recording
 		D3D(rhi.commandList->Close());
