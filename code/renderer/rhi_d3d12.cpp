@@ -300,6 +300,7 @@ namespace RHI
 		HBuffer timeStampBuffer;
 		const UINT64* mappedTimeStamps;
 		uint32_t durationQueryIndex;
+		HRootSignature currentRootSignature;
 
 #define POOL(Type, Size) StaticPool<Type, H##Type, ResourceType::Type, Size>
 		POOL(Fence, 64) fences;
@@ -1188,6 +1189,8 @@ namespace RHI
 
 	void BeginFrame()
 	{
+		rhi.currentRootSignature = MAKE_NULL_HANDLE();
+
 		// reclaim used memory
 		D3D(rhi.commandAllocators[rhi.frameIndex]->Reset());
 
@@ -1773,16 +1776,22 @@ namespace RHI
 	{
 		Q_assert(CanWriteCommands());
 
-		const RootSignature sig = rhi.rootSignatures.Get(rootSignature);
-		// @TODO: decide between graphics and compute!
-		rhi.commandList->SetGraphicsRootSignature(sig.signature);
+		const RootSignature& sig = rhi.rootSignatures.Get(rootSignature);
+		if(rootSignature != rhi.currentRootSignature)
+		{
+			rhi.currentRootSignature = rootSignature;
+			// @TODO: decide between graphics and compute!
+			rhi.commandList->SetGraphicsRootSignature(sig.signature);
+			rhi.commandList->SetGraphicsRootDescriptorTable(sig.firstTableIndex + 0, rhi.descHeapTex2D.mHeap->GetGPUDescriptorHandleForHeapStart());
+			rhi.commandList->SetGraphicsRootDescriptorTable(sig.firstTableIndex + 1, rhi.descHeapSamplers.mHeap->GetGPUDescriptorHandleForHeapStart());
+		}
 	}
 
 	void CmdBindPipeline(HPipeline pipeline)
 	{
 		Q_assert(CanWriteCommands());
 
-		const Pipeline pipe = rhi.pipelines.Get(pipeline);
+		const Pipeline& pipe = rhi.pipelines.Get(pipeline);
 		rhi.commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // @TODO: grab from pipe!
 		rhi.commandList->SetPipelineState(pipe.pso);
 	}
@@ -1854,15 +1863,10 @@ namespace RHI
 		const UINT parameterIndex = sig.constants[shaderType].parameterIndex;
 		const UINT constantCount = sig.desc.constants[shaderType].count;
 
-		// @TODO: check that the rootSignature specified is already set
-		//rhi.commandList->SetGraphicsRootSignature(sig.signature);
+		CmdBindRootSignature(rootSignature);
 
 		// @TODO: decide between graphics and compute!
 		rhi.commandList->SetGraphicsRoot32BitConstants(parameterIndex, constantCount, constants, 0);
-
-		// @TODO: move out, etc
-		rhi.commandList->SetGraphicsRootDescriptorTable(sig.firstTableIndex + 0, rhi.descHeapTex2D.mHeap->GetGPUDescriptorHandleForHeapStart());
-		rhi.commandList->SetGraphicsRootDescriptorTable(sig.firstTableIndex + 1, rhi.descHeapSamplers.mHeap->GetGPUDescriptorHandleForHeapStart());
 	}
 
 	/*void CmdSetRootDescriptorTable(uint32_t tableIndex, HDescriptorTable descriptorTable)
