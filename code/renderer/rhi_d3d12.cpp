@@ -176,6 +176,7 @@ namespace RHI
 		RootSignatureDesc desc;
 		ID3D12RootSignature* signature;
 		PerStageConstants constants[ShaderType::Count];
+		UINT firstTableIndex;
 	};
 
 	struct Pipeline
@@ -1605,6 +1606,7 @@ namespace RHI
 			}
 		}
 		Q_assert(parameterCount <= ShaderType::Count);
+		const int firstTableIndex = parameterCount;
 
 		D3D12_DESCRIPTOR_RANGE ranges[64] = {};
 		int rangeCount = 0;
@@ -1675,6 +1677,7 @@ namespace RHI
 
 		rhiSignature.desc = rhiDesc;
 		rhiSignature.signature = signature;
+		rhiSignature.firstTableIndex = firstTableIndex;
 
 		return rhi.rootSignatures.Add(rhiSignature);
 	}
@@ -1858,8 +1861,8 @@ namespace RHI
 		rhi.commandList->SetGraphicsRoot32BitConstants(parameterIndex, constantCount, constants, 0);
 
 		// @TODO: move out, etc
-		rhi.commandList->SetGraphicsRootDescriptorTable(2, rhi.descHeapTex2D.mHeap->GetGPUDescriptorHandleForHeapStart());
-		rhi.commandList->SetGraphicsRootDescriptorTable(3, rhi.descHeapSamplers.mHeap->GetGPUDescriptorHandleForHeapStart());
+		rhi.commandList->SetGraphicsRootDescriptorTable(sig.firstTableIndex + 0, rhi.descHeapTex2D.mHeap->GetGPUDescriptorHandleForHeapStart());
+		rhi.commandList->SetGraphicsRootDescriptorTable(sig.firstTableIndex + 1, rhi.descHeapSamplers.mHeap->GetGPUDescriptorHandleForHeapStart());
 	}
 
 	/*void CmdSetRootDescriptorTable(uint32_t tableIndex, HDescriptorTable descriptorTable)
