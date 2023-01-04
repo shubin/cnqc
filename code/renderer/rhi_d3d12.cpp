@@ -222,9 +222,8 @@ namespace RHI
 		ID3D12GraphicsCommandList* commandList;
 		HBuffer buffer;
 		uint32_t bufferByteCount;
-		ID3D12Fence* fence;
+		Fence fence;
 		UINT64 fenceValue;
-		HANDLE fenceEvent;
 	};
 
 	struct DurationQuery
@@ -1081,14 +1080,7 @@ namespace RHI
 		SetDebugName(rhi.upload.commandList, "copy command list");
 		D3D(rhi.upload.commandList->Close());
 
-		D3D(rhi.device->CreateFence(rhi.upload.fenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&rhi.upload.fence)));
-		SetDebugName(rhi.upload.fence, "Copy Queue Fence");
-
-		rhi.upload.fenceEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-		if(rhi.upload.fenceEvent == NULL)
-		{
-			Check(HRESULT_FROM_WIN32(GetLastError()), "CreateEvent");
-		}
+		rhi.upload.fence.Create(0, "copy queue fence");
 
 		{
 			rhi.durationQueryIndex = 0;
@@ -1161,8 +1153,7 @@ namespace RHI
 		DESTROY_POOL(rootSignatures, DestroyRootSignature);
 		DESTROY_POOL(pipelines, DestroyPipeline);
 
-		CloseHandle(rhi.upload.fenceEvent);
-		COM_RELEASE(rhi.upload.fence);
+		rhi.upload.fence.Release();
 		COM_RELEASE(rhi.upload.commandList);
 		COM_RELEASE(rhi.upload.commandAllocator);
 		COM_RELEASE(rhi.upload.commandQueue);
@@ -1497,11 +1488,7 @@ namespace RHI
 		const uint64_t numSubResources = texture.desc.mipCount;
 		rhi.device->GetCopyableFootprints(&textureDesc, 0, (uint32_t)numSubResources, 0, layouts, numRows, rowSizesInBytes, &textureMemorySize);
 
-		if(rhi.upload.fence->GetCompletedValue() < rhi.upload.fenceValue)
-		{
-			D3D(rhi.upload.fence->SetEventOnCompletion(rhi.upload.fenceValue, rhi.upload.fenceEvent));
-			WaitForSingleObjectEx(rhi.upload.fenceEvent, INFINITE, FALSE);
-		}
+		rhi.upload.fence.Wait(rhi.upload.fenceValue);
 		rhi.upload.fenceValue++;
 
 		{
@@ -1555,7 +1542,7 @@ namespace RHI
 		ID3D12CommandList* commandLists[] = { rhi.upload.commandList };
 		D3D(rhi.upload.commandList->Close());
 		rhi.upload.commandQueue->ExecuteCommandLists(ARRAY_LEN(commandLists), commandLists);
-		rhi.upload.commandQueue->Signal(rhi.upload.fence, rhi.upload.fenceValue);
+		rhi.upload.commandQueue->Signal(rhi.upload.fence.fence, rhi.upload.fenceValue);
 
 		rhi.texturesToTransition.Add(handle);
 	}
