@@ -1195,6 +1195,9 @@ namespace RHI
 	{
 		rhi.currentRootSignature = MAKE_NULL_HANDLE();
 
+		// wait for pending copies from the upload buffer to textures to be finished
+		rhi.commandQueue->Wait(rhi.upload.fence.fence, rhi.upload.fenceValue);
+
 		// reclaim used memory
 		D3D(rhi.commandAllocators[rhi.frameIndex]->Reset());
 
