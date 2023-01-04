@@ -285,9 +285,6 @@ namespace RHI
 		ID3D12CommandQueue* commandQueue;
 		IDXGISwapChain3* swapChain;
 		ID3D12DescriptorHeap* rtvHeap;
-		ID3D12DescriptorHeap* srvHeap; // all of the game's textures
-		uint32_t srvCount;
-		ID3D12DescriptorHeap* samplerHeap; // all samplers
 		ID3D12DescriptorHeap* imguiHeap;
 		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle;
 		UINT rtvIncSize;
@@ -1028,26 +1025,7 @@ namespace RHI
 		}
 
 		{
-			D3D12_DESCRIPTOR_HEAP_DESC heapDesc = { 0 };
-			heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-			heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-			heapDesc.NumDescriptors = MAX_DRAWIMAGES;
-			heapDesc.NodeMask = 0;
-			D3D(rhi.device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&rhi.srvHeap)));
-			SetDebugName(rhi.srvHeap, "Texture Descriptor Heap");
-		}
-
-		{
-			D3D12_DESCRIPTOR_HEAP_DESC heapDesc = { 0 };
-			heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
-			heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-			heapDesc.NumDescriptors = 1; // @TODO:
-			heapDesc.NodeMask = 0;
-			D3D(rhi.device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&rhi.samplerHeap)));
-			SetDebugName(rhi.samplerHeap, "Sampler Descriptor Heap");
-		}
-
-		{
+			// @TODO: uint32_t CreateSampler(const SamplerDesc& desc);
 			D3D12_SAMPLER_DESC desc = { 0 };
 			desc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 			desc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
@@ -1056,7 +1034,7 @@ namespace RHI
 			desc.MaxAnisotropy = 1;
 			desc.MaxLOD = D3D12_FLOAT32_MAX;
 			desc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-			rhi.device->CreateSampler(&desc, rhi.samplerHeap->GetCPUDescriptorHandleForHeapStart());
+			rhi.device->CreateSampler(&desc, rhi.descHeapSamplers.mHeap->GetCPUDescriptorHandleForHeapStart());
 		}
 
 		{
@@ -1147,8 +1125,8 @@ namespace RHI
 		{
 			WaitUntilDeviceIsIdle();
 
-			DESTROY_POOL(textures, DestroyTexture);
-			rhi.srvCount = 0;
+			// @TODO: the GRP will nuke all 2D textures it has to itself
+			//DESTROY_POOL(textures, DestroyTexture);
 
 			return;
 		}
@@ -1179,8 +1157,6 @@ namespace RHI
 		COM_RELEASE_ARRAY(rhi.commandAllocators);
 		COM_RELEASE_ARRAY(rhi.renderTargets);
 		COM_RELEASE(rhi.imguiHeap);
-		COM_RELEASE(rhi.samplerHeap);
-		COM_RELEASE(rhi.srvHeap);
 		COM_RELEASE(rhi.rtvHeap);
 		COM_RELEASE(rhi.swapChain);
 		COM_RELEASE(rhi.commandQueue);
@@ -1228,7 +1204,7 @@ namespace RHI
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		rhi.commandList->ResourceBarrier(1, &barrier);
 
-		ID3D12DescriptorHeap* heaps[2] = {rhi.srvHeap, rhi.samplerHeap};
+		ID3D12DescriptorHeap* heaps[2] = { rhi.descHeapTex2D.mHeap, rhi.descHeapSamplers.mHeap };
 		rhi.commandList->SetDescriptorHeaps(ARRAY_LEN(heaps), heaps);
 
 		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = { 0 };
@@ -1483,15 +1459,17 @@ namespace RHI
 		srv.Texture2D.MostDetailedMip = 0;
 		srv.Texture2D.PlaneSlice = 0;
 		srv.Texture2D.ResourceMinLODClamp = 0.0f;
-		D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = rhi.srvHeap->GetCPUDescriptorHandleForHeapStart();
-		srvHandle.ptr += rhi.srvCount * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+		const uint32_t srvIndex = rhi.descHeapTex2D.AllocateDescriptor();
+		D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = rhi.descHeapTex2D.mHeap->GetCPUDescriptorHandleForHeapStart();
+		srvHandle.ptr += srvIndex * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		rhi.device->CreateShaderResourceView(resource, &srv, srvHandle);
 
 		Texture texture = { 0 };
 		texture.desc = rhiDesc;
 		texture.allocation = allocation;
 		texture.texture = resource;
-		texture.srvIndex = rhi.srvCount++;
+		texture.srvIndex = srvIndex;
 		for(int m = 0; m < rhiDesc.mipCount; ++m)
 		{
 			texture.subResources[m].state = rhiDesc.initialState;
@@ -1897,8 +1875,8 @@ namespace RHI
 		rhi.commandList->SetGraphicsRoot32BitConstants(parameterIndex, constantCount, constants, 0);
 
 		// @TODO: move out, etc
-		rhi.commandList->SetGraphicsRootDescriptorTable(2, rhi.srvHeap->GetGPUDescriptorHandleForHeapStart());
-		rhi.commandList->SetGraphicsRootDescriptorTable(3, rhi.samplerHeap->GetGPUDescriptorHandleForHeapStart());
+		rhi.commandList->SetGraphicsRootDescriptorTable(2, rhi.descHeapTex2D.mHeap->GetGPUDescriptorHandleForHeapStart());
+		rhi.commandList->SetGraphicsRootDescriptorTable(3, rhi.descHeapSamplers.mHeap->GetGPUDescriptorHandleForHeapStart());
 	}
 
 	/*void CmdSetRootDescriptorTable(uint32_t tableIndex, HDescriptorTable descriptorTable)
