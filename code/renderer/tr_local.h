@@ -52,7 +52,6 @@ namespace RHI
 #define RHI_HANDLE_TYPE(TypeName) struct TypeName { Handle v; }; \
 	inline bool operator==(TypeName a, TypeName b) { return a.v == b.v; } \
 	inline bool operator!=(TypeName a, TypeName b) { return a.v != b.v; }
-	RHI_HANDLE_TYPE(HFence);
 	RHI_HANDLE_TYPE(HBuffer);
 	RHI_HANDLE_TYPE(HRootSignature);
 	RHI_HANDLE_TYPE(HPipeline);
@@ -323,12 +322,6 @@ namespace RHI
 
 	uint32_t GetFrameIndex();
 
-	//HFence CreateFence();
-	//void GetCompletedValue(HFence fence);
-	//void Signal(HFence fence, CommandQueue::Id queue, uint64_t value);
-	//void Wait(HFence fence, uint64_t value);
-	//void DestroyFence(HFence fence);
-
 	HBuffer CreateBuffer(const BufferDesc& desc);
 	void DestroyBuffer(HBuffer buffer);
 	void* MapBuffer(HBuffer buffer);
@@ -354,7 +347,6 @@ namespace RHI
 	void CmdSetViewport(uint32_t x, uint32_t y, uint32_t w, uint32_t h, float minDepth = 0.0f, float maxDepth = 1.0f);
 	void CmdSetScissor(uint32_t x, uint32_t y, uint32_t w, uint32_t h);
 	void CmdSetRootConstants(HRootSignature rootSignature, ShaderType::Id shaderType, const void* constants);
-	//void CmdSetRootDescriptorTable(HRootSignature rootSignature, HDescriptorTable table);
 	void CmdDraw(uint32_t vertexCount, uint32_t firstVertex);
 	void CmdDrawIndexed(uint32_t indexCount, uint32_t firstIndex, uint32_t firstVertex);
 	HDurationQuery CmdBeginDurationQuery(const char* name);

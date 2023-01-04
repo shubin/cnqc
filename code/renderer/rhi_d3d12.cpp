@@ -137,13 +137,6 @@ namespace RHI
 		};
 	};
 
-	struct Fence
-	{
-		ID3D12Fence* fence;
-		HANDLE fenceEvent;
-		UINT64 fenceValue;
-	};
-
 	struct Buffer
 	{
 		BufferDesc desc;
@@ -208,16 +201,19 @@ namespace RHI
 		ID3D12CommandQueue* commandQueue;
 		ID3D12CommandAllocator* commandAllocator;
 		ID3D12GraphicsCommandList* commandList;
-	};
+	};*/
 
 	struct Fence
 	{
-		void Create();
+		void Create(UINT64 value, const char* name);
+		void Signal(ID3D12CommandQueue* queue, UINT64 value);
+		void Wait(UINT64 value);
+		bool HasCompleted(UINT64 value);
 		void Release();
 
 		ID3D12Fence* fence;
-		HANDLE fenceEvent;
-	};*/
+		HANDLE event;
+	};
 
 	struct Upload
 	{
@@ -259,7 +255,7 @@ namespace RHI
 
 	struct ShaderVisibleDescriptorHeap
 	{
-		void Init(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t* descriptors, uint32_t count, const char* name);
+		void Create(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t* descriptors, uint32_t count, const char* name);
 		void Release();
 		uint32_t AllocateDescriptor();
 		void FreeDescriptor(uint32_t index);
@@ -293,8 +289,7 @@ namespace RHI
 		ID3D12CommandAllocator* commandAllocators[FrameCount];
 		ID3D12GraphicsCommandList* commandList;
 		UINT frameIndex;
-		HANDLE fenceEvent;
-		ID3D12Fence* fence;
+		Fence fence;
 		UINT64 fenceValues[FrameCount];
 		ID3D12QueryHeap* timeStampHeap;
 		HBuffer timeStampBuffer;
@@ -303,7 +298,6 @@ namespace RHI
 		HRootSignature currentRootSignature;
 
 #define POOL(Type, Size) StaticPool<Type, H##Type, ResourceType::Type, Size>
-		POOL(Fence, 64) fences;
 		POOL(Buffer, 64) buffers;
 		POOL(Texture, MAX_DRAWIMAGES * 2) textures;
 		POOL(RootSignature, 64) rootSignatures;
@@ -399,7 +393,7 @@ namespace RHI
 		resource->SetPrivateData(WKPDID_D3DDebugObjectName, strlen(resourceName), resourceName);
 	}
 
-	void ShaderVisibleDescriptorHeap::Init(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t* descriptors, uint32_t count, const char* name)
+	void ShaderVisibleDescriptorHeap::Create(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t* descriptors, uint32_t count, const char* name)
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC heapDesc = { 0 };
 		heapDesc.Type = type;
@@ -443,6 +437,44 @@ namespace RHI
 		const uint32_t oldList = mDescriptorFreeList;
 		mDescriptorFreeList = index;
 		mDescriptors[index] = oldList;
+	}
+
+	void Fence::Create(UINT64 value, const char* name)
+	{
+		D3D(rhi.device->CreateFence(value, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)));
+		SetDebugName(fence, name);
+
+		event = CreateEvent(NULL, FALSE, FALSE, NULL);
+		if(event == NULL)
+		{
+			Check(HRESULT_FROM_WIN32(GetLastError()), "CreateEvent");
+		}
+	}
+
+	void Fence::Signal(ID3D12CommandQueue* queue, UINT64 value)
+	{
+		D3D(queue->Signal(fence, value));
+	}
+
+	void Fence::Wait(UINT64 value)
+	{
+		if(fence->GetCompletedValue() < value)
+		{
+			D3D(fence->SetEventOnCompletion(value, event));
+			WaitForSingleObjectEx(event, INFINITE, FALSE);
+		}
+	}
+
+	bool Fence::HasCompleted(UINT64 value)
+	{
+		return fence->GetCompletedValue() >= value;
+	}
+
+	void Fence::Release()
+	{
+		CloseHandle(event);
+		event = NULL;
+		COM_RELEASE(fence);
 	}
 
 	static const char* GetDeviceRemovedReasonString(HRESULT reason)
@@ -528,27 +560,16 @@ namespace RHI
 	static void MoveToNextFrame()
 	{
 		const UINT64 currentFenceValue = rhi.fenceValues[rhi.frameIndex];
-		D3D(rhi.commandQueue->Signal(rhi.fence, currentFenceValue));
-
+		rhi.fence.Signal(rhi.commandQueue, currentFenceValue);
 		rhi.frameIndex = rhi.swapChain->GetCurrentBackBufferIndex();
-
-		// wait indefinitely to start rendering if needed
-		if(rhi.fence->GetCompletedValue() < rhi.fenceValues[rhi.frameIndex])
-		{
-			D3D(rhi.fence->SetEventOnCompletion(rhi.fenceValues[rhi.frameIndex], rhi.fenceEvent));
-			WaitForSingleObjectEx(rhi.fenceEvent, INFINITE, FALSE);
-		}
-
+		rhi.fence.Wait(rhi.fenceValues[rhi.frameIndex]);
 		rhi.fenceValues[rhi.frameIndex] = currentFenceValue + 1;
 	}
 
 	static void WaitUntilDeviceIsIdle()
 	{
-		D3D(rhi.commandQueue->Signal(rhi.fence, rhi.fenceValues[rhi.frameIndex]));
-
-		D3D(rhi.fence->SetEventOnCompletion(rhi.fenceValues[rhi.frameIndex], rhi.fenceEvent));
-		WaitForSingleObjectEx(rhi.fenceEvent, INFINITE, FALSE);
-
+		rhi.fence.Signal(rhi.commandQueue, rhi.fenceValues[rhi.frameIndex]);
+		rhi.fence.Wait(rhi.fenceValues[rhi.frameIndex]);
 		rhi.fenceValues[rhi.frameIndex]++;
 	}
 
@@ -937,8 +958,8 @@ namespace RHI
 		}
 #endif
 
-		rhi.descHeapTex2D.Init(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, rhi.descTex2D, ARRAY_LEN(rhi.descTex2D), "Texture2D heap");
-		rhi.descHeapSamplers.Init(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, rhi.descSamplers, ARRAY_LEN(rhi.descSamplers), "Sampler heap");
+		rhi.descHeapTex2D.Create(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, rhi.descTex2D, ARRAY_LEN(rhi.descTex2D), "Texture2D heap");
+		rhi.descHeapSamplers.Create(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, rhi.descSamplers, ARRAY_LEN(rhi.descSamplers), "Sampler heap");
 
 		{
 			D3D12_COMMAND_QUEUE_DESC commandQueueDesc = { 0 };
@@ -1006,15 +1027,8 @@ namespace RHI
 		D3D(rhi.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, rhi.commandAllocators[rhi.frameIndex], NULL, IID_PPV_ARGS(&rhi.commandList)));
 		SetDebugName(rhi.commandList, "Command List");
 
-		D3D(rhi.device->CreateFence(rhi.fenceValues[rhi.frameIndex], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&rhi.fence)));
-		SetDebugName(rhi.fence, "Command Queue Fence");
+		rhi.fence.Create(rhi.fenceValues[rhi.frameIndex], "Command Queue Fence");
 		rhi.fenceValues[rhi.frameIndex]++;
-
-		rhi.fenceEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-		if(rhi.fenceEvent == NULL)
-		{
-			Check(HRESULT_FROM_WIN32(GetLastError()), "CreateEvent");
-		}
 
 		{
 			D3D12_DESCRIPTOR_HEAP_DESC heapDesc = { 0 };
@@ -1139,6 +1153,7 @@ namespace RHI
 
 		rhi.descHeapTex2D.Release();
 		rhi.descHeapSamplers.Release();
+		rhi.fence.Release();
 
 		//DESTROY_POOL(fences, DestroyFence);
 		DESTROY_POOL(buffers, DestroyBuffer);
@@ -1153,8 +1168,6 @@ namespace RHI
 		COM_RELEASE(rhi.upload.commandQueue);
 
 		COM_RELEASE(rhi.timeStampHeap);
-		CloseHandle(rhi.fenceEvent);
-		COM_RELEASE(rhi.fence);
 		COM_RELEASE(rhi.commandList);
 		COM_RELEASE_ARRAY(rhi.commandAllocators);
 		COM_RELEASE_ARRAY(rhi.renderTargets);
@@ -1280,27 +1293,6 @@ namespace RHI
 	uint32_t GetFrameIndex()
 	{
 		return rhi.frameIndex;
-	}
-
-	HFence CreateFence()
-	{
-		// @TODO:
-		Fence fence = { 0 };
-		//fence.fence = ;
-		//fence.fenceEvent = ;
-		//fence.fenceValue = ;
-
-		return rhi.fences.Add(fence);
-	}
-
-	void DestroyFence(HFence fence)
-	{
-		// @TODO:
-	}
-
-	void WaitForAllFences(uint32_t fenceCount, const HFence* fences)
-	{
-		// @TODO:
 	}
 
 	HBuffer CreateBuffer(const BufferDesc& rhiDesc)
@@ -1868,18 +1860,6 @@ namespace RHI
 		// @TODO: decide between graphics and compute!
 		rhi.commandList->SetGraphicsRoot32BitConstants(parameterIndex, constantCount, constants, 0);
 	}
-
-	/*void CmdSetRootDescriptorTable(uint32_t tableIndex, HDescriptorTable descriptorTable)
-	{
-		Q_assert(CanWriteCommands());
-
-		//const DescriptorTable& table = rhi.descriptorTables.Get(descriptorTable);
-		//const RootSignature& sig = rhi.rootSignatures.Get(table.rootSignature);
-		//const uint32_t index = 2 + tableIndex; // @TODO: grab the real offset
-
-		// @TODO: decide between graphics and compute!
-		//rhi.commandList->SetGraphicsRootDescriptorTable(index, );
-	}*/
 
 	void CmdDraw(uint32_t vertexCount, uint32_t firstVertex)
 	{
