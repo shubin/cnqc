@@ -25,11 +25,10 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 
 
 const char* vs = R"grml(
-struct RootConstants
+cbuffer RootConstants
 {
 	float2 scale;
 };
-ConstantBuffer<RootConstants> rc : register(b0, space0);
 
 struct VIn
 {
@@ -47,7 +46,7 @@ struct VOut
 
 VOut main(VIn input)
 {
-	const float2 position = input.position * rc.scale;
+	const float2 position = input.position * scale;
 	VOut output;
 	output.position = float4(position.x - 1.0, 1.0 - position.y, 0.0, 1.0);
 	output.texCoords = input.texCoords;
@@ -58,15 +57,14 @@ VOut main(VIn input)
 )grml";
 
 const char* ps = R"grml(
-struct RootConstants
+cbuffer RootConstants
 {
 	uint textureIndex;
 	uint samplerIndex;
 };
-ConstantBuffer<RootConstants> rc : register(b0, space0);
 
-Texture2D textureX[2048] : register(t0);
-SamplerState samplerX : register(s0);
+Texture2D textures2D[2048] : register(t0);
+SamplerState samplers[1] : register(s0);
 
 struct VOut
 {
@@ -77,7 +75,7 @@ struct VOut
 
 float4 main(VOut input) : SV_TARGET
 {
-	return textureX[rc.textureIndex].Sample(samplerX, input.texCoords) * input.color;
+	return textures2D[textureIndex].Sample(samplers[samplerIndex], input.texCoords) * input.color;
 }
 )grml";
 
