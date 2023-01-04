@@ -215,8 +215,13 @@ namespace RHI
 		HANDLE event;
 	};
 
-	struct Upload
+	struct TextureUpload
 	{
+		void Create();
+		void Wait(ID3D12CommandQueue* queue);
+		void Upload(HTexture handle, const TextureUploadDesc& desc);
+		void Release();
+
 		ID3D12CommandQueue* commandQueue;
 		ID3D12CommandAllocator* commandAllocator;
 		ID3D12GraphicsCommandList* commandList;
@@ -304,7 +309,7 @@ namespace RHI
 		POOL(Pipeline, 64) pipelines;
 #undef POOL
 
-		Upload upload;
+		TextureUpload upload;
 		StaticUnorderedArray<HTexture, MAX_DRAWIMAGES> texturesToTransition;
 		FrameQueries frameQueries[FrameCount];
 		ResolvedQueries resolvedQueries;
@@ -393,6 +398,29 @@ namespace RHI
 		resource->SetPrivateData(WKPDID_D3DDebugObjectName, strlen(resourceName), resourceName);
 	}
 
+	static UINT64 GetUploadBufferSize(ID3D12Resource* resource, UINT firstSubresource, UINT subresourceCount)
+	{
+		UINT64 requiredSize = 0;
+		const D3D12_RESOURCE_DESC desc = resource->GetDesc();
+		rhi.device->GetCopyableFootprints(&desc, firstSubresource, subresourceCount, 0, NULL, NULL, NULL, &requiredSize);
+
+		return requiredSize;
+	}
+
+	static UINT IsPowerOfTwo(UINT x)
+	{
+		return x > 0 && (x & (x - 1)) == 0;
+	}
+
+	static UINT AlignUp(UINT value, UINT alignment)
+	{
+		Q_assert(IsPowerOfTwo(alignment));
+
+		const UINT mask = alignment - 1;
+
+		return (value + mask) & (~mask);
+	}
+
 	void ShaderVisibleDescriptorHeap::Create(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t* descriptors, uint32_t count, const char* name)
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC heapDesc = { 0 };
@@ -475,6 +503,121 @@ namespace RHI
 		CloseHandle(event);
 		event = NULL;
 		COM_RELEASE(fence);
+	}
+
+	void TextureUpload::Create()
+	{
+		{
+			BufferDesc bufferDesc = { 0 };
+			bufferDesc.name = "upload buffer";
+			bufferDesc.byteCount = 64 << 20;
+			bufferDesc.memoryUsage = MemoryUsage::Upload;
+			bufferDesc.initialState = ResourceState::CopyDestinationBit;
+			bufferDesc.committedResource = true;
+			buffer = CreateBuffer(bufferDesc);
+			bufferByteCount = bufferDesc.byteCount;
+		}
+
+		{
+			D3D12_COMMAND_QUEUE_DESC desc = { 0 };
+			desc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
+			desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+			desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+			desc.NodeMask = 0;
+			D3D(rhi.device->CreateCommandQueue(&desc, IID_PPV_ARGS(&commandQueue)));
+			SetDebugName(commandQueue, "copy command queue");
+		}
+
+		D3D(rhi.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(&commandAllocator)));
+		SetDebugName(commandAllocator, "copy command allocator");
+
+		D3D(rhi.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, commandAllocator, NULL, IID_PPV_ARGS(&commandList)));
+		SetDebugName(commandList, "copy command list");
+		D3D(commandList->Close());
+
+		fence.Create(0, "copy queue fence");
+	}
+
+	void TextureUpload::Wait(ID3D12CommandQueue* queue)
+	{
+		queue->Wait(fence.fence, fenceValue);
+	}
+
+	void TextureUpload::Upload(HTexture handle, const TextureUploadDesc& desc)
+	{
+		// @TODO: support for sub-regions so that internal lightmaps get handled right
+
+		Texture& texture = rhi.textures.Get(handle);
+
+		// otherwise the pitch is computed wrong!
+		Q_assert(texture.desc.format == TextureFormat::RGBA32_UNorm);
+
+		const UINT64 uploadByteCount = GetUploadBufferSize(texture.texture, 0, 1);
+		if(uploadByteCount > bufferByteCount)
+		{
+			ri.Error(ERR_FATAL, "Upload request too large!\n");
+		}
+
+		D3D12_RESOURCE_DESC textureDesc = texture.texture->GetDesc();
+		uint64_t textureMemorySize = 0;
+		UINT numRows[16];
+		UINT64 rowSizesInBytes[16];
+		D3D12_PLACED_SUBRESOURCE_FOOTPRINT layouts[16];
+		const uint64_t numSubResources = texture.desc.mipCount;
+		rhi.device->GetCopyableFootprints(&textureDesc, 0, (uint32_t)numSubResources, 0, layouts, numRows, rowSizesInBytes, &textureMemorySize);
+
+		fence.Wait(fenceValue);
+		fenceValue++;
+
+		{
+			byte* const uploadMemory = (byte*)MapBuffer(buffer);
+
+			const byte* sourceSubResourceMemory = (const byte*)desc.data;
+			const uint64_t subResourceIndex = 0;
+			const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& subResourceLayout = layouts[subResourceIndex];
+			const uint64_t subResourceHeight = numRows[subResourceIndex];
+			const uint64_t subResourcePitch = AlignUp(subResourceLayout.Footprint.RowPitch, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
+			const uint64_t sourceRowPitch = desc.width * 4; // @TODO: compute the pitch properly baded on the format...
+			uint8_t* destinationSubResourceMemory = uploadMemory + subResourceLayout.Offset;
+
+			for(uint64_t height = 0; height < subResourceHeight; height++)
+			{
+				memcpy(destinationSubResourceMemory, sourceSubResourceMemory, min(subResourcePitch, sourceRowPitch));
+				destinationSubResourceMemory += subResourcePitch;
+				sourceSubResourceMemory += sourceRowPitch;
+			}
+
+			UnmapBuffer(buffer);
+		}
+
+		D3D(commandAllocator->Reset());
+		D3D(commandList->Reset(commandAllocator, NULL));
+
+		Buffer& bufferRef = rhi.buffers.Get(buffer);
+		D3D12_TEXTURE_COPY_LOCATION dstLoc = { 0 };
+		D3D12_TEXTURE_COPY_LOCATION srcLoc = { 0 };
+		dstLoc.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+		dstLoc.pResource = texture.texture;
+		dstLoc.SubresourceIndex = 0;
+		srcLoc.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+		srcLoc.pResource = bufferRef.buffer;
+		srcLoc.PlacedFootprint = layouts[0];
+		commandList->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, NULL);
+
+		ID3D12CommandList* commandLists[] = { commandList };
+		D3D(commandList->Close());
+		commandQueue->ExecuteCommandLists(ARRAY_LEN(commandLists), commandLists);
+		commandQueue->Signal(fence.fence, fenceValue);
+
+		rhi.texturesToTransition.Add(handle);
+	}
+
+	void TextureUpload::Release()
+	{
+		fence.Release();
+		COM_RELEASE(commandList);
+		COM_RELEASE(commandAllocator);
+		COM_RELEASE(commandQueue);
 	}
 
 	static const char* GetDeviceRemovedReasonString(HRESULT reason)
@@ -769,29 +912,6 @@ namespace RHI
 		}
 	}
 
-	static UINT64 GetUploadBufferSize(ID3D12Resource* resource, UINT firstSubresource, UINT subresourceCount)
-	{
-		UINT64 requiredSize = 0;
-		const D3D12_RESOURCE_DESC desc = resource->GetDesc();
-		rhi.device->GetCopyableFootprints(&desc, firstSubresource, subresourceCount, 0, NULL, NULL, NULL, &requiredSize);
-
-		return requiredSize;
-	}
-
-	static UINT IsPowerOfTwo(UINT x)
-	{
-		return x > 0 && (x & (x - 1)) == 0;
-	}
-
-	static UINT AlignUp(UINT value, UINT alignment)
-	{
-		Q_assert(IsPowerOfTwo(alignment));
-
-		const UINT mask = alignment - 1;
-
-		return (value + mask) & (~mask);
-	}
-
 	static void ResolveDurationQueries()
 	{
 		UINT64 gpuFrequency;
@@ -1053,35 +1173,7 @@ namespace RHI
 			rhi.device->CreateSampler(&desc, rhi.descHeapSamplers.mHeap->GetCPUDescriptorHandleForHeapStart());
 		}
 
-		{
-			BufferDesc bufferDesc = { 0 };
-			bufferDesc.name = "upload buffer";
-			bufferDesc.byteCount = 64 << 20;
-			bufferDesc.memoryUsage = MemoryUsage::Upload;
-			bufferDesc.initialState = ResourceState::CopyDestinationBit;
-			bufferDesc.committedResource = true;
-			rhi.upload.buffer = CreateBuffer(bufferDesc);
-			rhi.upload.bufferByteCount = bufferDesc.byteCount;
-		}
-
-		{
-			D3D12_COMMAND_QUEUE_DESC desc = { 0 };
-			desc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
-			desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-			desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-			desc.NodeMask = 0;
-			D3D(rhi.device->CreateCommandQueue(&desc, IID_PPV_ARGS(&rhi.upload.commandQueue)));
-			SetDebugName(rhi.upload.commandQueue, "copy command queue");
-		}
-
-		D3D(rhi.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(&rhi.upload.commandAllocator)));
-		SetDebugName(rhi.upload.commandAllocator, "copy command allocator");
-
-		D3D(rhi.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, rhi.upload.commandAllocator, NULL, IID_PPV_ARGS(&rhi.upload.commandList)));
-		SetDebugName(rhi.upload.commandList, "copy command list");
-		D3D(rhi.upload.commandList->Close());
-
-		rhi.upload.fence.Create(0, "copy queue fence");
+		rhi.upload.Create();
 
 		{
 			rhi.durationQueryIndex = 0;
@@ -1144,20 +1236,15 @@ namespace RHI
 
 		WaitUntilDeviceIsIdle();
 
+		rhi.upload.Release();
 		rhi.descHeapTex2D.Release();
 		rhi.descHeapSamplers.Release();
 		rhi.fence.Release();
 
-		//DESTROY_POOL(fences, DestroyFence);
 		DESTROY_POOL(buffers, DestroyBuffer);
 		DESTROY_POOL(textures, DestroyTexture);
 		DESTROY_POOL(rootSignatures, DestroyRootSignature);
 		DESTROY_POOL(pipelines, DestroyPipeline);
-
-		rhi.upload.fence.Release();
-		COM_RELEASE(rhi.upload.commandList);
-		COM_RELEASE(rhi.upload.commandAllocator);
-		COM_RELEASE(rhi.upload.commandQueue);
 
 		COM_RELEASE(rhi.timeStampHeap);
 		COM_RELEASE(rhi.commandList);
@@ -1195,7 +1282,7 @@ namespace RHI
 		rhi.currentRootSignature = MAKE_NULL_HANDLE();
 
 		// wait for pending copies from the upload buffer to textures to be finished
-		rhi.commandQueue->Wait(rhi.upload.fence.fence, rhi.upload.fenceValue);
+		rhi.upload.Wait(rhi.commandQueue);
 
 		// reclaim used memory
 		D3D(rhi.commandAllocators[rhi.frameIndex]->Reset());
@@ -1469,71 +1556,7 @@ namespace RHI
 
 	void UploadTextureMip0(HTexture handle, const TextureUploadDesc& desc)
 	{
-		// @TODO: support for sub-regions so that internal lightmaps get handled right
-
-		Texture& texture = rhi.textures.Get(handle);
-
-		// otherwise the pitch is computed wrong!
-		Q_assert(texture.desc.format == TextureFormat::RGBA32_UNorm);
-
-		const UINT64 uploadByteCount = GetUploadBufferSize(texture.texture, 0, 1);
-		if(uploadByteCount > rhi.upload.bufferByteCount)
-		{
-			ri.Error(ERR_FATAL, "Upload request too large!\n");
-		}
-
-		D3D12_RESOURCE_DESC textureDesc = texture.texture->GetDesc();
-		uint64_t textureMemorySize = 0;
-		UINT numRows[16];
-		UINT64 rowSizesInBytes[16];
-		D3D12_PLACED_SUBRESOURCE_FOOTPRINT layouts[16];
-		const uint64_t numSubResources = texture.desc.mipCount;
-		rhi.device->GetCopyableFootprints(&textureDesc, 0, (uint32_t)numSubResources, 0, layouts, numRows, rowSizesInBytes, &textureMemorySize);
-
-		rhi.upload.fence.Wait(rhi.upload.fenceValue);
-		rhi.upload.fenceValue++;
-
-		{
-			byte* const uploadMemory = (byte*)MapBuffer(rhi.upload.buffer);
-
-			const byte* sourceSubResourceMemory = (const byte*)desc.data;
-			const uint64_t subResourceIndex = 0;
-			const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& subResourceLayout = layouts[subResourceIndex];
-			const uint64_t subResourceHeight = numRows[subResourceIndex];
-			const uint64_t subResourcePitch = AlignUp(subResourceLayout.Footprint.RowPitch, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
-			const uint64_t sourceRowPitch = desc.width * 4; // @TODO: compute the pitch properly baded on the format...
-			uint8_t* destinationSubResourceMemory = uploadMemory + subResourceLayout.Offset;
-
-			for(uint64_t height = 0; height < subResourceHeight; height++)
-			{
-				memcpy(destinationSubResourceMemory, sourceSubResourceMemory, min(subResourcePitch, sourceRowPitch));
-				destinationSubResourceMemory += subResourcePitch;
-				sourceSubResourceMemory += sourceRowPitch;
-			}
-
-			UnmapBuffer(rhi.upload.buffer);
-		}
-
-		D3D(rhi.upload.commandAllocator->Reset());
-		D3D(rhi.upload.commandList->Reset(rhi.upload.commandAllocator, NULL));
-
-		Buffer& buffer = rhi.buffers.Get(rhi.upload.buffer);
-		D3D12_TEXTURE_COPY_LOCATION dstLoc = { 0 };
-		D3D12_TEXTURE_COPY_LOCATION srcLoc = { 0 };
-		dstLoc.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-		dstLoc.pResource = texture.texture;
-		dstLoc.SubresourceIndex = 0;
-		srcLoc.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-		srcLoc.pResource = buffer.buffer;
-		srcLoc.PlacedFootprint = layouts[0];
-		rhi.upload.commandList->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, NULL);
-
-		ID3D12CommandList* commandLists[] = { rhi.upload.commandList };
-		D3D(rhi.upload.commandList->Close());
-		rhi.upload.commandQueue->ExecuteCommandLists(ARRAY_LEN(commandLists), commandLists);
-		rhi.upload.commandQueue->Signal(rhi.upload.fence.fence, rhi.upload.fenceValue);
-
-		rhi.texturesToTransition.Add(handle);
+		rhi.upload.Upload(handle, desc);
 	}
 
 	void GenerateTextureMips(HTexture texture)
