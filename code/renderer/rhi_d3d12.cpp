@@ -712,25 +712,19 @@ namespace RHI
 
 	static void ResolveDurationQueries()
 	{
-		const uint32_t frameIndex = rhi.frameIndex;
-		FrameQueries& fq = rhi.frameQueries[frameIndex];
-		ResolvedQueries& rq = rhi.resolvedQueries;
-
 		UINT64 gpuFrequency;
 		D3D(rhi.commandQueue->GetTimestampFrequency(&gpuFrequency));
 		const double frequency = (double)gpuFrequency;
 
-		const Buffer& buffer = rhi.buffers.Get(rhi.timeStampBuffer);
+		const uint32_t frameIndex = rhi.frameIndex ^ 1;
+		FrameQueries& fq = rhi.frameQueries[frameIndex];
+		ResolvedQueries& rq = rhi.resolvedQueries;
 		const UINT64* const timeStamps = rhi.mappedTimeStamps + (frameIndex * MaxDurationQueries * 2);
 
 		for(uint32_t q = 0; q < fq.durationQueryCount; ++q)
 		{
 			DurationQuery& dq = fq.durationQueries[q];
 			ResolvedDurationQuery& rdq = rq.durationQueries[q];
-
-			const UINT64 destIndex = (frameIndex * MaxDurationQueries * 2) + dq.queryIndex;
-			const UINT64 destByteOffset = destIndex * sizeof(UINT64);
-			rhi.commandList->ResolveQueryData(rhi.timeStampHeap, D3D12_QUERY_TYPE_TIMESTAMP, dq.queryIndex, 2, buffer.buffer, destByteOffset);
 
 			const UINT64 begin = timeStamps[dq.queryIndex * 2 + 0];
 			const UINT64 end = timeStamps[dq.queryIndex * 2 + 1];
@@ -1220,7 +1214,6 @@ namespace RHI
 		rhi.commandList->ResourceBarrier(1, &barrier);
 
 		CmdEndDurationQuery(frameDuration);
-		ResolveDurationQueries();
 
 		// stop recording
 		D3D(rhi.commandList->Close());
@@ -1231,6 +1224,8 @@ namespace RHI
 		Present();
 
 		MoveToNextFrame();
+
+		ResolveDurationQueries();
 	}
 
 	uint32_t GetFrameIndex()
@@ -1903,6 +1898,13 @@ namespace RHI
 		Q_assert(query.state == QueryState::Begun);
 		const UINT endIndex = query.queryIndex * 2 + 1;
 		rhi.commandList->EndQuery(rhi.timeStampHeap, D3D12_QUERY_TYPE_TIMESTAMP, endIndex);
+		
+		const Buffer& buffer = rhi.buffers.Get(rhi.timeStampBuffer);
+		const UINT timeStampIndex = query.queryIndex * 2;
+		const UINT64 destIndex = (rhi.frameIndex * MaxDurationQueries * 2) + timeStampIndex;
+		const UINT64 destByteOffset = destIndex * sizeof(UINT64);
+		rhi.commandList->ResolveQueryData(rhi.timeStampHeap, D3D12_QUERY_TYPE_TIMESTAMP, timeStampIndex, 2, buffer.buffer, destByteOffset);
+
 		query.state = QueryState::Ended;
 	}
 
