@@ -152,12 +152,8 @@ namespace RHI
 		D3D12MA::Allocation* allocation;
 		ID3D12Resource* texture;
 		uint32_t srvIndex;
-		struct SubResource
-		{
-			ResourceState::Flags state;
-			// additional views here?
-		}
-		subResources[16];
+		//uint32_t uavIndex; // @TODO:
+		D3D12_RESOURCE_STATES currentState;
 	};
 
 	struct RootSignature
@@ -528,22 +524,22 @@ namespace RHI
 
 		{
 			D3D12_COMMAND_QUEUE_DESC desc = { 0 };
-			desc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
+			desc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
 			desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 			desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
 			desc.NodeMask = 0;
 			D3D(rhi.device->CreateCommandQueue(&desc, IID_PPV_ARGS(&commandQueue)));
-			SetDebugName(commandQueue, "copy command queue");
+			SetDebugName(commandQueue, "compute command queue");
 		}
 
-		D3D(rhi.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(&commandAllocator)));
-		SetDebugName(commandAllocator, "copy command allocator");
+		D3D(rhi.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COMPUTE, IID_PPV_ARGS(&commandAllocator)));
+		SetDebugName(commandAllocator, "compute command allocator");
 
-		D3D(rhi.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, commandAllocator, NULL, IID_PPV_ARGS(&commandList)));
-		SetDebugName(commandList, "copy command list");
+		D3D(rhi.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COMPUTE, commandAllocator, NULL, IID_PPV_ARGS(&commandList)));
+		SetDebugName(commandList, "compute command list");
 		D3D(commandList->Close());
 
-		fence.Create(0, "copy queue fence");
+		fence.Create(0, "compute queue fence");
 		fenceValue = 0;
 	}
 
@@ -582,7 +578,6 @@ namespace RHI
 		const uint64_t numSubResources = texture.desc.mipCount;
 		rhi.device->GetCopyableFootprints(&textureDesc, 0, (uint32_t)numSubResources, 0, layouts, numRows, rowSizesInBytes, &textureMemorySize);
 
-
 		{
 			byte* const uploadMemory = (byte*)MapBuffer(buffer) + bufferByteOffset;
 
@@ -607,17 +602,31 @@ namespace RHI
 		D3D(commandAllocator->Reset());
 		D3D(commandList->Reset(commandAllocator, NULL));
 
-		Buffer& bufferRef = rhi.buffers.Get(buffer);
-		D3D12_TEXTURE_COPY_LOCATION dstLoc = { 0 };
-		D3D12_TEXTURE_COPY_LOCATION srcLoc = { 0 };
-		dstLoc.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-		dstLoc.pResource = texture.texture;
-		dstLoc.SubresourceIndex = 0;
-		srcLoc.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-		srcLoc.pResource = bufferRef.buffer;
-		srcLoc.PlacedFootprint = layouts[0];
-		srcLoc.PlacedFootprint.Offset = bufferByteOffset;
-		commandList->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, NULL);
+		{
+			Buffer& bufferRef = rhi.buffers.Get(buffer);
+			D3D12_TEXTURE_COPY_LOCATION dstLoc = { 0 };
+			D3D12_TEXTURE_COPY_LOCATION srcLoc = { 0 };
+			dstLoc.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+			dstLoc.pResource = texture.texture;
+			dstLoc.SubresourceIndex = 0;
+			srcLoc.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+			srcLoc.pResource = bufferRef.buffer;
+			srcLoc.PlacedFootprint = layouts[0];
+			srcLoc.PlacedFootprint.Offset = bufferByteOffset;
+			commandList->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, NULL);
+		}
+
+		{
+			D3D12_RESOURCE_BARRIER barrier = { 0 };
+			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+			barrier.Transition.pResource = texture.texture;
+			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+			barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+			commandList->ResourceBarrier(1, &barrier);
+			texture.currentState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+		}
 
 		ID3D12CommandList* commandLists[] = { commandList };
 		D3D(commandList->Close());
@@ -1328,20 +1337,18 @@ namespace RHI
 		const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 		rhi.commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, NULL);
 
-		// @TODO: keep this? run through compute queue first?
 		for(uint32_t t = 0; t < rhi.texturesToTransition.count; ++t)
 		{
-			// @TODO: transition all mips anyway?
 			Texture& texture = rhi.textures.Get(rhi.texturesToTransition[t]);
 			D3D12_RESOURCE_BARRIER b = { 0 };
 			b.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 			b.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
 			b.Transition.pResource = texture.texture;
-			b.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+			b.Transition.StateBefore = texture.currentState;
 			b.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-			b.Transition.Subresource = 0;
+			b.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 			rhi.commandList->ResourceBarrier(1, &b);
-			texture.subResources[0].state = ResourceState::PixelShaderAccessBit;
+			texture.currentState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 		}
 		rhi.texturesToTransition.Clear();
 	}
@@ -1495,7 +1502,7 @@ namespace RHI
 		Q_assert(rhiDesc.height > 0);
 		Q_assert(rhiDesc.sampleCount > 0);
 		Q_assert(rhiDesc.mipCount > 0);
-		Q_assert(rhiDesc.mipCount <= ARRAY_LEN(Texture::subResources));
+		Q_assert(rhiDesc.mipCount <= MaxTextureMips);
 
 		// alignment must be 64KB (D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT) or 0, which is effectively 64KB.
 		// https://msdn.microsoft.com/en-us/library/windows/desktop/dn903813(v=vs.85).aspx
@@ -1564,10 +1571,7 @@ namespace RHI
 		texture.allocation = allocation;
 		texture.texture = resource;
 		texture.srvIndex = srvIndex;
-		for(int m = 0; m < rhiDesc.mipCount; ++m)
-		{
-			texture.subResources[m].state = rhiDesc.initialState;
-		}
+		texture.currentState = D3D12_RESOURCE_STATE_COPY_DEST;
 
 		return rhi.textures.Add(texture);
 	}

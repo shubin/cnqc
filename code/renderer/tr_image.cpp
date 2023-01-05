@@ -236,7 +236,7 @@ static void CreateTexture( image_t* image, int mipCount, int width, int height )
 	desc.mipCount = mipCount;
 	desc.name = image->name;
 	desc.sampleCount = 1;
-	desc.initialState = RHI::ResourceState::ShaderAccessBits;
+	desc.initialState = RHI::ResourceState::ShaderAccessBits | RHI::ResourceState::UnorderedAccessBit;
 	desc.committedResource = true;
 	image->texture = RHI::CreateTexture(desc);
 	image->textureIndex = RHI::GetTextureSRV(image->texture);
@@ -339,7 +339,9 @@ static void Upload32( image_t* image, unsigned int* data )
 
 	// @TODO: only do mip map generation in a compute shader
 	// --> kill the old crappy code that follows when done
-	if ( qtrue && image->format == TF_RGBA8 && ( image->flags & IMG_NOMIPMAP ) == 0 ) {
+	//if ( image->format == TF_RGBA8 && ( image->flags & IMG_NOMIPMAP ) == 0 ) {
+	// @TODO: don't force mip-mapping anymore once it's been validated
+	if ( image->format == TF_RGBA8 ) {
 		const int w = image->width;
 		const int h = image->height;
 		const int mipCount = ComputeMipCount( w, h );
