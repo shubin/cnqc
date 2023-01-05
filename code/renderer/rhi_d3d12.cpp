@@ -1653,6 +1653,10 @@ namespace RHI
 			filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
 			maxAnisotropy = 1;
 		}
+		if(filter != D3D12_FILTER_ANISOTROPIC)
+		{
+			maxAnisotropy = 1;
+		}
 
 		D3D12_SAMPLER_DESC desc = { 0 };
 		desc.AddressU = addressMode;
@@ -1854,7 +1858,7 @@ namespace RHI
 			{
 				Handle htype, index, gen;
 				DecomposeHandle(&htype, &index, &gen, samplers[i].v);
-				CopyDescriptor(table.samplerHeap, firstIndex, rhi.descHeapSamplers, index, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+				CopyDescriptor(table.samplerHeap, firstIndex + i, rhi.descHeapSamplers, index, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 			}
 		}
 		else
