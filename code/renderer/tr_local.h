@@ -34,6 +34,7 @@ namespace RHI
 {
 	// @TODO: move to own header file to be included by both C++ and HLSL code
 #define RHI_MAX_TEXTURES_2D 4096 // real max: unlimited
+#define RHI_MAX_RW_TEXTURES_2D 64 // real max: 64
 #define RHI_MAX_SAMPLERS 64 // real max: 2048
 #define RHI_SPACE_TEXTURE2D 0
 #define RHI_SPACE_SAMPLERS 0
@@ -691,6 +692,50 @@ private:
 public:
 	T items[N];
 	uint32_t count;
+};
+
+template<typename T, uint32_t N, uint32_t Invalid>
+struct StaticFreeList
+{
+	StaticFreeList()
+	{
+		Clear();
+	}
+
+	uint32_t Allocate()
+	{
+		Q_assert(firstFree != Invalid);
+		// @TODO: fatal error in release
+
+		const T index = firstFree;
+		firstFree = items[index];
+		items[index] = Invalid;
+
+		return index;
+	}
+
+	void Free(uint32_t index)
+	{
+		Q_assert(index < N);
+		// @TODO: fatal error in release
+
+		const T oldList = firstFree;
+		firstFree = index;
+		items[index] = oldList;
+	}
+
+	void Clear()
+	{
+		for(uint32_t i = 0; i < N - 1; ++i)
+		{
+			items[i] = i + 1;
+		}
+		items[N - 1] = Invalid;
+		firstFree = 0;
+	}
+
+	T items[N];
+	T firstFree;
 };
 
 

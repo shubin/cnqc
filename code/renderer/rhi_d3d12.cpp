@@ -76,6 +76,17 @@ SetPredication
 EndQuery
 */
 
+/*
+There is an additional restriction for Tier 1 hardware that applies to all heaps,
+and to Tier 2 hardware that applies to CBV and UAV heaps,
+that all descriptor heap entries covered by descriptor tables in the root signature
+must be populated with descriptors by the time the shader executes,
+even if the shader (perhaps due to branching) does not need the descriptor.
+
+There is no such restriction for Tier 3 hardware.
+One mitigation for this restriction is the diligent use of Null descriptors.
+*/
+
 
 #include "tr_local.h"
 #include <Windows.h>
@@ -152,8 +163,12 @@ namespace RHI
 		D3D12MA::Allocation* allocation;
 		ID3D12Resource* texture;
 		uint32_t srvIndex;
-		//uint32_t uavIndex; // @TODO:
 		D3D12_RESOURCE_STATES currentState;
+		struct Mip
+		{
+			uint32_t uavIndex;
+		}
+		mips[MaxTextureMips];
 	};
 
 	struct RootSignature
@@ -256,19 +271,6 @@ namespace RHI
 		uint32_t durationQueryCount;
 	};
 
-	struct ShaderVisibleDescriptorHeap
-	{
-		void Create(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t* descriptors, uint32_t count, const char* name);
-		void Release();
-		uint32_t AllocateDescriptor();
-		void FreeDescriptor(uint32_t index);
-
-		ID3D12DescriptorHeap* mHeap;
-		uint32_t* mDescriptors;
-		uint32_t mDescriptorFreeList;
-		uint32_t mCount;
-	};
-
 	struct RHIPrivate
 	{
 		ID3D12Debug* debug; // can be NULL
@@ -300,6 +302,10 @@ namespace RHI
 		uint32_t durationQueryIndex;
 		HRootSignature currentRootSignature;
 		HDurationQuery frameDuration;
+		StaticFreeList<uint16_t, RHI_MAX_TEXTURES_2D, UINT16_MAX> freeListTex2D;
+		StaticFreeList<uint16_t, RHI_MAX_SAMPLERS, UINT16_MAX> freeListSamplers;
+		ID3D12DescriptorHeap* descHeapSRVs;
+		ID3D12DescriptorHeap* descHeapSamplers;
 
 #define POOL(Type, Size) StaticPool<Type, H##Type, ResourceType::Type, Size>
 		POOL(Buffer, 64) buffers;
@@ -312,11 +318,6 @@ namespace RHI
 		StaticUnorderedArray<HTexture, MAX_DRAWIMAGES> texturesToTransition;
 		FrameQueries frameQueries[FrameCount];
 		ResolvedQueries resolvedQueries;
-
-		uint32_t descTex2D[RHI_MAX_TEXTURES_2D];
-		uint32_t descSamplers[RHI_MAX_SAMPLERS];
-		ShaderVisibleDescriptorHeap descHeapTex2D;
-		ShaderVisibleDescriptorHeap descHeapSamplers;
 	};
 
 	static RHIPrivate rhi;
@@ -420,50 +421,18 @@ namespace RHI
 		return (value + mask) & (~mask);
 	}
 
-	void ShaderVisibleDescriptorHeap::Create(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t* descriptors, uint32_t count, const char* name)
+	static ID3D12DescriptorHeap* CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type, UINT size, bool shaderVisible, const char* name)
 	{
+		ID3D12DescriptorHeap* heap;
 		D3D12_DESCRIPTOR_HEAP_DESC heapDesc = { 0 };
 		heapDesc.Type = type;
-		heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		heapDesc.NumDescriptors = count;
+		heapDesc.Flags = shaderVisible ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE : D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+		heapDesc.NumDescriptors = size;
 		heapDesc.NodeMask = 0;
-		D3D(rhi.device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&mHeap)));
-		SetDebugName(mHeap, name);
+		D3D(rhi.device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&heap)));
+		SetDebugName(heap, name);
 
-		for(uint32_t d = 0; d < count; ++d)
-		{
-			descriptors[d] = d + 1;
-		}
-		mDescriptorFreeList = 0;
-		mDescriptors = descriptors;
-		mCount = count;
-	}
-
-	void ShaderVisibleDescriptorHeap::Release()
-	{
-		COM_RELEASE(mHeap);
-	}
-
-	uint32_t ShaderVisibleDescriptorHeap::AllocateDescriptor()
-	{
-		Q_assert(mDescriptorFreeList != UINT32_MAX);
-		// @TODO: fatal error in release
-
-		const uint32_t index = mDescriptorFreeList;
-		mDescriptorFreeList = mDescriptors[index];
-		mDescriptors[index] = UINT32_MAX;
-
-		return index;
-	}
-
-	void ShaderVisibleDescriptorHeap::FreeDescriptor(uint32_t index)
-	{
-		Q_assert(index < mCount);
-		// @TODO: fatal error in release
-
-		const uint32_t oldList = mDescriptorFreeList;
-		mDescriptorFreeList = index;
-		mDescriptors[index] = oldList;
+		return heap;
 	}
 
 	void Fence::Create(UINT64 value, const char* name)
@@ -1111,8 +1080,8 @@ namespace RHI
 		}
 #endif
 
-		rhi.descHeapTex2D.Create(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, rhi.descTex2D, ARRAY_LEN(rhi.descTex2D), "Texture2D heap");
-		rhi.descHeapSamplers.Create(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, rhi.descSamplers, ARRAY_LEN(rhi.descSamplers), "Sampler heap");
+		rhi.descHeapSRVs = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, RHI_MAX_TEXTURES_2D + RHI_MAX_RW_TEXTURES_2D, true, "CBV SRV UAV heap");
+		rhi.descHeapSamplers = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, RHI_MAX_SAMPLERS, true, "sampler heap");
 
 		{
 			D3D12_COMMAND_QUEUE_DESC commandQueueDesc = { 0 };
@@ -1201,9 +1170,9 @@ namespace RHI
 			desc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 			desc.ComparisonFunc = D3D12_COMPARISON_FUNC_NONE;
 			desc.MaxAnisotropy = 1;
-			desc.MaxLOD = D3D12_FLOAT32_MAX;
+			desc.MaxLOD = 0.0f;
 			desc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-			rhi.device->CreateSampler(&desc, rhi.descHeapSamplers.mHeap->GetCPUDescriptorHandleForHeapStart());
+			rhi.device->CreateSampler(&desc, rhi.descHeapSamplers->GetCPUDescriptorHandleForHeapStart());
 		}
 
 		rhi.upload.Create();
@@ -1270,8 +1239,6 @@ namespace RHI
 		WaitUntilDeviceIsIdle();
 
 		rhi.upload.Release();
-		rhi.descHeapTex2D.Release();
-		rhi.descHeapSamplers.Release();
 		rhi.fence.Release();
 
 		DESTROY_POOL(buffers, DestroyBuffer);
@@ -1279,6 +1246,8 @@ namespace RHI
 		DESTROY_POOL(rootSignatures, DestroyRootSignature);
 		DESTROY_POOL(pipelines, DestroyPipeline);
 
+		COM_RELEASE(rhi.descHeapSRVs);
+		COM_RELEASE(rhi.descHeapSamplers);
 		COM_RELEASE(rhi.timeStampHeap);
 		COM_RELEASE(rhi.commandList);
 		COM_RELEASE_ARRAY(rhi.commandAllocators);
@@ -1334,7 +1303,7 @@ namespace RHI
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		rhi.commandList->ResourceBarrier(1, &barrier);
 
-		ID3D12DescriptorHeap* heaps[2] = { rhi.descHeapTex2D.mHeap, rhi.descHeapSamplers.mHeap };
+		ID3D12DescriptorHeap* heaps[2] = { rhi.descHeapSRVs, rhi.descHeapSamplers };
 		rhi.commandList->SetDescriptorHeaps(ARRAY_LEN(heaps), heaps);
 
 		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = { 0 };
@@ -1557,20 +1526,23 @@ namespace RHI
 		D3D(rhi.allocator->CreateResource(&allocDesc, &desc, D3D12_RESOURCE_STATE_COPY_DEST, NULL, &allocation, IID_PPV_ARGS(&resource)));
 		SetDebugName(resource, rhiDesc.name);
 
-		D3D12_SHADER_RESOURCE_VIEW_DESC srv = { 0 };
-		srv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		srv.Format = desc.Format;
-		srv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		//srv.Texture2D.MipLevels = desc.MipLevels;
-		srv.Texture2D.MipLevels = 1; // @TODO:
-		srv.Texture2D.MostDetailedMip = 0;
-		srv.Texture2D.PlaneSlice = 0;
-		srv.Texture2D.ResourceMinLODClamp = 0.0f;
+		uint32_t srvIndex = UINT32_MAX;
+		if(rhiDesc.initialState & ResourceState::ShaderAccessBits)
+		{
+			D3D12_SHADER_RESOURCE_VIEW_DESC srv = { 0 };
+			srv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+			srv.Format = desc.Format;
+			srv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			srv.Texture2D.MipLevels = desc.MipLevels;
+			srv.Texture2D.MostDetailedMip = 0;
+			srv.Texture2D.PlaneSlice = 0;
+			srv.Texture2D.ResourceMinLODClamp = 0.0f;
 
-		const uint32_t srvIndex = rhi.descHeapTex2D.AllocateDescriptor();
-		D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = rhi.descHeapTex2D.mHeap->GetCPUDescriptorHandleForHeapStart();
-		srvHandle.ptr += srvIndex * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		rhi.device->CreateShaderResourceView(resource, &srv, srvHandle);
+			srvIndex = rhi.freeListTex2D.Allocate();
+			D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = rhi.descHeapSRVs->GetCPUDescriptorHandleForHeapStart();
+			srvHandle.ptr += srvIndex * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			rhi.device->CreateShaderResourceView(resource, &srv, srvHandle);
+		}
 
 		Texture texture = { 0 };
 		texture.desc = rhiDesc;
@@ -1578,6 +1550,33 @@ namespace RHI
 		texture.texture = resource;
 		texture.srvIndex = srvIndex;
 		texture.currentState = D3D12_RESOURCE_STATE_COPY_DEST;
+		if(rhiDesc.initialState & ResourceState::UnorderedAccessBit)
+		{
+			for(uint32_t m = 0; m < rhiDesc.mipCount; ++m)
+			{
+				// @TODO: create in a CPU descriptor heap
+				texture.mips[m].uavIndex = UINT32_MAX;
+
+				/*D3D12_UNORDERED_ACCESS_VIEW_DESC uav = {0};
+				uav.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+				uav.Format = desc.Format;
+				uav.Texture2D.MipSlice = m;
+				uav.Texture2D.PlaneSlice = 0;*/
+
+				/*const uint32_t index = rhi.descHeapRWTex2D.AllocateDescriptor();
+				D3D12_CPU_DESCRIPTOR_HANDLE handle = rhi.descHeapRWTex2D.heap->GetCPUDescriptorHandleForHeapStart();
+				handle.ptr += index * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				rhi.device->CreateUnorderedAccessView(resource, NULL, &uav, handle);
+				texture.mips[m].uavIndex = index;*/
+			}
+		}
+		else
+		{
+			for(uint32_t m = 0; m < rhiDesc.mipCount; ++m)
+			{
+				texture.mips[m].uavIndex = UINT32_MAX;
+			}
+		}
 
 		return rhi.textures.Add(texture);
 	}
@@ -1821,8 +1820,8 @@ namespace RHI
 			rhi.currentRootSignature = rootSignature;
 			// @TODO: decide between graphics and compute!
 			rhi.commandList->SetGraphicsRootSignature(sig.signature);
-			rhi.commandList->SetGraphicsRootDescriptorTable(sig.firstTableIndex + 0, rhi.descHeapTex2D.mHeap->GetGPUDescriptorHandleForHeapStart());
-			rhi.commandList->SetGraphicsRootDescriptorTable(sig.firstTableIndex + 1, rhi.descHeapSamplers.mHeap->GetGPUDescriptorHandleForHeapStart());
+			rhi.commandList->SetGraphicsRootDescriptorTable(sig.firstTableIndex + 0, rhi.descHeapSRVs->GetGPUDescriptorHandleForHeapStart());
+			rhi.commandList->SetGraphicsRootDescriptorTable(sig.firstTableIndex + 1, rhi.descHeapSamplers->GetGPUDescriptorHandleForHeapStart());
 		}
 	}
 
