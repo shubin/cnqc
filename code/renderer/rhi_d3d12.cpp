@@ -574,7 +574,6 @@ namespace RHI
 		rhi.device->GetCopyableFootprints(&textureDesc, 0, (uint32_t)numSubResources, 0, layouts, numRows, rowSizesInBytes, &textureMemorySize);
 
 		fence.WaitOnCPU(fenceValue);
-		fenceValue++;
 
 		{
 			byte* const uploadMemory = (byte*)MapBuffer(buffer);
@@ -614,6 +613,7 @@ namespace RHI
 		ID3D12CommandList* commandLists[] = { commandList };
 		D3D(commandList->Close());
 		commandQueue->ExecuteCommandLists(ARRAY_LEN(commandLists), commandLists);
+		fenceValue++;
 		commandQueue->Signal(fence.fence, fenceValue);
 
 		rhi.texturesToTransition.Add(handle);
