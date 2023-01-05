@@ -228,6 +228,7 @@ namespace RHI
 		ID3D12GraphicsCommandList* commandList;
 		HBuffer buffer;
 		uint32_t bufferByteCount;
+		uint32_t bufferByteOffset;
 		Fence fence;
 		UINT64 fenceValue;
 	};
@@ -522,6 +523,7 @@ namespace RHI
 			bufferDesc.committedResource = true;
 			buffer = CreateBuffer(bufferDesc);
 			bufferByteCount = bufferDesc.byteCount;
+			bufferByteOffset = 0;
 		}
 
 		{
@@ -565,6 +567,13 @@ namespace RHI
 			ri.Error(ERR_FATAL, "Upload request too large!\n");
 		}
 
+		if(bufferByteOffset + uploadByteCount > bufferByteCount)
+		{
+			// not enough space left, force a wait and rewind
+			fence.WaitOnCPU(fenceValue);
+			bufferByteOffset = 0;
+		}
+
 		D3D12_RESOURCE_DESC textureDesc = texture.texture->GetDesc();
 		uint64_t textureMemorySize = 0;
 		UINT numRows[16];
@@ -573,17 +582,16 @@ namespace RHI
 		const uint64_t numSubResources = texture.desc.mipCount;
 		rhi.device->GetCopyableFootprints(&textureDesc, 0, (uint32_t)numSubResources, 0, layouts, numRows, rowSizesInBytes, &textureMemorySize);
 
-		fence.WaitOnCPU(fenceValue);
 
 		{
-			byte* const uploadMemory = (byte*)MapBuffer(buffer);
+			byte* const uploadMemory = (byte*)MapBuffer(buffer) + bufferByteOffset;
 
 			const byte* sourceSubResourceMemory = (const byte*)desc.data;
 			const uint64_t subResourceIndex = 0;
 			const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& subResourceLayout = layouts[subResourceIndex];
 			const uint64_t subResourceHeight = numRows[subResourceIndex];
 			const uint64_t subResourcePitch = AlignUp(subResourceLayout.Footprint.RowPitch, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
-			const uint64_t sourceRowPitch = desc.width * 4; // @TODO: compute the pitch properly baded on the format...
+			const uint64_t sourceRowPitch = desc.width * 4; // @TODO: compute the pitch properly based on the format...
 			uint8_t* destinationSubResourceMemory = uploadMemory + subResourceLayout.Offset;
 
 			for(uint64_t height = 0; height < subResourceHeight; height++)
@@ -608,6 +616,7 @@ namespace RHI
 		srcLoc.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
 		srcLoc.pResource = bufferRef.buffer;
 		srcLoc.PlacedFootprint = layouts[0];
+		srcLoc.PlacedFootprint.Offset = bufferByteOffset;
 		commandList->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, NULL);
 
 		ID3D12CommandList* commandLists[] = { commandList };
@@ -615,6 +624,8 @@ namespace RHI
 		commandQueue->ExecuteCommandLists(ARRAY_LEN(commandLists), commandLists);
 		fenceValue++;
 		commandQueue->Signal(fence.fence, fenceValue);
+
+		bufferByteOffset = AlignUp(bufferByteOffset + uploadByteCount, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
 
 		rhi.texturesToTransition.Add(handle);
 	}
