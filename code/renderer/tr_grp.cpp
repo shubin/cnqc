@@ -63,7 +63,7 @@ cbuffer RootConstants
 	uint samplerIndex;
 };
 
-Texture2D textures2D[4096] : register(t0);
+Texture2D textures2D[2048] : register(t0);
 //RWTexture2D<float4> rwtextures2D[4096 * 16] : register(u0);
 SamplerState sampler0 : register(s0, space0);
 

@@ -308,10 +308,9 @@ namespace RHI
 		uint32_t durationQueryIndex;
 		HRootSignature currentRootSignature;
 		HDurationQuery frameDuration;
-		StaticFreeList<uint16_t, RHI_MAX_TEXTURES_2D, InvalidDescriptorIndex> freeListTex2D;
-		StaticFreeList<uint16_t, RHI_MAX_RW_TEXTURES_2D, InvalidDescriptorIndex> freeListRWTex2D;
-		StaticFreeList<uint16_t, RHI_MAX_SAMPLERS, InvalidDescriptorIndex> freeListSamplers;
-		ID3D12DescriptorHeap* descHeapSRVs;
+		StaticFreeList<uint16_t, RHI_MAX_TEXTURES_2D * 4, InvalidDescriptorIndex> freeListGeneric;
+		StaticFreeList<uint16_t, RHI_MAX_SAMPLERS * 4, InvalidDescriptorIndex> freeListSamplers;
+		ID3D12DescriptorHeap* descHeapGeneric;
 		ID3D12DescriptorHeap* descHeapSamplers;
 
 #define POOL(Type, Size) StaticPool<Type, H##Type, ResourceType::Type, Size>
@@ -1116,7 +1115,7 @@ namespace RHI
 		}
 #endif
 
-		rhi.descHeapSRVs = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, RHI_MAX_TEXTURES_2D + RHI_MAX_RW_TEXTURES_2D, false, "CBV SRV UAV heap");
+		rhi.descHeapGeneric = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, RHI_MAX_TEXTURES_2D + RHI_MAX_RW_TEXTURES_2D, false, "CBV SRV UAV heap");
 		rhi.descHeapSamplers = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, RHI_MAX_SAMPLERS, false, "sampler heap");
 
 		{
@@ -1283,7 +1282,7 @@ namespace RHI
 		DESTROY_POOL(rootSignatures, DestroyRootSignature);
 		DESTROY_POOL(pipelines, DestroyPipeline);
 
-		COM_RELEASE(rhi.descHeapSRVs);
+		COM_RELEASE(rhi.descHeapGeneric);
 		COM_RELEASE(rhi.descHeapSamplers);
 		COM_RELEASE(rhi.timeStampHeap);
 		COM_RELEASE(rhi.commandList);
@@ -1572,8 +1571,8 @@ namespace RHI
 			srv.Texture2D.PlaneSlice = 0;
 			srv.Texture2D.ResourceMinLODClamp = 0.0f;
 
-			srvIndex = rhi.freeListTex2D.Allocate();
-			D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = rhi.descHeapSRVs->GetCPUDescriptorHandleForHeapStart();
+			srvIndex = rhi.freeListGeneric.Allocate();
+			D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = rhi.descHeapGeneric->GetCPUDescriptorHandleForHeapStart();
 			srvHandle.ptr += srvIndex * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 			rhi.device->CreateShaderResourceView(resource, &srv, srvHandle);
 		}
@@ -1588,17 +1587,14 @@ namespace RHI
 		{
 			for(uint32_t m = 0; m < rhiDesc.mipCount; ++m)
 			{
-				// @TODO: resource binding tier 2 support -> use CPU heaps and do copies
-
 				D3D12_UNORDERED_ACCESS_VIEW_DESC uav = { 0 };
 				uav.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
 				uav.Format = desc.Format;
 				uav.Texture2D.MipSlice = m;
 				uav.Texture2D.PlaneSlice = 0;
 
-				// UAVs are after the SRVs
-				const uint32_t index = RHI_MAX_TEXTURES_2D + rhi.freeListRWTex2D.Allocate();
-				D3D12_CPU_DESCRIPTOR_HANDLE handle = rhi.descHeapSRVs->GetCPUDescriptorHandleForHeapStart();
+				const uint32_t index = rhi.freeListGeneric.Allocate();
+				D3D12_CPU_DESCRIPTOR_HANDLE handle = rhi.descHeapGeneric->GetCPUDescriptorHandleForHeapStart();
 				handle.ptr += index * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 				rhi.device->CreateUnorderedAccessView(resource, NULL, &uav, handle);
 				texture.mips[m].uavIndex = index;
@@ -1900,26 +1896,29 @@ namespace RHI
 			rhi.currentRootSignature = rootSignature;
 			// @TODO: decide between graphics and compute!
 			rhi.commandList->SetGraphicsRootSignature(sig.signature);
-			if(sig.genericTableIndex != UINT32_MAX)
-			{
-				rhi.commandList->SetGraphicsRootDescriptorTable(sig.genericTableIndex, rhi.descHeapSRVs->GetGPUDescriptorHandleForHeapStart());
-			}
-			if(sig.samplerTableIndex != UINT32_MAX)
-			{
-				rhi.commandList->SetGraphicsRootDescriptorTable(sig.samplerTableIndex, rhi.descHeapSamplers->GetGPUDescriptorHandleForHeapStart());
-			}
-			
 		}
 	}
 
-	void CmdBindDescriptorTable(HDescriptorTable handle)
+	void CmdBindDescriptorTable(HRootSignature sigHandle, HDescriptorTable handle)
 	{
 		Q_assert(CanWriteCommands());
 
 		const DescriptorTable& table = rhi.descriptorTables.Get(handle);
+		const RootSignature& sig = rhi.rootSignatures.Get(sigHandle);
 
-		ID3D12DescriptorHeap* heaps[2] = { table.genericHeap, table.samplerHeap };
-		rhi.commandList->SetDescriptorHeaps(ARRAY_LEN(heaps), heaps);
+		UINT heapCount = 0;
+		ID3D12DescriptorHeap* heaps[2];
+		if(sig.genericTableIndex != UINT32_MAX)
+		{
+			heaps[heapCount++] = table.genericHeap;
+			rhi.commandList->SetGraphicsRootDescriptorTable(sig.genericTableIndex, table.genericHeap->GetGPUDescriptorHandleForHeapStart());
+		}
+		if(sig.samplerTableIndex != UINT32_MAX)
+		{
+			heaps[heapCount++] = table.samplerHeap;
+			rhi.commandList->SetGraphicsRootDescriptorTable(sig.samplerTableIndex, table.samplerHeap->GetGPUDescriptorHandleForHeapStart());
+		}
+		rhi.commandList->SetDescriptorHeaps(heapCount, heaps);
 	}
 
 	void CmdBindPipeline(HPipeline pipeline)
