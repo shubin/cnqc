@@ -154,6 +154,7 @@ struct grp_t
 	ui_t ui;
 	projection_t projection;
 	uint32_t textureIndex;
+	RHI::HSampler sampler;
 };
 
 static grp_t grp;
@@ -351,6 +352,10 @@ struct GameplayRenderPipeline : IRenderPipeline
 	void Init() override
 	{
 		{
+			RHI::SamplerDesc desc = {};
+			grp.sampler = RHI::CreateSampler(desc);
+		}
+		{
 			RHI::RootSignatureDesc desc = { 0 };
 			desc.name = "UI root signature";
 			desc.usingVertexBuffers = qtrue;
@@ -367,6 +372,7 @@ struct GameplayRenderPipeline : IRenderPipeline
 			desc.name = "UI descriptor table";
 			desc.rootSignature = grp.ui.rootSignature;
 			grp.ui.descriptorTable = RHI::CreateDescriptorTable(desc);
+			RHI::UpdateDescriptorTable(grp.ui.descriptorTable, RHI::DescriptorType::Sampler, 0, 1, &grp.sampler);
 		}
 		{
 			RHI::GraphicsPipelineDesc desc = { 0 };

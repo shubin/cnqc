@@ -1797,17 +1797,32 @@ namespace RHI
 		// @TODO:
 
 		Q_assert(handleCount == 1);
-		Q_assert(type == DescriptorType::Texture);
+		
+		if(type == DescriptorType::Texture)
+		{
+			const HTexture* textures = (const HTexture*)resourceHandles;
+			const Texture& texture = rhi.textures.Get(textures[0]);
 
-		const HTexture* textures = (const HTexture*)resourceHandles;
-		const Texture& texture = rhi.textures.Get(textures[0]);
+			DescriptorTable& table = rhi.descriptorTables.Get(handle);
+			D3D12_CPU_DESCRIPTOR_HANDLE srcHandle = rhi.descHeapGeneric->GetCPUDescriptorHandleForHeapStart();
+			D3D12_CPU_DESCRIPTOR_HANDLE dstHandle = table.genericHeap->GetCPUDescriptorHandleForHeapStart();
+			srcHandle.ptr += texture.srvIndex * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			dstHandle.ptr += firstIndex * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			rhi.device->CopyDescriptorsSimple(1, dstHandle, srcHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		}
+		else
+		{
+			const HSampler* samplers = (const HSampler*)resourceHandles;
+			Handle htype, index, gen;
+			DecomposeHandle(&htype, &index, &gen, samplers[0].v);
 
-		DescriptorTable& table = rhi.descriptorTables.Get(handle);
-		D3D12_CPU_DESCRIPTOR_HANDLE srcHandle = rhi.descHeapGeneric->GetCPUDescriptorHandleForHeapStart();
-		D3D12_CPU_DESCRIPTOR_HANDLE dstHandle = table.genericHeap->GetCPUDescriptorHandleForHeapStart();
-		srcHandle.ptr += texture.srvIndex * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		dstHandle.ptr += firstIndex * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		rhi.device->CopyDescriptorsSimple(1, dstHandle, srcHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			DescriptorTable& table = rhi.descriptorTables.Get(handle);
+			D3D12_CPU_DESCRIPTOR_HANDLE srcHandle = rhi.descHeapSamplers->GetCPUDescriptorHandleForHeapStart();
+			D3D12_CPU_DESCRIPTOR_HANDLE dstHandle = table.samplerHeap->GetCPUDescriptorHandleForHeapStart();
+			srcHandle.ptr += index * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+			dstHandle.ptr += firstIndex * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+			rhi.device->CopyDescriptorsSimple(1, dstHandle, srcHandle, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+		}
 	}
 
 	void DestroyDescriptorTable(HDescriptorTable handle)
