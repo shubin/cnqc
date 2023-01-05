@@ -207,7 +207,8 @@ namespace RHI
 	{
 		void Create(UINT64 value, const char* name);
 		void Signal(ID3D12CommandQueue* queue, UINT64 value);
-		void Wait(UINT64 value);
+		void WaitOnCPU(UINT64 value);
+		void WaitOnGPU(ID3D12CommandQueue* queue, UINT64 value);
 		bool HasCompleted(UINT64 value);
 		void Release();
 
@@ -218,7 +219,7 @@ namespace RHI
 	struct TextureUpload
 	{
 		void Create();
-		void Wait(ID3D12CommandQueue* queue);
+		void WaitOnGPU(ID3D12CommandQueue* queue);
 		void Upload(HTexture handle, const TextureUploadDesc& desc);
 		void Release();
 
@@ -484,13 +485,18 @@ namespace RHI
 		D3D(queue->Signal(fence, value));
 	}
 
-	void Fence::Wait(UINT64 value)
+	void Fence::WaitOnCPU(UINT64 value)
 	{
 		if(fence->GetCompletedValue() < value)
 		{
 			D3D(fence->SetEventOnCompletion(value, event));
 			WaitForSingleObjectEx(event, INFINITE, FALSE);
 		}
+	}
+
+	void Fence::WaitOnGPU(ID3D12CommandQueue* queue, UINT64 value)
+	{
+		D3D(queue->Wait(fence, value));
 	}
 
 	bool Fence::HasCompleted(UINT64 value)
@@ -536,11 +542,12 @@ namespace RHI
 		D3D(commandList->Close());
 
 		fence.Create(0, "copy queue fence");
+		fenceValue = 0;
 	}
 
-	void TextureUpload::Wait(ID3D12CommandQueue* queue)
+	void TextureUpload::WaitOnGPU(ID3D12CommandQueue* queue)
 	{
-		queue->Wait(fence.fence, fenceValue);
+		fence.WaitOnGPU(queue, fenceValue);
 	}
 
 	void TextureUpload::Upload(HTexture handle, const TextureUploadDesc& desc)
@@ -566,7 +573,7 @@ namespace RHI
 		const uint64_t numSubResources = texture.desc.mipCount;
 		rhi.device->GetCopyableFootprints(&textureDesc, 0, (uint32_t)numSubResources, 0, layouts, numRows, rowSizesInBytes, &textureMemorySize);
 
-		fence.Wait(fenceValue);
+		fence.WaitOnCPU(fenceValue);
 		fenceValue++;
 
 		{
@@ -705,14 +712,14 @@ namespace RHI
 		const UINT64 currentFenceValue = rhi.fenceValues[rhi.frameIndex];
 		rhi.fence.Signal(rhi.commandQueue, currentFenceValue);
 		rhi.frameIndex = rhi.swapChain->GetCurrentBackBufferIndex();
-		rhi.fence.Wait(rhi.fenceValues[rhi.frameIndex]);
+		rhi.fence.WaitOnCPU(rhi.fenceValues[rhi.frameIndex]);
 		rhi.fenceValues[rhi.frameIndex] = currentFenceValue + 1;
 	}
 
 	static void WaitUntilDeviceIsIdle()
 	{
 		rhi.fence.Signal(rhi.commandQueue, rhi.fenceValues[rhi.frameIndex]);
-		rhi.fence.Wait(rhi.fenceValues[rhi.frameIndex]);
+		rhi.fence.WaitOnCPU(rhi.fenceValues[rhi.frameIndex]);
 		rhi.fenceValues[rhi.frameIndex]++;
 	}
 
@@ -1282,7 +1289,7 @@ namespace RHI
 		rhi.currentRootSignature = MAKE_NULL_HANDLE();
 
 		// wait for pending copies from the upload buffer to textures to be finished
-		rhi.upload.Wait(rhi.commandQueue);
+		rhi.upload.WaitOnGPU(rhi.commandQueue);
 
 		// reclaim used memory
 		D3D(rhi.commandAllocators[rhi.frameIndex]->Reset());
