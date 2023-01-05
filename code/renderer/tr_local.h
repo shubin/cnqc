@@ -48,6 +48,7 @@ namespace RHI
 	const uint32_t MaxRenderTargetCount = 8;
 	const uint32_t MaxDurationQueries = 64;
 	const uint32_t MaxTextureMips = 16;
+	const uint32_t InvalidDescriptorIndex = UINT16_MAX;
 
 	typedef uint32_t Handle;
 

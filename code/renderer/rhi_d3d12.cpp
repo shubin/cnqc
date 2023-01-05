@@ -302,8 +302,8 @@ namespace RHI
 		uint32_t durationQueryIndex;
 		HRootSignature currentRootSignature;
 		HDurationQuery frameDuration;
-		StaticFreeList<uint16_t, RHI_MAX_TEXTURES_2D, UINT16_MAX> freeListTex2D;
-		StaticFreeList<uint16_t, RHI_MAX_SAMPLERS, UINT16_MAX> freeListSamplers;
+		StaticFreeList<uint16_t, RHI_MAX_TEXTURES_2D, InvalidDescriptorIndex> freeListTex2D;
+		StaticFreeList<uint16_t, RHI_MAX_SAMPLERS, InvalidDescriptorIndex> freeListSamplers;
 		ID3D12DescriptorHeap* descHeapSRVs;
 		ID3D12DescriptorHeap* descHeapSamplers;
 
@@ -1526,7 +1526,7 @@ namespace RHI
 		D3D(rhi.allocator->CreateResource(&allocDesc, &desc, D3D12_RESOURCE_STATE_COPY_DEST, NULL, &allocation, IID_PPV_ARGS(&resource)));
 		SetDebugName(resource, rhiDesc.name);
 
-		uint32_t srvIndex = UINT32_MAX;
+		uint32_t srvIndex = InvalidDescriptorIndex;
 		if(rhiDesc.initialState & ResourceState::ShaderAccessBits)
 		{
 			D3D12_SHADER_RESOURCE_VIEW_DESC srv = { 0 };
@@ -1555,7 +1555,7 @@ namespace RHI
 			for(uint32_t m = 0; m < rhiDesc.mipCount; ++m)
 			{
 				// @TODO: create in a CPU descriptor heap
-				texture.mips[m].uavIndex = UINT32_MAX;
+				texture.mips[m].uavIndex = InvalidDescriptorIndex;
 
 				/*D3D12_UNORDERED_ACCESS_VIEW_DESC uav = {0};
 				uav.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
@@ -1574,7 +1574,7 @@ namespace RHI
 		{
 			for(uint32_t m = 0; m < rhiDesc.mipCount; ++m)
 			{
-				texture.mips[m].uavIndex = UINT32_MAX;
+				texture.mips[m].uavIndex = InvalidDescriptorIndex;
 			}
 		}
 
