@@ -173,6 +173,7 @@ namespace RHI
 		union
 		{
 			GraphicsPipelineDesc graphicsDesc;
+			ComputePipelineDesc computeDesc;
 		};
 		ID3D12PipelineState* pso;
 		PipelineType::Id type;
@@ -1779,6 +1780,26 @@ namespace RHI
 		Pipeline rhiPipeline = { 0 };
 		rhiPipeline.type = PipelineType::Graphics;
 		rhiPipeline.graphicsDesc = rhiDesc;
+		rhiPipeline.pso = pso;
+
+		return rhi.pipelines.Add(rhiPipeline);
+	}
+
+	HPipeline CreateComputePipeline(const ComputePipelineDesc& rhiDesc)
+	{
+		D3D12_COMPUTE_PIPELINE_STATE_DESC desc = { 0 };
+		desc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE; // none available so far
+		desc.pRootSignature = rhi.rootSignatures.Get(rhiDesc.rootSignature).signature;
+		desc.CS.pShaderBytecode = rhiDesc.shader.data;
+		desc.CS.BytecodeLength = rhiDesc.shader.byteCount;
+
+		ID3D12PipelineState* pso;
+		D3D(rhi.device->CreateComputePipelineState(&desc, IID_PPV_ARGS(&pso)));
+		SetDebugName(pso, rhiDesc.name);
+
+		Pipeline rhiPipeline = { 0 };
+		rhiPipeline.type = PipelineType::Compute;
+		rhiPipeline.computeDesc = rhiDesc;
 		rhiPipeline.pso = pso;
 
 		return rhi.pipelines.Add(rhiPipeline);

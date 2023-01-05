@@ -284,6 +284,13 @@ namespace RHI
 		}
 	};
 
+	struct ComputePipelineDesc
+	{
+		const char* name;
+		HRootSignature rootSignature;
+		ShaderByteCode shader;
+	};
+
 	struct BufferDesc
 	{
 		const char* name;
@@ -338,6 +345,7 @@ namespace RHI
 	void DestroyRootSignature(HRootSignature signature);
 
 	HPipeline CreateGraphicsPipeline(const GraphicsPipelineDesc& desc);
+	HPipeline CreateComputePipeline(const ComputePipelineDesc& desc);
 	void DestroyPipeline(HPipeline pipeline);
 
 	// Cmd* write commands to the main/graphics command queue
