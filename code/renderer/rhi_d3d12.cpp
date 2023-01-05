@@ -905,6 +905,27 @@ namespace RHI
 		}
 	}
 
+	static D3D12_TEXTURE_ADDRESS_MODE GetD3DTextureAddressMode(textureWrap_t wrap)
+	{
+		switch(wrap)
+		{
+			case TW_REPEAT: return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+			case TW_CLAMP_TO_EDGE: return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+			default: Q_assert(!"Unsupported texture wrap mode"); return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		}
+	}
+
+	static D3D12_FILTER GetD3DFilter(TextureFilter::Id filter)
+	{
+		switch(filter)
+		{
+			case TextureFilter::Point: return D3D12_FILTER_MIN_MAG_MIP_POINT;
+			case TextureFilter::Linear: return D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+			case TextureFilter::Anisotropic: return D3D12_FILTER_ANISOTROPIC;
+			default: Q_assert(!"Unsupported texture filter mode"); return D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+		}
+	}
+
 	static D3D12_BLEND GetD3DSourceBlend(uint32_t stateBits)
 	{
 		switch(stateBits & GLS_SRCBLEND_BITS)
@@ -1624,14 +1645,23 @@ namespace RHI
 		D3D12_CPU_DESCRIPTOR_HANDLE address = rhi.descHeapSamplers->GetCPUDescriptorHandleForHeapStart();
 		address.ptr += index * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
+		const D3D12_TEXTURE_ADDRESS_MODE addressMode = GetD3DTextureAddressMode(sampler.wrapMode);
+		D3D12_FILTER filter = GetD3DFilter(sampler.filterMode);
+		UINT maxAnisotropy = r_ext_max_anisotropy->integer;
+		if(filter == D3D12_FILTER_ANISOTROPIC && maxAnisotropy <= 1)
+		{
+			filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+			maxAnisotropy = 1;
+		}
+
 		D3D12_SAMPLER_DESC desc = { 0 };
-		desc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		desc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		desc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		desc.AddressU = addressMode;
+		desc.AddressV = addressMode;
+		desc.AddressW = addressMode;
 		desc.ComparisonFunc = D3D12_COMPARISON_FUNC_NONE;
-		desc.MaxAnisotropy = 1;
+		desc.MaxAnisotropy = maxAnisotropy;
 		desc.MaxLOD = 0.0f;
-		desc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+		desc.Filter = filter;
 		rhi.device->CreateSampler(&desc, address);
 
 		return MAKE_HANDLE(CreateHandle(ResourceType::Sampler, index, 0));

@@ -30,6 +30,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_public.h"
 
 
+enum textureWrap_t;
+
 namespace RHI
 {
 	// @TODO: move to own header file to be included by both C++ and HLSL code
@@ -212,6 +214,17 @@ namespace RHI
 		};
 	};
 
+	struct TextureFilter
+	{
+		enum Id
+		{
+			Point,
+			Linear,
+			Anisotropic,
+			Count
+		};
+	};
+
 	struct RootSignatureDesc
 	{
 		const char* name;
@@ -349,7 +362,8 @@ namespace RHI
 
 	struct SamplerDesc
 	{
-
+		textureWrap_t wrapMode;
+		TextureFilter::Id filterMode;
 	};
 
 	struct TextureUploadDesc
