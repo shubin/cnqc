@@ -64,8 +64,7 @@ cbuffer RootConstants
 };
 
 Texture2D textures2D[2048] : register(t0);
-//RWTexture2D<float4> rwtextures2D[4096 * 16] : register(u0);
-SamplerState sampler0 : register(s0, space0);
+SamplerState samplers[2] : register(s0);
 
 struct VOut
 {
@@ -76,8 +75,7 @@ struct VOut
 
 float4 main(VOut input) : SV_TARGET
 {
-	//return rwtextures2D[0][uint2(0, 0)] + textures2D[textureIndex].Sample(samplers[samplerIndex], input.texCoords) * input.color;
-	return textures2D[textureIndex].Sample(sampler0, input.texCoords) * input.color;
+	return textures2D[textureIndex].Sample(samplers[samplerIndex], input.texCoords) * input.color;
 }
 )grml";
 
@@ -154,7 +152,7 @@ struct grp_t
 	ui_t ui;
 	projection_t projection;
 	uint32_t textureIndex;
-	RHI::HSampler sampler;
+	RHI::HSampler samplers[2];
 };
 
 static grp_t grp;
@@ -353,7 +351,11 @@ struct GameplayRenderPipeline : IRenderPipeline
 	{
 		{
 			RHI::SamplerDesc desc = {};
-			grp.sampler = RHI::CreateSampler(desc);
+			desc.filterMode = RHI::TextureFilter::Linear;
+			desc.wrapMode = TW_REPEAT;
+			grp.samplers[0] = RHI::CreateSampler(desc);
+			desc.wrapMode = TW_CLAMP_TO_EDGE;
+			grp.samplers[1] = RHI::CreateSampler(desc);
 		}
 		{
 			RHI::RootSignatureDesc desc = { 0 };
@@ -361,7 +363,7 @@ struct GameplayRenderPipeline : IRenderPipeline
 			desc.usingVertexBuffers = qtrue;
 			desc.constants[RHI::ShaderType::Vertex].count = 2;
 			desc.constants[RHI::ShaderType::Pixel].count = 2;
-			desc.samplerCount = 1;
+			desc.samplerCount = ARRAY_LEN(grp.samplers);
 			desc.samplerVisibility = RHI::ShaderStage::PixelBit;
 			desc.genericVisibility = RHI::ShaderStage::PixelBit;
 			desc.AddRange(RHI::DescriptorType::Texture, 0, MAX_DRAWIMAGES);
@@ -372,7 +374,7 @@ struct GameplayRenderPipeline : IRenderPipeline
 			desc.name = "UI descriptor table";
 			desc.rootSignature = grp.ui.rootSignature;
 			grp.ui.descriptorTable = RHI::CreateDescriptorTable(desc);
-			RHI::UpdateDescriptorTable(grp.ui.descriptorTable, RHI::DescriptorType::Sampler, 0, 1, &grp.sampler);
+			RHI::UpdateDescriptorTable(grp.ui.descriptorTable, RHI::DescriptorType::Sampler, 0, ARRAY_LEN(grp.samplers), grp.samplers);
 		}
 		{
 			RHI::GraphicsPipelineDesc desc = { 0 };
