@@ -127,6 +127,7 @@ namespace RHI
 			Invalid,
 			Buffer,
 			Texture,
+			Sampler,
 			RootSignature,
 			DescriptorTable,
 			Pipeline,
@@ -1197,19 +1198,6 @@ namespace RHI
 			SetDebugName(rhi.imguiHeap, "Dear ImGUI Descriptor Heap");
 		}
 
-		{
-			// @TODO: uint32_t CreateSampler(const SamplerDesc& desc);
-			D3D12_SAMPLER_DESC desc = { 0 };
-			desc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-			desc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-			desc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-			desc.ComparisonFunc = D3D12_COMPARISON_FUNC_NONE;
-			desc.MaxAnisotropy = 1;
-			desc.MaxLOD = 0.0f;
-			desc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-			rhi.device->CreateSampler(&desc, rhi.descHeapSamplers->GetCPUDescriptorHandleForHeapStart());
-		}
-
 		rhi.upload.Create();
 
 		{
@@ -1627,6 +1615,40 @@ namespace RHI
 		COM_RELEASE(texture.texture);
 		COM_RELEASE(texture.allocation);
 		rhi.textures.Remove(handle);
+	}
+
+	HSampler CreateSampler(const SamplerDesc& sampler)
+	{
+		const uint32_t index = rhi.freeListSamplers.Allocate();
+
+		D3D12_CPU_DESCRIPTOR_HANDLE address = rhi.descHeapSamplers->GetCPUDescriptorHandleForHeapStart();
+		address.ptr += index * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+
+		D3D12_SAMPLER_DESC desc = { 0 };
+		desc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		desc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		desc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		desc.ComparisonFunc = D3D12_COMPARISON_FUNC_NONE;
+		desc.MaxAnisotropy = 1;
+		desc.MaxLOD = 0.0f;
+		desc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+		rhi.device->CreateSampler(&desc, address);
+
+		return MAKE_HANDLE(CreateHandle(ResourceType::Sampler, index, 0));
+	}
+
+	void DestroySampler(HSampler sampler)
+	{
+		Handle type, index, gen;
+		DecomposeHandle(&type, &index, &gen, sampler.v);
+		Q_assert(type == ResourceType::Sampler);
+		if(type != ResourceType::Sampler)
+		{
+			ri.Error(ERR_FATAL, "DestroySampler handle is not a sampler!\n");
+			return;
+		}
+
+		rhi.freeListSamplers.Free(index);
 	}
 
 	HRootSignature CreateRootSignature(const RootSignatureDesc& rhiDesc)

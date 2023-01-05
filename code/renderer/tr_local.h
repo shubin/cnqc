@@ -58,7 +58,7 @@ namespace RHI
 	RHI_HANDLE_TYPE(HDescriptorTable);
 	RHI_HANDLE_TYPE(HPipeline);
 	RHI_HANDLE_TYPE(HTexture);
-	//RHI_HANDLE_TYPE(HSampler);
+	RHI_HANDLE_TYPE(HSampler);
 	RHI_HANDLE_TYPE(HDurationQuery);
 
 #define RHI_ENUM_OPERATORS(EnumType) \
@@ -347,6 +347,11 @@ namespace RHI
 		// @TODO: clear value?
 	};
 
+	struct SamplerDesc
+	{
+
+	};
+
 	struct TextureUploadDesc
 	{
 		const void* data;
@@ -379,6 +384,9 @@ namespace RHI
 	void UploadTextureMip0(HTexture texture, const TextureUploadDesc& desc);
 	void GenerateTextureMips(HTexture texture);
 	void DestroyTexture(HTexture texture);
+
+	HSampler CreateSampler(const SamplerDesc& sampler);
+	void DestroySampler(HSampler sampler);
 
 	HRootSignature CreateRootSignature(const RootSignatureDesc& desc);
 	void DestroyRootSignature(HRootSignature signature);
