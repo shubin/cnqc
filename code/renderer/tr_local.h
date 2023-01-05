@@ -379,14 +379,13 @@ namespace RHI
 	HTexture CreateTexture(const TextureDesc& desc);
 	void UploadTextureMip0(HTexture texture, const TextureUploadDesc& desc);
 	void GenerateTextureMips(HTexture texture);
-	uint32_t GetTextureSRV(HTexture texture);
 	void DestroyTexture(HTexture texture);
 
 	HRootSignature CreateRootSignature(const RootSignatureDesc& desc);
 	void DestroyRootSignature(HRootSignature signature);
 
 	HDescriptorTable CreateDescriptorTable(const DescriptorTableDesc& desc);
-	void UpdateDescriptorTable(HRootSignature signature, DescriptorType::Id type, uint32_t firstIndex, uint32_t handleCount, const void* resourceHandles);
+	void UpdateDescriptorTable(HDescriptorTable table, DescriptorType::Id type, uint32_t firstIndex, uint32_t handleCount, const void* resourceHandles);
 	void DestroyDescriptorTable(HDescriptorTable table);
 
 	HPipeline CreateGraphicsPipeline(const GraphicsPipelineDesc& desc);
@@ -395,7 +394,7 @@ namespace RHI
 
 	// Cmd* write commands to the main/graphics command queue
 	void CmdBindRootSignature(HRootSignature rootSignature);
-	void CmdBindDescriptorTable(HDescriptorTable table);
+	void CmdBindDescriptorTable(HRootSignature sigHandle, HDescriptorTable table);
 	void CmdBindPipeline(HPipeline pipeline);
 	void CmdBindVertexBuffers(uint32_t count, const HBuffer* vertexBuffers, const uint32_t* byteStrides, const uint32_t* startByteOffsets);
 	void CmdBindIndexBuffer(HBuffer indexBuffer, IndexType::Id type, uint32_t startByteOffset);
@@ -2404,6 +2403,8 @@ struct IRenderPipeline
 	virtual void EndFrame() = 0;
 	virtual void AddDrawSurface(const surfaceType_t* surface, const shader_t* shader) = 0;
 	virtual void ExecuteRenderCommands(const void* data) = 0;
+	virtual void CreateTexture(image_t* image, int mipCount, int width, int height) = 0;
+	virtual void UpdateTexture(image_t* image, int mipIndex, int x, int y, int width, int height, const void* data) = 0;
 };
 
 extern IRenderPipeline* renderPipeline;

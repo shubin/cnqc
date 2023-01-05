@@ -1621,11 +1621,6 @@ namespace RHI
 		// @TODO:
 	}
 
-	uint32_t GetTextureSRV(HTexture texture)
-	{
-		return rhi.textures.Get(texture).srvIndex;
-	}
-
 	void DestroyTexture(HTexture handle)
 	{
 		Texture& texture = rhi.textures.Get(handle);
@@ -1771,9 +1766,24 @@ namespace RHI
 		return rhi.descriptorTables.Add(table);
 	}
 
-	void UpdateDescriptorTable(HRootSignature signature, DescriptorType::Id type, uint32_t firstIndex, uint32_t handleCount, const void* resourceHandles)
+	void UpdateDescriptorTable(HDescriptorTable handle, DescriptorType::Id type, uint32_t firstIndex, uint32_t handleCount, const void* resourceHandles)
 	{
+		Q_assert(resourceHandles != NULL);
+
 		// @TODO:
+
+		Q_assert(handleCount == 1);
+		Q_assert(type == DescriptorType::Texture);
+
+		const HTexture* textures = (const HTexture*)resourceHandles;
+		const Texture& texture = rhi.textures.Get(textures[0]);
+
+		DescriptorTable& table = rhi.descriptorTables.Get(handle);
+		D3D12_CPU_DESCRIPTOR_HANDLE srcHandle = rhi.descHeapGeneric->GetCPUDescriptorHandleForHeapStart();
+		D3D12_CPU_DESCRIPTOR_HANDLE dstHandle = table.genericHeap->GetCPUDescriptorHandleForHeapStart();
+		srcHandle.ptr += texture.srvIndex * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		dstHandle.ptr += firstIndex * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		rhi.device->CopyDescriptorsSimple(1, dstHandle, srcHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	}
 
 	void DestroyDescriptorTable(HDescriptorTable handle)
@@ -1911,14 +1921,21 @@ namespace RHI
 		if(sig.genericTableIndex != UINT32_MAX)
 		{
 			heaps[heapCount++] = table.genericHeap;
-			rhi.commandList->SetGraphicsRootDescriptorTable(sig.genericTableIndex, table.genericHeap->GetGPUDescriptorHandleForHeapStart());
 		}
 		if(sig.samplerTableIndex != UINT32_MAX)
 		{
 			heaps[heapCount++] = table.samplerHeap;
-			rhi.commandList->SetGraphicsRootDescriptorTable(sig.samplerTableIndex, table.samplerHeap->GetGPUDescriptorHandleForHeapStart());
 		}
 		rhi.commandList->SetDescriptorHeaps(heapCount, heaps);
+
+		if(sig.genericTableIndex != UINT32_MAX)
+		{
+			rhi.commandList->SetGraphicsRootDescriptorTable(sig.genericTableIndex, table.genericHeap->GetGPUDescriptorHandleForHeapStart());
+		}
+		if(sig.samplerTableIndex != UINT32_MAX)
+		{
+			rhi.commandList->SetGraphicsRootDescriptorTable(sig.samplerTableIndex, table.samplerHeap->GetGPUDescriptorHandleForHeapStart());
+		}
 	}
 
 	void CmdBindPipeline(HPipeline pipeline)

@@ -227,34 +227,6 @@ static int ComputeMipCount( int scaled_width, int scaled_height )
 }
 
 
-static void CreateTexture( image_t* image, int mipCount, int width, int height )
-{
-	RHI::TextureDesc desc = { 0 };
-	desc.format = RHI::TextureFormat::RGBA32_UNorm;
-	desc.width = width;
-	desc.height = height;
-	desc.mipCount = mipCount;
-	desc.name = image->name;
-	desc.sampleCount = 1;
-	desc.initialState = RHI::ResourceState::ShaderAccessBits | RHI::ResourceState::UnorderedAccessBit;
-	desc.committedResource = true;
-	image->texture = RHI::CreateTexture(desc);
-	image->textureIndex = RHI::GetTextureSRV(image->texture);
-}
-
-
-static void UpdateTexture( image_t* image, int /*mipIndex*/, int x, int y, int width, int height, const void* data )
-{
-	RHI::TextureUploadDesc upload = { 0 };
-	upload.data = data;
-	upload.x = x;
-	upload.y = y;
-	upload.width = width;
-	upload.height = height;
-	RHI::UploadTextureMip0(image->texture, upload);
-}
-
-
 // note that the "32" here is for the image's STRIDE - it has nothing to do with the actual COMPONENTS
 
 static void Upload32( image_t* image, unsigned int* data )
@@ -263,7 +235,7 @@ static void Upload32( image_t* image, unsigned int* data )
 	if ( image->flags & IMG_LMATLAS ) {
 		image->flags |= IMG_NOMIPMAP;
 		image->flags |= IMG_NOAF;
-		CreateTexture( image, 1, image->width, image->height );
+		renderPipeline->CreateTexture( image, 1, image->width, image->height );
 		return;
 	}
 
@@ -351,8 +323,8 @@ static void Upload32( image_t* image, unsigned int* data )
 			image->height = max( image->height >> 1, 1 );
 			mipOffset++;
 		}
-		CreateTexture( image, mipCount, w, h );
-		UpdateTexture( image, 0, 0, 0, w, h, data );
+		renderPipeline->CreateTexture( image, mipCount, w, h );
+		renderPipeline->UpdateTexture( image, 0, 0, 0, w, h, data );
 		RHI::GenerateTextureMips( image->texture );
 		return;
 	}
@@ -361,8 +333,8 @@ static void Upload32( image_t* image, unsigned int* data )
 	// copy or resample data as appropriate for first MIP level
 	if ( ( scaled_width == image->width ) && ( scaled_height == image->height ) ) {
 		if ( image->flags & IMG_NOMIPMAP ) {
-			CreateTexture( image, 1, image->width, image->height );
-			UpdateTexture( image, 0, 0, 0, image->width, image->height, data );
+			renderPipeline->CreateTexture( image, 1, image->width, image->height );
+			renderPipeline->UpdateTexture( image, 0, 0, 0, image->width, image->height, data );
 			return;
 		}
 		Com_Memcpy( pScaled, data, image->width * image->height * 4 );
@@ -384,8 +356,8 @@ static void Upload32( image_t* image, unsigned int* data )
 		R_LightScaleTexture( pScaled.Get<byte>(), scaled_width, scaled_height );
 
 	const int mipCount = ( image->flags & IMG_NOMIPMAP ) ? 1 : ComputeMipCount( scaled_width, scaled_height );
-	CreateTexture( image, 1, scaled_width, scaled_height ); // @TODO: mipCount
-	UpdateTexture( image, 0, 0, 0, scaled_width, scaled_height, pScaled );
+	renderPipeline->CreateTexture( image, 1, scaled_width, scaled_height ); // @TODO: mipCount
+	renderPipeline->UpdateTexture( image, 0, 0, 0, scaled_width, scaled_height, pScaled );
 
 	if ( !(image->flags & IMG_NOMIPMAP) )
 	{

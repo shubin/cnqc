@@ -132,6 +132,7 @@ struct ui_t
 	int indexCount;
 	int vertexCount;
 	RHI::HRootSignature rootSignature;
+	RHI::HDescriptorTable descriptorTable;
 	RHI::HPipeline pipeline;
 	RHI::HBuffer indexBuffer;
 	RHI::HBuffer vertexBuffer;
@@ -152,6 +153,7 @@ struct grp_t
 {
 	ui_t ui;
 	projection_t projection;
+	uint32_t textureIndex;
 };
 
 static grp_t grp;
@@ -187,6 +189,7 @@ static void Begin2D()
 	RHI::CmdSetScissor(0, 0, glConfig.vidWidth, glConfig.vidHeight);
 	RHI::CmdBindRootSignature(grp.ui.rootSignature);
 	RHI::CmdBindPipeline(grp.ui.pipeline);
+	RHI::CmdBindDescriptorTable(grp.ui.rootSignature, grp.ui.descriptorTable);
 	const uint32_t stride = sizeof(ui_t::vertex_t);
 	RHI::CmdBindVertexBuffers(1, &grp.ui.vertexBuffer, &stride, NULL);
 	RHI::CmdBindIndexBuffer(grp.ui.indexBuffer, RHI::IndexType::UInt32, 0);
@@ -360,6 +363,14 @@ struct GameplayRenderPipeline : IRenderPipeline
 			grp.ui.rootSignature = RHI::CreateRootSignature(desc);
 		}
 		{
+			RHI::DescriptorTableDesc desc = { 0 };
+			desc.name = "UI descriptor table";
+			// @TODO: use root signature instead!
+			desc.genericCount = MAX_DRAWIMAGES;
+			desc.samplerCount = 1;
+			grp.ui.descriptorTable = RHI::CreateDescriptorTable(desc);
+		}
+		{
 			RHI::GraphicsPipelineDesc desc = { 0 };
 			desc.name = "UI PSO";
 			desc.rootSignature = grp.ui.rootSignature;
@@ -467,6 +478,35 @@ struct GameplayRenderPipeline : IRenderPipeline
 					return;
 			}
 		}
+	}
+
+	void CreateTexture(image_t* image, int mipCount, int width, int height) override
+	{
+		RHI::TextureDesc desc = { 0 };
+		desc.format = RHI::TextureFormat::RGBA32_UNorm;
+		desc.width = width;
+		desc.height = height;
+		desc.mipCount = mipCount;
+		desc.name = image->name;
+		desc.sampleCount = 1;
+		desc.initialState = RHI::ResourceState::ShaderAccessBits | RHI::ResourceState::UnorderedAccessBit;
+		desc.committedResource = true;
+
+		image->texture = RHI::CreateTexture(desc);
+		image->textureIndex = grp.textureIndex++;
+
+		RHI::UpdateDescriptorTable(grp.ui.descriptorTable, RHI::DescriptorType::Texture, image->textureIndex, 1, &image->texture);
+	}
+
+	void UpdateTexture(image_t* image, int mipIndex, int x, int y, int width, int height, const void* data) override
+	{
+		RHI::TextureUploadDesc upload = { 0 };
+		upload.data = data;
+		upload.x = x;
+		upload.y = y;
+		upload.width = width;
+		upload.height = height;
+		RHI::UploadTextureMip0(image->texture, upload);
 	}
 };
 
