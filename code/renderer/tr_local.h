@@ -71,22 +71,6 @@ namespace RHI
 #define RHI_BIT(Bit) (1 << Bit)
 #define RHI_BIT_MASK(BitCount) ((1 << BitCount) - 1)
 
-	struct ResourceType
-	{
-		enum Id
-		{
-			// @NOTE: a valid type never being 0 means we can discard 0 handles right away
-			Invalid,
-			Buffer,
-			Texture,
-			RootSignature,
-			DescriptorTable,
-			Pipeline,
-			DurationQuery,
-			Count
-		};
-	};
-
 	struct IndexType
 	{
 		enum Id
@@ -215,6 +199,19 @@ namespace RHI
 		};
 	};
 
+	struct DescriptorType
+	{
+		enum Id
+		{
+			Buffer, // CBV, HBuffer
+			RWBuffer, // UAV, HBuffer
+			Texture, // SRV, HTexture
+			RWTexture, // UAV, HTexture
+			Sampler,
+			Count
+		};
+	};
+
 	struct RootSignatureDesc
 	{
 		const char* name;
@@ -224,6 +221,26 @@ namespace RHI
 			uint32_t count; // in multiples of 4 bytes
 		}
 		constants[ShaderType::Count];
+		struct DescriptorRange
+		{
+			DescriptorType::Id type;
+			uint32_t firstIndex;
+			uint32_t count;
+		}
+		genericRanges[64];
+		uint32_t genericRangeCount;
+		uint32_t samplerCount;
+		ShaderStage::Flags genericVisibility;
+		ShaderStage::Flags samplerVisibility;
+
+		void AddRange(DescriptorType::Id type, uint32_t firstIndex, uint32_t count)
+		{
+			Q_assert(genericRangeCount < ARRAY_LEN(genericRanges));
+			DescriptorRange& r = genericRanges[genericRangeCount++];
+			r.type = type;
+			r.firstIndex = firstIndex;
+			r.count = count;
+		}
 	};
 
 	struct ShaderByteCode
@@ -369,7 +386,7 @@ namespace RHI
 	void DestroyRootSignature(HRootSignature signature);
 
 	HDescriptorTable CreateDescriptorTable(const DescriptorTableDesc& desc);
-	void UpdateDescriptorTable(HRootSignature signature, ResourceType::Id type, uint32_t firstIndex, uint32_t handleCount, const void* resourceHandles);
+	void UpdateDescriptorTable(HRootSignature signature, DescriptorType::Id type, uint32_t firstIndex, uint32_t handleCount, const void* resourceHandles);
 	void DestroyDescriptorTable(HDescriptorTable table);
 
 	HPipeline CreateGraphicsPipeline(const GraphicsPipelineDesc& desc);

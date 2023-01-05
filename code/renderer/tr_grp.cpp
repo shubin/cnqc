@@ -65,7 +65,7 @@ cbuffer RootConstants
 
 Texture2D textures2D[4096] : register(t0);
 //RWTexture2D<float4> rwtextures2D[4096 * 16] : register(u0);
-SamplerState samplers[1] : register(s0, space0);
+SamplerState sampler0 : register(s0, space0);
 
 struct VOut
 {
@@ -77,7 +77,7 @@ struct VOut
 float4 main(VOut input) : SV_TARGET
 {
 	//return rwtextures2D[0][uint2(0, 0)] + textures2D[textureIndex].Sample(samplers[samplerIndex], input.texCoords) * input.color;
-	return textures2D[textureIndex].Sample(samplers[samplerIndex], input.texCoords) * input.color;
+	return textures2D[textureIndex].Sample(sampler0, input.texCoords) * input.color;
 }
 )grml";
 
@@ -353,6 +353,10 @@ struct GameplayRenderPipeline : IRenderPipeline
 			desc.usingVertexBuffers = qtrue;
 			desc.constants[RHI::ShaderType::Vertex].count = 2;
 			desc.constants[RHI::ShaderType::Pixel].count = 2;
+			desc.samplerCount = 1;
+			desc.samplerVisibility = RHI::ShaderStage::PixelBit;
+			desc.genericVisibility = RHI::ShaderStage::PixelBit;
+			desc.AddRange(RHI::DescriptorType::Texture, 0, MAX_DRAWIMAGES);
 			grp.ui.rootSignature = RHI::CreateRootSignature(desc);
 		}
 		{
