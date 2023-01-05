@@ -119,24 +119,14 @@ namespace RHI
 	// - 2048 samplers
 	static const D3D_FEATURE_LEVEL FeatureLevel = D3D_FEATURE_LEVEL_12_0;
 
-	struct ResourceType
+	/*struct ResourceTypeEx
 	{
 		enum Id
 		{
-			// @NOTE: a valid type never being 0 means we can discard 0 handles right away
-			Invalid,
-			// public stuff
-			Fence,
-			Buffer,
-			Texture,
-			RootSignature,
-			Pipeline,
-			DurationQuery,
-			// private stuff
-			//
+			XXX = ResourceType::Count,
 			Count
 		};
-	};
+	};*/
 
 	struct PipelineType
 	{
@@ -181,6 +171,12 @@ namespace RHI
 		ID3D12RootSignature* signature;
 		PerStageConstants constants[ShaderType::Count];
 		UINT firstTableIndex;
+	};
+
+	struct DescriptorTable
+	{
+		ID3D12DescriptorHeap* genericHeap; // SRV, CBV, UAV
+		ID3D12DescriptorHeap* samplerHeap;
 	};
 
 	struct Pipeline
@@ -312,6 +308,7 @@ namespace RHI
 		POOL(Buffer, 64) buffers;
 		POOL(Texture, MAX_DRAWIMAGES * 2) textures;
 		POOL(RootSignature, 64) rootSignatures;
+		POOL(DescriptorTable, 64) descriptorTables;
 		POOL(Pipeline, 64) pipelines;
 #undef POOL
 
@@ -1081,8 +1078,8 @@ namespace RHI
 		}
 #endif
 
-		rhi.descHeapSRVs = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, RHI_MAX_TEXTURES_2D + RHI_MAX_RW_TEXTURES_2D, true, "CBV SRV UAV heap");
-		rhi.descHeapSamplers = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, RHI_MAX_SAMPLERS, true, "sampler heap");
+		rhi.descHeapSRVs = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, RHI_MAX_TEXTURES_2D + RHI_MAX_RW_TEXTURES_2D, false, "CBV SRV UAV heap");
+		rhi.descHeapSamplers = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, RHI_MAX_SAMPLERS, false, "sampler heap");
 
 		{
 			D3D12_COMMAND_QUEUE_DESC commandQueueDesc = { 0 };
@@ -1244,6 +1241,7 @@ namespace RHI
 
 		DESTROY_POOL(buffers, DestroyBuffer);
 		DESTROY_POOL(textures, DestroyTexture);
+		DESTROY_POOL(descriptorTables, DestroyDescriptorTable);
 		DESTROY_POOL(rootSignatures, DestroyRootSignature);
 		DESTROY_POOL(pipelines, DestroyPipeline);
 
@@ -1303,9 +1301,6 @@ namespace RHI
 		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		rhi.commandList->ResourceBarrier(1, &barrier);
-
-		ID3D12DescriptorHeap* heaps[2] = { rhi.descHeapSRVs, rhi.descHeapSamplers };
-		rhi.commandList->SetDescriptorHeaps(ARRAY_LEN(heaps), heaps);
 
 		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = { 0 };
 		rtvHandle.ptr = rhi.rtvHandle.ptr + rhi.frameIndex * rhi.rtvIncSize;
@@ -1630,6 +1625,7 @@ namespace RHI
 		Q_assert(parameterCount <= ShaderType::Count);
 		const int firstTableIndex = parameterCount;
 
+#if 0
 		D3D12_DESCRIPTOR_RANGE ranges[64] = {};
 		int rangeCount = 0;
 
@@ -1680,6 +1676,7 @@ namespace RHI
 			p.DescriptorTable.pDescriptorRanges = &r;
 			p.ShaderVisibility = (D3D12_SHADER_VISIBILITY)(D3D12_SHADER_VISIBILITY_VERTEX | D3D12_SHADER_VISIBILITY_PIXEL);
 		}
+#endif
 
 		D3D12_ROOT_SIGNATURE_DESC desc = { 0 };
 		desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE |
@@ -1728,6 +1725,29 @@ namespace RHI
 	{
 		COM_RELEASE(rhi.rootSignatures.Get(signature).signature);
 		rhi.rootSignatures.Remove(signature);
+	}
+
+	HDescriptorTable CreateDescriptorTable(const DescriptorTableDesc& desc)
+	{
+		DescriptorTable table = { 0 };
+		table.genericHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, desc.genericCount, true, va("%s CBV SRV UAV", desc.name));
+		table.samplerHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, desc.samplerCount, true, va("%s sampler", desc.name));
+
+		return rhi.descriptorTables.Add(table);
+	}
+
+	void UpdateDescriptorTable(HRootSignature signature, ResourceType::Id type, uint32_t firstIndex, uint32_t handleCount, const void* resourceHandles)
+	{
+		// @TODO:
+	}
+
+	void DestroyDescriptorTable(HDescriptorTable handle)
+	{
+		DescriptorTable& table = rhi.descriptorTables.Get(handle);
+		COM_RELEASE(table.genericHeap);
+		COM_RELEASE(table.samplerHeap);
+
+		rhi.descriptorTables.Remove(handle);
 	}
 
 	HPipeline CreateGraphicsPipeline(const GraphicsPipelineDesc& rhiDesc)
@@ -1844,6 +1864,16 @@ namespace RHI
 			rhi.commandList->SetGraphicsRootDescriptorTable(sig.firstTableIndex + 0, rhi.descHeapSRVs->GetGPUDescriptorHandleForHeapStart());
 			rhi.commandList->SetGraphicsRootDescriptorTable(sig.firstTableIndex + 1, rhi.descHeapSamplers->GetGPUDescriptorHandleForHeapStart());
 		}
+	}
+
+	void CmdBindDescriptorTable(HDescriptorTable handle)
+	{
+		Q_assert(CanWriteCommands());
+
+		const DescriptorTable& table = rhi.descriptorTables.Get(handle);
+
+		ID3D12DescriptorHeap* heaps[2] = { table.genericHeap, table.samplerHeap };
+		rhi.commandList->SetDescriptorHeaps(ARRAY_LEN(heaps), heaps);
 	}
 
 	void CmdBindPipeline(HPipeline pipeline)

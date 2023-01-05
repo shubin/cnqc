@@ -34,11 +34,8 @@ namespace RHI
 {
 	// @TODO: move to own header file to be included by both C++ and HLSL code
 #define RHI_MAX_TEXTURES_2D 4096 // real max: unlimited
-#define RHI_MAX_RW_TEXTURES_2D (4096 * 16) // real max: 64 in tier 2, unlimited in tier 3
+#define RHI_MAX_RW_TEXTURES_2D 64 // real max: 64
 #define RHI_MAX_SAMPLERS 64 // real max: 2048
-#define RHI_SPACE_TEXTURE2D 0
-#define RHI_SPACE_RW_TEXTURES_2D 0
-#define RHI_SPACE_SAMPLERS 0
 
 	// this has 2 meanings:
 	// 1. maximum number of frames queued
@@ -58,6 +55,7 @@ namespace RHI
 	inline bool operator!=(TypeName a, TypeName b) { return a.v != b.v; }
 	RHI_HANDLE_TYPE(HBuffer);
 	RHI_HANDLE_TYPE(HRootSignature);
+	RHI_HANDLE_TYPE(HDescriptorTable);
 	RHI_HANDLE_TYPE(HPipeline);
 	RHI_HANDLE_TYPE(HTexture);
 	//RHI_HANDLE_TYPE(HSampler);
@@ -72,6 +70,22 @@ namespace RHI
 
 #define RHI_BIT(Bit) (1 << Bit)
 #define RHI_BIT_MASK(BitCount) ((1 << BitCount) - 1)
+
+	struct ResourceType
+	{
+		enum Id
+		{
+			// @NOTE: a valid type never being 0 means we can discard 0 handles right away
+			Invalid,
+			Buffer,
+			Texture,
+			RootSignature,
+			DescriptorTable,
+			Pipeline,
+			DurationQuery,
+			Count
+		};
+	};
 
 	struct IndexType
 	{
@@ -325,6 +339,13 @@ namespace RHI
 		uint32_t height;
 	};
 
+	struct DescriptorTableDesc
+	{
+		const char* name;
+		uint32_t genericCount;
+		uint32_t samplerCount;
+	};
+
 	void Init();
 	void ShutDown(qbool destroyWindow);
 
@@ -347,12 +368,17 @@ namespace RHI
 	HRootSignature CreateRootSignature(const RootSignatureDesc& desc);
 	void DestroyRootSignature(HRootSignature signature);
 
+	HDescriptorTable CreateDescriptorTable(const DescriptorTableDesc& desc);
+	void UpdateDescriptorTable(HRootSignature signature, ResourceType::Id type, uint32_t firstIndex, uint32_t handleCount, const void* resourceHandles);
+	void DestroyDescriptorTable(HDescriptorTable table);
+
 	HPipeline CreateGraphicsPipeline(const GraphicsPipelineDesc& desc);
 	HPipeline CreateComputePipeline(const ComputePipelineDesc& desc);
 	void DestroyPipeline(HPipeline pipeline);
 
 	// Cmd* write commands to the main/graphics command queue
 	void CmdBindRootSignature(HRootSignature rootSignature);
+	void CmdBindDescriptorTable(HDescriptorTable table);
 	void CmdBindPipeline(HPipeline pipeline);
 	void CmdBindVertexBuffers(uint32_t count, const HBuffer* vertexBuffers, const uint32_t* byteStrides, const uint32_t* startByteOffsets);
 	void CmdBindIndexBuffer(HBuffer indexBuffer, IndexType::Id type, uint32_t startByteOffset);
