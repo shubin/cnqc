@@ -1759,9 +1759,11 @@ namespace RHI
 
 	HDescriptorTable CreateDescriptorTable(const DescriptorTableDesc& desc)
 	{
+		const RootSignature& sig = rhi.rootSignatures.Get(desc.rootSignature);
+
 		DescriptorTable table = { 0 };
-		table.genericHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, desc.genericCount, true, va("%s CBV SRV UAV", desc.name));
-		table.samplerHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, desc.samplerCount, true, va("%s sampler", desc.name));
+		table.genericHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, sig.genericDescCount, true, va("%s CBV SRV UAV", desc.name));
+		table.samplerHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, sig.samplerDescCount, true, va("%s sampler", desc.name));
 
 		return rhi.descriptorTables.Add(table);
 	}

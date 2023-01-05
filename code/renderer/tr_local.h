@@ -359,8 +359,7 @@ namespace RHI
 	struct DescriptorTableDesc
 	{
 		const char* name;
-		uint32_t genericCount;
-		uint32_t samplerCount;
+		HRootSignature rootSignature;
 	};
 
 	void Init();

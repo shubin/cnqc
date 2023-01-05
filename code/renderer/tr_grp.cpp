@@ -365,9 +365,7 @@ struct GameplayRenderPipeline : IRenderPipeline
 		{
 			RHI::DescriptorTableDesc desc = { 0 };
 			desc.name = "UI descriptor table";
-			// @TODO: use root signature instead!
-			desc.genericCount = MAX_DRAWIMAGES;
-			desc.samplerCount = 1;
+			desc.rootSignature = grp.ui.rootSignature;
 			grp.ui.descriptorTable = RHI::CreateDescriptorTable(desc);
 		}
 		{
