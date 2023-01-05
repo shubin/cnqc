@@ -563,12 +563,14 @@ namespace RHI
 			ri.Error(ERR_FATAL, "Upload request too large!\n");
 		}
 
-		if(bufferByteOffset + uploadByteCount > bufferByteCount)
+		// @TODO: woopsie, command list isn't sync'd
+		/*if(bufferByteOffset + uploadByteCount > bufferByteCount)
 		{
 			// not enough space left, force a wait and rewind
 			fence.WaitOnCPU(fenceValue);
 			bufferByteOffset = 0;
-		}
+		}*/
+		fence.WaitOnCPU(fenceValue);
 
 		D3D12_RESOURCE_DESC textureDesc = texture.texture->GetDesc();
 		uint64_t textureMemorySize = 0;
@@ -616,16 +618,19 @@ namespace RHI
 			commandList->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, NULL);
 		}
 
+		if(texture.desc.mipCount > 1)
 		{
-			D3D12_RESOURCE_BARRIER barrier = { 0 };
-			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-			barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-			barrier.Transition.pResource = texture.texture;
-			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-			barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-			commandList->ResourceBarrier(1, &barrier);
-			texture.currentState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+			{
+				D3D12_RESOURCE_BARRIER barrier = { 0 };
+				barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+				barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+				barrier.Transition.pResource = texture.texture;
+				barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+				barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+				barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+				commandList->ResourceBarrier(1, &barrier);
+				texture.currentState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+			}
 		}
 
 		ID3D12CommandList* commandLists[] = { commandList };
@@ -634,7 +639,7 @@ namespace RHI
 		fenceValue++;
 		commandQueue->Signal(fence.fence, fenceValue);
 
-		bufferByteOffset = AlignUp(bufferByteOffset + uploadByteCount, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+		//bufferByteOffset = AlignUp(bufferByteOffset + uploadByteCount, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
 
 		rhi.texturesToTransition.Add(handle);
 	}
