@@ -1790,38 +1790,46 @@ namespace RHI
 		return rhi.descriptorTables.Add(table);
 	}
 
+	static void CopyDescriptor(ID3D12DescriptorHeap* dstHeap, uint32_t dstIndex, ID3D12DescriptorHeap* srcHeap, uint32_t srcIndex, D3D12_DESCRIPTOR_HEAP_TYPE heapType)
+	{
+		const UINT incSize= rhi.device->GetDescriptorHandleIncrementSize(heapType);
+		D3D12_CPU_DESCRIPTOR_HANDLE srcHandle = srcHeap->GetCPUDescriptorHandleForHeapStart();
+		D3D12_CPU_DESCRIPTOR_HANDLE dstHandle = dstHeap->GetCPUDescriptorHandleForHeapStart();
+		srcHandle.ptr += srcIndex * incSize;
+		dstHandle.ptr += dstIndex * incSize;
+		rhi.device->CopyDescriptorsSimple(1, dstHandle, srcHandle, heapType);
+	}
+
 	void UpdateDescriptorTable(HDescriptorTable handle, DescriptorType::Id type, uint32_t firstIndex, uint32_t handleCount, const void* resourceHandles)
 	{
 		Q_assert(resourceHandles != NULL);
 
-		// @TODO:
-
-		Q_assert(handleCount == 1);
+		DescriptorTable& table = rhi.descriptorTables.Get(handle);
 		
 		if(type == DescriptorType::Texture)
 		{
 			const HTexture* textures = (const HTexture*)resourceHandles;
-			const Texture& texture = rhi.textures.Get(textures[0]);
 
-			DescriptorTable& table = rhi.descriptorTables.Get(handle);
-			D3D12_CPU_DESCRIPTOR_HANDLE srcHandle = rhi.descHeapGeneric->GetCPUDescriptorHandleForHeapStart();
-			D3D12_CPU_DESCRIPTOR_HANDLE dstHandle = table.genericHeap->GetCPUDescriptorHandleForHeapStart();
-			srcHandle.ptr += texture.srvIndex * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			dstHandle.ptr += firstIndex * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			rhi.device->CopyDescriptorsSimple(1, dstHandle, srcHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			for(uint32_t i = 0; i < handleCount; ++i)
+			{
+				const Texture& texture = rhi.textures.Get(textures[i]);
+				CopyDescriptor(table.genericHeap, firstIndex, rhi.descHeapGeneric, texture.srvIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			}
+		}
+		else if(type == DescriptorType::Sampler)
+		{
+			const HSampler* samplers = (const HSampler*)resourceHandles;
+
+			for(uint32_t i = 0; i < handleCount; ++i)
+			{
+				Handle htype, index, gen;
+				DecomposeHandle(&htype, &index, &gen, samplers[i].v);
+				CopyDescriptor(table.samplerHeap, firstIndex, rhi.descHeapSamplers, index, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+			}
 		}
 		else
 		{
-			const HSampler* samplers = (const HSampler*)resourceHandles;
-			Handle htype, index, gen;
-			DecomposeHandle(&htype, &index, &gen, samplers[0].v);
-
-			DescriptorTable& table = rhi.descriptorTables.Get(handle);
-			D3D12_CPU_DESCRIPTOR_HANDLE srcHandle = rhi.descHeapSamplers->GetCPUDescriptorHandleForHeapStart();
-			D3D12_CPU_DESCRIPTOR_HANDLE dstHandle = table.samplerHeap->GetCPUDescriptorHandleForHeapStart();
-			srcHandle.ptr += index * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-			dstHandle.ptr += firstIndex * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-			rhi.device->CopyDescriptorsSimple(1, dstHandle, srcHandle, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+			ri.Error(ERR_FATAL, "UpdateDescriptorTable: unsupported descriptor type\n");
 		}
 	}
 
