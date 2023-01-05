@@ -34,9 +34,10 @@ namespace RHI
 {
 	// @TODO: move to own header file to be included by both C++ and HLSL code
 #define RHI_MAX_TEXTURES_2D 4096 // real max: unlimited
-#define RHI_MAX_RW_TEXTURES_2D 64 // real max: 64
+#define RHI_MAX_RW_TEXTURES_2D (4096 * 16) // real max: 64 in tier 2, unlimited in tier 3
 #define RHI_MAX_SAMPLERS 64 // real max: 2048
 #define RHI_SPACE_TEXTURE2D 0
+#define RHI_SPACE_RW_TEXTURES_2D 0
 #define RHI_SPACE_SAMPLERS 0
 
 	// this has 2 meanings:

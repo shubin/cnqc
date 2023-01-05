@@ -303,6 +303,7 @@ namespace RHI
 		HRootSignature currentRootSignature;
 		HDurationQuery frameDuration;
 		StaticFreeList<uint16_t, RHI_MAX_TEXTURES_2D, InvalidDescriptorIndex> freeListTex2D;
+		StaticFreeList<uint16_t, RHI_MAX_RW_TEXTURES_2D, InvalidDescriptorIndex> freeListRWTex2D;
 		StaticFreeList<uint16_t, RHI_MAX_SAMPLERS, InvalidDescriptorIndex> freeListSamplers;
 		ID3D12DescriptorHeap* descHeapSRVs;
 		ID3D12DescriptorHeap* descHeapSamplers;
@@ -1554,20 +1555,20 @@ namespace RHI
 		{
 			for(uint32_t m = 0; m < rhiDesc.mipCount; ++m)
 			{
-				// @TODO: create in a CPU descriptor heap
-				texture.mips[m].uavIndex = InvalidDescriptorIndex;
+				// @TODO: resource binding tier 2 support -> use CPU heaps and do copies
 
-				/*D3D12_UNORDERED_ACCESS_VIEW_DESC uav = {0};
+				D3D12_UNORDERED_ACCESS_VIEW_DESC uav = { 0 };
 				uav.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
 				uav.Format = desc.Format;
 				uav.Texture2D.MipSlice = m;
-				uav.Texture2D.PlaneSlice = 0;*/
+				uav.Texture2D.PlaneSlice = 0;
 
-				/*const uint32_t index = rhi.descHeapRWTex2D.AllocateDescriptor();
-				D3D12_CPU_DESCRIPTOR_HANDLE handle = rhi.descHeapRWTex2D.heap->GetCPUDescriptorHandleForHeapStart();
+				// UAVs are after the SRVs
+				const uint32_t index = RHI_MAX_TEXTURES_2D + rhi.freeListRWTex2D.Allocate();
+				D3D12_CPU_DESCRIPTOR_HANDLE handle = rhi.descHeapSRVs->GetCPUDescriptorHandleForHeapStart();
 				handle.ptr += index * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 				rhi.device->CreateUnorderedAccessView(resource, NULL, &uav, handle);
-				texture.mips[m].uavIndex = index;*/
+				texture.mips[m].uavIndex = index;
 			}
 		}
 		else
@@ -1632,7 +1633,7 @@ namespace RHI
 		D3D12_DESCRIPTOR_RANGE ranges[64] = {};
 		int rangeCount = 0;
 
-		{
+		/*{
 			D3D12_DESCRIPTOR_RANGE& r = ranges[rangeCount++];
 			r.BaseShaderRegister = 0;
 			r.NumDescriptors = RHI_MAX_TEXTURES_2D;
@@ -1642,6 +1643,26 @@ namespace RHI
 			D3D12_ROOT_PARAMETER& p = parameters[parameterCount++];
 			p.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 			p.DescriptorTable.NumDescriptorRanges = 1;
+			p.DescriptorTable.pDescriptorRanges = &r;
+			p.ShaderVisibility = (D3D12_SHADER_VISIBILITY)(D3D12_SHADER_VISIBILITY_VERTEX | D3D12_SHADER_VISIBILITY_PIXEL);
+		}*/
+
+		{
+			D3D12_DESCRIPTOR_RANGE& r = ranges[rangeCount++];
+			r.BaseShaderRegister = 0;
+			r.NumDescriptors = RHI_MAX_TEXTURES_2D;
+			r.OffsetInDescriptorsFromTableStart = 0;
+			r.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+			r.RegisterSpace = RHI_SPACE_TEXTURE2D;
+			D3D12_DESCRIPTOR_RANGE& r2 = ranges[rangeCount++];
+			r2.BaseShaderRegister = 0;
+			r2.NumDescriptors = RHI_MAX_RW_TEXTURES_2D;
+			r2.OffsetInDescriptorsFromTableStart = RHI_MAX_TEXTURES_2D;
+			r2.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+			r2.RegisterSpace = RHI_SPACE_RW_TEXTURES_2D;
+			D3D12_ROOT_PARAMETER& p = parameters[parameterCount++];
+			p.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+			p.DescriptorTable.NumDescriptorRanges = 2;
 			p.DescriptorTable.pDescriptorRanges = &r;
 			p.ShaderVisibility = (D3D12_SHADER_VISIBILITY)(D3D12_SHADER_VISIBILITY_VERTEX | D3D12_SHADER_VISIBILITY_PIXEL);
 		}

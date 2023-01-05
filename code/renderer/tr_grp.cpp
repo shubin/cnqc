@@ -63,8 +63,9 @@ cbuffer RootConstants
 	uint samplerIndex;
 };
 
-Texture2D textures2D[2048] : register(t0);
-SamplerState samplers[1] : register(s0);
+Texture2D textures2D[4096] : register(t0);
+//RWTexture2D<float4> rwtextures2D[4096 * 16] : register(u0);
+SamplerState samplers[1] : register(s0, space0);
 
 struct VOut
 {
@@ -75,6 +76,7 @@ struct VOut
 
 float4 main(VOut input) : SV_TARGET
 {
+	//return rwtextures2D[0][uint2(0, 0)] + textures2D[textureIndex].Sample(samplers[samplerIndex], input.texCoords) * input.color;
 	return textures2D[textureIndex].Sample(samplers[samplerIndex], input.texCoords) * input.color;
 }
 )grml";
