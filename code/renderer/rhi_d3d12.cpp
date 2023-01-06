@@ -2413,6 +2413,12 @@ namespace RHI
 		//D3D12_RESOURCE_BARRIER_TYPE_UAV
 		//D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES
 
+		// a UAV barrier is used whenever
+		// D3D12_RESOURCE_STATE_UNORDERED_ACCESS is in both old and new state?
+		// if not, texture barrier is a layout transition
+		// if not, buffer barrier is invalid/dropped
+		// is that right?
+
 		// @TODO:
 
 		/*UINT barrierCount = 0;
