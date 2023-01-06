@@ -105,32 +105,6 @@ There is no such restriction for Tier 3 hardware.
 One mitigation for this restriction is the diligent use of Null descriptors.
 */
 
-/*
-Barrier resource states
-
-The following usage bits are read-only:
-D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER
-D3D12_RESOURCE_STATE_INDEX_BUFFER
-D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE
-D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
-D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT
-D3D12_RESOURCE_STATE_COPY_SOURCE
-D3D12_RESOURCE_STATE_DEPTH_READ
-
-The following usage bits are read/write:
-D3D12_RESOURCE_STATE_UNORDERED_ACCESS
-D3D12_RESOURCE_STATE_DEPTH_WRITE
-
-The following usage bits are write-only:
-D3D12_RESOURCE_STATE_COPY_DEST
-D3D12_RESOURCE_STATE_RENDER_TARGET
-D3D12_RESOURCE_STATE_STREAM_OUT
-
-At most one write bit can be set.
-If any write bit is set, then no read bit may be set.
-If no write bit is set, then any number of read bits may be set.
-*/
-
 
 #include "tr_local.h"
 #include <Windows.h>
@@ -987,6 +961,33 @@ namespace RHI
 		}
 	}
 
+	static D3D12_RESOURCE_STATES GetD3DResourceStates(ResourceState::Flags flags)
+	{
+#define ADD_BITS(RHIBit, D3DBits) \
+		if(flags & ResourceState::RHIBit) \
+		{ \
+			states |= D3DBits; \
+		}
+
+		D3D12_RESOURCE_STATES states = D3D12_RESOURCE_STATE_COMMON;
+		ADD_BITS(VertexBufferBit, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+		ADD_BITS(IndexBufferBit, D3D12_RESOURCE_STATE_INDEX_BUFFER);
+		ADD_BITS(ConstantBufferBit, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+		ADD_BITS(RenderTargetBit, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		ADD_BITS(VertexShaderAccessBit, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		ADD_BITS(PixelShaderAccessBit, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		ADD_BITS(ComputeShaderAccessBit, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		ADD_BITS(CopySourceBit, D3D12_RESOURCE_STATE_COPY_SOURCE);
+		ADD_BITS(CopyDestinationBit, D3D12_RESOURCE_STATE_COPY_DEST);
+		ADD_BITS(DepthReadBit, D3D12_RESOURCE_STATE_DEPTH_READ);
+		ADD_BITS(DepthWriteBit, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+		ADD_BITS(UnorderedAccessBit, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+		return states;
+
+#undef ADD_BITS
+	}
+
 	static D3D12_BLEND GetD3DSourceBlend(uint32_t stateBits)
 	{
 		switch(stateBits & GLS_SRCBLEND_BITS)
@@ -1043,6 +1044,66 @@ namespace RHI
 				return true;
 			default:
 				return false;
+		}
+	}
+
+	static void ValidateResourceStateForBarrier(D3D12_RESOURCE_STATES state)
+	{
+		const D3D12_RESOURCE_STATES readOnly[] =
+		{
+			D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
+			D3D12_RESOURCE_STATE_INDEX_BUFFER,
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+			D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT,
+			D3D12_RESOURCE_STATE_COPY_SOURCE,
+			D3D12_RESOURCE_STATE_DEPTH_READ
+		};
+		const D3D12_RESOURCE_STATES readWrite[] =
+		{
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+			D3D12_RESOURCE_STATE_DEPTH_WRITE
+		};
+		const D3D12_RESOURCE_STATES writeOnly[] =
+		{
+			D3D12_RESOURCE_STATE_COPY_DEST,
+			D3D12_RESOURCE_STATE_RENDER_TARGET,
+			D3D12_RESOURCE_STATE_STREAM_OUT
+		};
+
+		int rBits = 0;
+		int wBits = 0;
+
+		for(auto bit : readOnly)
+		{
+			if(state & bit)
+			{
+				rBits++;
+			}
+		}
+		for(auto bit : readWrite)
+		{
+			if(state & bit)
+			{
+				rBits++;
+				wBits++;
+			}
+		}
+		for(auto bit : writeOnly)
+		{
+			if(state & bit)
+			{
+				wBits++;
+			}
+		}
+
+		// MS: "At most one write bit can be set."
+		Q_assert(wBits == 0 || wBits == 1);
+
+		if(wBits == 1)
+		{
+			// MS: "If any write bit is set, then no read bit may be set."
+			Q_assert(rBits == 0);
 		}
 	}
 
@@ -1591,7 +1652,8 @@ namespace RHI
 		const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 		rhi.commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, NULL);
 
-		for(uint32_t t = 0; t < rhi.texturesToTransition.count; ++t)
+		// @TODO: nuke
+		/*for(uint32_t t = 0; t < rhi.texturesToTransition.count; ++t)
 		{
 			Texture& texture = rhi.textures.Get(rhi.texturesToTransition[t]);
 
@@ -1604,8 +1666,18 @@ namespace RHI
 			b.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 			rhi.commandList->ResourceBarrier(1, &b);
 			texture.currentState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+		}*/
+
+		static TextureBarrier barriers[MAX_DRAWIMAGES];
+		for(uint32_t t = 0; t < rhi.texturesToTransition.count; ++t)
+		{
+			const HTexture handle = rhi.texturesToTransition[t];
+			const Texture& texture = rhi.textures.Get(handle);
+			TextureBarrier& b = barriers[t];
+			b.texture = handle;
+			b.newState = texture.desc.initialState;
 		}
-		//@TODO: CmdBarriers(rhi.texturesToTransition.count, barriers);
+		CmdBarriers(rhi.texturesToTransition.count, barriers);
 		rhi.texturesToTransition.Clear();
 	}
 
@@ -2471,33 +2543,51 @@ namespace RHI
 
 	void CmdBarriers(uint32_t texCount, const TextureBarrier* textures, uint32_t buffCount, const BufferBarrier* buffers)
 	{
-		// of interest:
-		//D3D12_RESOURCE_BARRIER_TYPE_TRANSITION
-		//D3D12_RESOURCE_BARRIER_TYPE_UAV
-		//D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES
-
 		// a UAV barrier is used whenever
-		// D3D12_RESOURCE_STATE_UNORDERED_ACCESS is in both old and new state?
+		// D3D12_RESOURCE_STATE_UNORDERED_ACCESS is in both old and new state
 		// if not, texture/buffer barrier is a layout transition
 
-		// @TODO:
+		// @TODO: buffer barriers
 
-		/*UINT barrierCount = 0;
-		D3D12_RESOURCE_BARRIER barriers[16];
+		static D3D12_RESOURCE_BARRIER barriers[MAX_DRAWIMAGES * 2];
 		Q_assert(buffCount + texCount <= ARRAY_LEN(barriers));
 
+		UINT barrierCount = 0;
+		for(uint32_t i = 0; i < texCount; ++i)
 		{
-			D3D12_RESOURCE_BARRIER& b = barriers[barrierCount++];
-			b.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			const Texture& texture = rhi.textures.Get(textures[i].texture);
+			const D3D12_RESOURCE_STATES before = texture.currentState;
+			const D3D12_RESOURCE_STATES after = GetD3DResourceStates(textures[i].newState);
+			ValidateResourceStateForBarrier(before);
+			ValidateResourceStateForBarrier(after);
+			GetD3DResourceStates(textures[i].newState);
+
+			D3D12_RESOURCE_BARRIER& b = barriers[barrierCount];
 			b.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-			b.Transition.pResource = ;
-			b.Transition.StateBefore = ;
-			b.Transition.StateAfter = ;
-			b.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-			b.UAV.pResource = ;
+			if((before & D3D12_RESOURCE_STATE_UNORDERED_ACCESS) != 0 &&
+				(after & D3D12_RESOURCE_STATE_UNORDERED_ACCESS) != 0)
+			{
+				b.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+				b.UAV.pResource = texture.texture;
+			}
+			else
+			{
+				if(before == after)
+				{
+					continue;
+				}
+
+				b.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+				b.Transition.pResource = texture.texture;
+				b.Transition.StateBefore = before;
+				b.Transition.StateAfter = after;
+				b.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+			}
+
+			barrierCount++;
 		}
 
-		rhi.commandList->ResourceBarrier(barrierCount, barriers);*/
+		rhi.commandList->ResourceBarrier(barrierCount, barriers);
 	}
 
 #if defined(_DEBUG) || defined(CNQ3_DEV)
