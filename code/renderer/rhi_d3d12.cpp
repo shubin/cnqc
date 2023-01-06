@@ -1216,6 +1216,7 @@ namespace RHI
 				tier = "Unknown";
 				switch(options5.RaytracingTier)
 				{
+					case D3D12_RAYTRACING_TIER_NOT_SUPPORTED: tier = "Not supported";
 					case D3D12_RAYTRACING_TIER_1_0: tier = "1.0";
 					case D3D12_RAYTRACING_TIER_1_1: tier = "1.1";
 					default: break;
