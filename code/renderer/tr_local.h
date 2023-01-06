@@ -657,6 +657,20 @@ namespace RHI
 			return false;
 		}
 
+		int CountUsedSlots() const
+		{
+			int used = 0;
+			for(int i = 0; i < N; ++i)
+			{
+				if(items[i].used)
+				{
+					used++;
+				}
+			}
+
+			return used;
+		}
+
 	private:
 		StaticPool(const StaticPool<T, HT, RT, N>&);
 		void operator=(const StaticPool<T, HT, RT, N>&);
@@ -775,6 +789,7 @@ struct StaticFreeList
 		const T index = firstFree;
 		firstFree = items[index];
 		items[index] = Invalid;
+		allocatedItemCount++;
 
 		return index;
 	}
@@ -787,6 +802,7 @@ struct StaticFreeList
 		const T oldList = firstFree;
 		firstFree = index;
 		items[index] = oldList;
+		allocatedItemCount--;
 	}
 
 	void Clear()
@@ -797,10 +813,12 @@ struct StaticFreeList
 		}
 		items[N - 1] = Invalid;
 		firstFree = 0;
+		allocatedItemCount = 0;
 	}
 
 	T items[N];
 	T firstFree;
+	uint32_t allocatedItemCount;
 };
 
 

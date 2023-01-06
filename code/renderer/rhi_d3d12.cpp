@@ -1007,29 +1007,102 @@ namespace RHI
 		fq.durationQueryCount = 0;
 	}
 
+	static bool BeginTable(const char* name, int count)
+	{
+		ImGui::Text(name);
+
+		return ImGui::BeginTable(name, count, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders);
+	}
+
+	static void TableHeader2(const char* item0, const char* item1)
+	{
+		ImGui::TableSetupColumn(item0);
+		ImGui::TableSetupColumn(item1);
+		ImGui::TableHeadersRow();
+	}
+
+	static void TableRow2(const char* item0, const char* item1)
+	{
+		ImGui::TableNextRow();
+		ImGui::TableSetColumnIndex(0);
+		ImGui::Text(item0);
+		ImGui::TableSetColumnIndex(1);
+		ImGui::Text(item1);
+	}
+
 	static void DrawPerfStats()
 	{
-		if(ImGui::Begin("Performance"))
+		if(BeginTable("GPU timings", 2))
 		{
-			if(ImGui::BeginTable("GPU timings", 2))
+			ImGui::TableSetupColumn("Pass");
+			ImGui::TableSetupColumn("Micro-seconds");
+			ImGui::TableHeadersRow();
+
+			const ResolvedQueries& rq = rhi.resolvedQueries;
+			for(uint32_t q = 0; q < rq.durationQueryCount; ++q)
 			{
-				ImGui::TableSetupColumn("Pass");
-				ImGui::TableSetupColumn("Micro-seconds");
-				ImGui::TableHeadersRow();
-
-				const ResolvedQueries& rq = rhi.resolvedQueries;
-				for(uint32_t q = 0; q < rq.durationQueryCount; ++q)
-				{
-					const ResolvedDurationQuery& rdq = rq.durationQueries[q];
-					ImGui::TableNextRow();
-					ImGui::TableSetColumnIndex(0);
-					ImGui::Text(rdq.name);
-					ImGui::TableSetColumnIndex(1);
-					ImGui::Text("%d", (int)rdq.gpuMicroSeconds);
-				}
-
-				ImGui::EndTable();
+				const ResolvedDurationQuery& rdq = rq.durationQueries[q];
+				ImGui::TableNextRow();
+				ImGui::TableSetColumnIndex(0);
+				ImGui::Text(rdq.name);
+				ImGui::TableSetColumnIndex(1);
+				ImGui::Text("%d", (int)rdq.gpuMicroSeconds);
 			}
+
+			ImGui::EndTable();
+		}
+	}
+
+	static void DrawResourceUsage()
+	{
+		if(BeginTable("Handles", 2))
+		{
+			TableHeader2("Type", "Count");
+
+#define ITEM(Name, Variable) TableRow2(Name, va("%d", (int)Variable.CountUsedSlots()))
+			ITEM("Buffers", rhi.buffers);
+			ITEM("Textures", rhi.textures);
+			ITEM("Root Signatures", rhi.rootSignatures);
+			ITEM("Descriptor Tables", rhi.descriptorTables);
+			ITEM("Pipelines", rhi.pipelines);
+#undef ITEM
+
+			ImGui::EndTable();
+		}
+
+		if(BeginTable("Descriptors", 2))
+		{
+			TableHeader2("Type", "Count");
+
+#define ITEM(Name, Variable) TableRow2(Name, va("%d", (int)Variable.allocatedItemCount))
+			ITEM("CBV/SRV/UAV", rhi.freeListGeneric);
+			ITEM("Samplers", rhi.freeListSamplers);
+#undef ITEM
+
+			ImGui::EndTable();
+		}
+	}
+
+	typedef void (*UICallback)();
+
+	static void DrawSection(const char* name, UICallback callback)
+	{
+		if(ImGui::BeginTabItem(name))
+		{
+			(*callback)();
+			ImGui::EndTabItem();
+		}
+		
+	}
+
+	static void DrawGUI()
+	{
+		if(ImGui::Begin("Direct3D 12 RHI"))
+		{
+			ImGui::BeginTabBar("Tabs#RHI");
+			DrawSection("Performance", &DrawPerfStats);
+			DrawSection("Resources", &DrawResourceUsage);
+			ImGui::EndTabBar();
 		}
 		ImGui::End();
 	}
@@ -1247,7 +1320,7 @@ namespace RHI
 
 		WaitUntilDeviceIsIdle();
 
-		glInfo.maxTextureSize = 2048;
+		glInfo.maxTextureSize = MAX_TEXTURE_SIZE;
 		glInfo.maxAnisotropy = 16;
 		glInfo.depthFadeSupport = qfalse;
 
@@ -1379,8 +1452,7 @@ namespace RHI
 			io.DisplaySize.y = glConfig.vidHeight;
 			ImGui_ImplDX12_NewFrame();
 			ImGui::NewFrame();
-			DrawPerfStats();
-			//ImGui::ShowDemoWindow();
+			DrawGUI();
 			ImGui::EndFrame();
 			ImGui::Render();
 			rhi.commandList->SetDescriptorHeaps(1, &rhi.imguiHeap);
