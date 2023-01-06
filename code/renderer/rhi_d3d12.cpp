@@ -595,7 +595,14 @@ namespace RHI
 			srcLoc.pResource = bufferRef.buffer;
 			srcLoc.PlacedFootprint = layouts[0];
 			srcLoc.PlacedFootprint.Offset = bufferByteOffset;
-			commandList->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, NULL);
+			D3D12_BOX srcBox = { 0 };
+			srcBox.left = 0;
+			srcBox.top = 0;
+			srcBox.front = 0;
+			srcBox.right = desc.width;
+			srcBox.bottom = desc.height;
+			srcBox.back = 1;
+			commandList->CopyTextureRegion(&dstLoc, desc.x, desc.y, 0, &srcLoc, &srcBox);
 		}
 
 		if(texture.desc.mipCount > 1)
