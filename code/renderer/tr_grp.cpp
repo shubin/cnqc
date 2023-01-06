@@ -520,7 +520,7 @@ struct GameplayRenderPipeline : IRenderPipeline
 		desc.mipCount = mipCount;
 		desc.name = image->name;
 		desc.sampleCount = 1;
-		desc.initialState = RHI::ResourceState::ShaderAccessBits | RHI::ResourceState::UnorderedAccessBit;
+		desc.initialState = RHI::ResourceState::ShaderAccessBits;
 		desc.committedResource = true;
 
 		image->texture = RHI::CreateTexture(desc);
