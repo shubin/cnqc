@@ -625,7 +625,7 @@ namespace RHI
 			commandList->CopyTextureRegion(&dstLoc, desc.x, desc.y, 0, &srcLoc, &srcBox);
 		}
 
-		if(texture.desc.mipCount > 1)
+		/*if(texture.desc.mipCount > 1)
 		{
 			{
 				D3D12_RESOURCE_BARRIER barrier = { 0 };
@@ -638,7 +638,7 @@ namespace RHI
 				commandList->ResourceBarrier(1, &barrier);
 				texture.currentState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 			}
-		}
+		}*/
 
 		ID3D12CommandList* commandLists[] = { commandList };
 		D3D(commandList->Close());
@@ -2587,7 +2587,10 @@ namespace RHI
 			barrierCount++;
 		}
 
-		rhi.commandList->ResourceBarrier(barrierCount, barriers);
+		if(barrierCount > 0)
+		{
+			rhi.commandList->ResourceBarrier(barrierCount, barriers);
+		}
 	}
 
 #if defined(_DEBUG) || defined(CNQ3_DEV)
