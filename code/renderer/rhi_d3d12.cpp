@@ -280,7 +280,7 @@ namespace RHI
 		HANDLE event;
 	};
 
-	struct TextureUpload
+	struct TextureUploader
 	{
 		void Create();
 		void WaitOnGPU(ID3D12CommandQueue* queue);
@@ -367,7 +367,7 @@ namespace RHI
 		POOL(Pipeline, 64) pipelines;
 #undef POOL
 
-		TextureUpload upload;
+		TextureUploader upload;
 		StaticUnorderedArray<HTexture, MAX_DRAWIMAGES> texturesToTransition;
 		FrameQueries frameQueries[FrameCount];
 		ResolvedQueries resolvedQueries;
@@ -531,7 +531,7 @@ namespace RHI
 		COM_RELEASE(fence);
 	}
 
-	void TextureUpload::Create()
+	void TextureUploader::Create()
 	{
 		{
 			BufferDesc bufferDesc = { 0 };
@@ -566,12 +566,12 @@ namespace RHI
 		fenceValue = 0;
 	}
 
-	void TextureUpload::WaitOnGPU(ID3D12CommandQueue* queue)
+	void TextureUploader::WaitOnGPU(ID3D12CommandQueue* queue)
 	{
 		fence.WaitOnGPU(queue, fenceValue);
 	}
 
-	void TextureUpload::Upload(HTexture handle, const TextureUpload& desc)
+	void TextureUploader::Upload(HTexture handle, const TextureUpload& desc)
 	{
 		// @TODO: support for sub-regions so that internal lightmaps get handled right
 
@@ -680,7 +680,7 @@ namespace RHI
 		}
 	}
 
-	void TextureUpload::Release()
+	void TextureUploader::Release()
 	{
 		fence.Release();
 		COM_RELEASE(commandList);
@@ -1667,12 +1667,12 @@ namespace RHI
 		if(rhiDesc.memoryUsage == MemoryUsage::CPU || rhiDesc.memoryUsage == MemoryUsage::Upload)
 		{
 			allocDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
-			resourceState = D3D12_RESOURCE_STATE_GENERIC_READ; // @TODO: specialize this
+			resourceState = D3D12_RESOURCE_STATE_GENERIC_READ; // mandated
 		}
 		else if(rhiDesc.memoryUsage == MemoryUsage::Readback)
 		{
 			allocDesc.HeapType = D3D12_HEAP_TYPE_READBACK;
-			//resourceState = D3D12_RESOURCE_STATE_COPY_SOURCE;
+			resourceState = D3D12_RESOURCE_STATE_COPY_DEST; // mandated
 			desc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 		}
 		allocDesc.Flags = D3D12MA::ALLOCATION_FLAG_STRATEGY_MIN_MEMORY;
