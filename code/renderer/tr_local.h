@@ -419,6 +419,7 @@ namespace RHI
 	void DestroyRootSignature(HRootSignature signature);
 
 	HDescriptorTable CreateDescriptorTable(const DescriptorTableDesc& desc);
+	void InitDescriptorTable(HDescriptorTable table, DescriptorType::Id type, uint32_t firstIndex, uint32_t slotCount, const void* nullHandle);
 	void UpdateDescriptorTable(HDescriptorTable table, DescriptorType::Id type, uint32_t firstIndex, uint32_t handleCount, const void* resourceHandles);
 	void DestroyDescriptorTable(HDescriptorTable table);
 

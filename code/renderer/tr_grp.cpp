@@ -349,6 +349,30 @@ struct GameplayRenderPipeline : IRenderPipeline
 {
 	void Init() override
 	{
+		
+		RHI::HTexture nullTexture;
+		{
+			RHI::TextureDesc desc = { 0 };
+			desc.name = "null texture";
+			desc.format = RHI::TextureFormat::RGBA32_UNorm;
+			desc.initialState = RHI::ResourceState::ShaderAccessBits;
+			desc.mipCount = 1;
+			desc.sampleCount = 1;
+			desc.width = 1;
+			desc.height = 1;
+			desc.committedResource = true;
+			nullTexture = RHI::CreateTexture(desc);
+		}
+		{
+			const uint8_t color[4] = { 0, 0, 0, 255 };
+			RHI::TextureUpload desc = { 0 };
+			desc.x = 0;
+			desc.y = 0;
+			desc.width = 1;
+			desc.height = 1;
+			desc.data = color;
+			RHI::UploadTextureMip0(nullTexture, desc);
+		}
 		{
 			RHI::SamplerDesc desc = {};
 			desc.filterMode = RHI::TextureFilter::Linear;
@@ -374,6 +398,7 @@ struct GameplayRenderPipeline : IRenderPipeline
 			desc.name = "UI descriptor table";
 			desc.rootSignature = grp.ui.rootSignature;
 			grp.ui.descriptorTable = RHI::CreateDescriptorTable(desc);
+			RHI::InitDescriptorTable(grp.ui.descriptorTable, RHI::DescriptorType::Texture, 0, MAX_DRAWIMAGES, &nullTexture);
 			RHI::UpdateDescriptorTable(grp.ui.descriptorTable, RHI::DescriptorType::Sampler, 0, ARRAY_LEN(grp.samplers), grp.samplers);
 		}
 		{

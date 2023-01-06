@@ -2063,6 +2063,38 @@ namespace RHI
 		rhi.device->CopyDescriptorsSimple(1, dstHandle, srcHandle, heapType);
 	}
 
+	void InitDescriptorTable(HDescriptorTable handle, DescriptorType::Id type, uint32_t firstIndex, uint32_t slotCount, const void* nullHandle)
+	{
+		Q_assert(nullHandle != NULL);
+
+		DescriptorTable& table = rhi.descriptorTables.Get(handle);
+
+		if(type == DescriptorType::Texture)
+		{
+			const Texture& texture = rhi.textures.Get(*(const HTexture*)nullHandle);
+
+			for(uint32_t i = 0; i < slotCount; ++i)
+			{
+				CopyDescriptor(table.genericHeap, firstIndex + i, rhi.descHeapGeneric, texture.srvIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			}
+		}
+		else if(type == DescriptorType::Sampler)
+		{
+			const HSampler sampler = *(const HSampler*)nullHandle;
+			Handle htype, index, gen;
+			DecomposeHandle(&htype, &index, &gen, sampler.v);
+
+			for(uint32_t i = 0; i < slotCount; ++i)
+			{
+				CopyDescriptor(table.samplerHeap, firstIndex + i, rhi.descHeapSamplers, index, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+			}
+		}
+		else
+		{
+			ri.Error(ERR_FATAL, "InitDescriptorTable: unsupported descriptor type\n");
+		}
+	}
+
 	void UpdateDescriptorTable(HDescriptorTable handle, DescriptorType::Id type, uint32_t firstIndex, uint32_t handleCount, const void* resourceHandles)
 	{
 		Q_assert(resourceHandles != NULL);
@@ -2076,7 +2108,7 @@ namespace RHI
 			for(uint32_t i = 0; i < handleCount; ++i)
 			{
 				const Texture& texture = rhi.textures.Get(textures[i]);
-				CopyDescriptor(table.genericHeap, firstIndex, rhi.descHeapGeneric, texture.srvIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				CopyDescriptor(table.genericHeap, firstIndex + i, rhi.descHeapGeneric, texture.srvIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 			}
 		}
 		else if(type == DescriptorType::Sampler)
