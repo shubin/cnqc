@@ -118,6 +118,8 @@ namespace RHI
 	// - 64 UAVs
 	// - 2048 samplers
 	static const D3D_FEATURE_LEVEL FeatureLevel = D3D_FEATURE_LEVEL_12_0;
+	static const uint32_t MaxCPUGenericDescriptors = RHI_MAX_TEXTURES_2D * 4;
+	static const uint32_t MaxCPUSamplerDescriptors = RHI_MAX_SAMPLERS * 4;
 
 	struct ResourceType
 	{
@@ -309,8 +311,8 @@ namespace RHI
 		uint32_t durationQueryIndex;
 		HRootSignature currentRootSignature;
 		HDurationQuery frameDuration;
-		StaticFreeList<uint16_t, RHI_MAX_TEXTURES_2D * 4, InvalidDescriptorIndex> freeListGeneric;
-		StaticFreeList<uint16_t, RHI_MAX_SAMPLERS * 4, InvalidDescriptorIndex> freeListSamplers;
+		StaticFreeList<uint16_t, MaxCPUGenericDescriptors, InvalidDescriptorIndex> freeListGeneric;
+		StaticFreeList<uint16_t, MaxCPUSamplerDescriptors, InvalidDescriptorIndex> freeListSamplers;
 		ID3D12DescriptorHeap* descHeapGeneric;
 		ID3D12DescriptorHeap* descHeapSamplers;
 
@@ -1296,8 +1298,8 @@ namespace RHI
 		}
 #endif
 
-		rhi.descHeapGeneric = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, RHI_MAX_TEXTURES_2D + RHI_MAX_RW_TEXTURES_2D, false, "CBV SRV UAV heap");
-		rhi.descHeapSamplers = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, RHI_MAX_SAMPLERS, false, "sampler heap");
+		rhi.descHeapGeneric = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, MaxCPUGenericDescriptors, false, "CBV SRV UAV heap");
+		rhi.descHeapSamplers = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, MaxCPUSamplerDescriptors, false, "sampler heap");
 
 		{
 			D3D12_COMMAND_QUEUE_DESC commandQueueDesc = { 0 };
