@@ -24,6 +24,7 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 /*
 to do:
 
+- fix TextureUploader::Upload so it actually uses the upload buffer as a linear allocator
 - use root signature 1.1 to use the hints that help the drivers optimize out static resources
 - remove srvIndex or textureIndex from image_t
 	can't remove either for now
@@ -1591,10 +1592,6 @@ namespace RHI
 		for(uint32_t t = 0; t < rhi.texturesToTransition.count; ++t)
 		{
 			Texture& texture = rhi.textures.Get(rhi.texturesToTransition[t]);
-			if(texture.currentState == D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
-			{
-				continue;
-			}
 
 			D3D12_RESOURCE_BARRIER b = { 0 };
 			b.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -1606,6 +1603,7 @@ namespace RHI
 			rhi.commandList->ResourceBarrier(1, &b);
 			texture.currentState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 		}
+		//@TODO: CmdBarriers(rhi.texturesToTransition.count, barriers);
 		rhi.texturesToTransition.Clear();
 	}
 
@@ -2478,9 +2476,7 @@ namespace RHI
 
 		// a UAV barrier is used whenever
 		// D3D12_RESOURCE_STATE_UNORDERED_ACCESS is in both old and new state?
-		// if not, texture barrier is a layout transition
-		// if not, buffer barrier is invalid/dropped
-		// is that right?
+		// if not, texture/buffer barrier is a layout transition
 
 		// @TODO:
 
