@@ -242,6 +242,7 @@ namespace RHI
 		void Create();
 		void WaitOnGPU(ID3D12CommandQueue* queue);
 		void Upload(HTexture handle, const TextureUploadDesc& desc);
+		void FinishUpload(HTexture handle);
 		void Release();
 
 		ID3D12CommandQueue* commandQueue;
@@ -622,6 +623,11 @@ namespace RHI
 		//bufferByteOffset = AlignUp(bufferByteOffset + uploadByteCount, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
 
 		rhi.texturesToTransition.Add(handle);
+	}
+
+	void TextureUpload::FinishUpload(HTexture handle)
+	{
+		// @TODO:
 	}
 
 	void TextureUpload::Release()
@@ -1783,6 +1789,11 @@ namespace RHI
 	void UploadTextureMip0(HTexture handle, const TextureUploadDesc& desc)
 	{
 		rhi.upload.Upload(handle, desc);
+	}
+
+	void FinishTextureUpload(HTexture texture)
+	{
+		rhi.upload.FinishUpload(texture);
 	}
 
 	void GenerateTextureMips(HTexture texture)

@@ -382,15 +382,6 @@ static void Upload32( image_t* image, unsigned int* data )
 }
 
 
-void R_UploadLightmapTile( image_t* image, byte* pic, int x, int y, int width, int height )
-{
-	if ( !(image->flags & IMG_LMATLAS) )
-		ri.Error( ERR_DROP, "R_UploadLightmapTile: IMG_LMATLAS flag not defined\n" );
-
-	//@TODO: gal.UpdateTexture( image, 0, x, y, width, height, pic );
-}
-
-
 // this is the only way any image_t are created
 // !!! i'm pretty sure this DOESN'T work correctly for non-POT images
 

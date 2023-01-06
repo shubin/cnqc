@@ -396,6 +396,7 @@ namespace RHI
 
 	HTexture CreateTexture(const TextureDesc& desc);
 	void UploadTextureMip0(HTexture texture, const TextureUploadDesc& desc);
+	void FinishTextureUpload(HTexture texture);
 	void GenerateTextureMips(HTexture texture);
 	void DestroyTexture(HTexture texture);
 
@@ -1967,7 +1968,6 @@ void	R_ConfigureVideoMode( int desktopWidth, int desktopHeight );	// writes to g
 
 image_t* R_FindImageFile( const char* name, int flags, textureWrap_t glWrapClampMode );
 image_t* R_CreateImage( const char* name, byte* pic, int width, int height, textureFormat_t format, int flags, textureWrap_t wrapClampMode );
-void	R_UploadLightmapTile( image_t* image, byte* pic, int x, int y, int width, int height );
 
 void	R_SetColorMappings();
 
@@ -2444,6 +2444,7 @@ struct IRenderPipeline
 	virtual void ExecuteRenderCommands(const void* data) = 0;
 	virtual void CreateTexture(image_t* image, int mipCount, int width, int height) = 0;
 	virtual void UpdateTexture(image_t* image, int mipIndex, int x, int y, int width, int height, const void* data) = 0;
+	virtual void FinalizeTexture(image_t* image) = 0;
 };
 
 extern IRenderPipeline* renderPipeline;

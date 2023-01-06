@@ -506,6 +506,8 @@ struct GameplayRenderPipeline : IRenderPipeline
 
 	void UpdateTexture(image_t* image, int mipIndex, int x, int y, int width, int height, const void* data) override
 	{
+		Q_assert(mipIndex == 0); // @TODO: sigh...
+
 		RHI::TextureUploadDesc upload = { 0 };
 		upload.data = data;
 		upload.x = x;
@@ -513,6 +515,11 @@ struct GameplayRenderPipeline : IRenderPipeline
 		upload.width = width;
 		upload.height = height;
 		RHI::UploadTextureMip0(image->texture, upload);
+	}
+
+	virtual void FinalizeTexture(image_t* image) override
+	{
+		RHI::FinishTextureUpload(image->texture);
 	}
 };
 

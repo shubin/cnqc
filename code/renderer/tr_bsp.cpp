@@ -197,7 +197,7 @@ static void R_LoadLightmaps( const lump_t* l )
 
 			const int offX = (t % countX) * LMPhysPageSize;
 			const int offY = (t / countX) * LMPhysPageSize;
-			R_UploadLightmapTile( tr.lightmaps[a], image, offX, offY, LMPhysPageSize, LMPhysPageSize );
+			renderPipeline->UpdateTexture( tr.lightmaps[a], 0, offX, offY, LMPhysPageSize, LMPhysPageSize, image );
 
 			lightmapBiases[i][0] = (float)(offX + LMBorderSize) / (float)sizeX;
 			lightmapBiases[i][1] = (float)(offY + LMBorderSize) / (float)sizeY;
@@ -205,6 +205,8 @@ static void R_LoadLightmaps( const lump_t* l )
 			p += LMVirtPageSize * LMVirtPageSize * 3;
 			++i;
 		}
+
+		renderPipeline->FinalizeTexture( tr.lightmaps[a] );
 	}
 
 	tr.numLightmaps = numAtlases;
