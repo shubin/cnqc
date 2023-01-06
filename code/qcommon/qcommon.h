@@ -854,7 +854,7 @@ int			Com_Filter( const char* filter, const char* name );
 int			Com_FilterPath( const char* filter, const char* name );
 int			Com_RealTime(qtime_t *qtime);
 qbool		Com_SafeMode();
-const char	*Com_FormatBytes( int numBytes );
+const char	*Com_FormatBytes( uint64_t numBytes );
 
 void		Com_StartupVariable( const char *match );
 // checks for and removes command line "+set var arg" constructs

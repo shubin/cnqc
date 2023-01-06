@@ -1081,6 +1081,23 @@ namespace RHI
 
 			ImGui::EndTable();
 		}
+
+		if(BeginTable("Memory", 2))
+		{
+			D3D12MA::Budget budget;
+			rhi.allocator->GetBudget(&budget, NULL);
+			TableRow2("UMA", rhi.allocator->IsUMA() ? "YES" : "NO");
+			TableRow2("Cache coherent UMA", rhi.allocator->IsCacheCoherentUMA() ? "YES" : "NO");
+			TableRow2("Total", Com_FormatBytes(rhi.allocator->GetMemoryCapacity(DXGI_MEMORY_SEGMENT_GROUP_LOCAL)));
+			TableRow2("Budget", Com_FormatBytes(budget.BudgetBytes));
+			TableRow2("Usage", Com_FormatBytes(budget.UsageBytes));
+			TableRow2("Allocated", Com_FormatBytes(budget.Stats.BlockBytes));
+			TableRow2("Used", Com_FormatBytes(budget.Stats.AllocationBytes));
+			TableRow2("Block count", va("%d", budget.Stats.BlockCount));
+			TableRow2("Allocation count", va("%d", budget.Stats.AllocationCount));
+
+			ImGui::EndTable();
+		}
 	}
 
 	typedef void (*UICallback)();

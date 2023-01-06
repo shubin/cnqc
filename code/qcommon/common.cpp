@@ -3604,13 +3604,13 @@ static const char* Com_GetCompilerInfo()
 }
 
 
-const char* Com_FormatBytes( int numBytes )
+const char* Com_FormatBytes( uint64_t numBytes )
 {
 	const char* units[] = { "bytes", "KB", "MB", "GB" };
 	const float dividers[] = { 1.0f, float(1 << 10), float(1 << 20), float(1 << 30) };
 
 	int unit = 0;
-	for ( int vi = numBytes; vi >= 1024; vi >>= 10 ) {
+	for ( uint64_t vi = numBytes; vi >= 1024; vi >>= 10 ) {
 		unit++;
 	}
 
