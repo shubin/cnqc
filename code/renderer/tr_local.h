@@ -366,7 +366,7 @@ namespace RHI
 		TextureFilter::Id filterMode;
 	};
 
-	struct TextureUploadDesc
+	struct TextureUpload
 	{
 		const void* data;
 		uint32_t x;
@@ -379,6 +379,18 @@ namespace RHI
 	{
 		const char* name;
 		HRootSignature rootSignature;
+	};
+
+	struct BufferBarrier
+	{
+		HBuffer buffer;
+		ResourceState::Flags newState;
+	};
+
+	struct TextureBarrier
+	{
+		HTexture texture;
+		ResourceState::Flags newState;
 	};
 
 	void Init();
@@ -395,7 +407,7 @@ namespace RHI
 	void UnmapBuffer(HBuffer buffer);
 
 	HTexture CreateTexture(const TextureDesc& desc);
-	void UploadTextureMip0(HTexture texture, const TextureUploadDesc& desc);
+	void UploadTextureMip0(HTexture texture, const TextureUpload& desc);
 	void FinishTextureUpload(HTexture texture);
 	void GenerateTextureMips(HTexture texture);
 	void DestroyTexture(HTexture texture);
@@ -427,6 +439,7 @@ namespace RHI
 	void CmdDrawIndexed(uint32_t indexCount, uint32_t firstIndex, uint32_t firstVertex);
 	HDurationQuery CmdBeginDurationQuery(const char* name);
 	void CmdEndDurationQuery(HDurationQuery query);
+	void CmdBarriers(uint32_t texCount, const TextureBarrier* textures, uint32_t buffCount = 0, const BufferBarrier* buffers = NULL);
 
 #define CNQ3_DEV
 #if defined(_DEBUG) || defined(CNQ3_DEV)

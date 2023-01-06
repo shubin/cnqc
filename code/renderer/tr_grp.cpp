@@ -508,7 +508,7 @@ struct GameplayRenderPipeline : IRenderPipeline
 	{
 		Q_assert(mipIndex == 0); // @TODO: sigh...
 
-		RHI::TextureUploadDesc upload = { 0 };
+		RHI::TextureUpload upload = { 0 };
 		upload.data = data;
 		upload.x = x;
 		upload.y = y;

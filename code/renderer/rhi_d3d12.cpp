@@ -24,12 +24,24 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 /*
 to do:
 
-- get rid of d3dx12.h
+- use root signature 1.1 to use the hints that help the drivers optimize out static resources
+- remove srvIndex or textureIndex from image_t
+	can't remove either for now
+- is it possible to force Resource Binding Tier 2 somehow? are we supposed to run on old HW to test? :(
+- DescriptorTable API: update all entries with valid RHI resource handles before drawing/dispatching
+	we don't allow null descriptors and it helps to have proper fallbacks
+- RenderDoc API integration
+- no RHI references outside of the render pipelines!
+- don't do persistent mapping to help out RenderDoc?
+- explicit barrier API
+- implicit barrier & profiling API: Begin/EndRenderPass
+- finish compute dispatch support
+- texture mip-map generation in the RP as a callback to the RHI's Upload function
 * partial inits and shutdown
+- clean up the Win32 window creation/update mess
 - move the Dear ImGui rendering outside of the RHI
-* integrate D3D12MA
-- D3D12MA: leverage rhi.allocator->IsUMA() & rhi.allocator->IsCacheCoherentUMA()
-- D3D12MA: defragment on partial inits?
+- leverage rhi.allocator->IsCacheCoherentUMA()
+- defragment on partial inits with D3D12MA?
 - compiler switch for GPU validation
 - use ID3D12Device4::CreateCommandList1 to create closed command lists
 - if a feature level below 12.0 is good enough,
@@ -41,6 +53,12 @@ to do:
 - NvAPI_D3D_GetLatency to get (simulated) input to display latency
 - NvAPI_D3D_IsGSyncCapable / NvAPI_D3D_IsGSyncActive for diagnostics
 - CVar for setting the gpuPreference_t
+*/
+
+/*
+notes/plans:
+
+- for our views, we only allow "all mips" and "this single mip", no ranges
 */
 
 /*
@@ -87,13 +105,38 @@ There is no such restriction for Tier 3 hardware.
 One mitigation for this restriction is the diligent use of Null descriptors.
 */
 
+/*
+Barrier resource states
+
+The following usage bits are read-only:
+D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER
+D3D12_RESOURCE_STATE_INDEX_BUFFER
+D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE
+D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT
+D3D12_RESOURCE_STATE_COPY_SOURCE
+D3D12_RESOURCE_STATE_DEPTH_READ
+
+The following usage bits are read/write:
+D3D12_RESOURCE_STATE_UNORDERED_ACCESS
+D3D12_RESOURCE_STATE_DEPTH_WRITE
+
+The following usage bits are write-only:
+D3D12_RESOURCE_STATE_COPY_DEST
+D3D12_RESOURCE_STATE_RENDER_TARGET
+D3D12_RESOURCE_STATE_STREAM_OUT
+
+At most one write bit can be set.
+If any write bit is set, then no read bit may be set.
+If no write bit is set, then any number of read bits may be set.
+*/
+
 
 #include "tr_local.h"
 #include <Windows.h>
 #include <d3d12.h>
 #include <dxgi1_6.h>
 #include <dxgidebug.h>
-//#include <d3dx12.h>
 #if defined(_DEBUG) || defined(CNQ3_DEV)
 #include <d3dcompiler.h>
 #pragma comment(lib, "d3dcompiler")
@@ -241,7 +284,7 @@ namespace RHI
 	{
 		void Create();
 		void WaitOnGPU(ID3D12CommandQueue* queue);
-		void Upload(HTexture handle, const TextureUploadDesc& desc);
+		void Upload(HTexture handle, const TextureUpload& desc);
 		void Release();
 
 		ID3D12CommandQueue* commandQueue;
@@ -528,7 +571,7 @@ namespace RHI
 		fence.WaitOnGPU(queue, fenceValue);
 	}
 
-	void TextureUpload::Upload(HTexture handle, const TextureUploadDesc& desc)
+	void TextureUpload::Upload(HTexture handle, const TextureUpload& desc)
 	{
 		// @TODO: support for sub-regions so that internal lightmaps get handled right
 
@@ -1800,7 +1843,7 @@ namespace RHI
 		return rhi.textures.Add(texture);
 	}
 
-	void UploadTextureMip0(HTexture handle, const TextureUploadDesc& desc)
+	void UploadTextureMip0(HTexture handle, const TextureUpload& desc)
 	{
 		rhi.upload.Upload(handle, desc);
 	}
@@ -2361,6 +2404,33 @@ namespace RHI
 		rhi.commandList->ResolveQueryData(rhi.timeStampHeap, D3D12_QUERY_TYPE_TIMESTAMP, timeStampIndex, 2, buffer.buffer, destByteOffset);
 
 		query.state = QueryState::Ended;
+	}
+
+	void CmdBarriers(uint32_t texCount, const TextureBarrier* textures, uint32_t buffCount, const BufferBarrier* buffers)
+	{
+		// of interest:
+		//D3D12_RESOURCE_BARRIER_TYPE_TRANSITION
+		//D3D12_RESOURCE_BARRIER_TYPE_UAV
+		//D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES
+
+		// @TODO:
+
+		/*UINT barrierCount = 0;
+		D3D12_RESOURCE_BARRIER barriers[16];
+		Q_assert(buffCount + texCount <= ARRAY_LEN(barriers));
+
+		{
+			D3D12_RESOURCE_BARRIER& b = barriers[barrierCount++];
+			b.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			b.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+			b.Transition.pResource = ;
+			b.Transition.StateBefore = ;
+			b.Transition.StateAfter = ;
+			b.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+			b.UAV.pResource = ;
+		}
+
+		rhi.commandList->ResourceBarrier(barrierCount, barriers);*/
 	}
 
 #if defined(_DEBUG) || defined(CNQ3_DEV)
