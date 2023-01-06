@@ -242,7 +242,6 @@ namespace RHI
 		void Create();
 		void WaitOnGPU(ID3D12CommandQueue* queue);
 		void Upload(HTexture handle, const TextureUploadDesc& desc);
-		void FinishUpload(HTexture handle);
 		void Release();
 
 		ID3D12CommandQueue* commandQueue;
@@ -622,12 +621,13 @@ namespace RHI
 
 		//bufferByteOffset = AlignUp(bufferByteOffset + uploadByteCount, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
 
-		rhi.texturesToTransition.Add(handle);
-	}
-
-	void TextureUpload::FinishUpload(HTexture handle)
-	{
-		// @TODO:
+		if(desc.x == 0 &&
+			desc.y == 0 &&
+			desc.width == texture.desc.width &&
+			desc.height && texture.desc.height)
+		{
+			rhi.texturesToTransition.Add(handle);
+		}
 	}
 
 	void TextureUpload::Release()
@@ -1439,6 +1439,8 @@ namespace RHI
 		{
 			WaitUntilDeviceIsIdle();
 
+			rhi.texturesToTransition.Clear();
+
 			// @TODO: the GRP will nuke all 2D textures it has to itself
 			//DESTROY_POOL(textures, DestroyTexture);
 
@@ -1524,6 +1526,11 @@ namespace RHI
 		for(uint32_t t = 0; t < rhi.texturesToTransition.count; ++t)
 		{
 			Texture& texture = rhi.textures.Get(rhi.texturesToTransition[t]);
+			if(texture.currentState == D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
+			{
+				continue;
+			}
+
 			D3D12_RESOURCE_BARRIER b = { 0 };
 			b.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 			b.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
@@ -1793,7 +1800,7 @@ namespace RHI
 
 	void FinishTextureUpload(HTexture texture)
 	{
-		rhi.upload.FinishUpload(texture);
+		rhi.texturesToTransition.Add(texture);
 	}
 
 	void GenerateTextureMips(HTexture texture)
