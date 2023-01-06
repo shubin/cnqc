@@ -24,7 +24,6 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 /*
 to do:
 
-- fix TextureUploader::Upload so it actually uses the upload buffer as a linear allocator
 - use root signature 1.1 to use the hints that help the drivers optimize out static resources
 - remove srvIndex or textureIndex from image_t
 	can't remove either for now
@@ -295,7 +294,10 @@ namespace RHI
 		uint32_t bufferByteCount;
 		uint32_t bufferByteOffset;
 		Fence fence;
+		// fenceValue      : signaled value after last uploaded chunk
+		// fenceValueRewind: signaled value after last uploaded chunk before rewinding the write pointer to the start
 		UINT64 fenceValue;
+		UINT64 fenceValueRewind;
 	};
 
 	struct DurationQuery
@@ -565,6 +567,7 @@ namespace RHI
 
 		fence.Create(0, "compute queue fence");
 		fenceValue = 0;
+		fenceValueRewind = 0;
 	}
 
 	void TextureUploader::WaitOnGPU(ID3D12CommandQueue* queue)
@@ -587,14 +590,14 @@ namespace RHI
 			ri.Error(ERR_FATAL, "Upload request too large!\n");
 		}
 
-		// @TODO: woopsie, command list isn't sync'd
-		/*if(bufferByteOffset + uploadByteCount > bufferByteCount)
+		if(bufferByteOffset + uploadByteCount > bufferByteCount)
 		{
 			// not enough space left, force a wait and rewind
-			fence.WaitOnCPU(fenceValue);
+			fence.WaitOnCPU(fenceValueRewind);
+			D3D(commandAllocator->Reset());
+			fenceValueRewind = fenceValue;
 			bufferByteOffset = 0;
-		}*/
-		fence.WaitOnCPU(fenceValue);
+		}
 
 		D3D12_RESOURCE_DESC textureDesc = texture.texture->GetDesc();
 		uint64_t textureMemorySize = 0;
@@ -625,7 +628,6 @@ namespace RHI
 			UnmapBuffer(buffer);
 		}
 
-		D3D(commandAllocator->Reset());
 		D3D(commandList->Reset(commandAllocator, NULL));
 
 		{
@@ -670,7 +672,7 @@ namespace RHI
 		fenceValue++;
 		commandQueue->Signal(fence.fence, fenceValue);
 
-		//bufferByteOffset = AlignUp(bufferByteOffset + uploadByteCount, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+		bufferByteOffset = AlignUp(bufferByteOffset + uploadByteCount, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
 
 		if(desc.x == 0 &&
 			desc.y == 0 &&
