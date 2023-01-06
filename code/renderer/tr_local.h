@@ -357,7 +357,10 @@ namespace RHI
 		ResourceState::Flags initialState;
 		TextureFormat::Id format;
 		bool committedResource;
-		// @TODO: clear value?
+		bool usePreferredClearValue; // for render targets and depth/stencil buffers
+		float clearColor[4];
+		float clearDepth;
+		byte clearStencil;
 	};
 
 	struct SamplerDesc

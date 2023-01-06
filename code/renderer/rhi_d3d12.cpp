@@ -1029,6 +1029,20 @@ namespace RHI
 		}
 	}
 
+	static bool IsD3DDepthFormat(DXGI_FORMAT format)
+	{
+		switch(format)
+		{
+			case DXGI_FORMAT_D16_UNORM:
+			case DXGI_FORMAT_D24_UNORM_S8_UINT:
+			case DXGI_FORMAT_D32_FLOAT:
+			case DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
+				return true;
+			default:
+				return false;
+		}
+	}
+
 	static void ResolveDurationQueries()
 	{
 		UINT64 gpuFrequency;
@@ -1785,11 +1799,27 @@ namespace RHI
 			allocDesc.Flags = (D3D12MA::ALLOCATION_FLAGS)(allocDesc.Flags | D3D12MA::ALLOCATION_FLAG_COMMITTED);
 		}
 
+		D3D12_CLEAR_VALUE clearValue = {};
+		const D3D12_CLEAR_VALUE* pClearValue = NULL;
+		if(rhiDesc.usePreferredClearValue)
+		{
+			pClearValue = &clearValue;
+			clearValue.Format = desc.Format;
+			if(IsD3DDepthFormat(clearValue.Format))
+			{
+				clearValue.DepthStencil.Depth = rhiDesc.clearDepth;
+				clearValue.DepthStencil.Stencil = rhiDesc.clearStencil;
+			}
+			else
+			{
+				memcpy(clearValue.Color, rhiDesc.clearColor, sizeof(clearValue.Color));
+			}
+		}
+
 		// @TODO: initial state -> D3D12_RESOURCE_STATE
-		// @TODO: clear value
 		D3D12MA::Allocation* allocation;
 		ID3D12Resource* resource;
-		D3D(rhi.allocator->CreateResource(&allocDesc, &desc, D3D12_RESOURCE_STATE_COPY_DEST, NULL, &allocation, IID_PPV_ARGS(&resource)));
+		D3D(rhi.allocator->CreateResource(&allocDesc, &desc, D3D12_RESOURCE_STATE_COPY_DEST, pClearValue, &allocation, IID_PPV_ARGS(&resource)));
 		SetDebugName(resource, rhiDesc.name);
 
 		uint32_t srvIndex = InvalidDescriptorIndex;
