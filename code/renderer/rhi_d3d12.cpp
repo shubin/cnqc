@@ -1030,6 +1030,11 @@ namespace RHI
 		ImGui::Text(item1);
 	}
 
+	static void TableRow2Bool(const char* item0, bool item1)
+	{
+		TableRow2(item0, item1 ? "YES" : "NO");
+	}
+
 	static void DrawPerfStats()
 	{
 		if(BeginTable("GPU timings", 2))
@@ -1086,8 +1091,8 @@ namespace RHI
 		{
 			D3D12MA::Budget budget;
 			rhi.allocator->GetBudget(&budget, NULL);
-			TableRow2("UMA", rhi.allocator->IsUMA() ? "YES" : "NO");
-			TableRow2("Cache coherent UMA", rhi.allocator->IsCacheCoherentUMA() ? "YES" : "NO");
+			TableRow2Bool("UMA", rhi.allocator->IsUMA());
+			TableRow2Bool("Cache coherent UMA", rhi.allocator->IsCacheCoherentUMA());
 			TableRow2("Total", Com_FormatBytes(rhi.allocator->GetMemoryCapacity(DXGI_MEMORY_SEGMENT_GROUP_LOCAL)));
 			TableRow2("Budget", Com_FormatBytes(budget.BudgetBytes));
 			TableRow2("Usage", Com_FormatBytes(budget.UsageBytes));
@@ -1095,6 +1100,70 @@ namespace RHI
 			TableRow2("Used", Com_FormatBytes(budget.Stats.AllocationBytes));
 			TableRow2("Block count", va("%d", budget.Stats.BlockCount));
 			TableRow2("Allocation count", va("%d", budget.Stats.AllocationCount));
+
+			ImGui::EndTable();
+		}
+	}
+
+	static void DrawCaps()
+	{
+		if(BeginTable("Capabilities", 2))
+		{
+			D3D12_FEATURE_DATA_D3D12_OPTIONS options0 = { 0 };
+			if(SUCCEEDED(rhi.device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &options0, sizeof(options0))))
+			{
+				const char* tier = "Unknown";
+				switch(options0.ResourceBindingTier)
+				{
+					case D3D12_RESOURCE_BINDING_TIER_1: tier = "1"; break;
+					case D3D12_RESOURCE_BINDING_TIER_2: tier = "2"; break;
+					case D3D12_RESOURCE_BINDING_TIER_3: tier = "3"; break;
+					default: break;
+				}
+				TableRow2("Resource binding tier", tier);
+			}
+
+			D3D12_FEATURE_DATA_ARCHITECTURE arch0 = { 0 };
+			if(SUCCEEDED(rhi.device->CheckFeatureSupport(D3D12_FEATURE_ARCHITECTURE, &arch0, sizeof(arch0))))
+			{
+				TableRow2Bool("Tile-based renderer", arch0.TileBasedRenderer);
+			}
+
+			D3D12_FEATURE_DATA_ROOT_SIGNATURE root0 = {};
+			if(SUCCEEDED(rhi.device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &root0, sizeof(root0))))
+			{
+				const char* version = "Unknown";
+				switch(root0.HighestVersion)
+				{
+					case D3D_ROOT_SIGNATURE_VERSION_1_0: version = "1.0";
+					case D3D_ROOT_SIGNATURE_VERSION_1_1: version = "1.1";
+					default: break;
+				}
+				TableRow2("Root signature version", version);
+			}
+
+			D3D12_FEATURE_DATA_D3D12_OPTIONS5 options5 = { 0 };
+			if(SUCCEEDED(rhi.device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &options5, sizeof(options5))))
+			{
+				const char* tier = "Unknown";
+				switch(options5.RenderPassesTier)
+				{
+					case D3D12_RENDER_PASS_TIER_0: tier = "0";
+					case D3D12_RENDER_PASS_TIER_1: tier = "1";
+					case D3D12_RENDER_PASS_TIER_2: tier = "2";
+					default: break;
+				}
+				TableRow2("Render passes tier", tier);
+
+				tier = "Unknown";
+				switch(options5.RaytracingTier)
+				{
+					case D3D12_RAYTRACING_TIER_1_0: tier = "1.0";
+					case D3D12_RAYTRACING_TIER_1_1: tier = "1.1";
+					default: break;
+				}
+				TableRow2("Raytracing tier (DXR)", tier);
+			}
 
 			ImGui::EndTable();
 		}
@@ -1109,7 +1178,6 @@ namespace RHI
 			(*callback)();
 			ImGui::EndTabItem();
 		}
-		
 	}
 
 	static void DrawGUI()
@@ -1119,6 +1187,7 @@ namespace RHI
 			ImGui::BeginTabBar("Tabs#RHI");
 			DrawSection("Performance", &DrawPerfStats);
 			DrawSection("Resources", &DrawResourceUsage);
+			DrawSection("Caps", &DrawCaps);
 			ImGui::EndTabBar();
 		}
 		ImGui::End();
