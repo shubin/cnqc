@@ -47,12 +47,12 @@ struct GameplayRenderPipeline : IRenderPipeline
 	void Init() override
 	{
 		{
-			/*SamplerDesc desc = {};
+			SamplerDesc desc = {};
 			desc.filterMode = TextureFilter::Linear;
 			desc.wrapMode = TW_REPEAT;
 			grp.samplers[0] = CreateSampler(desc);
 			desc.wrapMode = TW_CLAMP_TO_EDGE;
-			grp.samplers[1] = CreateSampler(desc);*/
+			grp.samplers[1] = CreateSampler(desc);
 		}
 		grp.ui.Init();
 		grp.mipMapGen.Init();
