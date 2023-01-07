@@ -335,6 +335,13 @@ namespace RHI
 		POOL(Pipeline, 64) pipelines;
 #undef POOL
 
+		// null resources, no manual clean-up needed
+		HTexture nullTexture; // SRV
+		HTexture nullRWTexture; // UAV
+		HBuffer nullBuffer; // CBV
+		HBuffer nullRWBuffer; // UAV
+		HSampler nullSampler;
+
 		TextureUploader upload;
 		StaticUnorderedArray<HTexture, MAX_DRAWIMAGES> texturesToTransition;
 		FrameQueries frameQueries[FrameCount];
@@ -1177,6 +1184,60 @@ namespace RHI
 		fq.durationQueryCount = 0;
 	}
 
+	static void CreateNullResources()
+	{
+		{
+			TextureDesc desc = { 0 };
+			desc.name = "null texture";
+			desc.format = TextureFormat::RGBA32_UNorm;
+			desc.initialState = ResourceState::PixelShaderAccessBit;
+			desc.allowedState = ResourceState::PixelShaderAccessBit;
+			desc.mipCount = 1;
+			desc.sampleCount = 1;
+			desc.width = 1;
+			desc.height = 1;
+			desc.committedResource = true;
+			rhi.nullTexture = CreateTexture(desc);
+		}
+		{
+			TextureDesc desc = { 0 };
+			desc.name = "null RW texture";
+			desc.format = TextureFormat::RGBA32_UNorm;
+			desc.initialState = ResourceState::UnorderedAccessBit;
+			desc.allowedState = ResourceState::UnorderedAccessBit | ResourceState::PixelShaderAccessBit;
+			desc.mipCount = 1;
+			desc.sampleCount = 1;
+			desc.width = 1;
+			desc.height = 1;
+			desc.committedResource = true;
+			rhi.nullRWTexture = CreateTexture(desc);
+		}
+		{
+			BufferDesc desc = { 0 };
+			desc.name = "null buffer";
+			desc.byteCount = 256;
+			desc.initialState = ResourceState::ShaderAccessBits;
+			desc.memoryUsage = MemoryUsage::GPU;
+			desc.committedResource = true;
+			rhi.nullBuffer = CreateBuffer(desc);
+		}
+		{
+			BufferDesc desc = { 0 };
+			desc.name = "null RW buffer";
+			desc.byteCount = 256;
+			desc.initialState = ResourceState::UnorderedAccessBit;
+			desc.memoryUsage = MemoryUsage::GPU;
+			desc.committedResource = true;
+			rhi.nullRWBuffer = CreateBuffer(desc);
+		}
+		{
+			SamplerDesc desc = {};
+			desc.wrapMode = TW_REPEAT;
+			desc.filterMode = TextureFilter::Linear;
+			rhi.nullSampler = CreateSampler(desc);
+		}
+	}
+
 	static bool BeginTable(const char* name, int count)
 	{
 		ImGui::Text(name);
@@ -1570,6 +1631,8 @@ namespace RHI
 			rhi.timeStampBuffer = CreateBuffer(desc);
 			rhi.mappedTimeStamps = (UINT64*)MapBuffer(rhi.timeStampBuffer);
 		}
+
+		CreateNullResources();
 
 		// queue some actual work...
 

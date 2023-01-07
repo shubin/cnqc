@@ -41,36 +41,11 @@ static void EndSurfaces()
 	// @TODO: grp.world.Draw();
 }
 
-static void CreateNullTexture()
-{
-	TextureDesc desc = { 0 };
-	desc.name = "null texture";
-	desc.format = TextureFormat::RGBA32_UNorm;
-	desc.initialState = ResourceState::PixelShaderAccessBit;
-	desc.allowedState = ResourceState::PixelShaderAccessBit;
-	desc.mipCount = 1;
-	desc.sampleCount = 1;
-	desc.width = 1;
-	desc.height = 1;
-	desc.committedResource = true;
-	grp.nullTexture = CreateTexture(desc);
-
-	const uint8_t color[4] = { 0, 0, 0, 255 };
-	TextureUpload upload = { 0 };
-	upload.x = 0;
-	upload.y = 0;
-	upload.width = 1;
-	upload.height = 1;
-	upload.data = color;
-	UploadTextureMip0(grp.nullTexture, upload);
-}
-
 
 struct GameplayRenderPipeline : IRenderPipeline
 {
 	void Init() override
 	{
-		CreateNullTexture();
 		{
 			SamplerDesc desc = {};
 			desc.filterMode = TextureFilter::Linear;

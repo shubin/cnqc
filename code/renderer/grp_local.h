@@ -96,7 +96,6 @@ struct grp_t
 	projection_t projection;
 	uint32_t textureIndex;
 	HSampler samplers[2];
-	HTexture nullTexture;
 };
 
 extern grp_t grp;
