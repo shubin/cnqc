@@ -100,9 +100,6 @@ void ui_t::Init()
 		desc.rootSignature = rootSignature;
 		descriptorTable = CreateDescriptorTable(desc);
 
-		// @TODO:
-		//InitDescriptorTable(descriptorTable, DescriptorType::Texture, 0, MAX_DRAWIMAGES, &grp.nullTexture);
-
 		DescriptorTableUpdate update = { 0 };
 		update.type = DescriptorType::Sampler;
 		update.firstIndex = 0;

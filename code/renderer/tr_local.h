@@ -427,6 +427,21 @@ namespace RHI
 		ResourceState::Flags newState = ResourceState::Common;
 	};
 
+	struct DescriptorTableUpdate
+	{
+		uint32_t firstIndex;
+		uint32_t resourceCount;
+		DescriptorType::Id type;
+		union // based on type
+		{
+			const HTexture* textures;
+			const HBuffer* buffers;
+			const HSampler* samplers;
+		};
+		uint32_t uavMipSlice; // UAV textures: bind this specific mip
+		bool uavMipChain; // UAV textures: bind all mips if true, the specific mip slice otherwise
+	};
+
 	void Init();
 	void ShutDown(qbool destroyWindow);
 
@@ -451,21 +466,6 @@ namespace RHI
 
 	HRootSignature CreateRootSignature(const RootSignatureDesc& desc);
 	void DestroyRootSignature(HRootSignature signature);
-
-	struct DescriptorTableUpdate
-	{
-		uint32_t firstIndex;
-		uint32_t resourceCount;
-		DescriptorType::Id type;
-		union // based on type
-		{
-			const HTexture* textures;
-			const HBuffer* buffers;
-			const HSampler* samplers;
-		};
-		uint32_t uavMipSlice; // UAV textures: bind this specific mip
-		bool uavMipChain; // UAV textures: bind all mips if true, the specific mip slice otherwise
-	};
 
 	HDescriptorTable CreateDescriptorTable(const DescriptorTableDesc& desc);
 	void UpdateDescriptorTable(HDescriptorTable table, const DescriptorTableUpdate& update);

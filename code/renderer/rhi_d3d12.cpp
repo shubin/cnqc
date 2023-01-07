@@ -24,6 +24,7 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 /*
 to do:
 
+- when creating the root signature, validate that neither of the tables have any gap
 - use root signature 1.1 to use the hints that help the drivers optimize out static resources
 - remove srvIndex or textureIndex from image_t
 	can't remove either for now
@@ -1238,6 +1239,16 @@ namespace RHI
 		}
 	}
 
+	static void CopyDescriptor(ID3D12DescriptorHeap* dstHeap, uint32_t dstIndex, ID3D12DescriptorHeap* srcHeap, uint32_t srcIndex, D3D12_DESCRIPTOR_HEAP_TYPE heapType)
+	{
+		const UINT incSize = rhi.device->GetDescriptorHandleIncrementSize(heapType);
+		D3D12_CPU_DESCRIPTOR_HANDLE srcHandle = srcHeap->GetCPUDescriptorHandleForHeapStart();
+		D3D12_CPU_DESCRIPTOR_HANDLE dstHandle = dstHeap->GetCPUDescriptorHandleForHeapStart();
+		srcHandle.ptr += srcIndex * incSize;
+		dstHandle.ptr += dstIndex * incSize;
+		rhi.device->CopyDescriptorsSimple(1, dstHandle, srcHandle, heapType);
+	}
+
 	static bool BeginTable(const char* name, int count)
 	{
 		ImGui::Text(name);
@@ -2232,17 +2243,41 @@ namespace RHI
 		table.genericHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, sig.genericDescCount, true, va("%s CBV SRV UAV", desc.name));
 		table.samplerHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, sig.samplerDescCount, true, va("%s sampler", desc.name));
 
-		return rhi.descriptorTables.Add(table);
-	}
+		const Texture& nullTex = rhi.textures.Get(rhi.nullTexture);
+		const Texture& nullRWTex = rhi.textures.Get(rhi.nullRWTexture);
+		//const Buffer& nullBuffer = rhi.buffers.Get(rhi.nullBuffer);
+		//const Buffer& nullRWBuffer = rhi.buffers.Get(rhi.nullRWBuffer);
 
-	static void CopyDescriptor(ID3D12DescriptorHeap* dstHeap, uint32_t dstIndex, ID3D12DescriptorHeap* srcHeap, uint32_t srcIndex, D3D12_DESCRIPTOR_HEAP_TYPE heapType)
-	{
-		const UINT incSize= rhi.device->GetDescriptorHandleIncrementSize(heapType);
-		D3D12_CPU_DESCRIPTOR_HANDLE srcHandle = srcHeap->GetCPUDescriptorHandleForHeapStart();
-		D3D12_CPU_DESCRIPTOR_HANDLE dstHandle = dstHeap->GetCPUDescriptorHandleForHeapStart();
-		srcHandle.ptr += srcIndex * incSize;
-		dstHandle.ptr += dstIndex * incSize;
-		rhi.device->CopyDescriptorsSimple(1, dstHandle, srcHandle, heapType);
+		// bind null CBV SRV UAV resources
+		for(uint32_t r = 0; r < sig.desc.genericRangeCount; ++r)
+		{
+			const RootSignatureDesc::DescriptorRange& range = sig.desc.genericRanges[r];
+
+			uint32_t index;
+			switch(range.type)
+			{
+				case DescriptorType::Texture: index = nullTex.srvIndex; break;
+				case DescriptorType::RWTexture: index = nullRWTex.mips[0].uavIndex; break;
+				//case DescriptorType::Buffer: index = nullBuffer.XXX; break;
+				//case DescriptorType::RWBuffer: index = nullRWBuffer.XXX; break;
+				default: Q_assert(!"Unsupported descriptor type"); continue;
+			}
+
+			for(uint32_t i = 0; i < range.count; ++i)
+			{
+				CopyDescriptor(table.genericHeap, range.firstIndex + i, rhi.descHeapGeneric, index, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			}
+		}
+
+		// bind null samplers
+		for(uint32_t d = 0; d < sig.desc.samplerCount; ++d)
+		{
+			Handle type, index, gen;
+			DecomposeHandle(&type, &index, &gen, rhi.nullSampler.v);
+			CopyDescriptor(table.samplerHeap, d, rhi.descHeapSamplers, index, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+		}
+
+		return rhi.descriptorTables.Add(table);
 	}
 
 	void UpdateDescriptorTable(HDescriptorTable htable, const DescriptorTableUpdate& update)
