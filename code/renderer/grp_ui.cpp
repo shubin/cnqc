@@ -24,7 +24,137 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 #include "grp_local.h"
 
 
-void ui_t::Begin2D()
+const char* vs = R"grml(
+cbuffer RootConstants
+{
+	float2 scale;
+};
+
+struct VIn
+{
+	float2 position : POSITION;
+	float2 texCoords : TEXCOORD0;
+	float4 color : COLOR0;
+};
+
+struct VOut
+{
+	float4 position : SV_Position;
+	float2 texCoords : TEXCOORD0;
+	float4 color : COLOR0;
+};
+
+VOut main(VIn input)
+{
+	const float2 position = input.position * scale;
+	VOut output;
+	output.position = float4(position.x - 1.0, 1.0 - position.y, 0.0, 1.0);
+	output.texCoords = input.texCoords;
+	output.color = input.color;
+
+	return output;
+}
+)grml";
+
+const char* ps = R"grml(
+cbuffer RootConstants
+{
+	uint textureIndex;
+	uint samplerIndex;
+};
+
+Texture2D textures2D[2048] : register(t0);
+SamplerState samplers[2] : register(s0);
+
+struct VOut
+{
+	float4 position : SV_Position;
+	float2 texCoords : TEXCOORD0;
+	float4 color : COLOR0;
+};
+
+float4 main(VOut input) : SV_TARGET
+{
+	return textures2D[textureIndex].Sample(samplers[samplerIndex], input.texCoords) * input.color;
+}
+)grml";
+
+
+void ui_t::Init()
+{
+	{
+		RHI::RootSignatureDesc desc = { 0 };
+		desc.name = "UI root signature";
+		desc.usingVertexBuffers = qtrue;
+		desc.constants[RHI::ShaderType::Vertex].count = 2;
+		desc.constants[RHI::ShaderType::Pixel].count = 2;
+		desc.samplerCount = ARRAY_LEN(grp.samplers);
+		desc.samplerVisibility = RHI::ShaderStage::PixelBit;
+		desc.genericVisibility = RHI::ShaderStage::PixelBit;
+		desc.AddRange(RHI::DescriptorType::Texture, 0, MAX_DRAWIMAGES);
+		grp.ui.rootSignature = RHI::CreateRootSignature(desc);
+	}
+	{
+		RHI::DescriptorTableDesc desc = { 0 };
+		desc.name = "UI descriptor table";
+		desc.rootSignature = grp.ui.rootSignature;
+		grp.ui.descriptorTable = RHI::CreateDescriptorTable(desc);
+		RHI::InitDescriptorTable(grp.ui.descriptorTable, RHI::DescriptorType::Texture, 0, MAX_DRAWIMAGES, &grp.nullTexture);
+		RHI::UpdateDescriptorTable(grp.ui.descriptorTable, RHI::DescriptorType::Sampler, 0, ARRAY_LEN(grp.samplers), grp.samplers);
+	}
+	{
+		RHI::GraphicsPipelineDesc desc = { 0 };
+		desc.name = "UI PSO";
+		desc.rootSignature = grp.ui.rootSignature;
+		desc.vertexShader = RHI::CompileVertexShader(vs);
+		desc.pixelShader = RHI::CompilePixelShader(ps);
+		desc.vertexLayout.bindingStrides[0] = sizeof(ui_t::vertex_t);
+		desc.vertexLayout.AddAttribute(0, RHI::ShaderSemantic::Position,
+			RHI::DataType::Float32, 2, offsetof(ui_t::vertex_t, position));
+		desc.vertexLayout.AddAttribute(0, RHI::ShaderSemantic::TexCoord,
+			RHI::DataType::Float32, 2, offsetof(ui_t::vertex_t, texCoords));
+		desc.vertexLayout.AddAttribute(0, RHI::ShaderSemantic::Color,
+			RHI::DataType::UNorm8, 4, offsetof(ui_t::vertex_t, color));
+		desc.depthStencil.depthComparison = RHI::ComparisonFunction::Always;
+		desc.depthStencil.depthStencilFormat = RHI::TextureFormat::DepthStencil32_UNorm24_UInt8;
+		desc.depthStencil.enableDepthTest = false;
+		desc.depthStencil.enableDepthWrites = false;
+		desc.rasterizer.cullMode = RHI::CullMode::None;
+		desc.AddRenderTarget(GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, RHI::TextureFormat::RGBA32_UNorm);
+		grp.ui.pipeline = RHI::CreateGraphicsPipeline(desc);
+	}
+	grp.ui.maxVertexCount = 64 << 10;
+	grp.ui.maxIndexCount = 8 * grp.ui.maxVertexCount;
+	{
+		RHI::BufferDesc desc = { 0 };
+		desc.name = "UI index buffer";
+		desc.byteCount = sizeof(ui_t::index_t) * grp.ui.maxIndexCount * RHI::FrameCount;
+		desc.memoryUsage = RHI::MemoryUsage::Upload;
+		desc.initialState = RHI::ResourceState::IndexBufferBit;
+		grp.ui.indexBuffer = RHI::CreateBuffer(desc);
+		grp.ui.indices = (ui_t::index_t*)RHI::MapBuffer(grp.ui.indexBuffer);
+
+	}
+	{
+		RHI::BufferDesc desc = { 0 };
+		desc.name = "UI vertex buffer";
+		desc.byteCount = sizeof(ui_t::vertex_t) * grp.ui.maxVertexCount * RHI::FrameCount;
+		desc.memoryUsage = RHI::MemoryUsage::Upload;
+		desc.initialState = RHI::ResourceState::VertexBufferBit;
+		grp.ui.vertexBuffer = RHI::CreateBuffer(desc);
+		grp.ui.vertices = (ui_t::vertex_t*)RHI::MapBuffer(grp.ui.vertexBuffer);
+	}
+}
+
+void ui_t::BeginFrame()
+{
+	// move to this frame's dedicated buffer section
+	const uint32_t frameIndex = RHI::GetFrameIndex();
+	grp.ui.firstIndex = frameIndex * grp.ui.maxIndexCount;
+	grp.ui.firstVertex = frameIndex * grp.ui.maxVertexCount;
+}
+
+void ui_t::Begin()
 {
 	if(grp.projection == PROJECTION_2D)
 	{
@@ -86,7 +216,7 @@ const void* ui_t::StretchPic(const void* data)
 		return (const void*)(cmd + 1);
 	}
 
-	Begin2D();
+	Begin();
 
 	if(grp.ui.shader != cmd->shader)
 	{
@@ -144,7 +274,7 @@ const void* ui_t::Triangle(const void* data)
 		return (const void*)(cmd + 1);
 	}
 
-	Begin2D();
+	Begin();
 
 	if(grp.ui.shader != cmd->shader)
 	{

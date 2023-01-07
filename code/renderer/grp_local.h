@@ -29,7 +29,9 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 
 struct ui_t
 {
-	void Begin2D();
+	void Init();
+	void BeginFrame();
+	void Begin();
 	void Draw();
 	const void* SetColor(const void* data);
 	const void* StretchPic(const void* data);
@@ -63,6 +65,9 @@ struct ui_t
 
 struct mipMapGen_t
 {
+	void Init();
+	void GenerateMipMaps(RHI::HTexture texture);
+
 	RHI::HRootSignature rootSignature;
 	RHI::HDescriptorTable descriptorTable;
 	RHI::HPipeline pipeline;
@@ -78,9 +83,11 @@ enum projection_t
 struct grp_t
 {
 	ui_t ui;
+	mipMapGen_t mipMapGen;
 	projection_t projection;
 	uint32_t textureIndex;
 	RHI::HSampler samplers[2];
+	RHI::HTexture nullTexture;
 };
 
 extern grp_t grp;
