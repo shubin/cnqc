@@ -78,8 +78,18 @@ struct mipMapGen_t
 		HPipeline pipeline;
 	};
 
-	HTexture texturesFloat[2];
-	HTexture textureUNorm;
+	struct MipSlice
+	{
+		enum Id
+		{
+			Float16_0,
+			Float16_1,
+			UNorm_0,
+			Count
+		};
+	};
+
+	HTexture textures[MipSlice::Count];
 	Stage stages[3];
 };
 

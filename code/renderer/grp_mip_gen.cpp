@@ -34,8 +34,8 @@ struct StartConstants
 const char* start_cs = R"grml(
 // gamma-space to linear-space compute shader
 
-RWTexture2D<float4> src : register(u0);
-RWTexture2D<float4> dst : register(u16);
+RWTexture2D<float4> src : register(u3);
+RWTexture2D<float4> dst : register(u0);
 
 cbuffer RootConstants
 {
@@ -58,14 +58,15 @@ struct DownConstants
 	int32_t scale[2];
 	int32_t offset[2];
 	uint32_t clampMode; // 0 = repeat
-	uint32_t sourceMip;
+	uint32_t srcMip;
+	uint32_t dstMip;
 };
 #pragma pack(pop)
 
 const char* down_cs = R"grml(
 // 8-tap 1D filter compute shader
 
-RWTexture2D<float4> mips[16] : register(u0);
+RWTexture2D<float4> mips[2] : register(u0);
 
 cbuffer RootConstants
 {
@@ -74,7 +75,8 @@ cbuffer RootConstants
 	int2 scale;
 	int2 offset;
 	uint clampMode; // 0 = repeat
-	uint sourceMip;
+	uint srcMip;
+	uint dstMip;
 }
 
 uint2 FixCoords(int2 c)
@@ -92,8 +94,8 @@ uint2 FixCoords(int2 c)
 [numthreads(8, 8, 1)]
 void main(uint3 id : SV_DispatchThreadID)
 {
-	RWTexture2D<float4> src = mips[sourceMip + 0];
-	RWTexture2D<float4> dst = mips[sourceMip + 1];
+	RWTexture2D<float4> src = mips[srcMip];
+	RWTexture2D<float4> dst = mips[dstMip];
 
 	int2 base = int2(id.xy) * scale;
 	float4 r = float4(0, 0, 0, 0);
@@ -196,7 +198,7 @@ void mipMapGen_t::Init()
 		desc.initialState = ResourceState::UnorderedAccessBit;
 		desc.allowedState = ResourceState::UnorderedAccessBit | ResourceState::ComputeShaderAccessBit;
 		desc.committedResource = true;
-		texturesFloat[t] = CreateTexture(desc);
+		textures[MipSlice::Float16_0 + t] = CreateTexture(desc);
 	}
 
 	TextureDesc desc = { 0 };
@@ -209,7 +211,7 @@ void mipMapGen_t::Init()
 	desc.initialState = ResourceState::UnorderedAccessBit;
 	desc.allowedState = ResourceState::UnorderedAccessBit | ResourceState::ComputeShaderAccessBit;
 	desc.committedResource = true;
-	textureUNorm = CreateTexture(desc);
+	textures[MipSlice::UNorm_0] = CreateTexture(desc);
 }
 
 void mipMapGen_t::GenerateMipMaps(HTexture texture)
@@ -230,10 +232,11 @@ void mipMapGen_t::GenerateMipMaps(HTexture texture)
 		return;
 	}
 
-	/*if(Q_stricmp(image->name, "icons/envirosuit.tga"))
+	// @TODO:
+	if(Q_stricmp(image->name, "icons/envirosuit.tga"))
 	{
 		return;
-	}*/
+	}
 
 	for(int s = 0; s < 3; ++s)
 	{
@@ -243,21 +246,23 @@ void mipMapGen_t::GenerateMipMaps(HTexture texture)
 		DescriptorTableUpdate update = { 0 };
 		update.type = DescriptorType::RWTexture;
 		update.resourceCount = 1;
+		update.uavMipSlice = 0;
 
 		update.firstIndex = index++;
-		update.textures = &texturesFloat[0];
+		update.textures = &textures[MipSlice::Float16_0];
 		UpdateDescriptorTable(stage.descriptorTable, update);
 
 		update.firstIndex = index++;
-		update.textures = &texturesFloat[0];
+		update.textures = &textures[MipSlice::Float16_1];
 		UpdateDescriptorTable(stage.descriptorTable, update);
 
 		update.firstIndex = index++;
-		update.textures = &texturesFloat[0]; // @TODO:
+		update.textures = &textures[MipSlice::UNorm_0];
 		UpdateDescriptorTable(stage.descriptorTable, update);
 
 		update.firstIndex = index++;
 		update.textures = &texture;
+		update.uavMipChain = true;
 		UpdateDescriptorTable(stage.descriptorTable, update);
 	}
 	
@@ -266,7 +271,7 @@ void mipMapGen_t::GenerateMipMaps(HTexture texture)
 	int w = image->width;
 	int h = image->height;
 
-	// create a linear color space copy of mip 0 into temp texture 0
+	// create a linear color space copy of mip 0 into float16 texture 0
 	{
 		Stage& stage = stages[0];
 		StartConstants rc = {};
@@ -279,38 +284,81 @@ void mipMapGen_t::GenerateMipMaps(HTexture texture)
 		CmdDispatch((w + GroupMask) / GroupSize, (h + GroupMask) / GroupSize, 1);
 	}
 
-#if 0
-	DownConstants rc = { 0 };
-	rc.clampMode = image->wrapClampMode == TW_REPEAT ? 0 : 1;
-	memcpy(rc.weights, tr.mipFilter, sizeof(rc.weights));
+	TextureBarrier barriers[MipSlice::Count];
+	for(int i = 0; i < MipSlice::Count; ++i)
+	{
+		barriers[i].texture = textures[i];
+		barriers[i].newState = ResourceState::UnorderedAccessBit;
+	}
 
-	//const int mipCount = R_ComputeMipCount(image->width, image->height);
-
-	enum { GroupSize = 8, GroupMask = GroupSize - 1 };
-
-	int w = image->width;
-	int h = image->height;
+	const int mipCount = R_ComputeMipCount(image->width, image->height);
 	//for(int i = 1; i < mipCount; ++i)
+	for(int i = 1; i < 2; ++i)
 	{
 		const int w1 = w;
 		const int h1 = h;
 		w = max(w / 2, 1);
 		h = max(h / 2, 1);
 
+		Stage& stage = stages[1];
+		DownConstants rc = {};
+		rc.clampMode = image->wrapClampMode == TW_REPEAT ? 0 : 1;
+		memcpy(rc.weights, tr.mipFilter, sizeof(rc.weights));
+
+		CmdBindRootSignature(stage.rootSignature);
+		CmdBindPipeline(stage.pipeline);
+		CmdBindDescriptorTable(stage.rootSignature, stage.descriptorTable);
+
 		// down-sample on the X-axis
+		rc.srcMip = MipSlice::Float16_0;
+		rc.dstMip = MipSlice::Float16_1;
 		rc.scale[0] = w1 / w;
 		rc.scale[1] = 1;
 		rc.maxSize[0] = w1 - 1;
 		rc.maxSize[1] = h1 - 1;
 		rc.offset[0] = 1;
 		rc.offset[1] = 0;
-		rc.sourceMip = 0;
-		CmdSetRootConstants(rootSignature, ShaderType::Compute, &rc);
+		CmdSetRootConstants(stage.rootSignature, ShaderType::Compute, &rc);
+		CmdBarrier(ARRAY_LEN(barriers), barriers);
 		CmdDispatch((w + GroupMask) / GroupSize, (h1 + GroupMask) / GroupSize, 1);
-	}
-#endif
 
-	/*const uint32_t x = (image->width + 7) / 8;
-	const uint32_t y = (image->height + 7) / 8;
-	CmdDispatch(x, y, 1);*/
+		// down-sample on the Y-axis
+		rc.srcMip = MipSlice::Float16_1;
+		rc.dstMip = MipSlice::Float16_0;
+		rc.scale[0] = 1;
+		rc.scale[1] = h1 / h;
+		rc.maxSize[0] = w - 1;
+		rc.maxSize[1] = h1 - 1;
+		rc.offset[0] = 0;
+		rc.offset[1] = 1;
+		CmdSetRootConstants(stage.rootSignature, ShaderType::Compute, &rc);
+		CmdBarrier(ARRAY_LEN(barriers), barriers);
+		CmdDispatch((w + GroupMask) / GroupSize, (h + GroupMask) / GroupSize, 1);
+
+#if 0
+		// convert to final format
+		const int destMip = i;
+		readIndex = 0;
+		writeIndex = 2;
+		memcpy(dataL2G.blendColor, r_mipBlendColors[r_colorMipLevels->integer ? destMip : 0], sizeof(dataL2G.blendColor));
+		ResetShaderData(d3d.mipLinearToGammaConstBuffer, &dataL2G, sizeof(dataL2G));
+		d3ds.context->CSSetShader(d3d.mipLinearToGammaComputeShader, NULL, 0);
+		d3ds.context->CSSetConstantBuffers(0, 1, &bufferNull);
+		d3ds.context->CSSetShaderResources(0, 1, &srvNull);
+		d3ds.context->CSSetUnorderedAccessViews(0, 1, &uavNull, NULL);
+		d3ds.context->CSSetConstantBuffers(0, 1, &d3d.mipLinearToGammaConstBuffer);
+		d3ds.context->CSSetShaderResources(0, 1, &d3d.mipGenTextures[readIndex].srv);
+		d3ds.context->CSSetUnorderedAccessViews(0, 1, &d3d.mipGenTextures[writeIndex].uav, NULL);
+		d3ds.context->Dispatch((w + GroupMask) / GroupSize, (h + GroupMask) / GroupSize, 1);
+
+		// write out the result
+		box.front = 0;
+		box.back = 1;
+		box.left = 0;
+		box.right = w;
+		box.top = 0;
+		box.bottom = h;
+		d3ds.context->CopySubresourceRegion(texture->texture, destMip, 0, 0, 0, d3d.mipGenTextures[2].texture, 0, &box);
+#endif
+	}
 }
