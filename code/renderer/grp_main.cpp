@@ -166,7 +166,12 @@ struct GameplayRenderPipeline : IRenderPipeline
 		image->texture = ::RHI::CreateTexture(desc);
 		image->textureIndex = grp.textureIndex++;
 
-		UpdateDescriptorTable(grp.ui.descriptorTable, DescriptorType::Texture, image->textureIndex, 1, &image->texture);
+		DescriptorTableUpdate update = { 0 };
+		update.type = DescriptorType::Texture;
+		update.firstIndex = image->textureIndex;
+		update.resourceCount = 1;
+		update.textures = &image->texture;
+		UpdateDescriptorTable(grp.ui.descriptorTable, update);
 	}
 
 	void UpdateTexture(image_t* image, int mipIndex, int x, int y, int width, int height, const void* data) override

@@ -99,8 +99,16 @@ void ui_t::Init()
 		desc.name = "UI descriptor table";
 		desc.rootSignature = rootSignature;
 		descriptorTable = CreateDescriptorTable(desc);
-		InitDescriptorTable(descriptorTable, DescriptorType::Texture, 0, MAX_DRAWIMAGES, &grp.nullTexture);
-		UpdateDescriptorTable(descriptorTable, DescriptorType::Sampler, 0, ARRAY_LEN(grp.samplers), grp.samplers);
+
+		// @TODO:
+		//InitDescriptorTable(descriptorTable, DescriptorType::Texture, 0, MAX_DRAWIMAGES, &grp.nullTexture);
+
+		DescriptorTableUpdate update = { 0 };
+		update.type = DescriptorType::Sampler;
+		update.firstIndex = 0;
+		update.resourceCount = ARRAY_LEN(grp.samplers);
+		update.samplers = grp.samplers;
+		UpdateDescriptorTable(descriptorTable, update);
 	}
 	{
 		GraphicsPipelineDesc desc = { 0 };

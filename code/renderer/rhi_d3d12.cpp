@@ -2182,78 +2182,53 @@ namespace RHI
 		rhi.device->CopyDescriptorsSimple(1, dstHandle, srcHandle, heapType);
 	}
 
-	void InitDescriptorTable(HDescriptorTable handle, DescriptorType::Id type, uint32_t firstIndex, uint32_t slotCount, const void* nullHandle)
+	void UpdateDescriptorTable(HDescriptorTable htable, const DescriptorTableUpdate& update)
 	{
-		Q_assert(nullHandle != NULL);
-
-		DescriptorTable& table = rhi.descriptorTables.Get(handle);
-
-		if(type == DescriptorType::Texture && table.genericHeap)
-		{
-			const Texture& texture = rhi.textures.Get(*(const HTexture*)nullHandle);
-
-			for(uint32_t i = 0; i < slotCount; ++i)
-			{
-				CopyDescriptor(table.genericHeap, firstIndex + i, rhi.descHeapGeneric, texture.srvIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			}
-		}
-		else if(type == DescriptorType::Sampler && table.samplerHeap)
-		{
-			const HSampler sampler = *(const HSampler*)nullHandle;
-			Handle htype, index, gen;
-			DecomposeHandle(&htype, &index, &gen, sampler.v);
-
-			for(uint32_t i = 0; i < slotCount; ++i)
-			{
-				CopyDescriptor(table.samplerHeap, firstIndex + i, rhi.descHeapSamplers, index, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-			}
-		}
-		else
-		{
-			ri.Error(ERR_FATAL, "InitDescriptorTable: unsupported descriptor type\n");
-		}
-	}
-
-	void UpdateDescriptorTable(HDescriptorTable htable, DescriptorType::Id type, uint32_t firstIndex, uint32_t handleCount, const void* resourceHandles)
-	{
-		Q_assert(resourceHandles != NULL);
+		Q_assert(update.textures != NULL);
 
 		DescriptorTable& table = rhi.descriptorTables.Get(htable);
 		
-		if(type == DescriptorType::Texture && table.genericHeap)
+		if(update.type == DescriptorType::Texture && table.genericHeap)
 		{
-			const HTexture* textures = (const HTexture*)resourceHandles;
-
-			for(uint32_t i = 0; i < handleCount; ++i)
+			for(uint32_t i = 0; i < update.resourceCount; ++i)
 			{
-				const Texture& texture = rhi.textures.Get(textures[i]);
-				CopyDescriptor(table.genericHeap, firstIndex + i, rhi.descHeapGeneric, texture.srvIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				const Texture& texture = rhi.textures.Get(update.textures[i]);
+				CopyDescriptor(table.genericHeap, update.firstIndex + i, rhi.descHeapGeneric, texture.srvIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 			}
 		}
-		else if(type == DescriptorType::RWTexture && table.genericHeap && handleCount == 1)
+		else if(update.type == DescriptorType::RWTexture && table.genericHeap)
 		{
-			const HTexture htex = *(const HTexture*)resourceHandles;
+			uint32_t destIndex = update.firstIndex;
+			for(uint32_t i = 0; i < update.resourceCount; ++i)
+			{
+				const Texture& texture = rhi.textures.Get(update.textures[i]);
+				uint32_t start;
+				uint32_t end;
+				if(update.uavMipChain)
+				{
+					start = 0;
+					end = texture.desc.mipCount;
+				}
+				else
+				{
+					Q_assert(update.uavMipSlice < texture.desc.mipCount);
+					start = update.uavMipSlice;
+					end = start + 1;
+				}
 
-			const Texture& texture = rhi.textures.Get(htex);
-			uint32_t m = 0;
-			for(; m < texture.desc.mipCount; ++m)
-			{
-				CopyDescriptor(table.genericHeap, firstIndex + m, rhi.descHeapGeneric, texture.mips[m].uavIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			}
-			for(; m < MaxTextureMips; ++m)
-			{
-				CopyDescriptor(table.genericHeap, firstIndex + m, rhi.descHeapGeneric, texture.mips[texture.desc.mipCount - 1].uavIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				for(uint32_t m = start; m < end; ++m)
+				{
+					CopyDescriptor(table.genericHeap, destIndex++, rhi.descHeapGeneric, texture.mips[m].uavIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				}
 			}
 		}
-		else if(type == DescriptorType::Sampler && table.samplerHeap)
+		else if(update.type == DescriptorType::Sampler && table.samplerHeap)
 		{
-			const HSampler* samplers = (const HSampler*)resourceHandles;
-
-			for(uint32_t i = 0; i < handleCount; ++i)
+			for(uint32_t i = 0; i < update.resourceCount; ++i)
 			{
 				Handle htype, index, gen;
-				DecomposeHandle(&htype, &index, &gen, samplers[i].v);
-				CopyDescriptor(table.samplerHeap, firstIndex + i, rhi.descHeapSamplers, index, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+				DecomposeHandle(&htype, &index, &gen, update.samplers[i].v);
+				CopyDescriptor(table.samplerHeap, update.firstIndex + i, rhi.descHeapSamplers, index, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 			}
 		}
 		else

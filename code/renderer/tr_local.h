@@ -452,9 +452,23 @@ namespace RHI
 	HRootSignature CreateRootSignature(const RootSignatureDesc& desc);
 	void DestroyRootSignature(HRootSignature signature);
 
+	struct DescriptorTableUpdate
+	{
+		uint32_t firstIndex;
+		uint32_t resourceCount;
+		DescriptorType::Id type;
+		union // based on type
+		{
+			const HTexture* textures;
+			const HBuffer* buffers;
+			const HSampler* samplers;
+		};
+		uint32_t uavMipSlice; // UAV textures: bind this specific mip
+		bool uavMipChain; // UAV textures: bind all mips if true, the specific mip slice otherwise
+	};
+
 	HDescriptorTable CreateDescriptorTable(const DescriptorTableDesc& desc);
-	void InitDescriptorTable(HDescriptorTable table, DescriptorType::Id type, uint32_t firstIndex, uint32_t slotCount, const void* nullHandle);
-	void UpdateDescriptorTable(HDescriptorTable table, DescriptorType::Id type, uint32_t firstIndex, uint32_t handleCount, const void* resourceHandles);
+	void UpdateDescriptorTable(HDescriptorTable table, const DescriptorTableUpdate& update);
 	void DestroyDescriptorTable(HDescriptorTable table);
 
 	HPipeline CreateGraphicsPipeline(const GraphicsPipelineDesc& desc);

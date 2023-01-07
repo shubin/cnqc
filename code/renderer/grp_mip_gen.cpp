@@ -226,9 +226,27 @@ void mipMapGen_t::GenerateMipMaps(HTexture texture)
 	for(int s = 0; s < 3; ++s)
 	{
 		Stage& stage = stages[s];
-		UpdateDescriptorTable(stage.descriptorTable, DescriptorType::RWTexture, 0, 1, &texture);
-		UpdateDescriptorTable(stage.descriptorTable, DescriptorType::RWTexture, MaxTextureMips, 1, &textures[0]);
-		UpdateDescriptorTable(stage.descriptorTable, DescriptorType::RWTexture, MaxTextureMips * 2, 1, &textures[1]);
+		uint32_t index = 0;
+
+		DescriptorTableUpdate update = { 0 };
+		update.type = DescriptorType::RWTexture;
+		update.resourceCount = 1;
+
+		update.firstIndex = index++;
+		update.textures = &textures[0];
+		UpdateDescriptorTable(stage.descriptorTable, update);
+
+		update.firstIndex = index++;
+		update.textures = &textures[0];
+		UpdateDescriptorTable(stage.descriptorTable, update);
+
+		update.firstIndex = index++;
+		update.textures = &textures[0]; // @TODO:
+		UpdateDescriptorTable(stage.descriptorTable, update);
+
+		update.firstIndex = index++;
+		update.textures = &texture;
+		UpdateDescriptorTable(stage.descriptorTable, update);
 	}
 	
 	enum { GroupSize = 8, GroupMask = GroupSize - 1 };
