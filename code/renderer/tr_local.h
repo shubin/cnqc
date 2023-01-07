@@ -468,6 +468,7 @@ namespace RHI
 #if defined(_DEBUG) || defined(CNQ3_DEV)
 	ShaderByteCode CompileVertexShader(const char* source);
 	ShaderByteCode CompilePixelShader(const char* source);
+	ShaderByteCode CompileComputeShader(const char* source);
 #endif
 
 #if 0
@@ -1997,6 +1998,8 @@ void	R_ConfigureVideoMode( int desktopWidth, int desktopHeight );	// writes to g
 #define IMG_LMATLAS     0x0008  // lightmap atlas => RGBA, no initial data, no mip-mapping, no anisotropic, upload with R_UploadLightmapTile
 #define IMG_EXTLMATLAS  0x0010  // external lightmap atlas => no mip-mapping, no anisotropic
 #define IMG_NOAF        0x0020  // never enable anisotropic filtering
+
+int		R_ComputeMipCount( int width, int height );
 
 image_t* R_FindImageFile( const char* name, int flags, textureWrap_t glWrapClampMode );
 image_t* R_CreateImage( const char* name, byte* pic, int width, int height, textureFormat_t format, int flags, textureWrap_t wrapClampMode );

@@ -24,13 +24,56 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 #include "grp_local.h"
 
 
+const char* cs = R"grml(
+// @TODO:
+)grml";
+
+
 void mipMapGen_t::Init()
 {
-	// @TODO:
+	{
+		RootSignatureDesc desc = { 0 };
+		desc.name = "mip-map gen root signature";
+		desc.constants[ShaderType::Compute].count = 0;
+		desc.genericVisibility = ShaderStage::PixelBit;
+		desc.AddRange(DescriptorType::RWTexture, 0, MaxTextureMips);
+		rootSignature = CreateRootSignature(desc);
+	}
+	{
+		DescriptorTableDesc desc = { 0 };
+		desc.name = "mip-map gen descriptor table";
+		desc.rootSignature = rootSignature;
+		descriptorTable = CreateDescriptorTable(desc);
+	}
+	{
+		ComputePipelineDesc desc = { 0 };
+		desc.name = "mip-map gen PSO";
+		desc.rootSignature = rootSignature;
+		desc.shader = CompileComputeShader(cs);
+		pipeline = CreateComputePipeline(desc);
+	}
 }
 
 void mipMapGen_t::GenerateMipMaps(HTexture texture)
 {
+	// @FIXME:
+	image_t* image = NULL;
+	for(int i = 0; i < tr.numImages; ++i)
+	{
+		if(tr.images[i]->texture == texture)
+		{
+			image = tr.images[i];
+			break;
+		}
+	}
+	Q_assert(image);
+	if(image == NULL)
+	{
+		return;
+	}
+
 	// @TODO:
 	//UpdateDescriptorTable();
+
+	//const int mipCount = R_ComputeMipCount(image->width, image->height);
 }

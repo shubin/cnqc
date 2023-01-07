@@ -454,6 +454,11 @@ namespace RHI
 
 	static ID3D12DescriptorHeap* CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type, UINT size, bool shaderVisible, const char* name)
 	{
+		if(size == 0)
+		{
+			return NULL;
+		}
+
 		ID3D12DescriptorHeap* heap;
 		D3D12_DESCRIPTOR_HEAP_DESC heapDesc = { 0 };
 		heapDesc.Type = type;
@@ -2192,7 +2197,7 @@ namespace RHI
 
 		DescriptorTable& table = rhi.descriptorTables.Get(handle);
 
-		if(type == DescriptorType::Texture)
+		if(type == DescriptorType::Texture && table.genericHeap)
 		{
 			const Texture& texture = rhi.textures.Get(*(const HTexture*)nullHandle);
 
@@ -2201,7 +2206,7 @@ namespace RHI
 				CopyDescriptor(table.genericHeap, firstIndex + i, rhi.descHeapGeneric, texture.srvIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 			}
 		}
-		else if(type == DescriptorType::Sampler)
+		else if(type == DescriptorType::Sampler && table.samplerHeap)
 		{
 			const HSampler sampler = *(const HSampler*)nullHandle;
 			Handle htype, index, gen;
@@ -2224,7 +2229,7 @@ namespace RHI
 
 		DescriptorTable& table = rhi.descriptorTables.Get(handle);
 		
-		if(type == DescriptorType::Texture)
+		if(type == DescriptorType::Texture && table.genericHeap)
 		{
 			const HTexture* textures = (const HTexture*)resourceHandles;
 
@@ -2234,7 +2239,7 @@ namespace RHI
 				CopyDescriptor(table.genericHeap, firstIndex + i, rhi.descHeapGeneric, texture.srvIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 			}
 		}
-		else if(type == DescriptorType::Sampler)
+		else if(type == DescriptorType::Sampler && table.samplerHeap)
 		{
 			const HSampler* samplers = (const HSampler*)resourceHandles;
 
@@ -2632,6 +2637,11 @@ namespace RHI
 	ShaderByteCode CompilePixelShader(const char* source)
 	{
 		return CompileShader(source, "ps_5_1");
+	}
+
+	ShaderByteCode CompileComputeShader(const char* source)
+	{
+		return CompileShader(source, "cs_5_1");
 	}
 
 #endif

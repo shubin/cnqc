@@ -214,7 +214,7 @@ static void R_BlendOverTexture( byte *data, int pixelCount, const byte blend[4] 
 }
 
 
-static int ComputeMipCount( int scaled_width, int scaled_height )
+int R_ComputeMipCount( int scaled_width, int scaled_height )
 {
 	int mipCount = 1;
 	while ( scaled_width > 1 || scaled_height > 1 ) {
@@ -316,7 +316,7 @@ static void Upload32( image_t* image, unsigned int* data )
 	if ( image->format == TF_RGBA8 ) {
 		const int w = image->width;
 		const int h = image->height;
-		const int mipCount = ComputeMipCount( w, h );
+		const int mipCount = R_ComputeMipCount( w, h );
 		int mipOffset = 0;
 		while ( image->width > scaled_width || image->height > scaled_height ) {
 			image->width = max( image->width >> 1, 1 );
@@ -355,7 +355,7 @@ static void Upload32( image_t* image, unsigned int* data )
 	if ( !(image->flags & IMG_NOIMANIP) )
 		R_LightScaleTexture( pScaled.Get<byte>(), scaled_width, scaled_height );
 
-	const int mipCount = ( image->flags & IMG_NOMIPMAP ) ? 1 : ComputeMipCount( scaled_width, scaled_height );
+	const int mipCount = ( image->flags & IMG_NOMIPMAP ) ? 1 : R_ComputeMipCount( scaled_width, scaled_height );
 	renderPipeline->CreateTexture( image, 1, scaled_width, scaled_height ); // @TODO: mipCount
 	renderPipeline->UpdateTexture( image, 0, 0, 0, scaled_width, scaled_height, pScaled );
 
