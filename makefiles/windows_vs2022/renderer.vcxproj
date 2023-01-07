@@ -248,6 +248,7 @@
     <ClCompile Include="..\..\code\renderer\tr_mesh.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_model.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_noise.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_renderdoc.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_scene.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_shade.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_shade_calc.cpp" />

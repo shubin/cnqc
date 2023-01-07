@@ -40,5 +40,6 @@
     <ClCompile Include="..\..\code\renderer\grp_mip_gen.cpp" />
     <ClCompile Include="..\..\code\renderer\grp_ui.cpp" />
     <ClCompile Include="..\..\code\renderer\grp_world.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_renderdoc.cpp" />
   </ItemGroup>
 </Project>

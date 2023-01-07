@@ -34,6 +34,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <conio.h>
 #include <malloc.h>
 #include <VersionHelpers.h>
+#include "../renderdoc/renderdoc_app.h"
 
 
 WinVars_t g_wv;
@@ -663,6 +664,24 @@ static void S_Frame()
 }
 
 
+static void WIN_LoadRenderDoc()
+{
+	renderDocAPI = NULL;
+
+	const HMODULE module = GetModuleHandleA( "renderdoc.dll" );
+	if ( module != NULL ) {
+		const pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress( module, "RENDERDOC_GetAPI" );
+		if ( RENDERDOC_GetAPI( eRENDERDOC_API_Version_1_5_0, (void**)&renderDocAPI ) != 1 ) {
+			renderDocAPI = NULL;
+		}
+	}
+
+	if ( renderDocAPI ) {
+		renderDocAPI->UnloadCrashHandler();
+	}
+}
+
+
 #endif
 
 
@@ -782,6 +801,10 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 		return 0;
 
 	g_wv.hInstance = hInstance;
+
+#ifndef DEDICATED
+	WIN_LoadRenderDoc(); // load first to avoid messing with our exception handlers
+#endif
 
 	WIN_InstallExceptionHandlers();
 
