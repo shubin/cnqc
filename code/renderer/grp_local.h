@@ -78,7 +78,8 @@ struct mipMapGen_t
 		HPipeline pipeline;
 	};
 
-	HTexture textures[2];
+	HTexture texturesFloat[2];
+	HTexture textureUNorm;
 	Stage stages[3];
 };
 

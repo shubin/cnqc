@@ -187,7 +187,7 @@ void mipMapGen_t::Init()
 	for(int t = 0; t < 2; ++t)
 	{
 		TextureDesc desc = { 0 };
-		desc.name = va("mip-map generation texture #%d", t + 1);
+		desc.name = va("mip-map generation texture float16 #%d", t + 1);
 		desc.format = TextureFormat::RGBA64_Float;
 		desc.width = MAX_TEXTURE_SIZE;
 		desc.height = MAX_TEXTURE_SIZE;
@@ -196,8 +196,20 @@ void mipMapGen_t::Init()
 		desc.initialState = ResourceState::UnorderedAccessBit;
 		desc.allowedState = ResourceState::UnorderedAccessBit | ResourceState::ComputeShaderAccessBit;
 		desc.committedResource = true;
-		textures[t] = CreateTexture(desc);
+		texturesFloat[t] = CreateTexture(desc);
 	}
+
+	TextureDesc desc = { 0 };
+	desc.name = "mip-map generation texture unorm";
+	desc.format = TextureFormat::RGBA32_UNorm;
+	desc.width = MAX_TEXTURE_SIZE;
+	desc.height = MAX_TEXTURE_SIZE;
+	desc.mipCount = 1;
+	desc.sampleCount = 1;
+	desc.initialState = ResourceState::UnorderedAccessBit;
+	desc.allowedState = ResourceState::UnorderedAccessBit | ResourceState::ComputeShaderAccessBit;
+	desc.committedResource = true;
+	textureUNorm = CreateTexture(desc);
 }
 
 void mipMapGen_t::GenerateMipMaps(HTexture texture)
@@ -233,15 +245,15 @@ void mipMapGen_t::GenerateMipMaps(HTexture texture)
 		update.resourceCount = 1;
 
 		update.firstIndex = index++;
-		update.textures = &textures[0];
+		update.textures = &texturesFloat[0];
 		UpdateDescriptorTable(stage.descriptorTable, update);
 
 		update.firstIndex = index++;
-		update.textures = &textures[0];
+		update.textures = &texturesFloat[0];
 		UpdateDescriptorTable(stage.descriptorTable, update);
 
 		update.firstIndex = index++;
-		update.textures = &textures[0]; // @TODO:
+		update.textures = &texturesFloat[0]; // @TODO:
 		UpdateDescriptorTable(stage.descriptorTable, update);
 
 		update.firstIndex = index++;
