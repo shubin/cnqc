@@ -551,8 +551,6 @@ namespace RHI
 
 	void TextureUploader::Upload(HTexture handle, const TextureUpload& desc)
 	{
-		// @TODO: support for sub-regions so that internal lightmaps get handled right
-
 		Texture& texture = rhi.textures.Get(handle);
 
 		// otherwise the pitch is computed wrong!
@@ -564,16 +562,14 @@ namespace RHI
 			ri.Error(ERR_FATAL, "Upload request too large!\n");
 		}
 
-		/*if(bufferByteOffset + uploadByteCount > bufferByteCount)
+		if(bufferByteOffset + uploadByteCount > bufferByteCount)
 		{
 			// not enough space left, force a wait and rewind
 			fence.WaitOnCPU(fenceValueRewind);
 			D3D(commandAllocator->Reset());
 			fenceValueRewind = fenceValue;
 			bufferByteOffset = 0;
-		}*/
-		fence.WaitOnCPU(fenceValue);
-		D3D(commandAllocator->Reset());
+		}
 
 		D3D12_RESOURCE_DESC textureDesc = texture.texture->GetDesc();
 		uint64_t textureMemorySize = 0;
@@ -629,25 +625,15 @@ namespace RHI
 
 		if(texture.desc.mipCount > 1)
 		{
-			const D3D12_RESOURCE_FLAGS f = texture.texture->GetDesc().Flags;
+			ID3D12GraphicsCommandList* const directCommandList = rhi.commandList;
+			rhi.commandList = commandList;
+
 			{
-				D3D12_RESOURCE_BARRIER barrier = { 0 };
-				barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-				barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-				barrier.Transition.pResource = texture.texture;
-				barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-				barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-				barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-				commandList->ResourceBarrier(1, &barrier);
-				texture.currentState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+				const TextureBarrier barrier(handle, ResourceState::UnorderedAccessBit);
+				CmdBarriers(1, &barrier);
 			}
-			/*{
-				ID3D12GraphicsCommandList* const directCommandList = rhi.commandList;
-				rhi.commandList = commandList;
-				const TextureBarrier b(handle, ResourceState::UnorderedAccessBit);
-				CmdBarriers(1, &b);
-				rhi.commandList = directCommandList;
-			}*/
+
+			rhi.commandList = directCommandList;
 		}
 
 		ID3D12CommandList* commandLists[] = { commandList };
@@ -656,7 +642,7 @@ namespace RHI
 		fenceValue++;
 		commandQueue->Signal(fence.fence, fenceValue);
 
-		//bufferByteOffset = AlignUp(bufferByteOffset + uploadByteCount, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+		bufferByteOffset = AlignUp(bufferByteOffset + uploadByteCount, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
 
 		if(desc.x == 0 &&
 			desc.y == 0 &&
@@ -2552,7 +2538,7 @@ namespace RHI
 		UINT barrierCount = 0;
 		for(uint32_t i = 0; i < texCount; ++i)
 		{
-			const Texture& texture = rhi.textures.Get(textures[i].texture);
+			Texture& texture = rhi.textures.Get(textures[i].texture);
 			const D3D12_RESOURCE_STATES before = texture.currentState;
 			const D3D12_RESOURCE_STATES after = GetD3DResourceStates(textures[i].newState);
 			ValidateResourceStateForBarrier(before);
@@ -2579,6 +2565,7 @@ namespace RHI
 				b.Transition.StateBefore = before;
 				b.Transition.StateAfter = after;
 				b.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+				texture.currentState = after;
 			}
 
 			barrierCount++;
