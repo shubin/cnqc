@@ -25,7 +25,50 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 
 
 const char* cs = R"grml(
-// @TODO:
+// 8-tap 1D filter compute shader
+
+RWTexture2D<float4> mips[16] : register(u0);
+
+cbuffer RootConstants
+{
+	float4 weights;
+	int2 maxSize;
+	int2 scale;
+	int2 offset;
+	uint clampMode; // 0 = repeat
+	uint sourceMip;
+}
+
+uint2 FixCoords(int2 c)
+{
+	if(clampMode > 0)
+	{
+		// clamp
+		return uint2(clamp(c, int2(0, 0), maxSize));
+	}
+
+	// repeat
+	return uint2(c & maxSize);
+}
+
+[numthreads(8, 8, 1)]
+void main(uint3 id : SV_DispatchThreadID)
+{
+	RWTexture2D<float4> src = mips[sourceMip + 0];
+	RWTexture2D<float4> dst = mips[sourceMip + 1];
+
+	int2 base = int2(id.xy) * scale;
+	float4 r = float4(0, 0, 0, 0);
+	r += src[FixCoords(base - offset * 3)] * weights.x;
+	r += src[FixCoords(base - offset * 2)] * weights.y;
+	r += src[FixCoords(base - offset * 1)] * weights.z;
+	r += src[          base              ] * weights.w;
+	r += src[          base + offset     ] * weights.w;
+	r += src[FixCoords(base + offset * 2)] * weights.z;
+	r += src[FixCoords(base + offset * 3)] * weights.y;
+	r += src[FixCoords(base + offset * 4)] * weights.x;
+	dst[id.xy] = r;
+}
 )grml";
 
 
@@ -34,7 +77,7 @@ void mipMapGen_t::Init()
 	{
 		RootSignatureDesc desc = { 0 };
 		desc.name = "mip-map gen root signature";
-		desc.constants[ShaderType::Compute].count = 0;
+		desc.constants[ShaderType::Compute].count = 12;
 		desc.genericVisibility = ShaderStage::PixelBit;
 		desc.AddRange(DescriptorType::RWTexture, 0, MaxTextureMips);
 		rootSignature = CreateRootSignature(desc);
