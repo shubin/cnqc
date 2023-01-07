@@ -221,6 +221,7 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\code\renderer\grp_local.h" />
     <ClInclude Include="..\..\code\renderer\stb_image.h" />
     <ClInclude Include="..\..\code\renderer\tr_help.h" />
     <ClInclude Include="..\..\code\renderer\tr_local.h" />
@@ -228,13 +229,16 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\code\renderer\D3D12MemAlloc.cpp" />
+    <ClCompile Include="..\..\code\renderer\grp_main.cpp" />
+    <ClCompile Include="..\..\code\renderer\grp_mip_gen.cpp" />
+    <ClCompile Include="..\..\code\renderer\grp_ui.cpp" />
+    <ClCompile Include="..\..\code\renderer\grp_world.cpp" />
     <ClCompile Include="..\..\code\renderer\rhi_d3d12.cpp" />
     <ClCompile Include="..\..\code\renderer\stb_image.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_backend.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_bsp.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_cmds.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_curve.cpp" />
-    <ClCompile Include="..\..\code\renderer\tr_grp.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_image.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_image_scale.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_init.cpp" />

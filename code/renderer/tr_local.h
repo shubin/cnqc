@@ -2477,6 +2477,7 @@ struct IRenderPipeline
 	virtual void CreateTexture(image_t* image, int mipCount, int width, int height) = 0;
 	virtual void UpdateTexture(image_t* image, int mipIndex, int x, int y, int width, int height, const void* data) = 0;
 	virtual void FinalizeTexture(image_t* image) = 0;
+	virtual void GenerateMipMaps(RHI::HTexture texture) = 0;
 };
 
 extern IRenderPipeline* renderPipeline;

@@ -634,6 +634,8 @@ namespace RHI
 				CmdBarrier(1, &barrier);
 			}
 
+			renderPipeline->GenerateMipMaps(handle);
+
 			rhi.commandList = directCommandList;
 		}
 

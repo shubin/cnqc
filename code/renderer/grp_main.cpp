@@ -18,10 +18,13 @@ You should have received a copy of the GNU General Public License
 along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 ===========================================================================
 */
-// Gameplay Rendering Pipeline
+// Gameplay Rendering Pipeline - main interface
 
 
-#include "tr_local.h"
+#include "grp_local.h"
+
+
+grp_t grp;
 
 
 const char* vs = R"grml(
@@ -79,94 +82,6 @@ float4 main(VOut input) : SV_TARGET
 }
 )grml";
 
-#if 0
-const char* vs = R"grml(
-struct VOut
-{
-	float4 position : SV_Position;
-};
-
-VOut main(uint id : SV_VertexID)
-{
-	VOut output;
-	output.position.x = 1.0 * ((float)(id / 2) * 4.0 - 1.0);
-	output.position.y = 1.0 * ((float)(id % 2) * 4.0 - 1.0);
-	output.position.z = 0.0;
-	output.position.w = 1.0;
-
-	return output;
-}
-)grml";
-
-const char* ps = R"grml(
-struct VOut
-{
-	float4 position : SV_Position;
-};
-
-float4 main(VOut input) : SV_TARGET
-{
-	return float4(1, 0, 0, 1);
-}
-)grml";
-#endif
-
-
-struct ui_t
-{
-	typedef uint32_t index_t;
-#pragma pack(push, 1)
-	struct vertex_t
-	{
-		vec2_t position;
-		vec2_t texCoords;
-		uint32_t color;
-	};
-#pragma pack(pop)
-	int maxIndexCount;
-	int maxVertexCount;
-	int firstIndex;
-	int firstVertex;
-	int indexCount;
-	int vertexCount;
-	RHI::HRootSignature rootSignature;
-	RHI::HDescriptorTable descriptorTable;
-	RHI::HPipeline pipeline;
-	RHI::HBuffer indexBuffer;
-	RHI::HBuffer vertexBuffer;
-	index_t* indices; // @TODO: 16-bit indices
-	vertex_t* vertices;
-	uint32_t color;
-	const shader_t* shader;
-};
-
-enum projection_t
-{
-	PROJECTION_NONE,
-	PROJECTION_2D,
-	PROJECTION_3D
-};
-
-struct grp_t
-{
-	ui_t ui;
-	projection_t projection;
-	uint32_t textureIndex;
-	RHI::HSampler samplers[2];
-};
-
-static grp_t grp;
-
-#if 0
-static void DrawTriangle()
-{
-	RHI::CmdSetViewport(0, 0, glConfig.vidWidth, glConfig.vidHeight);
-	RHI::CmdSetScissor(0, 0, glConfig.vidWidth, glConfig.vidHeight);
-	RHI::CmdBindRootSignature(grp.rootSignature);
-	RHI::CmdBindPipeline(grp.pipeline);
-	RHI::CmdDraw(3, 0);
-}
-#endif
 
 template<typename T>
 static const void* SkipCommand(const void* data)
@@ -176,180 +91,17 @@ static const void* SkipCommand(const void* data)
 	return (const void*)(cmd + 1);
 }
 
-static void Begin2D()
-{
-	if(grp.projection == PROJECTION_2D)
-	{
-		return;
-	}
-
-	// @TODO: grab the right rects...
-	RHI::CmdSetViewport(0, 0, glConfig.vidWidth, glConfig.vidHeight);
-	RHI::CmdSetScissor(0, 0, glConfig.vidWidth, glConfig.vidHeight);
-	RHI::CmdBindRootSignature(grp.ui.rootSignature);
-	RHI::CmdBindPipeline(grp.ui.pipeline);
-	RHI::CmdBindDescriptorTable(grp.ui.rootSignature, grp.ui.descriptorTable);
-	const uint32_t stride = sizeof(ui_t::vertex_t);
-	RHI::CmdBindVertexBuffers(1, &grp.ui.vertexBuffer, &stride, NULL);
-	RHI::CmdBindIndexBuffer(grp.ui.indexBuffer, RHI::IndexType::UInt32, 0);
-	const float scale[2] = { 2.0f / glConfig.vidWidth, 2.0f / glConfig.vidHeight };
-	RHI::CmdSetRootConstants(grp.ui.rootSignature, RHI::ShaderType::Vertex, scale);
-
-	grp.projection = PROJECTION_2D;
-}
-
-static void Draw2D()
-{
-	if(grp.ui.indexCount <= 0)
-	{
-		return;
-	}
-
-	const uint32_t textureIndex = grp.ui.shader->stages[0]->bundle.image[0]->textureIndex;
-	const uint32_t pixelConstants[2] = { textureIndex, 0 }; // second one is the sampler index
-	RHI::CmdSetRootConstants(grp.ui.rootSignature, RHI::ShaderType::Pixel, pixelConstants);
-	RHI::CmdDrawIndexed(grp.ui.indexCount, grp.ui.firstIndex, 0);
-	grp.ui.firstIndex += grp.ui.indexCount;
-	grp.ui.firstVertex += grp.ui.vertexCount;
-	grp.ui.indexCount = 0;
-	grp.ui.vertexCount = 0;
-}
-
-static void Draw3D()
-{
-}
-
 static void EndSurfaces()
 {
-	Draw2D();
-	Draw3D();
+	grp.ui.Draw();
+	//grp.world.Draw();
 }
 
-static const void* SetColor(const void* data)
-{
-	const setColorCommand_t* cmd = (const setColorCommand_t*)data;
-
-	byte* const colors = (byte*)&grp.ui.color;
-	colors[0] = (byte)(cmd->color[0] * 255.0f);
-	colors[1] = (byte)(cmd->color[1] * 255.0f);
-	colors[2] = (byte)(cmd->color[2] * 255.0f);
-	colors[3] = (byte)(cmd->color[3] * 255.0f);
-
-	return (const void*)(cmd + 1);
-}
-
-static const void* StretchPic(const void* data)
-{
-	const stretchPicCommand_t* cmd = (const stretchPicCommand_t*)data;
-
-	if(grp.ui.vertexCount + 4 > grp.ui.maxVertexCount ||
-		grp.ui.indexCount + 6 > grp.ui.maxIndexCount)
-	{
-		return (const void*)(cmd + 1);
-	}
-
-	Begin2D();
-
-	if(grp.ui.shader != cmd->shader)
-	{
-		Draw2D();
-	}
-
-	grp.ui.shader = cmd->shader;
-
-	const int v = grp.ui.firstVertex + grp.ui.vertexCount;
-	const int i = grp.ui.firstIndex + grp.ui.indexCount;
-	grp.ui.vertexCount += 4;
-	grp.ui.indexCount += 6;
-
-	grp.ui.indices[i + 0] = v + 3;
-	grp.ui.indices[i + 1] = v + 0;
-	grp.ui.indices[i + 2] = v + 2;
-	grp.ui.indices[i + 3] = v + 2;
-	grp.ui.indices[i + 4] = v + 0;
-	grp.ui.indices[i + 5] = v + 1;
-
-	grp.ui.vertices[v + 0].position[0] = cmd->x;
-	grp.ui.vertices[v + 0].position[1] = cmd->y;
-	grp.ui.vertices[v + 0].texCoords[0] = cmd->s1;
-	grp.ui.vertices[v + 0].texCoords[1] = cmd->t1;
-	grp.ui.vertices[v + 0].color = grp.ui.color;
-
-	grp.ui.vertices[v + 1].position[0] = cmd->x + cmd->w;
-	grp.ui.vertices[v + 1].position[1] = cmd->y;
-	grp.ui.vertices[v + 1].texCoords[0] = cmd->s2;
-	grp.ui.vertices[v + 1].texCoords[1] = cmd->t1;
-	grp.ui.vertices[v + 1].color = grp.ui.color;
-
-	grp.ui.vertices[v + 2].position[0] = cmd->x + cmd->w;
-	grp.ui.vertices[v + 2].position[1] = cmd->y + cmd->h;
-	grp.ui.vertices[v + 2].texCoords[0] = cmd->s2;
-	grp.ui.vertices[v + 2].texCoords[1] = cmd->t2;
-	grp.ui.vertices[v + 2].color = grp.ui.color;
-
-	grp.ui.vertices[v + 3].position[0] = cmd->x;
-	grp.ui.vertices[v + 3].position[1] = cmd->y + cmd->h;
-	grp.ui.vertices[v + 3].texCoords[0] = cmd->s1;
-	grp.ui.vertices[v + 3].texCoords[1] = cmd->t2;
-	grp.ui.vertices[v + 3].color = grp.ui.color;
-
-	return (const void*)(cmd + 1);
-}
-
-static const void* Triangle(const void* data)
-{
-	const triangleCommand_t* cmd = (const triangleCommand_t*)data;
-
-	if(grp.ui.vertexCount + 3 > grp.ui.maxVertexCount ||
-		grp.ui.indexCount + 3 > grp.ui.maxIndexCount)
-	{
-		return (const void*)(cmd + 1);
-	}
-
-	Begin2D();
-
-	if(grp.ui.shader != cmd->shader)
-	{
-		Draw2D();
-	}
-
-	grp.ui.shader = cmd->shader;
-
-	const int v = grp.ui.firstVertex + grp.ui.vertexCount;
-	const int i = grp.ui.firstIndex + grp.ui.indexCount;
-	grp.ui.vertexCount += 3;
-	grp.ui.indexCount += 3;
-
-	grp.ui.indices[i + 0] = v + 0;
-	grp.ui.indices[i + 1] = v + 1;
-	grp.ui.indices[i + 2] = v + 2;
-
-	grp.ui.vertices[v + 0].position[0] = cmd->x0;
-	grp.ui.vertices[v + 0].position[1] = cmd->y0;
-	grp.ui.vertices[v + 0].texCoords[0] = cmd->s0;
-	grp.ui.vertices[v + 0].texCoords[1] = cmd->t0;
-	grp.ui.vertices[v + 0].color = grp.ui.color;
-
-	grp.ui.vertices[v + 1].position[0] = cmd->x1;
-	grp.ui.vertices[v + 1].position[1] = cmd->y1;
-	grp.ui.vertices[v + 1].texCoords[0] = cmd->s1;
-	grp.ui.vertices[v + 1].texCoords[1] = cmd->t1;
-	grp.ui.vertices[v + 1].color = grp.ui.color;
-
-	grp.ui.vertices[v + 2].position[0] = cmd->x2;
-	grp.ui.vertices[v + 2].position[1] = cmd->y2;
-	grp.ui.vertices[v + 2].texCoords[0] = cmd->s2;
-	grp.ui.vertices[v + 2].texCoords[1] = cmd->t2;
-	grp.ui.vertices[v + 2].color = grp.ui.color;
-
-	return (const void*)(cmd + 1);
-}
 
 struct GameplayRenderPipeline : IRenderPipeline
 {
 	void Init() override
 	{
-		
 		RHI::HTexture nullTexture;
 		{
 			RHI::TextureDesc desc = { 0 };
@@ -479,13 +231,13 @@ struct GameplayRenderPipeline : IRenderPipeline
 			switch(*(const int*)data)
 			{
 				case RC_SET_COLOR:
-					data = SetColor(data);
+					data = grp.ui.SetColor(data);
 					break;
 				case RC_STRETCH_PIC:
-					data = StretchPic(data);
+					data = grp.ui.StretchPic(data);
 					break;
 				case RC_TRIANGLE:
-					data = Triangle(data);
+					data = grp.ui.Triangle(data);
 					break;
 				case RC_DRAW_SURFS:
 					EndSurfaces();
@@ -548,9 +300,14 @@ struct GameplayRenderPipeline : IRenderPipeline
 		RHI::UploadTextureMip0(image->texture, upload);
 	}
 
-	virtual void FinalizeTexture(image_t* image) override
+	void FinalizeTexture(image_t* image) override
 	{
 		RHI::FinishTextureUpload(image->texture);
+	}
+
+	void GenerateMipMaps(RHI::HTexture texture) override
+	{
+		//RHI::UpdateDescriptorTable();
 	}
 };
 
