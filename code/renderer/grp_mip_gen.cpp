@@ -32,9 +32,9 @@ struct StartConstants
 #pragma pack(pop)
 
 const char* start_cs = R"grml(
-// gamma-space UINT8 to linear-space FLOAT compute shader
+// gamma-space to linear-space compute shader
 
-RWTexture2D<uint4>  src : register(u0);
+RWTexture2D<float4> src : register(u0);
 RWTexture2D<float4> dst : register(u16);
 
 cbuffer RootConstants
@@ -45,7 +45,7 @@ cbuffer RootConstants
 [numthreads(8, 8, 1)]
 void main(uint3 id : SV_DispatchThreadID)
 {
-	float4 v = src[id.xy] / 255.0;
+	float4 v = src[id.xy];
 	dst[id.xy] = float4(pow(v.xyz, gamma), v.a);
 }
 )grml";
@@ -120,10 +120,10 @@ struct EndConstants
 #pragma pack(pop)
 
 const char* end_cs = R"grml(
-// linear-space FLOAT to gamma-space UINT8 compute shader
+// linear-space to gamma-space compute shader
 
 RWTexture2D<float4> source[32] : register(u16);
-RWTexture2D<uint4>  dst        : register(u0);
+RWTexture2D<float4> dst        : register(u0);
 
 cbuffer RootConstants
 {
@@ -134,7 +134,7 @@ cbuffer RootConstants
 }
 
 [numthreads(8, 8, 1)]
-void cs_main(uint3 id : SV_DispatchThreadID)
+void main(uint3 id : SV_DispatchThreadID)
 {
 	RWTexture2D<float4> src = source[sourceIndex];
 
@@ -146,14 +146,14 @@ void cs_main(uint3 id : SV_DispatchThreadID)
 	float3 out0 = pow(max(inV, 0.0), invGamma);
 	float3 out1 = out0 * intensity;
 	float4 outV = saturate(float4(out1, in0.a));
-	dst[id.xy] = outV * 255.0;
+	dst[id.xy] = outV;
 }
 )grml";
 
 
 void mipMapGen_t::Init()
 {
-	const char* stageNames[] = { "G2L", "Down", "L2G" };
+	const char* stageNames[] = { "start", "down", "end" };
 	uint32_t stageRCByteCount[] = { sizeof(StartConstants), sizeof(DownConstants), sizeof(EndConstants) };
 	const char* stageShaders[] = { start_cs, down_cs, end_cs };
 
@@ -179,7 +179,7 @@ void mipMapGen_t::Init()
 			ComputePipelineDesc desc = { 0 };
 			desc.name = va("mip-map %s PSO", stageNames[s]);
 			desc.rootSignature = stage.rootSignature;
-			desc.shader = CompileComputeShader(down_cs);
+			desc.shader = CompileComputeShader(stageShaders[s]);
 			stage.pipeline = CreateComputePipeline(desc);
 		}
 	}
@@ -218,6 +218,11 @@ void mipMapGen_t::GenerateMipMaps(HTexture texture)
 		return;
 	}
 
+	/*if(Q_stricmp(image->name, "icons/envirosuit.tga"))
+	{
+		return;
+	}*/
+
 	for(int s = 0; s < 3; ++s)
 	{
 		Stage& stage = stages[s];
@@ -226,9 +231,23 @@ void mipMapGen_t::GenerateMipMaps(HTexture texture)
 		UpdateDescriptorTable(stage.descriptorTable, DescriptorType::RWTexture, MaxTextureMips * 2, 1, &textures[1]);
 	}
 	
-	CmdBindRootSignature(stages[0].rootSignature);
-	CmdBindPipeline(stages[0].pipeline);
-	CmdBindDescriptorTable(stages[0].rootSignature, stages[0].descriptorTable);
+	enum { GroupSize = 8, GroupMask = GroupSize - 1 };
+
+	int w = image->width;
+	int h = image->height;
+
+	// create a linear color space copy of mip 0 into temp texture 0
+	{
+		Stage& stage = stages[0];
+		StartConstants rc = {};
+		rc.gamma = r_mipGenGamma->value;
+
+		CmdBindRootSignature(stage.rootSignature);
+		CmdBindPipeline(stage.pipeline);
+		CmdBindDescriptorTable(stage.rootSignature, stage.descriptorTable);
+		CmdSetRootConstants(stage.rootSignature, ShaderType::Compute, &rc);
+		CmdDispatch((w + GroupMask) / GroupSize, (h + GroupMask) / GroupSize, 1);
+	}
 
 #if 0
 	DownConstants rc = { 0 };
