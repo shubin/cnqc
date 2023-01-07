@@ -229,6 +229,16 @@ namespace RHI
 		};
 	};
 
+	struct PipelineType
+	{
+		enum Id
+		{
+			Graphics,
+			Compute,
+			Count
+		};
+	};
+
 	struct RootSignatureDesc
 	{
 		const char* name;
@@ -249,6 +259,7 @@ namespace RHI
 		uint32_t samplerCount;
 		ShaderStage::Flags genericVisibility;
 		ShaderStage::Flags samplerVisibility;
+		PipelineType::Id pipelineType;
 
 		void AddRange(DescriptorType::Id type, uint32_t firstIndex, uint32_t count)
 		{

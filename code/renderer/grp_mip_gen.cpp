@@ -24,6 +24,18 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 #include "grp_local.h"
 
 
+#pragma pack(push, 1)
+struct RootConstants
+{
+	float weights[4];
+	int32_t maxSize[2];
+	int32_t scale[2];
+	int32_t offset[2];
+	uint32_t clampMode; // 0 = repeat
+	uint32_t sourceMip;
+};
+#pragma pack(pop)
+
 const char* cs = R"grml(
 // 8-tap 1D filter compute shader
 
@@ -77,6 +89,7 @@ void mipMapGen_t::Init()
 	{
 		RootSignatureDesc desc = { 0 };
 		desc.name = "mip-map gen root signature";
+		desc.pipelineType = PipelineType::Compute;
 		desc.constants[ShaderType::Compute].count = 12;
 		desc.genericVisibility = ShaderStage::PixelBit;
 		desc.AddRange(DescriptorType::RWTexture, 0, MaxTextureMips);
@@ -115,8 +128,18 @@ void mipMapGen_t::GenerateMipMaps(HTexture texture)
 		return;
 	}
 
-	// @TODO:
-	//UpdateDescriptorTable();
+	UpdateDescriptorTable(descriptorTable, DescriptorType::RWTexture, 0, 1, &texture);
+
+	CmdBindRootSignature(rootSignature);
+	CmdBindPipeline(pipeline);
+	CmdBindDescriptorTable(rootSignature, descriptorTable);
+
+	RootConstants rc = { 0 };
+	rc.clampMode = image->wrapClampMode == TW_REPEAT ? 0 : 1;
+	rc.sourceMip = 666;
+	memcpy(rc.weights, tr.mipFilter, sizeof(rc.weights));
+	CmdSetRootConstants(rootSignature, ShaderType::Compute, &rc);
+	//CmdDispatch(0, 0, 0);
 
 	//const int mipCount = R_ComputeMipCount(image->width, image->height);
 }

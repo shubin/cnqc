@@ -155,16 +155,6 @@ namespace RHI
 		};
 	};
 
-	struct PipelineType
-	{
-		enum Id
-		{
-			Graphics,
-			Compute,
-			Count
-		};
-	};
-
 	struct Buffer
 	{
 		BufferDesc desc;
@@ -2223,11 +2213,11 @@ namespace RHI
 		}
 	}
 
-	void UpdateDescriptorTable(HDescriptorTable handle, DescriptorType::Id type, uint32_t firstIndex, uint32_t handleCount, const void* resourceHandles)
+	void UpdateDescriptorTable(HDescriptorTable htable, DescriptorType::Id type, uint32_t firstIndex, uint32_t handleCount, const void* resourceHandles)
 	{
 		Q_assert(resourceHandles != NULL);
 
-		DescriptorTable& table = rhi.descriptorTables.Get(handle);
+		DescriptorTable& table = rhi.descriptorTables.Get(htable);
 		
 		if(type == DescriptorType::Texture && table.genericHeap)
 		{
@@ -2237,6 +2227,21 @@ namespace RHI
 			{
 				const Texture& texture = rhi.textures.Get(textures[i]);
 				CopyDescriptor(table.genericHeap, firstIndex + i, rhi.descHeapGeneric, texture.srvIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			}
+		}
+		else if(type == DescriptorType::RWTexture && table.genericHeap && handleCount == 1)
+		{
+			const HTexture htex = *(const HTexture*)resourceHandles;
+
+			const Texture& texture = rhi.textures.Get(htex);
+			uint32_t m = 0;
+			for(; m < texture.desc.mipCount; ++m)
+			{
+				CopyDescriptor(table.genericHeap, firstIndex + m, rhi.descHeapGeneric, texture.mips[m].uavIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			}
+			for(; m < MaxTextureMips; ++m)
+			{
+				CopyDescriptor(table.genericHeap, firstIndex + m, rhi.descHeapGeneric, texture.mips[texture.desc.mipCount - 1].uavIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 			}
 		}
 		else if(type == DescriptorType::Sampler && table.samplerHeap)
@@ -2267,6 +2272,8 @@ namespace RHI
 
 	HPipeline CreateGraphicsPipeline(const GraphicsPipelineDesc& rhiDesc)
 	{
+		Q_assert(rhi.rootSignatures.Get(rhiDesc.rootSignature).desc.pipelineType == PipelineType::Graphics);
+
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC desc = { 0 };
 		desc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE; // none available so far
 		desc.pRootSignature = rhi.rootSignatures.Get(rhiDesc.rootSignature).signature;
@@ -2342,6 +2349,8 @@ namespace RHI
 
 	HPipeline CreateComputePipeline(const ComputePipelineDesc& rhiDesc)
 	{
+		Q_assert(rhi.rootSignatures.Get(rhiDesc.rootSignature).desc.pipelineType == PipelineType::Compute);
+
 		D3D12_COMPUTE_PIPELINE_STATE_DESC desc = { 0 };
 		desc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE; // none available so far
 		desc.pRootSignature = rhi.rootSignatures.Get(rhiDesc.rootSignature).signature;
@@ -2371,11 +2380,14 @@ namespace RHI
 		Q_assert(CanWriteCommands());
 
 		const RootSignature& sig = rhi.rootSignatures.Get(rootSignature);
-		if(rootSignature != rhi.currentRootSignature)
+		if(sig.desc.pipelineType == PipelineType::Graphics && rootSignature != rhi.currentRootSignature)
 		{
 			rhi.currentRootSignature = rootSignature;
-			// @TODO: decide between graphics and compute!
 			rhi.commandList->SetGraphicsRootSignature(sig.signature);
+		}
+		else if(sig.desc.pipelineType == PipelineType::Compute)
+		{
+			rhi.commandList->SetComputeRootSignature(sig.signature);
 		}
 	}
 
@@ -2400,11 +2412,25 @@ namespace RHI
 
 		if(sig.genericTableIndex != UINT32_MAX)
 		{
-			rhi.commandList->SetGraphicsRootDescriptorTable(sig.genericTableIndex, table.genericHeap->GetGPUDescriptorHandleForHeapStart());
+			if(sig.desc.pipelineType == PipelineType::Graphics)
+			{
+				rhi.commandList->SetGraphicsRootDescriptorTable(sig.genericTableIndex, table.genericHeap->GetGPUDescriptorHandleForHeapStart());
+			}
+			else if(sig.desc.pipelineType == PipelineType::Compute)
+			{
+				rhi.commandList->SetComputeRootDescriptorTable(sig.genericTableIndex, table.genericHeap->GetGPUDescriptorHandleForHeapStart());
+			}
 		}
 		if(sig.samplerTableIndex != UINT32_MAX)
 		{
-			rhi.commandList->SetGraphicsRootDescriptorTable(sig.samplerTableIndex, table.samplerHeap->GetGPUDescriptorHandleForHeapStart());
+			if(sig.desc.pipelineType == PipelineType::Graphics)
+			{
+				rhi.commandList->SetGraphicsRootDescriptorTable(sig.samplerTableIndex, table.samplerHeap->GetGPUDescriptorHandleForHeapStart());
+			}
+			else if(sig.desc.pipelineType == PipelineType::Compute)
+			{
+				rhi.commandList->SetComputeRootDescriptorTable(sig.samplerTableIndex, table.samplerHeap->GetGPUDescriptorHandleForHeapStart());
+			}
 		}
 	}
 
@@ -2413,7 +2439,11 @@ namespace RHI
 		Q_assert(CanWriteCommands());
 
 		const Pipeline& pipe = rhi.pipelines.Get(pipeline);
-		rhi.commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // @TODO: grab from pipe!
+		if(pipe.type == PipelineType::Graphics)
+		{
+			// @TODO: grab from pipe + cache
+			rhi.commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		}
 		rhi.commandList->SetPipelineState(pipe.pso);
 	}
 
@@ -2486,8 +2516,14 @@ namespace RHI
 
 		CmdBindRootSignature(rootSignature);
 
-		// @TODO: decide between graphics and compute!
-		rhi.commandList->SetGraphicsRoot32BitConstants(parameterIndex, constantCount, constants, 0);
+		if(sig.desc.pipelineType == PipelineType::Graphics)
+		{
+			rhi.commandList->SetGraphicsRoot32BitConstants(parameterIndex, constantCount, constants, 0);
+		}
+		else if(sig.desc.pipelineType == PipelineType::Compute)
+		{
+			rhi.commandList->SetComputeRoot32BitConstants(parameterIndex, constantCount, constants, 0);
+		}
 	}
 
 	void CmdDraw(uint32_t vertexCount, uint32_t firstVertex)
