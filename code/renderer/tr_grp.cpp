@@ -355,7 +355,8 @@ struct GameplayRenderPipeline : IRenderPipeline
 			RHI::TextureDesc desc = { 0 };
 			desc.name = "null texture";
 			desc.format = RHI::TextureFormat::RGBA32_UNorm;
-			desc.initialState = RHI::ResourceState::ShaderAccessBits;
+			desc.initialState = RHI::ResourceState::PixelShaderAccessBit;
+			desc.allowedState = RHI::ResourceState::PixelShaderAccessBit;
 			desc.mipCount = 1;
 			desc.sampleCount = 1;
 			desc.width = 1;
@@ -520,7 +521,12 @@ struct GameplayRenderPipeline : IRenderPipeline
 		desc.mipCount = mipCount;
 		desc.name = image->name;
 		desc.sampleCount = 1;
-		desc.initialState = RHI::ResourceState::ShaderAccessBits;
+		desc.initialState = RHI::ResourceState::PixelShaderAccessBit;
+		desc.allowedState = RHI::ResourceState::PixelShaderAccessBit;
+		if(mipCount > 1)
+		{
+			desc.allowedState |= RHI::ResourceState::UnorderedAccessBit; // for mip-map generation
+		}
 		desc.committedResource = true;
 
 		image->texture = RHI::CreateTexture(desc);

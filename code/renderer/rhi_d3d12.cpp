@@ -564,14 +564,16 @@ namespace RHI
 			ri.Error(ERR_FATAL, "Upload request too large!\n");
 		}
 
-		if(bufferByteOffset + uploadByteCount > bufferByteCount)
+		/*if(bufferByteOffset + uploadByteCount > bufferByteCount)
 		{
 			// not enough space left, force a wait and rewind
 			fence.WaitOnCPU(fenceValueRewind);
 			D3D(commandAllocator->Reset());
 			fenceValueRewind = fenceValue;
 			bufferByteOffset = 0;
-		}
+		}*/
+		fence.WaitOnCPU(fenceValue);
+		D3D(commandAllocator->Reset());
 
 		D3D12_RESOURCE_DESC textureDesc = texture.texture->GetDesc();
 		uint64_t textureMemorySize = 0;
@@ -625,8 +627,9 @@ namespace RHI
 			commandList->CopyTextureRegion(&dstLoc, desc.x, desc.y, 0, &srcLoc, &srcBox);
 		}
 
-		/*if(texture.desc.mipCount > 1)
+		if(texture.desc.mipCount > 1)
 		{
+			const D3D12_RESOURCE_FLAGS f = texture.texture->GetDesc().Flags;
 			{
 				D3D12_RESOURCE_BARRIER barrier = { 0 };
 				barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -638,7 +641,14 @@ namespace RHI
 				commandList->ResourceBarrier(1, &barrier);
 				texture.currentState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 			}
-		}*/
+			/*{
+				ID3D12GraphicsCommandList* const directCommandList = rhi.commandList;
+				rhi.commandList = commandList;
+				const TextureBarrier b(handle, ResourceState::UnorderedAccessBit);
+				CmdBarriers(1, &b);
+				rhi.commandList = directCommandList;
+			}*/
+		}
 
 		ID3D12CommandList* commandLists[] = { commandList };
 		D3D(commandList->Close());
@@ -646,7 +656,7 @@ namespace RHI
 		fenceValue++;
 		commandQueue->Signal(fence.fence, fenceValue);
 
-		bufferByteOffset = AlignUp(bufferByteOffset + uploadByteCount, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+		//bufferByteOffset = AlignUp(bufferByteOffset + uploadByteCount, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
 
 		if(desc.x == 0 &&
 			desc.y == 0 &&
@@ -1049,6 +1059,11 @@ namespace RHI
 
 	static void ValidateResourceStateForBarrier(D3D12_RESOURCE_STATES state)
 	{
+		if(state == D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+		{
+			return;
+		}
+
 		const D3D12_RESOURCE_STATES readOnly[] =
 		{
 			D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
@@ -1559,7 +1574,7 @@ namespace RHI
 	{
 #define DESTROY_POOL(PoolName, FuncName) \
 		for(int i = 0; rhi.PoolName.FindNext(&handle, &i);) \
-			FuncName(MAKE_HANDLE(handle)); \
+			FuncName(RHI_MAKE_HANDLE(handle)); \
 		rhi.PoolName.Clear()
 
 		Handle handle;
@@ -1624,7 +1639,7 @@ namespace RHI
 
 	void BeginFrame()
 	{
-		rhi.currentRootSignature = MAKE_NULL_HANDLE();
+		rhi.currentRootSignature = RHI_MAKE_NULL_HANDLE();
 
 		// wait for pending copies from the upload buffer to textures to be finished
 		rhi.upload.WaitOnGPU(rhi.commandQueue);
@@ -1652,30 +1667,12 @@ namespace RHI
 		const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 		rhi.commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, NULL);
 
-		// @TODO: nuke
-		/*for(uint32_t t = 0; t < rhi.texturesToTransition.count; ++t)
-		{
-			Texture& texture = rhi.textures.Get(rhi.texturesToTransition[t]);
-
-			D3D12_RESOURCE_BARRIER b = { 0 };
-			b.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-			b.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-			b.Transition.pResource = texture.texture;
-			b.Transition.StateBefore = texture.currentState;
-			b.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-			b.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-			rhi.commandList->ResourceBarrier(1, &b);
-			texture.currentState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-		}*/
-
 		static TextureBarrier barriers[MAX_DRAWIMAGES];
 		for(uint32_t t = 0; t < rhi.texturesToTransition.count; ++t)
 		{
 			const HTexture handle = rhi.texturesToTransition[t];
 			const Texture& texture = rhi.textures.Get(handle);
-			TextureBarrier& b = barriers[t];
-			b.texture = handle;
-			b.newState = texture.desc.initialState;
+			barriers[t] = TextureBarrier(handle, texture.desc.initialState);
 		}
 		CmdBarriers(rhi.texturesToTransition.count, barriers);
 		rhi.texturesToTransition.Clear();
@@ -1845,19 +1842,19 @@ namespace RHI
 		desc.MipLevels = rhiDesc.mipCount;
 		desc.SampleDesc.Count = rhiDesc.sampleCount;
 		desc.SampleDesc.Quality = 0;
-		if(rhiDesc.initialState & ResourceState::UnorderedAccessBit)
+		if(rhiDesc.allowedState & ResourceState::UnorderedAccessBit)
 		{
 			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		}
-		if(rhiDesc.initialState & ResourceState::RenderTargetBit)
+		if(rhiDesc.allowedState & ResourceState::RenderTargetBit)
 		{
 			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 		}
-		if(rhiDesc.initialState & ResourceState::DepthAccessBits)
+		if(rhiDesc.allowedState & ResourceState::DepthAccessBits)
 		{
 			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 		}
-		if((rhiDesc.initialState & ResourceState::ShaderAccessBits) == 0)
+		if((rhiDesc.allowedState & ResourceState::ShaderAccessBits) == 0)
 		{
 			desc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 		}
@@ -1895,7 +1892,7 @@ namespace RHI
 		SetDebugName(resource, rhiDesc.name);
 
 		uint32_t srvIndex = InvalidDescriptorIndex;
-		if(rhiDesc.initialState & ResourceState::ShaderAccessBits)
+		if(rhiDesc.allowedState & ResourceState::ShaderAccessBits)
 		{
 			D3D12_SHADER_RESOURCE_VIEW_DESC srv = { 0 };
 			srv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
@@ -1918,7 +1915,7 @@ namespace RHI
 		texture.texture = resource;
 		texture.srvIndex = srvIndex;
 		texture.currentState = D3D12_RESOURCE_STATE_COPY_DEST;
-		if(rhiDesc.initialState & ResourceState::UnorderedAccessBit)
+		if(rhiDesc.allowedState & ResourceState::UnorderedAccessBit)
 		{
 			for(uint32_t m = 0; m < rhiDesc.mipCount; ++m)
 			{
@@ -1999,7 +1996,7 @@ namespace RHI
 		desc.Filter = filter;
 		rhi.device->CreateSampler(&desc, address);
 
-		return MAKE_HANDLE(CreateHandle(ResourceType::Sampler, index, 0));
+		return RHI_MAKE_HANDLE(CreateHandle(ResourceType::Sampler, index, 0));
 	}
 
 	void DestroySampler(HSampler sampler)
@@ -2486,7 +2483,7 @@ namespace RHI
 		Q_assert(fq.durationQueryCount < MaxDurationQueries);
 		if(fq.durationQueryCount >= MaxDurationQueries)
 		{
-			return MAKE_NULL_HANDLE();
+			return RHI_MAKE_NULL_HANDLE();
 		}
 
 		const UINT beginIndex = rhi.durationQueryIndex * 2;
@@ -2504,7 +2501,7 @@ namespace RHI
 		fq.durationQueryCount++;
 		rhi.durationQueryIndex = (rhi.durationQueryIndex + 1) % MaxDurationQueries;
 
-		return MAKE_HANDLE(query.handle);
+		return RHI_MAKE_HANDLE(query.handle);
 	}
 
 	void CmdEndDurationQuery(HDurationQuery handle)

@@ -34,7 +34,7 @@ enum textureWrap_t;
 
 namespace RHI
 {
-	// @TODO: move to own header file to be included by both C++ and HLSL code
+	// @TODO: turn into uint32_t constants too
 #define RHI_MAX_TEXTURES_2D 4096 // real max: unlimited
 #define RHI_MAX_RW_TEXTURES_2D 64 // real max: 64
 #define RHI_MAX_SAMPLERS 64 // real max: 2048
@@ -72,6 +72,10 @@ namespace RHI
 
 #define RHI_BIT(Bit) (1 << Bit)
 #define RHI_BIT_MASK(BitCount) ((1 << BitCount) - 1)
+
+#define RHI_GET_HANDLE_VALUE(Handle) (Handle.v)
+#define RHI_MAKE_HANDLE(Value) { Value }
+#define RHI_MAKE_NULL_HANDLE() { 0 }
 
 	struct IndexType
 	{
@@ -355,6 +359,7 @@ namespace RHI
 		uint32_t mipCount;
 		uint32_t sampleCount;
 		ResourceState::Flags initialState;
+		ResourceState::Flags allowedState;
 		TextureFormat::Id format;
 		bool committedResource;
 		bool usePreferredClearValue; // for render targets and depth/stencil buffers
@@ -386,14 +391,28 @@ namespace RHI
 
 	struct BufferBarrier
 	{
-		HBuffer buffer;
-		ResourceState::Flags newState;
+		BufferBarrier() = default;
+		BufferBarrier(HBuffer handle, ResourceState::Flags after)
+		{
+			buffer = handle;
+			newState = after;
+		}
+
+		HBuffer buffer = RHI_MAKE_NULL_HANDLE();
+		ResourceState::Flags newState = ResourceState::Common;
 	};
 
 	struct TextureBarrier
 	{
-		HTexture texture;
-		ResourceState::Flags newState;
+		TextureBarrier() = default;
+		TextureBarrier(HTexture handle, ResourceState::Flags after)
+		{
+			texture = handle;
+			newState = after;
+		}
+
+		HTexture texture = RHI_MAKE_NULL_HANDLE();
+		ResourceState::Flags newState = ResourceState::Common;
 	};
 
 	void Init();
@@ -558,14 +577,10 @@ namespace RHI
 		*generation = (handle >> HandleGenBitOffset) & RHI_BIT_MASK(HandleGenBitCount);
 	}
 
-#define GET_HANDLE_VALUE(Handle) (Handle.v)
-#define MAKE_HANDLE(Value) { Value }
-#define MAKE_NULL_HANDLE() { 0 }
-
 	template<typename T>
 	bool IsNullHandle(T handle)
 	{
-		return GET_HANDLE_VALUE(handle) == 0;
+		return RHI_GET_HANDLE_VALUE(handle) == 0;
 	}
 
 	template<typename T, typename HT, RHI::Handle RT, int N>
@@ -608,7 +623,7 @@ namespace RHI
 			items[freeList].used = qtrue;
 			const Handle handle = CreateHandle(RT, freeList, items[freeList].generation);
 			freeList = items[freeList].next;
-			return MAKE_HANDLE(handle);
+			return RHI_MAKE_HANDLE(handle);
 		}
 
 		void Remove(HT handle)
@@ -696,7 +711,7 @@ namespace RHI
 		Item& GetItemRef(HT handle)
 		{
 			Handle type, index, gen;
-			DecomposeHandle(&type, &index, &gen, GET_HANDLE_VALUE(handle));
+			DecomposeHandle(&type, &index, &gen, RHI_GET_HANDLE_VALUE(handle));
 			if(type != RT)
 			{
 				ri.Error(ERR_FATAL, "Invalid memory pool handle (wrong resource type)\n");
