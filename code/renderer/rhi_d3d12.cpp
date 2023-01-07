@@ -2540,6 +2540,13 @@ namespace RHI
 		rhi.commandList->DrawIndexedInstanced(indexCount, 1, firstIndex, firstVertex, 0);
 	}
 
+	void CmdDispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ)
+	{
+		Q_assert(CanWriteCommands());
+
+		rhi.commandList->Dispatch(groupCountX, groupCountY, groupCountZ);
+	}
+
 	HDurationQuery CmdBeginDurationQuery(const char* name)
 	{
 		Q_assert(CanWriteCommands());

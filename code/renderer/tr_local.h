@@ -471,6 +471,7 @@ namespace RHI
 	void CmdSetRootConstants(HRootSignature rootSignature, ShaderType::Id shaderType, const void* constants);
 	void CmdDraw(uint32_t vertexCount, uint32_t firstVertex);
 	void CmdDrawIndexed(uint32_t indexCount, uint32_t firstIndex, uint32_t firstVertex);
+	void CmdDispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ);
 	HDurationQuery CmdBeginDurationQuery(const char* name);
 	void CmdEndDurationQuery(HDurationQuery query);
 	void CmdBarrier(uint32_t texCount, const TextureBarrier* textures, uint32_t buffCount = 0, const BufferBarrier* buffers = NULL);

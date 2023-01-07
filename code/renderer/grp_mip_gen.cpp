@@ -136,10 +136,34 @@ void mipMapGen_t::GenerateMipMaps(HTexture texture)
 
 	RootConstants rc = { 0 };
 	rc.clampMode = image->wrapClampMode == TW_REPEAT ? 0 : 1;
-	rc.sourceMip = 666;
 	memcpy(rc.weights, tr.mipFilter, sizeof(rc.weights));
-	CmdSetRootConstants(rootSignature, ShaderType::Compute, &rc);
-	//CmdDispatch(0, 0, 0);
 
 	//const int mipCount = R_ComputeMipCount(image->width, image->height);
+
+	enum { GroupSize = 8, GroupMask = GroupSize - 1 };
+
+	int w = image->width;
+	int h = image->height;
+	//for(int i = 1; i < mipCount; ++i)
+	{
+		const int w1 = w;
+		const int h1 = h;
+		w = max(w / 2, 1);
+		h = max(h / 2, 1);
+
+		// down-sample on the X-axis
+		rc.scale[0] = w1 / w;
+		rc.scale[1] = 1;
+		rc.maxSize[0] = w1 - 1;
+		rc.maxSize[1] = h1 - 1;
+		rc.offset[0] = 1;
+		rc.offset[1] = 0;
+		rc.sourceMip = 0;
+		CmdSetRootConstants(rootSignature, ShaderType::Compute, &rc);
+		CmdDispatch((w + GroupMask) / GroupSize, (h1 + GroupMask) / GroupSize, 1);
+	}
+
+	/*const uint32_t x = (image->width + 7) / 8;
+	const uint32_t y = (image->height + 7) / 8;
+	CmdDispatch(x, y, 1);*/
 }
