@@ -29,8 +29,8 @@ void mipMapGen_t::Init()
 	// @TODO:
 }
 
-void mipMapGen_t::GenerateMipMaps(RHI::HTexture texture)
+void mipMapGen_t::GenerateMipMaps(HTexture texture)
 {
 	// @TODO:
-	//RHI::UpdateDescriptorTable();
+	//UpdateDescriptorTable();
 }

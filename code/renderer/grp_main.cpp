@@ -43,29 +43,26 @@ static void EndSurfaces()
 
 static void CreateNullTexture()
 {
-	{
-		RHI::TextureDesc desc = { 0 };
-		desc.name = "null texture";
-		desc.format = RHI::TextureFormat::RGBA32_UNorm;
-		desc.initialState = RHI::ResourceState::PixelShaderAccessBit;
-		desc.allowedState = RHI::ResourceState::PixelShaderAccessBit;
-		desc.mipCount = 1;
-		desc.sampleCount = 1;
-		desc.width = 1;
-		desc.height = 1;
-		desc.committedResource = true;
-		grp.nullTexture = RHI::CreateTexture(desc);
-	}
-	{
-		const uint8_t color[4] = { 0, 0, 0, 255 };
-		RHI::TextureUpload desc = { 0 };
-		desc.x = 0;
-		desc.y = 0;
-		desc.width = 1;
-		desc.height = 1;
-		desc.data = color;
-		RHI::UploadTextureMip0(grp.nullTexture, desc);
-	}
+	TextureDesc desc = { 0 };
+	desc.name = "null texture";
+	desc.format = TextureFormat::RGBA32_UNorm;
+	desc.initialState = ResourceState::PixelShaderAccessBit;
+	desc.allowedState = ResourceState::PixelShaderAccessBit;
+	desc.mipCount = 1;
+	desc.sampleCount = 1;
+	desc.width = 1;
+	desc.height = 1;
+	desc.committedResource = true;
+	grp.nullTexture = CreateTexture(desc);
+
+	const uint8_t color[4] = { 0, 0, 0, 255 };
+	TextureUpload upload = { 0 };
+	upload.x = 0;
+	upload.y = 0;
+	upload.width = 1;
+	upload.height = 1;
+	upload.data = color;
+	UploadTextureMip0(grp.nullTexture, upload);
 }
 
 
@@ -75,12 +72,12 @@ struct GameplayRenderPipeline : IRenderPipeline
 	{
 		CreateNullTexture();
 		{
-			RHI::SamplerDesc desc = {};
-			desc.filterMode = RHI::TextureFilter::Linear;
+			SamplerDesc desc = {};
+			desc.filterMode = TextureFilter::Linear;
 			desc.wrapMode = TW_REPEAT;
-			grp.samplers[0] = RHI::CreateSampler(desc);
+			grp.samplers[0] = CreateSampler(desc);
 			desc.wrapMode = TW_CLAMP_TO_EDGE;
-			grp.samplers[1] = RHI::CreateSampler(desc);
+			grp.samplers[1] = CreateSampler(desc);
 		}
 		grp.ui.Init();
 		grp.mipMapGen.Init();
@@ -151,46 +148,46 @@ struct GameplayRenderPipeline : IRenderPipeline
 
 	void CreateTexture(image_t* image, int mipCount, int width, int height) override
 	{
-		RHI::TextureDesc desc = { 0 };
-		desc.format = RHI::TextureFormat::RGBA32_UNorm;
+		TextureDesc desc = { 0 };
+		desc.format = TextureFormat::RGBA32_UNorm;
 		desc.width = width;
 		desc.height = height;
 		desc.mipCount = mipCount;
 		desc.name = image->name;
 		desc.sampleCount = 1;
-		desc.initialState = RHI::ResourceState::PixelShaderAccessBit;
-		desc.allowedState = RHI::ResourceState::PixelShaderAccessBit;
+		desc.initialState = ResourceState::PixelShaderAccessBit;
+		desc.allowedState = ResourceState::PixelShaderAccessBit;
 		if(mipCount > 1)
 		{
-			desc.allowedState |= RHI::ResourceState::UnorderedAccessBit; // for mip-map generation
+			desc.allowedState |= ResourceState::UnorderedAccessBit; // for mip-map generation
 		}
 		desc.committedResource = true;
 
-		image->texture = RHI::CreateTexture(desc);
+		image->texture = ::RHI::CreateTexture(desc);
 		image->textureIndex = grp.textureIndex++;
 
-		RHI::UpdateDescriptorTable(grp.ui.descriptorTable, RHI::DescriptorType::Texture, image->textureIndex, 1, &image->texture);
+		UpdateDescriptorTable(grp.ui.descriptorTable, DescriptorType::Texture, image->textureIndex, 1, &image->texture);
 	}
 
 	void UpdateTexture(image_t* image, int mipIndex, int x, int y, int width, int height, const void* data) override
 	{
 		Q_assert(mipIndex == 0); // @TODO: sigh...
 
-		RHI::TextureUpload upload = { 0 };
+		TextureUpload upload = { 0 };
 		upload.data = data;
 		upload.x = x;
 		upload.y = y;
 		upload.width = width;
 		upload.height = height;
-		RHI::UploadTextureMip0(image->texture, upload);
+		UploadTextureMip0(image->texture, upload);
 	}
 
 	void FinalizeTexture(image_t* image) override
 	{
-		RHI::FinishTextureUpload(image->texture);
+		FinishTextureUpload(image->texture);
 	}
 
-	void GenerateMipMaps(RHI::HTexture texture) override
+	void GenerateMipMaps(HTexture texture) override
 	{
 		grp.mipMapGen.GenerateMipMaps(texture);
 	}

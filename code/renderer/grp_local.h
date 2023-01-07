@@ -27,6 +27,9 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 #include "tr_local.h"
 
 
+using namespace RHI;
+
+
 struct ui_t
 {
 	void Init();
@@ -52,11 +55,11 @@ struct ui_t
 	int firstVertex;
 	int indexCount;
 	int vertexCount;
-	RHI::HRootSignature rootSignature;
-	RHI::HDescriptorTable descriptorTable;
-	RHI::HPipeline pipeline;
-	RHI::HBuffer indexBuffer;
-	RHI::HBuffer vertexBuffer;
+	HRootSignature rootSignature;
+	HDescriptorTable descriptorTable;
+	HPipeline pipeline;
+	HBuffer indexBuffer;
+	HBuffer vertexBuffer;
 	index_t* indices; // @TODO: 16-bit indices
 	vertex_t* vertices;
 	uint32_t color;
@@ -66,11 +69,11 @@ struct ui_t
 struct mipMapGen_t
 {
 	void Init();
-	void GenerateMipMaps(RHI::HTexture texture);
+	void GenerateMipMaps(HTexture texture);
 
-	RHI::HRootSignature rootSignature;
-	RHI::HDescriptorTable descriptorTable;
-	RHI::HPipeline pipeline;
+	HRootSignature rootSignature;
+	HDescriptorTable descriptorTable;
+	HPipeline pipeline;
 };
 
 enum projection_t
@@ -86,8 +89,8 @@ struct grp_t
 	mipMapGen_t mipMapGen;
 	projection_t projection;
 	uint32_t textureIndex;
-	RHI::HSampler samplers[2];
-	RHI::HTexture nullTexture;
+	HSampler samplers[2];
+	HTexture nullTexture;
 };
 
 extern grp_t grp;
