@@ -462,7 +462,7 @@ namespace RHI
 	void CmdDrawIndexed(uint32_t indexCount, uint32_t firstIndex, uint32_t firstVertex);
 	HDurationQuery CmdBeginDurationQuery(const char* name);
 	void CmdEndDurationQuery(HDurationQuery query);
-	void CmdBarriers(uint32_t texCount, const TextureBarrier* textures, uint32_t buffCount = 0, const BufferBarrier* buffers = NULL);
+	void CmdBarrier(uint32_t texCount, const TextureBarrier* textures, uint32_t buffCount = 0, const BufferBarrier* buffers = NULL);
 
 #define CNQ3_DEV
 #if defined(_DEBUG) || defined(CNQ3_DEV)

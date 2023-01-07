@@ -171,6 +171,7 @@ namespace RHI
 		D3D12MA::Allocation* allocation;
 		ID3D12Resource* buffer;
 		D3D12_GPU_VIRTUAL_ADDRESS gpuAddress;
+		D3D12_RESOURCE_STATES currentState;
 		bool mapped;
 	};
 
@@ -630,7 +631,7 @@ namespace RHI
 
 			{
 				const TextureBarrier barrier(handle, ResourceState::UnorderedAccessBit);
-				CmdBarriers(1, &barrier);
+				CmdBarrier(1, &barrier);
 			}
 
 			rhi.commandList = directCommandList;
@@ -1106,6 +1107,40 @@ namespace RHI
 			// MS: "If any write bit is set, then no read bit may be set."
 			Q_assert(rBits == 0);
 		}
+	}
+
+	// returns true if the barrier should be used
+	static bool SetBarrier(
+		D3D12_RESOURCE_STATES& currentState, D3D12_RESOURCE_BARRIER& barrier,
+		ResourceState::Flags newState, ID3D12Resource* resource)
+	{
+		const D3D12_RESOURCE_STATES before = currentState;
+		const D3D12_RESOURCE_STATES after = GetD3DResourceStates(newState);
+		ValidateResourceStateForBarrier(before);
+		ValidateResourceStateForBarrier(after);
+
+		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+		if(before & after & D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+		{
+			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+			barrier.UAV.pResource = resource;
+		}
+		else
+		{
+			if(before == after)
+			{
+				return false;
+			}
+
+			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			barrier.Transition.pResource = resource;
+			barrier.Transition.StateBefore = before;
+			barrier.Transition.StateAfter = after;
+			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+			currentState = after;
+		}
+
+		return true;
 	}
 
 	static void ResolveDurationQueries()
@@ -1638,7 +1673,7 @@ namespace RHI
 
 		rhi.frameDuration = CmdBeginDurationQuery("Whole frame");
 
-		D3D12_RESOURCE_BARRIER barrier = { 0 };
+		D3D12_RESOURCE_BARRIER barrier = {0};
 		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
 		barrier.Transition.pResource = rhi.renderTargets[rhi.frameIndex];
@@ -1660,7 +1695,7 @@ namespace RHI
 			const Texture& texture = rhi.textures.Get(handle);
 			barriers[t] = TextureBarrier(handle, texture.desc.initialState);
 		}
-		CmdBarriers(rhi.texturesToTransition.count, barriers);
+		CmdBarrier(rhi.texturesToTransition.count, barriers);
 		rhi.texturesToTransition.Clear();
 	}
 
@@ -1761,6 +1796,7 @@ namespace RHI
 		buffer.allocation = allocation;
 		buffer.buffer = resource;
 		buffer.gpuAddress = resource->GetGPUVirtualAddress();
+		buffer.currentState = resourceState;
 
 		return rhi.buffers.Add(buffer);
 	}
@@ -2524,7 +2560,7 @@ namespace RHI
 		query.state = QueryState::Ended;
 	}
 
-	void CmdBarriers(uint32_t texCount, const TextureBarrier* textures, uint32_t buffCount, const BufferBarrier* buffers)
+	void CmdBarrier(uint32_t texCount, const TextureBarrier* textures, uint32_t buffCount, const BufferBarrier* buffers)
 	{
 		// a UAV barrier is used whenever
 		// D3D12_RESOURCE_STATE_UNORDERED_ACCESS is in both old and new state
@@ -2539,36 +2575,19 @@ namespace RHI
 		for(uint32_t i = 0; i < texCount; ++i)
 		{
 			Texture& texture = rhi.textures.Get(textures[i].texture);
-			const D3D12_RESOURCE_STATES before = texture.currentState;
-			const D3D12_RESOURCE_STATES after = GetD3DResourceStates(textures[i].newState);
-			ValidateResourceStateForBarrier(before);
-			ValidateResourceStateForBarrier(after);
-			GetD3DResourceStates(textures[i].newState);
-
-			D3D12_RESOURCE_BARRIER& b = barriers[barrierCount];
-			b.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-			if((before & D3D12_RESOURCE_STATE_UNORDERED_ACCESS) != 0 &&
-				(after & D3D12_RESOURCE_STATE_UNORDERED_ACCESS) != 0)
+			if(SetBarrier(texture.currentState, barriers[barrierCount], textures[i].newState, texture.texture))
 			{
-				b.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-				b.UAV.pResource = texture.texture;
+				barrierCount++;
 			}
-			else
+			
+		}
+		for(uint32_t i = 0; i < buffCount; ++i)
+		{
+			Buffer& buffer = rhi.buffers.Get(buffers[i].buffer);
+			if(SetBarrier(buffer.currentState, barriers[barrierCount], buffers[i].newState, buffer.buffer))
 			{
-				if(before == after)
-				{
-					continue;
-				}
-
-				b.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-				b.Transition.pResource = texture.texture;
-				b.Transition.StateBefore = before;
-				b.Transition.StateAfter = after;
-				b.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-				texture.currentState = after;
+				barrierCount++;
 			}
-
-			barrierCount++;
 		}
 
 		if(barrierCount > 0)
