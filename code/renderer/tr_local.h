@@ -173,6 +173,7 @@ namespace RHI
 		enum Id
 		{
 			RGBA32_UNorm,
+			RGBA64_Float,
 			DepthStencil32_UNorm24_UInt8,
 			Count
 		};

@@ -24,8 +24,34 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 #include "grp_local.h"
 
 
-#pragma pack(push, 1)
-struct RootConstants
+#pragma pack(push, 4)
+struct StartConstants
+{
+	float gamma;
+};
+#pragma pack(pop)
+
+const char* start_cs = R"grml(
+// gamma-space UINT8 to linear-space FLOAT compute shader
+
+RWTexture2D<uint4>  src : register(u0);
+RWTexture2D<float4> dst : register(u16);
+
+cbuffer RootConstants
+{
+	float gamma;
+}
+
+[numthreads(8, 8, 1)]
+void main(uint3 id : SV_DispatchThreadID)
+{
+	float4 v = src[id.xy] / 255.0;
+	dst[id.xy] = float4(pow(v.xyz, gamma), v.a);
+}
+)grml";
+
+#pragma pack(push, 4)
+struct DownConstants
 {
 	float weights[4];
 	int32_t maxSize[2];
@@ -36,7 +62,7 @@ struct RootConstants
 };
 #pragma pack(pop)
 
-const char* cs = R"grml(
+const char* down_cs = R"grml(
 // 8-tap 1D filter compute shader
 
 RWTexture2D<float4> mips[16] : register(u0);
@@ -83,30 +109,94 @@ void main(uint3 id : SV_DispatchThreadID)
 }
 )grml";
 
+#pragma pack(push, 4)
+struct EndConstants
+{
+	float blendColor[4];
+	float intensity;
+	float invGamma; // 1.0 / gamma
+	int sourceIndex; // 16 or 32
+};
+#pragma pack(pop)
+
+const char* end_cs = R"grml(
+// linear-space FLOAT to gamma-space UINT8 compute shader
+
+RWTexture2D<float4> source[32] : register(u16);
+RWTexture2D<uint4>  dst        : register(u0);
+
+cbuffer RootConstants
+{
+	float4 blendColor;
+	float intensity;
+	float invGamma; // 1.0 / gamma
+	int sourceIndex; // 16 or 32
+}
+
+[numthreads(8, 8, 1)]
+void cs_main(uint3 id : SV_DispatchThreadID)
+{
+	RWTexture2D<float4> src = source[sourceIndex];
+
+	// yes, intensity *should* be done in light-linear space
+	// but we keep the old behavior for consistency...
+	float4 in0 = src[id.xy];
+	float3 in1 = 0.5 * (in0.rgb + blendColor.rgb);
+	float3 inV = lerp(in0.rgb, in1.rgb, blendColor.a);
+	float3 out0 = pow(max(inV, 0.0), invGamma);
+	float3 out1 = out0 * intensity;
+	float4 outV = saturate(float4(out1, in0.a));
+	dst[id.xy] = outV * 255.0;
+}
+)grml";
+
 
 void mipMapGen_t::Init()
 {
+	const char* stageNames[] = { "G2L", "Down", "L2G" };
+	uint32_t stageRCByteCount[] = { sizeof(StartConstants), sizeof(DownConstants), sizeof(EndConstants) };
+	const char* stageShaders[] = { start_cs, down_cs, end_cs };
+
+	for(int s = 0; s < 3; ++s)
 	{
-		RootSignatureDesc desc = { 0 };
-		desc.name = "mip-map gen root signature";
-		desc.pipelineType = PipelineType::Compute;
-		desc.constants[ShaderType::Compute].count = 12;
-		desc.genericVisibility = ShaderStage::PixelBit;
-		desc.AddRange(DescriptorType::RWTexture, 0, MaxTextureMips);
-		rootSignature = CreateRootSignature(desc);
+		Stage& stage = stages[s];
+		{
+			RootSignatureDesc desc = { 0 };
+			desc.name = va("mip-map %s root signature", stageNames[s]);
+			desc.pipelineType = PipelineType::Compute;
+			desc.constants[ShaderType::Compute].count = stageRCByteCount[s] / 4;
+			desc.genericVisibility = ShaderStage::ComputeBit;
+			desc.AddRange(DescriptorType::RWTexture, 0, MaxTextureMips * 3);
+			stage.rootSignature = CreateRootSignature(desc);
+		}
+		{
+			DescriptorTableDesc desc = { 0 };
+			desc.name = va("mip-map %s descriptor table", stageNames[s]);
+			desc.rootSignature = stage.rootSignature;
+			stage.descriptorTable = CreateDescriptorTable(desc);
+		}
+		{
+			ComputePipelineDesc desc = { 0 };
+			desc.name = va("mip-map %s PSO", stageNames[s]);
+			desc.rootSignature = stage.rootSignature;
+			desc.shader = CompileComputeShader(down_cs);
+			stage.pipeline = CreateComputePipeline(desc);
+		}
 	}
+
+	for(int t = 0; t < 2; ++t)
 	{
-		DescriptorTableDesc desc = { 0 };
-		desc.name = "mip-map gen descriptor table";
-		desc.rootSignature = rootSignature;
-		descriptorTable = CreateDescriptorTable(desc);
-	}
-	{
-		ComputePipelineDesc desc = { 0 };
-		desc.name = "mip-map gen PSO";
-		desc.rootSignature = rootSignature;
-		desc.shader = CompileComputeShader(cs);
-		pipeline = CreateComputePipeline(desc);
+		TextureDesc desc = { 0 };
+		desc.name = va("mip-map generation texture #%d", t + 1);
+		desc.format = TextureFormat::RGBA64_Float;
+		desc.width = MAX_TEXTURE_SIZE;
+		desc.height = MAX_TEXTURE_SIZE;
+		desc.mipCount = 1;
+		desc.sampleCount = 1;
+		desc.initialState = ResourceState::UnorderedAccessBit;
+		desc.allowedState = ResourceState::UnorderedAccessBit | ResourceState::ComputeShaderAccessBit;
+		desc.committedResource = true;
+		textures[t] = CreateTexture(desc);
 	}
 }
 
@@ -128,13 +218,20 @@ void mipMapGen_t::GenerateMipMaps(HTexture texture)
 		return;
 	}
 
-	UpdateDescriptorTable(descriptorTable, DescriptorType::RWTexture, 0, 1, &texture);
+	for(int s = 0; s < 3; ++s)
+	{
+		Stage& stage = stages[s];
+		UpdateDescriptorTable(stage.descriptorTable, DescriptorType::RWTexture, 0, 1, &texture);
+		UpdateDescriptorTable(stage.descriptorTable, DescriptorType::RWTexture, MaxTextureMips, 1, &textures[0]);
+		UpdateDescriptorTable(stage.descriptorTable, DescriptorType::RWTexture, MaxTextureMips * 2, 1, &textures[1]);
+	}
+	
+	CmdBindRootSignature(stages[0].rootSignature);
+	CmdBindPipeline(stages[0].pipeline);
+	CmdBindDescriptorTable(stages[0].rootSignature, stages[0].descriptorTable);
 
-	CmdBindRootSignature(rootSignature);
-	CmdBindPipeline(pipeline);
-	CmdBindDescriptorTable(rootSignature, descriptorTable);
-
-	RootConstants rc = { 0 };
+#if 0
+	DownConstants rc = { 0 };
 	rc.clampMode = image->wrapClampMode == TW_REPEAT ? 0 : 1;
 	memcpy(rc.weights, tr.mipFilter, sizeof(rc.weights));
 
@@ -162,6 +259,7 @@ void mipMapGen_t::GenerateMipMaps(HTexture texture)
 		CmdSetRootConstants(rootSignature, ShaderType::Compute, &rc);
 		CmdDispatch((w + GroupMask) / GroupSize, (h1 + GroupMask) / GroupSize, 1);
 	}
+#endif
 
 	/*const uint32_t x = (image->width + 7) / 8;
 	const uint32_t y = (image->height + 7) / 8;

@@ -71,9 +71,15 @@ struct mipMapGen_t
 	void Init();
 	void GenerateMipMaps(HTexture texture);
 
-	HRootSignature rootSignature;
-	HDescriptorTable descriptorTable;
-	HPipeline pipeline;
+	struct Stage
+	{
+		HRootSignature rootSignature;
+		HDescriptorTable descriptorTable;
+		HPipeline pipeline;
+	};
+
+	HTexture textures[2];
+	Stage stages[3];
 };
 
 enum projection_t
