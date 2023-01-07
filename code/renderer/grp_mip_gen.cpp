@@ -117,28 +117,30 @@ struct EndConstants
 	float blendColor[4];
 	float intensity;
 	float invGamma; // 1.0 / gamma
-	int sourceIndex; // 16 or 32
+	uint32_t srcMip;
+	uint32_t dstMip;
 };
 #pragma pack(pop)
 
 const char* end_cs = R"grml(
 // linear-space to gamma-space compute shader
 
-RWTexture2D<float4> source[32] : register(u16);
-RWTexture2D<float4> dst        : register(u0);
+RWTexture2D<float4> mips[3 + 16] : register(u0);
 
 cbuffer RootConstants
 {
 	float4 blendColor;
 	float intensity;
 	float invGamma; // 1.0 / gamma
-	int sourceIndex; // 16 or 32
+	uint srcMip;
+	uint dstMip;
 }
 
 [numthreads(8, 8, 1)]
 void main(uint3 id : SV_DispatchThreadID)
 {
-	RWTexture2D<float4> src = source[sourceIndex];
+	RWTexture2D<float4> src = mips[srcMip];
+	RWTexture2D<float4> dst = mips[dstMip];
 
 	// yes, intensity *should* be done in light-linear space
 	// but we keep the old behavior for consistency...
@@ -166,9 +168,9 @@ void mipMapGen_t::Init()
 			RootSignatureDesc desc = { 0 };
 			desc.name = va("mip-map %s root signature", stageNames[s]);
 			desc.pipelineType = PipelineType::Compute;
-			desc.constants[ShaderType::Compute].count = stageRCByteCount[s] / 4;
+			desc.constants[ShaderType::Compute].count = (stageRCByteCount[s] + 3) / 4; // @TODO: use AlignUp
 			desc.genericVisibility = ShaderStage::ComputeBit;
-			desc.AddRange(DescriptorType::RWTexture, 0, MaxTextureMips * 3);
+			desc.AddRange(DescriptorType::RWTexture, 0, MipSlice::Count + MaxTextureMips);
 			stage.rootSignature = CreateRootSignature(desc);
 		}
 		{
@@ -273,7 +275,7 @@ void mipMapGen_t::GenerateMipMaps(HTexture texture)
 
 	// create a linear color space copy of mip 0 into float16 texture 0
 	{
-		Stage& stage = stages[0];
+		Stage& stage = stages[Stage::Start];
 		StartConstants rc = {};
 		rc.gamma = r_mipGenGamma->value;
 
@@ -300,41 +302,59 @@ void mipMapGen_t::GenerateMipMaps(HTexture texture)
 		w = max(w / 2, 1);
 		h = max(h / 2, 1);
 
-		Stage& stage = stages[1];
-		DownConstants rc = {};
-		rc.clampMode = image->wrapClampMode == TW_REPEAT ? 0 : 1;
-		memcpy(rc.weights, tr.mipFilter, sizeof(rc.weights));
+		{
+			Stage& stage = stages[Stage::DownSample];
+			DownConstants rc = {};
+			rc.clampMode = image->wrapClampMode == TW_REPEAT ? 0 : 1;
+			memcpy(rc.weights, tr.mipFilter, sizeof(rc.weights));
 
-		CmdBindRootSignature(stage.rootSignature);
-		CmdBindPipeline(stage.pipeline);
-		CmdBindDescriptorTable(stage.rootSignature, stage.descriptorTable);
+			CmdBindRootSignature(stage.rootSignature);
+			CmdBindPipeline(stage.pipeline);
+			CmdBindDescriptorTable(stage.rootSignature, stage.descriptorTable);
 
-		// down-sample on the X-axis
-		rc.srcMip = MipSlice::Float16_0;
-		rc.dstMip = MipSlice::Float16_1;
-		rc.scale[0] = w1 / w;
-		rc.scale[1] = 1;
-		rc.maxSize[0] = w1 - 1;
-		rc.maxSize[1] = h1 - 1;
-		rc.offset[0] = 1;
-		rc.offset[1] = 0;
-		CmdSetRootConstants(stage.rootSignature, ShaderType::Compute, &rc);
-		CmdBarrier(ARRAY_LEN(barriers), barriers);
-		CmdDispatch((w + GroupMask) / GroupSize, (h1 + GroupMask) / GroupSize, 1);
+			// down-sample on the X-axis
+			rc.srcMip = MipSlice::Float16_0;
+			rc.dstMip = MipSlice::Float16_1;
+			rc.scale[0] = w1 / w;
+			rc.scale[1] = 1;
+			rc.maxSize[0] = w1 - 1;
+			rc.maxSize[1] = h1 - 1;
+			rc.offset[0] = 1;
+			rc.offset[1] = 0;
+			CmdSetRootConstants(stage.rootSignature, ShaderType::Compute, &rc);
+			CmdBarrier(ARRAY_LEN(barriers), barriers);
+			CmdDispatch((w + GroupMask) / GroupSize, (h1 + GroupMask) / GroupSize, 1);
 
-		// down-sample on the Y-axis
-		rc.srcMip = MipSlice::Float16_1;
-		rc.dstMip = MipSlice::Float16_0;
-		rc.scale[0] = 1;
-		rc.scale[1] = h1 / h;
-		rc.maxSize[0] = w - 1;
-		rc.maxSize[1] = h1 - 1;
-		rc.offset[0] = 0;
-		rc.offset[1] = 1;
-		CmdSetRootConstants(stage.rootSignature, ShaderType::Compute, &rc);
-		CmdBarrier(ARRAY_LEN(barriers), barriers);
-		CmdDispatch((w + GroupMask) / GroupSize, (h + GroupMask) / GroupSize, 1);
+			// down-sample on the Y-axis
+			rc.srcMip = MipSlice::Float16_1;
+			rc.dstMip = MipSlice::Float16_0;
+			rc.scale[0] = 1;
+			rc.scale[1] = h1 / h;
+			rc.maxSize[0] = w - 1;
+			rc.maxSize[1] = h1 - 1;
+			rc.offset[0] = 0;
+			rc.offset[1] = 1;
+			CmdSetRootConstants(stage.rootSignature, ShaderType::Compute, &rc);
+			CmdBarrier(ARRAY_LEN(barriers), barriers);
+			CmdDispatch((w + GroupMask) / GroupSize, (h + GroupMask) / GroupSize, 1);
+		}
 
+		// convert to final format
+		{
+			Stage& stage = stages[Stage::End];
+			const int destMip = i;
+
+			EndConstants rc = {};
+			rc.intensity = r_intensity->value;
+			rc.invGamma = 1.0f / r_mipGenGamma->value;
+			memcpy(rc.blendColor, r_mipBlendColors[r_colorMipLevels->integer ? destMip : 0], sizeof(rc.blendColor));
+			rc.srcMip = MipSlice::Float16_0;
+			rc.dstMip = MipSlice::Count + destMip;
+			
+			CmdSetRootConstants(stage.rootSignature, ShaderType::Compute, &rc);
+			CmdBarrier(ARRAY_LEN(barriers), barriers);
+			CmdDispatch((w + GroupMask) / GroupSize, (h + GroupMask) / GroupSize, 1);
+		}
 #if 0
 		// convert to final format
 		const int destMip = i;

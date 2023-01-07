@@ -73,6 +73,14 @@ struct mipMapGen_t
 
 	struct Stage
 	{
+		enum Id
+		{
+			Start,      // gamma to linear
+			DownSample, // down sample on 1 axis
+			End,        // linear to gamma
+			Count
+		};
+
 		HRootSignature rootSignature;
 		HDescriptorTable descriptorTable;
 		HPipeline pipeline;
