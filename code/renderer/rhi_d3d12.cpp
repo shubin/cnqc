@@ -29,8 +29,6 @@ to do:
 - remove srvIndex or textureIndex from image_t
 	can't remove either for now
 - is it possible to force Resource Binding Tier 2 somehow? are we supposed to run on old HW to test? :(
-- DescriptorTable API: update all entries with valid RHI resource handles before drawing/dispatching
-	we don't allow null descriptors and it helps to have proper fallbacks
 - RenderDoc API integration
 - no RHI references outside of the render pipelines!
 - don't do persistent mapping to help out RenderDoc?
