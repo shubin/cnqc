@@ -2058,7 +2058,7 @@ void R_MipMap( byte** outD, const byte* inD, int inW, int inH, textureWrap_t tw 
 //
 // tr_renderdoc.cpp
 //
-void R_RenderDoc_CaptureFrame();
+void R_RenderDoc_CaptureFrames( int numFrames );
 
 //
 // tr_shader.c

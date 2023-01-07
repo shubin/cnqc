@@ -671,7 +671,7 @@ static void WIN_LoadRenderDoc()
 	const HMODULE module = GetModuleHandleA( "renderdoc.dll" );
 	if ( module != NULL ) {
 		const pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress( module, "RENDERDOC_GetAPI" );
-		if ( RENDERDOC_GetAPI( eRENDERDOC_API_Version_1_5_0, (void**)&renderDocAPI ) != 1 ) {
+		if ( RENDERDOC_GetAPI( CNQ3_RENDERDOC_API_VERSION, (void**)&renderDocAPI ) != 1 ) {
 			renderDocAPI = NULL;
 		}
 	}

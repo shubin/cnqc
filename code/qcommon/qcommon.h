@@ -1168,9 +1168,10 @@ qbool	Sys_IsMinimized();
 #endif
 
 // RenderDoc integration - the API is grabbed at start-up by the OS module
-#define CNQ3_RENDERDOC_API_VERSION RENDERDOC_API_1_5_0
-struct CNQ3_RENDERDOC_API_VERSION;
-extern CNQ3_RENDERDOC_API_VERSION* renderDocAPI;
+#define CNQ3_RENDERDOC_API_STRUCT  RENDERDOC_API_1_5_0
+#define CNQ3_RENDERDOC_API_VERSION eRENDERDOC_API_Version_1_1_0
+struct CNQ3_RENDERDOC_API_STRUCT;
+extern CNQ3_RENDERDOC_API_STRUCT* renderDocAPI;
 
 // huffman.cpp - id's original code
 // used for out-of-band (OOB) datagrams with dynamically created trees

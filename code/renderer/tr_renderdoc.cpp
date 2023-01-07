@@ -25,12 +25,16 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 #include "../renderdoc/renderdoc_app.h"
 
 
-CNQ3_RENDERDOC_API_VERSION* renderDocAPI;
+CNQ3_RENDERDOC_API_STRUCT* renderDocAPI;
 
 
-void R_RenderDoc_CaptureFrame()
+void R_RenderDoc_CaptureFrames( int numFrames )
 {
 	if (renderDocAPI) {
-		renderDocAPI->TriggerCapture();
+		if (numFrames == 1) {
+			renderDocAPI->TriggerCapture();
+		} else if (numFrames > 1) {
+			renderDocAPI->TriggerMultiFrameCapture(numFrames);
+		}
 	}
 }
