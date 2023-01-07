@@ -168,7 +168,7 @@ void mipMapGen_t::Init()
 			RootSignatureDesc desc = { 0 };
 			desc.name = va("mip-map %s root signature", stageNames[s]);
 			desc.pipelineType = PipelineType::Compute;
-			desc.constants[ShaderType::Compute].count = (stageRCByteCount[s] + 3) / 4; // @TODO: use AlignUp
+			desc.constants[ShaderType::Compute].count = stageRCByteCount[s] / 4;
 			desc.genericVisibility = ShaderStage::ComputeBit;
 			desc.AddRange(DescriptorType::RWTexture, 0, MipSlice::Count + MaxTextureMips);
 			stage.rootSignature = CreateRootSignature(desc);
@@ -235,10 +235,10 @@ void mipMapGen_t::GenerateMipMaps(HTexture texture)
 	}
 
 	// @TODO:
-	if(Q_stricmp(image->name, "icons/envirosuit.tga"))
+	/*if(Q_stricmp(image->name, "icons/envirosuit.tga"))
 	{
 		return;
-	}
+	}*/
 
 	for(int s = 0; s < 3; ++s)
 	{
@@ -273,7 +273,7 @@ void mipMapGen_t::GenerateMipMaps(HTexture texture)
 	int w = image->width;
 	int h = image->height;
 
-	// create a linear color space copy of mip 0 into float16 texture 0
+	// create a linear-space copy of mip 0 into float16 texture 0
 	{
 		Stage& stage = stages[Stage::Start];
 		StartConstants rc = {};
@@ -294,14 +294,14 @@ void mipMapGen_t::GenerateMipMaps(HTexture texture)
 	}
 
 	const int mipCount = R_ComputeMipCount(image->width, image->height);
-	//for(int i = 1; i < mipCount; ++i)
-	for(int i = 1; i < 2; ++i)
+	for(int i = 1; i < mipCount; ++i)
 	{
 		const int w1 = w;
 		const int h1 = h;
 		w = max(w / 2, 1);
 		h = max(h / 2, 1);
 
+		// down-sample the image into float16 texture 1 and then 0
 		{
 			Stage& stage = stages[Stage::DownSample];
 			DownConstants rc = {};
@@ -339,7 +339,7 @@ void mipMapGen_t::GenerateMipMaps(HTexture texture)
 			CmdDispatch((w + GroupMask) / GroupSize, (h + GroupMask) / GroupSize, 1);
 		}
 
-		// convert to final format
+		// save the results in gamma-space
 		{
 			Stage& stage = stages[Stage::End];
 			const int destMip = i;
@@ -350,35 +350,13 @@ void mipMapGen_t::GenerateMipMaps(HTexture texture)
 			memcpy(rc.blendColor, r_mipBlendColors[r_colorMipLevels->integer ? destMip : 0], sizeof(rc.blendColor));
 			rc.srcMip = MipSlice::Float16_0;
 			rc.dstMip = MipSlice::Count + destMip;
-			
+
+			CmdBindRootSignature(stage.rootSignature);
+			CmdBindPipeline(stage.pipeline);
+			CmdBindDescriptorTable(stage.rootSignature, stage.descriptorTable);
 			CmdSetRootConstants(stage.rootSignature, ShaderType::Compute, &rc);
 			CmdBarrier(ARRAY_LEN(barriers), barriers);
 			CmdDispatch((w + GroupMask) / GroupSize, (h + GroupMask) / GroupSize, 1);
 		}
-#if 0
-		// convert to final format
-		const int destMip = i;
-		readIndex = 0;
-		writeIndex = 2;
-		memcpy(dataL2G.blendColor, r_mipBlendColors[r_colorMipLevels->integer ? destMip : 0], sizeof(dataL2G.blendColor));
-		ResetShaderData(d3d.mipLinearToGammaConstBuffer, &dataL2G, sizeof(dataL2G));
-		d3ds.context->CSSetShader(d3d.mipLinearToGammaComputeShader, NULL, 0);
-		d3ds.context->CSSetConstantBuffers(0, 1, &bufferNull);
-		d3ds.context->CSSetShaderResources(0, 1, &srvNull);
-		d3ds.context->CSSetUnorderedAccessViews(0, 1, &uavNull, NULL);
-		d3ds.context->CSSetConstantBuffers(0, 1, &d3d.mipLinearToGammaConstBuffer);
-		d3ds.context->CSSetShaderResources(0, 1, &d3d.mipGenTextures[readIndex].srv);
-		d3ds.context->CSSetUnorderedAccessViews(0, 1, &d3d.mipGenTextures[writeIndex].uav, NULL);
-		d3ds.context->Dispatch((w + GroupMask) / GroupSize, (h + GroupMask) / GroupSize, 1);
-
-		// write out the result
-		box.front = 0;
-		box.back = 1;
-		box.left = 0;
-		box.right = w;
-		box.top = 0;
-		box.bottom = h;
-		d3ds.context->CopySubresourceRegion(texture->texture, destMip, 0, 0, 0, d3d.mipGenTextures[2].texture, 0, &box);
-#endif
 	}
 }
