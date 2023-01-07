@@ -345,7 +345,7 @@ void mipMapGen_t::GenerateMipMaps(HTexture texture)
 			const int destMip = i;
 
 			EndConstants rc = {};
-			rc.intensity = r_intensity->value;
+			rc.intensity = (image->flags & IMG_NOIMANIP) ? 1.0f : r_intensity->value;
 			rc.invGamma = 1.0f / r_mipGenGamma->value;
 			memcpy(rc.blendColor, r_mipBlendColors[r_colorMipLevels->integer ? destMip : 0], sizeof(rc.blendColor));
 			rc.srcMip = MipSlice::Float16_0;

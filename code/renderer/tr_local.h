@@ -458,7 +458,6 @@ namespace RHI
 	HTexture CreateTexture(const TextureDesc& desc);
 	void UploadTextureMip0(HTexture texture, const TextureUpload& desc);
 	void FinishTextureUpload(HTexture texture);
-	void GenerateTextureMips(HTexture texture);
 	void DestroyTexture(HTexture texture);
 
 	HSampler CreateSampler(const SamplerDesc& sampler);

@@ -2047,11 +2047,6 @@ namespace RHI
 		rhi.texturesToTransition.Add(texture);
 	}
 
-	void GenerateTextureMips(HTexture texture)
-	{
-		// @TODO:
-	}
-
 	void DestroyTexture(HTexture handle)
 	{
 		Texture& texture = rhi.textures.Get(handle);
