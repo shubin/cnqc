@@ -2452,6 +2452,8 @@ void R_MultMatrix( const float *a, const float *b, float *out );
 void R_MakeIdentityMatrix( float* m );
 void R_MakeOrthoProjectionMatrix( float* m, float w, float h );
 
+void R_GUI_RHI();
+
 
 ///////////////////////////////////////////////////////////////
 

@@ -219,11 +219,7 @@ void imgui_t::Draw()
 	io.DisplaySize.y = glConfig.vidHeight;
 
 	ImGui::NewFrame();
-
-	// @TODO:
-	//DrawGUI();
-	ImGui::ShowDemoWindow();
-
+	R_GUI_RHI();
 	ImGui::EndFrame();
 	ImGui::Render();
 

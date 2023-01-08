@@ -2753,3 +2753,8 @@ namespace RHI
 
 #endif
 }
+
+void R_GUI_RHI()
+{
+	RHI::DrawGUI();
+}
