@@ -18,7 +18,7 @@ You should have received a copy of the GNU General Public License
 along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 ===========================================================================
 */
-// Gameplay Rendering Pipeline - main interface
+// Gameplay Rendering Pipeline - private declarations
 
 
 #pragma once
@@ -99,6 +99,14 @@ struct mipMapGen_t
 
 	HTexture textures[MipSlice::Count];
 	Stage stages[3];
+};
+
+struct imgui_t
+{
+	void Init();
+	void Draw();
+
+
 };
 
 enum projection_t

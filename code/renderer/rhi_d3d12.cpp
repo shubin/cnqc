@@ -35,7 +35,7 @@ to do:
 - implicit barrier & profiling API: Begin/EndRenderPass
 * partial inits and shutdown
 - clean up the Win32 window creation/update mess
-- move the Dear ImGui rendering outside of the RHI
+* move the Dear ImGui rendering outside of the RHI
 - leverage rhi.allocator->IsCacheCoherentUMA()
 - defragment on partial inits with D3D12MA?
 - compiler switch for GPU validation
@@ -113,8 +113,7 @@ One mitigation for this restriction is the diligent use of Null descriptors.
 #endif
 #define D3D12MA_D3D12_HEADERS_ALREADY_INCLUDED
 #include "D3D12MemAlloc.h"
-// @TODO: move out of the RHI...
-#include "../imgui/imgui_impl_dx12.h"
+#include "../imgui/imgui.h"
 
 
 #if defined(_DEBUG) || defined(CNQ3_DEV)
@@ -303,7 +302,6 @@ namespace RHI
 		ID3D12CommandQueue* commandQueue;
 		IDXGISwapChain3* swapChain;
 		ID3D12DescriptorHeap* rtvHeap;
-		ID3D12DescriptorHeap* imguiHeap;
 		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle;
 		UINT rtvIncSize;
 		ID3D12Resource* renderTargets[FrameCount];
@@ -1606,16 +1604,6 @@ namespace RHI
 		rhi.fence.Create(rhi.fenceValues[rhi.frameIndex], "Command Queue Fence");
 		rhi.fenceValues[rhi.frameIndex]++;
 
-		{
-			D3D12_DESCRIPTOR_HEAP_DESC heapDesc = { 0 };
-			heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-			heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-			heapDesc.NumDescriptors = 64;
-			heapDesc.NodeMask = 0;
-			D3D(rhi.device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&rhi.imguiHeap)));
-			SetDebugName(rhi.imguiHeap, "Dear ImGUI Descriptor Heap");
-		}
-
 		rhi.upload.Create();
 
 		{
@@ -1649,13 +1637,6 @@ namespace RHI
 		glInfo.maxTextureSize = MAX_TEXTURE_SIZE;
 		glInfo.maxAnisotropy = 16;
 		glInfo.depthFadeSupport = qfalse;
-
-		if(!ImGui_ImplDX12_Init(rhi.device, FrameCount, DXGI_FORMAT_R8G8B8A8_UNORM, rhi.imguiHeap,
-			rhi.imguiHeap->GetCPUDescriptorHandleForHeapStart(),
-			rhi.imguiHeap->GetGPUDescriptorHandleForHeapStart()))
-		{
-			ri.Error(ERR_FATAL, "Failed to initialize graphics objects for Dear ImGUI\n");
-		}
 	}
 
 	void ShutDown(qbool destroyWindow)
@@ -1679,8 +1660,6 @@ namespace RHI
 			return;
 		}
 
-		ImGui_ImplDX12_Shutdown();
-
 		WaitUntilDeviceIsIdle();
 
 		rhi.upload.Release();
@@ -1698,7 +1677,6 @@ namespace RHI
 		COM_RELEASE(rhi.commandList);
 		COM_RELEASE_ARRAY(rhi.commandAllocators);
 		COM_RELEASE_ARRAY(rhi.renderTargets);
-		COM_RELEASE(rhi.imguiHeap);
 		COM_RELEASE(rhi.rtvHeap);
 		COM_RELEASE(rhi.swapChain);
 		COM_RELEASE(rhi.commandQueue);
@@ -1768,6 +1746,7 @@ namespace RHI
 
 	void EndFrame()
 	{
+#if 0
 		if(r_debugUI->integer)
 		{
 			ImGuiIO& io = ImGui::GetIO();
@@ -1782,6 +1761,7 @@ namespace RHI
 			// the following call will set SetGraphicsRootDescriptorTable itself
 			ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), rhi.commandList);
 		}
+#endif
 
 		D3D12_RESOURCE_BARRIER barrier = { 0 };
 		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
