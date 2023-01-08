@@ -23,6 +23,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define __TR_PUBLIC_H
 
 #include "../qcommon/tr_types.h"
+#include "rhi_public.h"
 
 
 // print levels for severity-coloring (FIXME: move to qcommon for cgame as well?)

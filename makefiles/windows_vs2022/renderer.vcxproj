@@ -222,6 +222,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\..\code\renderer\grp_local.h" />
+    <ClInclude Include="..\..\code\renderer\rhi_public.h" />
+    <ClInclude Include="..\..\code\renderer\rhi_local.h" />
     <ClInclude Include="..\..\code\renderer\stb_image.h" />
     <ClInclude Include="..\..\code\renderer\tr_help.h" />
     <ClInclude Include="..\..\code\renderer\tr_local.h" />

@@ -11,6 +11,8 @@
     <ClInclude Include="..\..\code\renderer\tr_local.h" />
     <ClInclude Include="..\..\code\renderer\tr_public.h" />
     <ClInclude Include="..\..\code\renderer\grp_local.h" />
+    <ClInclude Include="..\..\code\renderer\rhi_public.h" />
+    <ClInclude Include="..\..\code\renderer\rhi_local.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\code\renderer\stb_image.cpp" />

@@ -103,7 +103,7 @@ One mitigation for this restriction is the diligent use of Null descriptors.
 */
 
 
-#include "tr_local.h"
+#include "rhi_local.h"
 #include <Windows.h>
 #include <d3d12.h>
 #include <dxgi1_6.h>

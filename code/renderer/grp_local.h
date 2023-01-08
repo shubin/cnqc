@@ -25,6 +25,7 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 
 
 #include "tr_local.h"
+#include "rhi_local.h"
 
 
 using namespace RHI;
