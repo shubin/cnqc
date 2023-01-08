@@ -29,6 +29,13 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 #define MAX_INDEX_COUNT  (MAX_VERTEX_COUNT << 3)
 
 
+#pragma pack(push, 4)
+struct VertexRC
+{
+	float mvp[4][4];
+};
+#pragma pack(pop)
+
 static const char* vs = R"grml(
 cbuffer vertexBuffer : register(b0)
 {
@@ -78,35 +85,6 @@ float4 main(PS_INPUT input) : SV_Target
 )grml";
 
 
-struct VERTEX_CONSTANT_BUFFER_DX12
-{
-	float mvp[4][4];
-};
-
-struct ImGui_ImplDX12_RenderBuffers
-{
-	HBuffer IndexBuffer;
-	HBuffer VertexBuffer;
-};
-
-struct ImGui_ImplDX12_Data
-{
-	HRootSignature pRootSignature;
-	HPipeline pPipelineState;
-	HTexture pFontTextureResource;
-
-	ImGui_ImplDX12_RenderBuffers pFrameResources[FrameCount];
-};
-
-static ImGui_ImplDX12_Data bd;
-
-HSampler sampler;
-HRootSignature rootSignature;
-HPipeline pipeline;
-HDescriptorTable descriptorTable;
-HTexture fontAtlas;
-
-
 void imgui_t::Init()
 {
 	ImGuiIO& io = ImGui::GetIO();
@@ -115,13 +93,13 @@ void imgui_t::Init()
 		return;
 	}
 
-	io.BackendRendererUserData = &bd;
+	io.BackendRendererUserData = this;
 	io.BackendRendererName = "CNQ3 Direct3D 12";
 	io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 
 	for(int i = 0; i < FrameCount; i++)
 	{
-		ImGui_ImplDX12_RenderBuffers* fr = &bd.pFrameResources[i];
+		RenderBuffers* fr = &frameResources[i];
 
 		BufferDesc desc = { 0 };
 		desc.committedResource = true;
@@ -130,12 +108,12 @@ void imgui_t::Init()
 		desc.name = "Dear ImGUI index buffer";
 		desc.initialState = ResourceState::IndexBufferBit;
 		desc.byteCount = MAX_INDEX_COUNT * sizeof(ImDrawIdx);
-		fr->IndexBuffer = CreateBuffer(desc);
+		fr->indexBuffer = CreateBuffer(desc);
 
 		desc.name = "Dear ImGUI vertex buffer";
 		desc.initialState = ResourceState::VertexBufferBit;
 		desc.byteCount = MAX_VERTEX_COUNT * sizeof(ImDrawData);
-		fr->VertexBuffer = CreateBuffer(desc);
+		fr->vertexBuffer = CreateBuffer(desc);
 	}
 
 	{
@@ -257,11 +235,11 @@ void imgui_t::Draw()
 		return;
 	}
 
-	ImGui_ImplDX12_RenderBuffers* fr = &bd.pFrameResources[GetFrameIndex()];
+	RenderBuffers* fr = &frameResources[GetFrameIndex()];
 
 	// Upload vertex/index data into a single contiguous GPU buffer
-	void* vtx_resource = MapBuffer(fr->VertexBuffer);
-	void* idx_resource = MapBuffer(fr->IndexBuffer);
+	void* vtx_resource = MapBuffer(fr->vertexBuffer);
+	void* idx_resource = MapBuffer(fr->indexBuffer);
 	ImDrawVert* vtx_dst = (ImDrawVert*)vtx_resource;
 	ImDrawIdx* idx_dst = (ImDrawIdx*)idx_resource;
 	for(int n = 0; n < draw_data->CmdListsCount; n++)
@@ -272,12 +250,12 @@ void imgui_t::Draw()
 		vtx_dst += cmd_list->VtxBuffer.Size;
 		idx_dst += cmd_list->IdxBuffer.Size;
 	}
-	UnmapBuffer(fr->VertexBuffer);
-	UnmapBuffer(fr->IndexBuffer);
+	UnmapBuffer(fr->vertexBuffer);
+	UnmapBuffer(fr->indexBuffer);
 
 	// Setup orthographic projection matrix into our constant buffer
 	// Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right).
-	VERTEX_CONSTANT_BUFFER_DX12 vertex_constant_buffer;
+	VertexRC vertex_constant_buffer;
 	{
 		float L = draw_data->DisplayPos.x;
 		float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x;
@@ -299,8 +277,8 @@ void imgui_t::Draw()
 	CmdBindRootSignature(rootSignature);
 	CmdBindPipeline(pipeline);
 	CmdBindDescriptorTable(rootSignature, descriptorTable);
-	CmdBindVertexBuffers(1, &fr->VertexBuffer, &vertexStride, NULL);
-	CmdBindIndexBuffer(fr->IndexBuffer, IndexType::UInt32, 0);
+	CmdBindVertexBuffers(1, &fr->vertexBuffer, &vertexStride, NULL);
+	CmdBindIndexBuffer(fr->indexBuffer, IndexType::UInt32, 0);
 	CmdSetViewport(0, 0, draw_data->DisplaySize.x, draw_data->DisplaySize.y);
 	CmdSetRootConstants(rootSignature, ShaderType::Vertex, &vertex_constant_buffer);
 

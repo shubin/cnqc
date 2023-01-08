@@ -105,6 +105,19 @@ struct imgui_t
 {
 	void Init();
 	void Draw();
+
+	struct RenderBuffers
+	{
+		HBuffer indexBuffer;
+		HBuffer vertexBuffer;
+	};
+
+	HSampler sampler;
+	HRootSignature rootSignature;
+	HPipeline pipeline;
+	HDescriptorTable descriptorTable;
+	HTexture fontAtlas;
+	RenderBuffers frameResources[FrameCount];
 };
 
 enum projection_t
