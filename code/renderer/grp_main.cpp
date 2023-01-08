@@ -24,7 +24,7 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 #include "grp_local.h"
 
 
-grp_t grp;
+GRP grp;
 
 
 template<typename T>
@@ -65,7 +65,7 @@ struct GameplayRenderPipeline : IRenderPipeline
 		grp.ui.BeginFrame();
 
 		// nothing is bound to the command list yet!
-		grp.projection = PROJECTION_NONE;
+		grp.renderMode = RenderMode::None;
 	}
 
 	void EndFrame() override

@@ -80,7 +80,7 @@ float4 main(VOut input) : SV_TARGET
 )grml";
 
 
-void ui_t::Init()
+void UI::Init()
 {
 	{
 		RootSignatureDesc desc("UI root signature");
@@ -104,13 +104,13 @@ void ui_t::Init()
 		GraphicsPipelineDesc desc("UI PSO", rootSignature);
 		desc.vertexShader = CompileVertexShader(vs);
 		desc.pixelShader = CompilePixelShader(ps);
-		desc.vertexLayout.bindingStrides[0] = sizeof(ui_t::vertex_t);
+		desc.vertexLayout.bindingStrides[0] = sizeof(UI::vertex_t);
 		desc.vertexLayout.AddAttribute(0, ShaderSemantic::Position,
-			DataType::Float32, 2, offsetof(ui_t::vertex_t, position));
+			DataType::Float32, 2, offsetof(UI::vertex_t, position));
 		desc.vertexLayout.AddAttribute(0, ShaderSemantic::TexCoord,
-			DataType::Float32, 2, offsetof(ui_t::vertex_t, texCoords));
+			DataType::Float32, 2, offsetof(UI::vertex_t, texCoords));
 		desc.vertexLayout.AddAttribute(0, ShaderSemantic::Color,
-			DataType::UNorm8, 4, offsetof(ui_t::vertex_t, color));
+			DataType::UNorm8, 4, offsetof(UI::vertex_t, color));
 		desc.depthStencil.depthComparison = ComparisonFunction::Always;
 		desc.depthStencil.depthStencilFormat = TextureFormat::DepthStencil32_UNorm24_UInt8;
 		desc.depthStencil.enableDepthTest = false;
@@ -122,19 +122,19 @@ void ui_t::Init()
 	maxVertexCount = 64 << 10;
 	maxIndexCount = 8 * maxVertexCount;
 	{
-		BufferDesc desc("UI index buffer", sizeof(ui_t::index_t) * maxIndexCount * FrameCount, ResourceStates::IndexBufferBit);
+		BufferDesc desc("UI index buffer", sizeof(UI::index_t) * maxIndexCount * FrameCount, ResourceStates::IndexBufferBit);
 		indexBuffer = CreateBuffer(desc);
-		indices = (ui_t::index_t*)MapBuffer(indexBuffer);
+		indices = (UI::index_t*)MapBuffer(indexBuffer);
 
 	}
 	{
-		BufferDesc desc("UI vertex buffer", sizeof(ui_t::vertex_t) * maxVertexCount * FrameCount, ResourceStates::VertexBufferBit);
+		BufferDesc desc("UI vertex buffer", sizeof(UI::vertex_t) * maxVertexCount * FrameCount, ResourceStates::VertexBufferBit);
 		vertexBuffer = CreateBuffer(desc);
-		vertices = (ui_t::vertex_t*)MapBuffer(vertexBuffer);
+		vertices = (UI::vertex_t*)MapBuffer(vertexBuffer);
 	}
 }
 
-void ui_t::BeginFrame()
+void UI::BeginFrame()
 {
 	// move to this frame's dedicated buffer section
 	const uint32_t frameIndex = GetFrameIndex();
@@ -142,9 +142,9 @@ void ui_t::BeginFrame()
 	firstVertex = frameIndex * maxVertexCount;
 }
 
-void ui_t::Begin()
+void UI::Begin()
 {
-	if(grp.projection == PROJECTION_2D)
+	if(grp.renderMode == RenderMode::UI)
 	{
 		return;
 	}
@@ -155,16 +155,16 @@ void ui_t::Begin()
 	CmdBindRootSignature(rootSignature);
 	CmdBindPipeline(pipeline);
 	CmdBindDescriptorTable(rootSignature, descriptorTable);
-	const uint32_t stride = sizeof(ui_t::vertex_t);
+	const uint32_t stride = sizeof(UI::vertex_t);
 	CmdBindVertexBuffers(1, &vertexBuffer, &stride, NULL);
 	CmdBindIndexBuffer(indexBuffer, IndexType::UInt32, 0);
 	const float scale[2] = { 2.0f / glConfig.vidWidth, 2.0f / glConfig.vidHeight };
 	CmdSetRootConstants(rootSignature, ShaderStage::Vertex, scale);
 
-	grp.projection = PROJECTION_2D;
+	grp.renderMode = RenderMode::UI;
 }
 
-void ui_t::Draw()
+void UI::Draw()
 {
 	if(indexCount <= 0)
 	{
@@ -181,7 +181,7 @@ void ui_t::Draw()
 	vertexCount = 0;
 }
 
-const void* ui_t::SetColor(const void* data)
+const void* UI::SetColor(const void* data)
 {
 	const setColorCommand_t* cmd = (const setColorCommand_t*)data;
 
@@ -194,7 +194,7 @@ const void* ui_t::SetColor(const void* data)
 	return (const void*)(cmd + 1);
 }
 
-const void* ui_t::StretchPic(const void* data)
+const void* UI::StretchPic(const void* data)
 {
 	const stretchPicCommand_t* cmd = (const stretchPicCommand_t*)data;
 
@@ -252,7 +252,7 @@ const void* ui_t::StretchPic(const void* data)
 	return (const void*)(cmd + 1);
 }
 
-const void* ui_t::Triangle(const void* data)
+const void* UI::Triangle(const void* data)
 {
 	const triangleCommand_t* cmd = (const triangleCommand_t*)data;
 

@@ -155,7 +155,7 @@ void main(uint3 id : SV_DispatchThreadID)
 )grml";
 
 
-void mipMapGen_t::Init()
+void MipMapGenerator::Init()
 {
 	const char* stageNames[] = { "start", "down", "end" };
 	uint32_t stageRCByteCount[] = { sizeof(StartConstants), sizeof(DownConstants), sizeof(EndConstants) };
@@ -197,7 +197,7 @@ void mipMapGen_t::Init()
 	textures[MipSlice::UNorm_0] = CreateTexture(desc);
 }
 
-void mipMapGen_t::GenerateMipMaps(HTexture texture)
+void MipMapGenerator::GenerateMipMaps(HTexture texture)
 {
 	// @FIXME:
 	image_t* image = NULL;

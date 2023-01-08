@@ -85,7 +85,7 @@ float4 main(PS_INPUT input) : SV_Target
 )grml";
 
 
-void imgui_t::Init()
+void ImGUI::Init()
 {
 	ImGuiIO& io = ImGui::GetIO();
 	if(io.BackendRendererUserData != NULL)
@@ -170,14 +170,14 @@ void imgui_t::Init()
 	}
 }
 
-void imgui_t::Draw()
+void ImGUI::Draw()
 {
 	if(r_debugUI->integer == 0)
 	{
 		return;
 	}
 
-	grp.projection = PROJECTION_IMGUI;
+	grp.renderMode = RenderMode::ImGui;
 
 	ImGuiIO& io = ImGui::GetIO();
 	io.DisplaySize.x = glConfig.vidWidth;

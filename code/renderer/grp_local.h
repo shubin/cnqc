@@ -31,7 +31,7 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 using namespace RHI;
 
 
-struct ui_t
+struct UI
 {
 	void Init();
 	void BeginFrame();
@@ -67,7 +67,7 @@ struct ui_t
 	const shader_t* shader;
 };
 
-struct mipMapGen_t
+struct MipMapGenerator
 {
 	void Init();
 	void GenerateMipMaps(HTexture texture);
@@ -102,7 +102,7 @@ struct mipMapGen_t
 	Stage stages[3];
 };
 
-struct imgui_t
+struct ImGUI
 {
 	void Init();
 	void Draw();
@@ -121,22 +121,26 @@ struct imgui_t
 	RenderBuffers frameResources[FrameCount];
 };
 
-enum projection_t
+struct RenderMode
 {
-	PROJECTION_NONE,
-	PROJECTION_2D,
-	PROJECTION_3D,
-	PROJECTION_IMGUI
+	enum Id
+	{
+		None,
+		UI,
+		World,
+		ImGui,
+		Count
+	};
 };
 
-struct grp_t
+struct GRP
 {
-	ui_t ui;
-	mipMapGen_t mipMapGen;
-	imgui_t imgui;
-	projection_t projection;
+	UI ui;
+	MipMapGenerator mipMapGen;
+	ImGUI imgui;
+	RenderMode::Id renderMode;
 	uint32_t textureIndex;
 	HSampler samplers[2];
 };
 
-extern grp_t grp;
+extern GRP grp;
