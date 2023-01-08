@@ -515,7 +515,6 @@ void R_Init()
 
 	R_InitMipFilter();
 
-	RHI::Init();
 	renderPipeline->Init();
 	GfxInfo_f();
 
@@ -538,7 +537,6 @@ static void RE_Shutdown( qbool destroyWindow )
 	if ( tr.registered ) {
 		ri.Cmd_UnregisterModule();
 		renderPipeline->ShutDown( destroyWindow );
-		RHI::ShutDown( destroyWindow );
 	}
 
 	// shut down platform-specific video stuff

@@ -46,6 +46,7 @@ struct GameplayRenderPipeline : IRenderPipeline
 {
 	void Init() override
 	{
+		RHI::Init();
 		{
 			SamplerDesc desc = {};
 			desc.filterMode = TextureFilter::Linear;
@@ -60,10 +61,12 @@ struct GameplayRenderPipeline : IRenderPipeline
 
 	void ShutDown(bool fullShutDown) override
 	{
+		RHI::ShutDown(fullShutDown);
 	}
 
 	void BeginFrame() override
 	{
+		RHI::BeginFrame();
 		grp.ui.BeginFrame();
 
 		// nothing is bound to the command list yet!
@@ -73,6 +76,7 @@ struct GameplayRenderPipeline : IRenderPipeline
 	void EndFrame() override
 	{
 		EndSurfaces();
+		RHI::EndFrame();
 	}
 
 	void AddDrawSurface(const surfaceType_t* surface, const shader_t* shader) override

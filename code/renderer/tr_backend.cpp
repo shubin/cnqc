@@ -602,7 +602,6 @@ const void* RB_BeginFrame( const void* data )
 	const beginFrameCommand_t* cmd = (const beginFrameCommand_t*)data;
 
 	R_SetColorMappings();
-	RHI::BeginFrame();
 	renderPipeline->BeginFrame();
 
 	return (const void*)(cmd + 1);
@@ -624,7 +623,6 @@ const void* RB_SwapBuffers( const void* data )
 
 	const swapBuffersCommand_t* cmd = (const swapBuffersCommand_t*)data;
 	renderPipeline->EndFrame();
-	RHI::EndFrame();
 	Sys_V_EndFrame();
 	const int64_t swapTime = ri.Microseconds();
 	backEnd.pc3D[RB_USEC_END] = (int)( swapTime - endTime );
