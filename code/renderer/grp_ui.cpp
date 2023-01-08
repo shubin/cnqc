@@ -95,10 +95,7 @@ void ui_t::Init()
 		rootSignature = CreateRootSignature(desc);
 	}
 	{
-		DescriptorTableDesc desc = { 0 };
-		desc.name = "UI descriptor table";
-		desc.rootSignature = rootSignature;
-		descriptorTable = CreateDescriptorTable(desc);
+		descriptorTable = CreateDescriptorTable(DescriptorTableDesc("UI descriptor table", rootSignature));
 
 		DescriptorTableUpdate update = { 0 };
 		update.type = DescriptorType::Sampler;

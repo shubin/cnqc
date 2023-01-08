@@ -173,9 +173,7 @@ void mipMapGen_t::Init()
 			stage.rootSignature = CreateRootSignature(desc);
 		}
 		{
-			DescriptorTableDesc desc = { 0 };
-			desc.name = va("mip-map %s descriptor table", stageNames[s]);
-			desc.rootSignature = stage.rootSignature;
+			const DescriptorTableDesc desc(DescriptorTableDesc(va("mip-map %s descriptor table", stageNames[s]), stage.rootSignature));
 			stage.descriptorTable = CreateDescriptorTable(desc);
 		}
 		{

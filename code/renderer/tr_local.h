@@ -398,8 +398,15 @@ namespace RHI
 
 	struct DescriptorTableDesc
 	{
-		const char* name;
-		HRootSignature rootSignature;
+		const char* name = "";
+		HRootSignature rootSignature = RHI_MAKE_NULL_HANDLE();
+
+		DescriptorTableDesc() = default;
+		DescriptorTableDesc(const char* name, HRootSignature rootSignature)
+		{
+			this->name = name;
+			this->rootSignature = rootSignature;
+		}
 	};
 
 	struct BufferBarrier

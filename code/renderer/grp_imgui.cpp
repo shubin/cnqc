@@ -187,10 +187,7 @@ void imgui_t::Init()
 		// @TODO: use the same big shared descriptor table for SRVs/samplers
 		// as the rest of the GRP?
 
-		DescriptorTableDesc desc = { 0 };
-		desc.name = "Dear ImGUI descriptor table";
-		desc.rootSignature = rootSignature;
-		descriptorTable = CreateDescriptorTable(desc);
+		descriptorTable = CreateDescriptorTable(DescriptorTableDesc("Dear ImGUI descriptor table", rootSignature));
 
 		DescriptorTableUpdate update = { 0 };
 		update.resourceCount = 1;
