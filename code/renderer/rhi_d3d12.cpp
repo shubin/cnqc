@@ -2112,13 +2112,13 @@ namespace RHI
 		D3D12_ROOT_PARAMETER parameters[16];
 		for(int s = 0; s < ShaderStage::Count; ++s)
 		{
-			if(rhiDesc.constants[s].count > 0)
+			if(rhiDesc.constants[s].byteCount > 0)
 			{
 				rhiSignature.constants[s].parameterIndex = parameterCount;
 
 				D3D12_ROOT_PARAMETER& p = parameters[parameterCount];
 				p.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-				p.Constants.Num32BitValues = rhiDesc.constants[s].count;
+				p.Constants.Num32BitValues = AlignUp(rhiDesc.constants[s].byteCount, 4) / 4;
 				p.Constants.RegisterSpace = 0;
 				p.Constants.ShaderRegister = 0;
 				p.ShaderVisibility = GetD3DVisibility((ShaderStage::Id)s);
@@ -2579,7 +2579,7 @@ namespace RHI
 
 		const RootSignature& sig = rhi.rootSignatures.Get(rootSignature);
 		const UINT parameterIndex = sig.constants[shaderType].parameterIndex;
-		const UINT constantCount = sig.desc.constants[shaderType].count;
+		const UINT constantCount = sig.desc.constants[shaderType].byteCount / 4;
 
 		CmdBindRootSignature(rootSignature);
 

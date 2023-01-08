@@ -243,25 +243,25 @@ namespace RHI
 
 	struct RootSignatureDesc
 	{
-		const char* name;
-		bool usingVertexBuffers;
+		const char* name = "";
+		bool usingVertexBuffers = false;
 		struct PerStageConstants
 		{
-			uint32_t count; // in multiples of 4 bytes
+			uint32_t byteCount = 0;
 		}
 		constants[ShaderStage::Count];
 		struct DescriptorRange
 		{
-			DescriptorType::Id type;
-			uint32_t firstIndex;
-			uint32_t count;
+			DescriptorType::Id type = DescriptorType::Count;
+			uint32_t firstIndex = 0;
+			uint32_t count = 0;
 		}
 		genericRanges[64];
-		uint32_t genericRangeCount;
-		uint32_t samplerCount;
-		ShaderStages::Flags genericVisibility;
-		ShaderStages::Flags samplerVisibility;
-		PipelineType::Id pipelineType;
+		uint32_t genericRangeCount = 0;
+		uint32_t samplerCount = 0;
+		ShaderStages::Flags genericVisibility = ShaderStages::None;
+		ShaderStages::Flags samplerVisibility = ShaderStages::None;
+		PipelineType::Id pipelineType = PipelineType::Graphics;
 
 		void AddRange(DescriptorType::Id type, uint32_t firstIndex, uint32_t count)
 		{

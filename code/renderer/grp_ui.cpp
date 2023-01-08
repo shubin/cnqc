@@ -86,8 +86,8 @@ void ui_t::Init()
 		RootSignatureDesc desc = { 0 };
 		desc.name = "UI root signature";
 		desc.usingVertexBuffers = qtrue;
-		desc.constants[ShaderStage::Vertex].count = 2;
-		desc.constants[ShaderStage::Pixel].count = 2;
+		desc.constants[ShaderStage::Vertex].byteCount = 8;
+		desc.constants[ShaderStage::Pixel].byteCount = 8;
 		desc.samplerCount = ARRAY_LEN(grp.samplers);
 		desc.samplerVisibility = ShaderStages::PixelBit;
 		desc.genericVisibility = ShaderStages::PixelBit;
