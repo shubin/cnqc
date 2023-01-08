@@ -1229,12 +1229,7 @@ namespace RHI
 			desc.committedResource = true;
 			rhi.nullRWBuffer = CreateBuffer(desc);
 		}
-		{
-			SamplerDesc desc = {};
-			desc.wrapMode = TW_REPEAT;
-			desc.filterMode = TextureFilter::Linear;
-			rhi.nullSampler = CreateSampler(desc);
-		}
+		rhi.nullSampler = CreateSampler(SamplerDesc());
 	}
 
 	static void CopyDescriptor(ID3D12DescriptorHeap* dstHeap, uint32_t dstIndex, ID3D12DescriptorHeap* srcHeap, uint32_t srcIndex, D3D12_DESCRIPTOR_HEAP_TYPE heapType)

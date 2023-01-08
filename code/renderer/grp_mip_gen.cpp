@@ -176,9 +176,7 @@ void mipMapGen_t::Init()
 			stage.descriptorTable = CreateDescriptorTable(desc);
 		}
 		{
-			ComputePipelineDesc desc;
-			desc.name = va("mip-map %s PSO", stageNames[s]);
-			desc.rootSignature = stage.rootSignature;
+			ComputePipelineDesc desc(va("mip-map %s PSO", stageNames[s]), stage.rootSignature);
 			desc.shader = CompileComputeShader(stageShaders[s]);
 			stage.pipeline = CreateComputePipeline(desc);
 		}
@@ -285,8 +283,7 @@ void mipMapGen_t::GenerateMipMaps(HTexture texture)
 	TextureBarrier barriers[MipSlice::Count];
 	for(int i = 0; i < MipSlice::Count; ++i)
 	{
-		barriers[i].texture = textures[i];
-		barriers[i].newState = ResourceStates::UnorderedAccessBit;
+		barriers[i] = TextureBarrier(textures[i], ResourceStates::UnorderedAccessBit);
 	}
 
 	const int mipCount = R_ComputeMipCount(image->width, image->height);

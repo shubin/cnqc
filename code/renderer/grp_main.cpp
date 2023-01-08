@@ -47,14 +47,8 @@ struct GameplayRenderPipeline : IRenderPipeline
 	void Init() override
 	{
 		RHI::Init();
-		{
-			SamplerDesc desc = {};
-			desc.filterMode = TextureFilter::Linear;
-			desc.wrapMode = TW_REPEAT;
-			grp.samplers[0] = CreateSampler(desc);
-			desc.wrapMode = TW_CLAMP_TO_EDGE;
-			grp.samplers[1] = CreateSampler(desc);
-		}
+		grp.samplers[0] = CreateSampler(SamplerDesc(TW_REPEAT, TextureFilter::Linear));
+		grp.samplers[1] = CreateSampler(SamplerDesc(TW_CLAMP_TO_EDGE, TextureFilter::Linear));
 		grp.ui.Init();
 		grp.mipMapGen.Init();
 		grp.imgui.Init();
@@ -159,13 +153,7 @@ struct GameplayRenderPipeline : IRenderPipeline
 	{
 		Q_assert(mipIndex == 0); // @TODO: sigh...
 
-		TextureUpload upload = { 0 };
-		upload.data = data;
-		upload.x = x;
-		upload.y = y;
-		upload.width = width;
-		upload.height = height;
-		UploadTextureMip0(image->texture, upload);
+		UploadTextureMip0(image->texture, TextureUpload(x, y, width, height, data));
 	}
 
 	void FinalizeTexture(image_t* image) override

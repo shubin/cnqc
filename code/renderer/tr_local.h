@@ -244,9 +244,9 @@ namespace RHI
 	struct RootSignatureDesc
 	{
 		RootSignatureDesc() = default;
-		RootSignatureDesc(const char* name)
+		RootSignatureDesc(const char* name_)
 		{
-			this->name = name;
+			name = name_;
 		}
 
 		const char* name = "";
@@ -297,10 +297,10 @@ namespace RHI
 	struct GraphicsPipelineDesc
 	{
 		GraphicsPipelineDesc() = default;
-		GraphicsPipelineDesc(const char* name, HRootSignature rootSignature)
+		GraphicsPipelineDesc(const char* name_, HRootSignature rootSignature_)
 		{
-			this->name = name;
-			this->rootSignature = rootSignature;
+			name = name_;
+			rootSignature = rootSignature_;
 		}
 
 		const char* name = "";
@@ -365,6 +365,13 @@ namespace RHI
 
 	struct ComputePipelineDesc
 	{
+		ComputePipelineDesc() = default;
+		ComputePipelineDesc(const char* name_, HRootSignature rootSignature_)
+		{
+			name = name_;
+			rootSignature = rootSignature_;
+		}
+
 		const char* name = "";
 		HRootSignature rootSignature = RHI_MAKE_NULL_HANDLE();
 		ShaderByteCode shader;
@@ -398,12 +405,41 @@ namespace RHI
 
 	struct SamplerDesc
 	{
-		textureWrap_t wrapMode;
-		TextureFilter::Id filterMode;
+		SamplerDesc() = default;
+		SamplerDesc(textureWrap_t wrapMode_, TextureFilter::Id filterMode_)
+		{
+			wrapMode = wrapMode_;
+			filterMode = filterMode_;
+		}
+
+		// @TODO:
+		//textureWrap_t wrapMode = TW_REPEAT;
+		textureWrap_t wrapMode = (textureWrap_t)0;
+		TextureFilter::Id filterMode = TextureFilter::Linear;
 	};
 
 	struct TextureUpload
 	{
+		TextureUpload() = default;
+
+		TextureUpload(uint32_t width_, uint32_t height_, const void* data_)
+		{
+			x = 0;
+			y = 0;
+			width = width_;
+			height = height_;
+			data = data_;
+		}
+
+		TextureUpload(uint32_t x_, uint32_t y_, uint32_t width_, uint32_t height_, const void* data_)
+		{
+			x = x_;
+			y = y_;
+			width = width_;
+			height = height_;
+			data = data_;
+		}
+
 		const void* data;
 		uint32_t x;
 		uint32_t y;
@@ -413,24 +449,24 @@ namespace RHI
 
 	struct DescriptorTableDesc
 	{
+		DescriptorTableDesc() = default;
+		DescriptorTableDesc(const char* name_, HRootSignature rootSignature_)
+		{
+			name = name_;
+			rootSignature = rootSignature_;
+		}
+
 		const char* name = "";
 		HRootSignature rootSignature = RHI_MAKE_NULL_HANDLE();
-
-		DescriptorTableDesc() = default;
-		DescriptorTableDesc(const char* name, HRootSignature rootSignature)
-		{
-			this->name = name;
-			this->rootSignature = rootSignature;
-		}
 	};
 
 	struct BufferBarrier
 	{
 		BufferBarrier() = default;
-		BufferBarrier(HBuffer handle, ResourceStates::Flags after)
+		BufferBarrier(HBuffer buffer_, ResourceStates::Flags newState_)
 		{
-			buffer = handle;
-			newState = after;
+			buffer = buffer_;
+			newState = newState_;
 		}
 
 		HBuffer buffer = RHI_MAKE_NULL_HANDLE();
@@ -440,10 +476,10 @@ namespace RHI
 	struct TextureBarrier
 	{
 		TextureBarrier() = default;
-		TextureBarrier(HTexture handle, ResourceStates::Flags after)
+		TextureBarrier(HTexture texture_, ResourceStates::Flags newState_)
 		{
-			texture = handle;
-			newState = after;
+			texture = texture_;
+			newState = newState_;
 		}
 
 		HTexture texture = RHI_MAKE_NULL_HANDLE();
@@ -452,17 +488,17 @@ namespace RHI
 
 	struct DescriptorTableUpdate
 	{
-		uint32_t firstIndex;
-		uint32_t resourceCount;
-		DescriptorType::Id type;
+		uint32_t firstIndex = 0;
+		uint32_t resourceCount = 0;
+		DescriptorType::Id type = DescriptorType::Count;
 		union // based on type
 		{
-			const HTexture* textures;
+			const HTexture* textures = NULL;
 			const HBuffer* buffers;
 			const HSampler* samplers;
 		};
-		uint32_t uavMipSlice; // UAV textures: bind this specific mip
-		bool uavMipChain; // UAV textures: bind all mips if true, the specific mip slice otherwise
+		uint32_t uavMipSlice = 0; // UAV textures: bind this specific mip
+		bool uavMipChain = false; // UAV textures: bind all mips if true, the specific mip slice otherwise
 	};
 
 	void Init();

@@ -116,13 +116,8 @@ void imgui_t::Init()
 		fr->vertexBuffer = CreateBuffer(desc);
 	}
 
-	{
-		// @TODO: BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK
-		SamplerDesc desc = {};
-		desc.wrapMode = TW_REPEAT;
-		desc.filterMode = TextureFilter::Linear;
-		sampler = CreateSampler(desc);
-	}
+	// @TODO: BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK
+	sampler = CreateSampler(SamplerDesc(TW_REPEAT, TextureFilter::Linear));
 
 	{
 		RootSignatureDesc desc("Dear ImGUI root signature");
@@ -173,11 +168,7 @@ void imgui_t::Init()
 		desc.committedResource = true;
 		fontAtlas = CreateTexture(desc);
 
-		TextureUpload upload = { 0 };
-		upload.width = width;
-		upload.height = height;
-		upload.data = pixels;
-		UploadTextureMip0(fontAtlas, upload);
+		UploadTextureMip0(fontAtlas, TextureUpload(width, height, pixels));
 	}
 
 	{
