@@ -57,6 +57,7 @@ struct GameplayRenderPipeline : IRenderPipeline
 		}
 		grp.ui.Init();
 		grp.mipMapGen.Init();
+		grp.imgui.Init();
 	}
 
 	void ShutDown(bool fullShutDown) override

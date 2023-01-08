@@ -105,8 +105,6 @@ struct imgui_t
 {
 	void Init();
 	void Draw();
-
-
 };
 
 enum projection_t
@@ -120,6 +118,7 @@ struct grp_t
 {
 	ui_t ui;
 	mipMapGen_t mipMapGen;
+	imgui_t imgui;
 	projection_t projection;
 	uint32_t textureIndex;
 	HSampler samplers[2];

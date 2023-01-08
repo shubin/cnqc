@@ -24,7 +24,7 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 #include "grp_local.h"
 
 
-const char* vs = R"grml(
+static const char* vs = R"grml(
 cbuffer RootConstants
 {
 	float2 scale;
@@ -56,7 +56,7 @@ VOut main(VIn input)
 }
 )grml";
 
-const char* ps = R"grml(
+static const char* ps = R"grml(
 cbuffer RootConstants
 {
 	uint textureIndex;

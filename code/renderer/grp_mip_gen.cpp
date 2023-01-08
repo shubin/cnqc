@@ -31,7 +31,7 @@ struct StartConstants
 };
 #pragma pack(pop)
 
-const char* start_cs = R"grml(
+static const char* start_cs = R"grml(
 // gamma-space to linear-space compute shader
 
 RWTexture2D<float4> src : register(u3);
@@ -63,7 +63,7 @@ struct DownConstants
 };
 #pragma pack(pop)
 
-const char* down_cs = R"grml(
+static const char* down_cs = R"grml(
 // 8-tap 1D filter compute shader
 
 RWTexture2D<float4> mips[2] : register(u0);
@@ -122,7 +122,7 @@ struct EndConstants
 };
 #pragma pack(pop)
 
-const char* end_cs = R"grml(
+static const char* end_cs = R"grml(
 // linear-space to gamma-space compute shader
 
 RWTexture2D<float4> mips[3 + 16] : register(u0);
