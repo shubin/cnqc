@@ -29,8 +29,6 @@ to do:
 - remove srvIndex or textureIndex from image_t
 	can't remove either for now
 - is it possible to force Resource Binding Tier 2 somehow? are we supposed to run on old HW to test? :(
-- RenderDoc API integration
-- no RHI references outside of the render pipelines!
 - don't do persistent mapping to help out RenderDoc?
 - explicit barrier API
 - implicit barrier & profiling API: Begin/EndRenderPass
