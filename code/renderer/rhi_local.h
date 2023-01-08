@@ -231,7 +231,7 @@ namespace RHI
 			name = name_;
 		}
 
-		const char* name = "";
+		const char* name = NULL;
 		bool usingVertexBuffers = false;
 		struct PerStageConstants
 		{
@@ -285,7 +285,7 @@ namespace RHI
 			rootSignature = rootSignature_;
 		}
 
-		const char* name = "";
+		const char* name = NULL;
 		HRootSignature rootSignature = RHI_MAKE_NULL_HANDLE();
 		ShaderByteCode vertexShader;
 		ShaderByteCode pixelShader;
@@ -354,7 +354,7 @@ namespace RHI
 			rootSignature = rootSignature_;
 		}
 
-		const char* name = "";
+		const char* name = NULL;
 		HRootSignature rootSignature = RHI_MAKE_NULL_HANDLE();
 		ShaderByteCode shader;
 	};
@@ -371,7 +371,7 @@ namespace RHI
 			committedResource = true;
 		}
 
-		const char* name = "";
+		const char* name = NULL;
 		uint32_t byteCount = 0;
 		ResourceStates::Flags initialState = ResourceStates::Common;
 		MemoryUsage::Id memoryUsage = MemoryUsage::Upload;
@@ -395,7 +395,7 @@ namespace RHI
 			usePreferredClearValue = false;
 		}
 
-		const char* name = "";
+		const char* name = NULL;
 		uint32_t width = 0;
 		uint32_t height = 0;
 		uint32_t mipCount = 1;
@@ -476,7 +476,7 @@ namespace RHI
 			rootSignature = rootSignature_;
 		}
 
-		const char* name = "";
+		const char* name = NULL;
 		HRootSignature rootSignature = RHI_MAKE_NULL_HANDLE();
 	};
 
