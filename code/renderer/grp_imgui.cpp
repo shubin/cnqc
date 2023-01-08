@@ -32,7 +32,7 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 #pragma pack(push, 4)
 struct VertexRC
 {
-	float mvp[4][4];
+	float mvp[16];
 };
 #pragma pack(pop)
 
@@ -99,7 +99,7 @@ void ImGUI::Init()
 
 	for(int i = 0; i < FrameCount; i++)
 	{
-		RenderBuffers* fr = &frameResources[i];
+		FrameResources* fr = &frameResources[i];
 
 		BufferDesc vtx("Dear ImGUI index", MAX_INDEX_COUNT * sizeof(ImDrawIdx), ResourceStates::IndexBufferBit);
 		fr->indexBuffer = CreateBuffer(vtx);
@@ -188,50 +188,43 @@ void ImGUI::Draw()
 	ImGui::EndFrame();
 	ImGui::Render();
 
-	const ImDrawData* draw_data = ImGui::GetDrawData();
+	const ImDrawData* drawData = ImGui::GetDrawData();
 
 	// avoid rendering when minimized
-	if(draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f)
+	if(drawData->DisplaySize.x <= 0.0f || drawData->DisplaySize.y <= 0.0f)
 	{
 		return;
 	}
 
-	RenderBuffers* fr = &frameResources[GetFrameIndex()];
+	FrameResources* fr = &frameResources[GetFrameIndex()];
 
 	// Upload vertex/index data into a single contiguous GPU buffer
-	void* vtx_resource = MapBuffer(fr->vertexBuffer);
-	void* idx_resource = MapBuffer(fr->indexBuffer);
-	ImDrawVert* vtx_dst = (ImDrawVert*)vtx_resource;
-	ImDrawIdx* idx_dst = (ImDrawIdx*)idx_resource;
-	for(int n = 0; n < draw_data->CmdListsCount; n++)
+	ImDrawVert* vtxDst = (ImDrawVert*)MapBuffer(fr->vertexBuffer);
+	ImDrawIdx* idxDst = (ImDrawIdx*)MapBuffer(fr->indexBuffer);
+	for(int cl = 0; cl < drawData->CmdListsCount; cl++)
 	{
-		const ImDrawList* cmd_list = draw_data->CmdLists[n];
-		memcpy(vtx_dst, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
-		memcpy(idx_dst, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
-		vtx_dst += cmd_list->VtxBuffer.Size;
-		idx_dst += cmd_list->IdxBuffer.Size;
+		const ImDrawList* cmdList = drawData->CmdLists[cl];
+		memcpy(vtxDst, cmdList->VtxBuffer.Data, cmdList->VtxBuffer.Size * sizeof(ImDrawVert));
+		memcpy(idxDst, cmdList->IdxBuffer.Data, cmdList->IdxBuffer.Size * sizeof(ImDrawIdx));
+		vtxDst += cmdList->VtxBuffer.Size;
+		idxDst += cmdList->IdxBuffer.Size;
 	}
 	UnmapBuffer(fr->vertexBuffer);
 	UnmapBuffer(fr->indexBuffer);
 
 	// Setup orthographic projection matrix into our constant buffer
 	// Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right).
-	VertexRC vertex_constant_buffer;
+	const float L = drawData->DisplayPos.x;
+	const float R = drawData->DisplayPos.x + drawData->DisplaySize.x;
+	const float T = drawData->DisplayPos.y;
+	const float B = drawData->DisplayPos.y + drawData->DisplaySize.y;
+	const VertexRC vertexRC =
 	{
-		float L = draw_data->DisplayPos.x;
-		float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x;
-		float T = draw_data->DisplayPos.y;
-		float B = draw_data->DisplayPos.y + draw_data->DisplaySize.y;
-		float mvp[4][4] =
-		{
-			{ 2.0f / (R - L),   0.0f,           0.0f,       0.0f },
-			{ 0.0f,         2.0f / (T - B),     0.0f,       0.0f },
-			{ 0.0f,         0.0f,           0.5f,       0.0f },
-			{ (R + L) / (L - R),  (T + B) / (B - T),    0.5f,       1.0f },
-		};
-		memcpy(&vertex_constant_buffer.mvp, mvp, sizeof(mvp));
-	}
-
+		2.0f / (R - L),    0.0f,              0.0f, 0.0f,
+		0.0f,              2.0f / (T - B),    0.0f, 0.0f,
+		0.0f,              0.0f,              0.5f, 0.0f,
+		(R + L) / (L - R), (T + B) / (B - T), 0.5f, 1.0f
+	};
 	const uint32_t vertexStride = sizeof(ImDrawVert);
 	static_assert(sizeof(ImDrawIdx) == 4, "uint32 indices expected!");
 
@@ -240,33 +233,35 @@ void ImGUI::Draw()
 	CmdBindDescriptorTable(rootSignature, descriptorTable);
 	CmdBindVertexBuffers(1, &fr->vertexBuffer, &vertexStride, NULL);
 	CmdBindIndexBuffer(fr->indexBuffer, IndexType::UInt32, 0);
-	CmdSetViewport(0, 0, draw_data->DisplaySize.x, draw_data->DisplaySize.y);
-	CmdSetRootConstants(rootSignature, ShaderStage::Vertex, &vertex_constant_buffer);
+	CmdSetViewport(0, 0, drawData->DisplaySize.x, drawData->DisplaySize.y);
+	CmdSetRootConstants(rootSignature, ShaderStage::Vertex, &vertexRC);
 
 	// Render command lists
 	// (Because we merged all buffers into a single one, we maintain our own offset into them)
-	int global_vtx_offset = 0;
-	int global_idx_offset = 0;
-	ImVec2 clip_off = draw_data->DisplayPos;
-	for(int n = 0; n < draw_data->CmdListsCount; n++)
+	int globalVtxOffset = 0;
+	int globalIdxOffset = 0;
+	ImVec2 clipOff = drawData->DisplayPos;
+	for(int cl = 0; cl < drawData->CmdListsCount; cl++)
 	{
-		const ImDrawList* cmd_list = draw_data->CmdLists[n];
-		for(int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
+		const ImDrawList* cmdList = drawData->CmdLists[cl];
+		for(int c = 0; c < cmdList->CmdBuffer.Size; c++)
 		{
-			const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
+			const ImDrawCmd* cmd = &cmdList->CmdBuffer[c];
 
 			// Project scissor/clipping rectangles into framebuffer space
-			ImVec2 clip_min(pcmd->ClipRect.x - clip_off.x, pcmd->ClipRect.y - clip_off.y);
-			ImVec2 clip_max(pcmd->ClipRect.z - clip_off.x, pcmd->ClipRect.w - clip_off.y);
+			ImVec2 clip_min(cmd->ClipRect.x - clipOff.x, cmd->ClipRect.y - clipOff.y);
+			ImVec2 clip_max(cmd->ClipRect.z - clipOff.x, cmd->ClipRect.w - clipOff.y);
 			if(clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
+			{
 				continue;
+			}
 
 			// Apply Scissor/clipping rectangle, Draw
 			CmdSetScissor(clip_min.x, clip_min.y, clip_max.x - clip_min.x, clip_max.y - clip_min.y);
-			CmdDrawIndexed(pcmd->ElemCount, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset);
+			CmdDrawIndexed(cmd->ElemCount, cmd->IdxOffset + globalIdxOffset, cmd->VtxOffset + globalVtxOffset);
 		}
 
-		global_idx_offset += cmd_list->IdxBuffer.Size;
-		global_vtx_offset += cmd_list->VtxBuffer.Size;
+		globalIdxOffset += cmdList->IdxBuffer.Size;
+		globalVtxOffset += cmdList->VtxBuffer.Size;
 	}
 }

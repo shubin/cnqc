@@ -107,7 +107,7 @@ struct ImGUI
 	void Init();
 	void Draw();
 
-	struct RenderBuffers
+	struct FrameResources
 	{
 		HBuffer indexBuffer;
 		HBuffer vertexBuffer;
@@ -118,7 +118,7 @@ struct ImGUI
 	HPipeline pipeline;
 	HDescriptorTable descriptorTable;
 	HTexture fontAtlas;
-	RenderBuffers frameResources[FrameCount];
+	FrameResources frameResources[FrameCount];
 };
 
 struct RenderMode
