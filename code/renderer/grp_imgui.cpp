@@ -132,7 +132,7 @@ void imgui_t::Init()
 		desc.samplerCount = 1;
 		desc.samplerVisibility = ShaderStages::PixelBit;
 		desc.genericVisibility = ShaderStages::PixelBit;
-		desc.constants[ShaderStage::Vertex].count = 16;
+		desc.constants[ShaderType::Vertex].count = 16;
 		desc.AddRange(DescriptorType::Texture, 0, 1);
 		rootSignature = CreateRootSignature(desc);
 	}
@@ -276,7 +276,7 @@ void imgui_t::Draw()
 	CmdBindVertexBuffers(1, &fr->vertexBuffer, &vertexStride, NULL);
 	CmdBindIndexBuffer(fr->indexBuffer, IndexType::UInt32, 0);
 	CmdSetViewport(0, 0, draw_data->DisplaySize.x, draw_data->DisplaySize.y);
-	CmdSetRootConstants(rootSignature, ShaderStage::Vertex, &vertex_constant_buffer);
+	CmdSetRootConstants(rootSignature, ShaderType::Vertex, &vertex_constant_buffer);
 
 	// Render command lists
 	// (Because we merged all buffers into a single one, we maintain our own offset into them)
