@@ -259,8 +259,8 @@ namespace RHI
 		genericRanges[64];
 		uint32_t genericRangeCount = 0;
 		uint32_t samplerCount = 0;
-		ShaderStages::Flags genericVisibility = ShaderStages::None;
-		ShaderStages::Flags samplerVisibility = ShaderStages::None;
+		ShaderStages::Flags genericVisibility = ShaderStages::None; // ignored by compute pipelines
+		ShaderStages::Flags samplerVisibility = ShaderStages::None; // ignored by compute pipelines
 		PipelineType::Id pipelineType = PipelineType::Graphics;
 
 		void AddRange(DescriptorType::Id type, uint32_t firstIndex, uint32_t count)

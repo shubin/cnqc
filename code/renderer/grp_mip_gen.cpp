@@ -169,7 +169,6 @@ void mipMapGen_t::Init()
 			desc.name = va("mip-map %s root signature", stageNames[s]);
 			desc.pipelineType = PipelineType::Compute;
 			desc.constants[ShaderStage::Compute].byteCount = stageRCByteCount[s];
-			desc.genericVisibility = ShaderStages::ComputeBit;
 			desc.AddRange(DescriptorType::RWTexture, 0, MipSlice::Count + MaxTextureMips);
 			stage.rootSignature = CreateRootSignature(desc);
 		}

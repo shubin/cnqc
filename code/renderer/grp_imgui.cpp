@@ -125,7 +125,7 @@ void imgui_t::Init()
 	}
 
 	{
-		RootSignatureDesc desc = { 0 };
+		RootSignatureDesc desc;
 		desc.name = "Dear ImGUI root signature";
 		desc.pipelineType = PipelineType::Graphics;
 		desc.usingVertexBuffers = true;

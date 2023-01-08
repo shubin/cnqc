@@ -83,7 +83,7 @@ float4 main(VOut input) : SV_TARGET
 void ui_t::Init()
 {
 	{
-		RootSignatureDesc desc = { 0 };
+		RootSignatureDesc desc;
 		desc.name = "UI root signature";
 		desc.usingVertexBuffers = qtrue;
 		desc.constants[ShaderStage::Vertex].byteCount = 8;
