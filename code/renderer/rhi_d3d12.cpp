@@ -1186,29 +1186,14 @@ namespace RHI
 	static void CreateNullResources()
 	{
 		{
-			TextureDesc desc = { 0 };
-			desc.name = "null texture";
-			desc.format = TextureFormat::RGBA32_UNorm;
-			desc.initialState = ResourceStates::PixelShaderAccessBit;
-			desc.allowedState = ResourceStates::PixelShaderAccessBit;
-			desc.mipCount = 1;
-			desc.sampleCount = 1;
-			desc.width = 1;
-			desc.height = 1;
-			desc.committedResource = true;
+			TextureDesc desc("null texture", 1, 1);
 			rhi.nullTexture = CreateTexture(desc);
 		}
 		{
-			TextureDesc desc = { 0 };
-			desc.name = "null RW texture";
+			TextureDesc desc("null RW texture", 1, 1);
 			desc.format = TextureFormat::RGBA32_UNorm;
 			desc.initialState = ResourceStates::UnorderedAccessBit;
 			desc.allowedState = ResourceStates::UnorderedAccessBit | ResourceStates::PixelShaderAccessBit;
-			desc.mipCount = 1;
-			desc.sampleCount = 1;
-			desc.width = 1;
-			desc.height = 1;
-			desc.committedResource = true;
 			rhi.nullRWTexture = CreateTexture(desc);
 		}
 		{
@@ -1978,7 +1963,7 @@ namespace RHI
 			rhi.device->CreateShaderResourceView(resource, &srv, srvHandle);
 		}
 
-		Texture texture = { 0 };
+		Texture texture = {};
 		texture.desc = rhiDesc;
 		texture.allocation = allocation;
 		texture.texture = resource;

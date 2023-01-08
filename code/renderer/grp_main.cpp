@@ -123,20 +123,11 @@ struct GameplayRenderPipeline : IRenderPipeline
 
 	void CreateTexture(image_t* image, int mipCount, int width, int height) override
 	{
-		TextureDesc desc = { 0 };
-		desc.format = TextureFormat::RGBA32_UNorm;
-		desc.width = width;
-		desc.height = height;
-		desc.mipCount = mipCount;
-		desc.name = image->name;
-		desc.sampleCount = 1;
-		desc.initialState = ResourceStates::PixelShaderAccessBit;
-		desc.allowedState = ResourceStates::PixelShaderAccessBit;
+		TextureDesc desc(image->name, width, height, mipCount);
 		if(mipCount > 1)
 		{
 			desc.allowedState |= ResourceStates::UnorderedAccessBit; // for mip-map generation
 		}
-		desc.committedResource = true;
 
 		image->texture = ::RHI::CreateTexture(desc);
 		image->textureIndex = grp.textureIndex++;

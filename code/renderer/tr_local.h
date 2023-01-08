@@ -388,19 +388,47 @@ namespace RHI
 
 	struct TextureDesc
 	{
-		const char* name;
-		uint32_t width;
-		uint32_t height;
-		uint32_t mipCount;
-		uint32_t sampleCount;
-		ResourceStates::Flags initialState;
-		ResourceStates::Flags allowedState;
-		TextureFormat::Id format;
-		bool committedResource;
-		bool usePreferredClearValue; // for render targets and depth/stencil buffers
-		float clearColor[4];
-		float clearDepth;
-		byte clearStencil;
+		TextureDesc() = default;
+		TextureDesc(const char* name_, uint32_t width_, uint32_t height_, uint32_t mipCount_ = 1)
+		{
+			name = name_;
+			width = width_;
+			height = height_;
+			mipCount = mipCount_;
+			sampleCount = 1;
+			initialState = ResourceStates::PixelShaderAccessBit;
+			allowedState = ResourceStates::PixelShaderAccessBit;
+			format = TextureFormat::RGBA32_UNorm;
+			committedResource = true;
+			usePreferredClearValue = false;
+		}
+
+		const char* name = "";
+		uint32_t width = 0;
+		uint32_t height = 0;
+		uint32_t mipCount = 1;
+		uint32_t sampleCount = 1;
+		ResourceStates::Flags initialState = ResourceStates::PixelShaderAccessBit;
+		ResourceStates::Flags allowedState = ResourceStates::PixelShaderAccessBit;
+		TextureFormat::Id format = TextureFormat::RGBA32_UNorm;
+		bool committedResource = true;
+		bool usePreferredClearValue = false; // for render targets and depth/stencil buffers
+		float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+		float clearDepth = 1.0f;
+		byte clearStencil = 0;
+
+		void SetClearColor(const vec4_t rgba)
+		{
+			usePreferredClearValue = true;
+			Vector4Copy(rgba, clearColor);
+		}
+
+		void SetClearDepthStencil(float depth, byte stencil = 0)
+		{
+			usePreferredClearValue = true;
+			clearDepth = depth;
+			clearStencil = stencil;
+		}
 	};
 
 	struct SamplerDesc

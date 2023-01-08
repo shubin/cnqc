@@ -156,16 +156,7 @@ void imgui_t::Init()
 		int width, height;
 		io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 
-		TextureDesc desc = { 0 };
-		desc.name = "Dear ImGUI font atlas";
-		desc.initialState = ResourceStates::PixelShaderAccessBit;
-		desc.allowedState = ResourceStates::PixelShaderAccessBit;
-		desc.width = width;
-		desc.height = height;
-		desc.mipCount = 1;
-		desc.sampleCount = 1;
-		desc.format = TextureFormat::RGBA32_UNorm;
-		desc.committedResource = true;
+		TextureDesc desc("Dear ImGUI font atlas", width, height, 1);
 		fontAtlas = CreateTexture(desc);
 
 		UploadTextureMip0(fontAtlas, TextureUpload(width, height, pixels));

@@ -184,29 +184,16 @@ void mipMapGen_t::Init()
 
 	for(int t = 0; t < 2; ++t)
 	{
-		TextureDesc desc = { 0 };
-		desc.name = va("mip-map generation texture float16 #%d", t + 1);
+		TextureDesc desc(va("mip-map generation texture float16 #%d", t + 1), MAX_TEXTURE_SIZE, MAX_TEXTURE_SIZE);
 		desc.format = TextureFormat::RGBA64_Float;
-		desc.width = MAX_TEXTURE_SIZE;
-		desc.height = MAX_TEXTURE_SIZE;
-		desc.mipCount = 1;
-		desc.sampleCount = 1;
 		desc.initialState = ResourceStates::UnorderedAccessBit;
 		desc.allowedState = ResourceStates::UnorderedAccessBit | ResourceStates::ComputeShaderAccessBit;
-		desc.committedResource = true;
 		textures[MipSlice::Float16_0 + t] = CreateTexture(desc);
 	}
 
-	TextureDesc desc = { 0 };
-	desc.name = "mip-map generation texture unorm";
-	desc.format = TextureFormat::RGBA32_UNorm;
-	desc.width = MAX_TEXTURE_SIZE;
-	desc.height = MAX_TEXTURE_SIZE;
-	desc.mipCount = 1;
-	desc.sampleCount = 1;
+	TextureDesc desc("mip-map generation texture unorm", MAX_TEXTURE_SIZE, MAX_TEXTURE_SIZE);
 	desc.initialState = ResourceStates::UnorderedAccessBit;
 	desc.allowedState = ResourceStates::UnorderedAccessBit | ResourceStates::ComputeShaderAccessBit;
-	desc.committedResource = true;
 	textures[MipSlice::UNorm_0] = CreateTexture(desc);
 }
 
