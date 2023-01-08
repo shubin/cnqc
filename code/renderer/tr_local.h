@@ -275,17 +275,17 @@ namespace RHI
 
 	struct ShaderByteCode
 	{
-		const void* data;
-		uint32_t byteCount;
+		const void* data = NULL;
+		uint32_t byteCount = 0;
 	};
 
 	struct VertexAttribute
 	{
-		uint32_t vertexBufferIndex; // also called "binding" or "input slot"
-		ShaderSemantic::Id semantic; // intended usage
-		DataType::Id dataType; // for a single component of the vector
-		uint32_t vectorLength; // number of components per vector
-		uint32_t structByteOffset; // where in the struct to look when using interleaved data
+		uint32_t vertexBufferIndex = 0; // also called "binding" or "input slot"
+		ShaderSemantic::Id semantic = ShaderSemantic::Count; // intended usage
+		DataType::Id dataType = DataType::Count; // for a single component of the vector
+		uint32_t vectorLength = 4; // number of components per vector
+		uint32_t structByteOffset = 0; // where in the struct to look when using interleaved data
 	};
 
 	struct GraphicsPipelineDesc
@@ -641,11 +641,11 @@ namespace RHI
 			freeList = 0;
 			for(int i = 0; i < N; ++i)
 			{
-				items[i].generation = 0;
-				items[i].used = 0;
-				items[i].next = i + 1;
+				At(i).generation = 0;
+				At(i).used = 0;
+				At(i).next = i + 1;
 			}
-			items[N - 1].next = RHI_BIT_MASK(15);
+			At(N - 1).next = RHI_BIT_MASK(15);
 		}
 
 		HT Add(const T& item)
@@ -654,10 +654,10 @@ namespace RHI
 			{
 				ri.Error(ERR_FATAL, "The memory pool is full\n");
 			}
-			items[freeList].item = item;
-			items[freeList].used = qtrue;
-			const Handle handle = CreateHandle(RT, freeList, items[freeList].generation);
-			freeList = items[freeList].next;
+			At(freeList).item = item;
+			At(freeList).used = qtrue;
+			const Handle handle = CreateHandle(RT, freeList, At(freeList).generation);
+			freeList = At(freeList).next;
 			return RHI_MAKE_HANDLE(handle);
 		}
 
@@ -671,7 +671,7 @@ namespace RHI
 			item.generation = (item.generation + 1) & RHI_BIT_MASK(HandleGenBitCount);
 			item.used = 0;
 			item.next = freeList;
-			freeList = (uint16_t)(&item - items);
+			freeList = (uint16_t)(&item - &At(0));
 		}
 
 		T& Get(HT handle)
@@ -696,9 +696,9 @@ namespace RHI
 
 			for(int i = *index; i < N; ++i)
 			{
-				if(items[i].used)
+				if(At(i).used)
 				{
-					*object = &items[i].item;
+					*object = &At(i).item;
 					*index = i + 1;
 					return true;
 				}
@@ -714,9 +714,9 @@ namespace RHI
 
 			for(int i = *index; i < N; ++i)
 			{
-				if(items[i].used)
+				if(At(i).used)
 				{
-					*handle = CreateHandle(RT, i, items[i].generation);
+					*handle = CreateHandle(RT, i, At(i).generation);
 					*index = i + 1;
 					return true;
 				}
@@ -730,7 +730,7 @@ namespace RHI
 			int used = 0;
 			for(int i = 0; i < N; ++i)
 			{
-				if(items[i].used)
+				if(At(i).used)
 				{
 					used++;
 				}
@@ -756,7 +756,7 @@ namespace RHI
 				ri.Error(ERR_FATAL, "Invalid memory pool handle (bad index)\n");
 			}
 
-			Item& item = items[index];
+			Item& item = At(index);
 			if(!item.used)
 			{
 				ri.Error(ERR_FATAL, "Invalid memory pool handle (unused slot)\n");
@@ -774,7 +774,17 @@ namespace RHI
 			return item;
 		}
 
-		Item items[N];
+		Item& At(uint32_t index)
+		{
+			return *(Item*)&items[index * sizeof(Item)];
+		}
+
+		const Item& At(uint32_t index) const
+		{
+			return *(Item*)&items[index * sizeof(Item)];
+		}
+
+		byte items[N * sizeof(Item)];
 		uint16_t freeList;
 	};
 }
