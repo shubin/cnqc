@@ -141,11 +141,8 @@ struct GameplayRenderPipeline : IRenderPipeline
 		image->texture = ::RHI::CreateTexture(desc);
 		image->textureIndex = grp.textureIndex++;
 
-		DescriptorTableUpdate update = { 0 };
-		update.type = DescriptorType::Texture;
-		update.firstIndex = image->textureIndex;
-		update.resourceCount = 1;
-		update.textures = &image->texture;
+		DescriptorTableUpdate update;
+		update.SetTextures(1, &image->texture, image->textureIndex);
 		UpdateDescriptorTable(grp.ui.descriptorTable, update);
 	}
 

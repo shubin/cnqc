@@ -177,15 +177,12 @@ void imgui_t::Init()
 
 		descriptorTable = CreateDescriptorTable(DescriptorTableDesc("Dear ImGUI descriptor table", rootSignature));
 
-		DescriptorTableUpdate update = { 0 };
-		update.resourceCount = 1;
+		DescriptorTableUpdate update;
 
-		update.type = DescriptorType::Sampler;
-		update.samplers = &sampler;
+		update.SetSamplers(1, &sampler);
 		UpdateDescriptorTable(descriptorTable, update);
 
-		update.type = DescriptorType::Texture;
-		update.textures = &fontAtlas;
+		update.SetTextures(1, &fontAtlas);
 		UpdateDescriptorTable(descriptorTable, update);
 	}
 }

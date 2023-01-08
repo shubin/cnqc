@@ -228,37 +228,16 @@ void mipMapGen_t::GenerateMipMaps(HTexture texture)
 		return;
 	}
 
-	// @TODO:
-	/*if(Q_stricmp(image->name, "icons/envirosuit.tga"))
-	{
-		return;
-	}*/
+	HTexture tableTextures[MipSlice::Count + 1];
+	memcpy(tableTextures, textures, sizeof(tableTextures));
+	tableTextures[MipSlice::Count] = texture;
 
 	for(int s = 0; s < 3; ++s)
 	{
 		Stage& stage = stages[s];
-		uint32_t index = 0;
 
-		DescriptorTableUpdate update = { 0 };
-		update.type = DescriptorType::RWTexture;
-		update.resourceCount = 1;
-		update.uavMipSlice = 0;
-
-		update.firstIndex = index++;
-		update.textures = &textures[MipSlice::Float16_0];
-		UpdateDescriptorTable(stage.descriptorTable, update);
-
-		update.firstIndex = index++;
-		update.textures = &textures[MipSlice::Float16_1];
-		UpdateDescriptorTable(stage.descriptorTable, update);
-
-		update.firstIndex = index++;
-		update.textures = &textures[MipSlice::UNorm_0];
-		UpdateDescriptorTable(stage.descriptorTable, update);
-
-		update.firstIndex = index++;
-		update.textures = &texture;
-		update.uavMipChain = true;
+		DescriptorTableUpdate update;
+		update.SetRWTexturesChain(ARRAY_LEN(tableTextures), tableTextures);
 		UpdateDescriptorTable(stage.descriptorTable, update);
 	}
 	

@@ -96,11 +96,8 @@ void ui_t::Init()
 	{
 		descriptorTable = CreateDescriptorTable(DescriptorTableDesc("UI descriptor table", rootSignature));
 
-		DescriptorTableUpdate update = { 0 };
-		update.type = DescriptorType::Sampler;
-		update.firstIndex = 0;
-		update.resourceCount = ARRAY_LEN(grp.samplers);
-		update.samplers = grp.samplers;
+		DescriptorTableUpdate update;
+		update.SetSamplers(ARRAY_LEN(grp.samplers), grp.samplers);
 		UpdateDescriptorTable(descriptorTable, update);
 	}
 	{

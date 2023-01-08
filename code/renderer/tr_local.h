@@ -499,6 +499,58 @@ namespace RHI
 		};
 		uint32_t uavMipSlice = 0; // UAV textures: bind this specific mip
 		bool uavMipChain = false; // UAV textures: bind all mips if true, the specific mip slice otherwise
+
+		void SetSamplers(uint32_t count, const HSampler* samplers_, uint32_t tableIndex = 0)
+		{
+			firstIndex = tableIndex;
+			resourceCount = count;
+			type = DescriptorType::Sampler;
+			samplers = samplers_;
+		}
+
+		void SetBuffers(uint32_t count, const HBuffer* buffers_, uint32_t tableIndex = 0)
+		{
+			firstIndex = tableIndex;
+			resourceCount = count;
+			type = DescriptorType::Buffer;
+			buffers = buffers_;
+		}
+
+		void SetRWBuffers(uint32_t count, const HBuffer* buffers_, uint32_t tableIndex = 0)
+		{
+			firstIndex = tableIndex;
+			resourceCount = count;
+			type = DescriptorType::RWBuffer;
+			buffers = buffers_;
+		}
+
+		void SetTextures(uint32_t count, const HTexture* textures_, uint32_t tableIndex = 0)
+		{
+			firstIndex = tableIndex;
+			resourceCount = count;
+			type = DescriptorType::Texture;
+			textures = textures_;
+		}
+
+		void SetRWTexturesSlice(uint32_t count, const HTexture* textures_, uint32_t tableIndex = 0, uint32_t slice = 0)
+		{
+			firstIndex = tableIndex;
+			resourceCount = count;
+			type = DescriptorType::RWTexture;
+			textures = textures_;
+			uavMipChain = false;
+			uavMipSlice = slice;
+		}
+
+		void SetRWTexturesChain(uint32_t count, const HTexture* textures_, uint32_t tableIndex = 0)
+		{
+			firstIndex = tableIndex;
+			resourceCount = count;
+			type = DescriptorType::RWTexture;
+			textures = textures_;
+			uavMipChain = true;
+			uavMipSlice = 0;
+		}
 	};
 
 	void Init();
