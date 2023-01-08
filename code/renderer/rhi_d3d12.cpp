@@ -815,24 +815,29 @@ namespace RHI
 		{
 			case ShaderType::Vertex: return D3D12_SHADER_VISIBILITY_VERTEX;
 			case ShaderType::Pixel: return D3D12_SHADER_VISIBILITY_PIXEL;
-			case ShaderType::Compute: return (D3D12_SHADER_VISIBILITY)0; // @TODO: assert here too?
-			default: Q_assert(!"Unsupported shader type"); return (D3D12_SHADER_VISIBILITY)0;
+			case ShaderType::Compute: return D3D12_SHADER_VISIBILITY_ALL; // @TODO: assert here too?
+			default: Q_assert(!"Unsupported shader type"); return D3D12_SHADER_VISIBILITY_ALL;
 		}
 	}
 
-	static D3D12_SHADER_VISIBILITY GetD3DVisibility(ShaderStage::Flags shaderType)
+	static D3D12_SHADER_VISIBILITY GetD3DVisibility(ShaderStage::Flags flags)
 	{
-		D3D12_SHADER_VISIBILITY v = (D3D12_SHADER_VISIBILITY)0;
-		if(shaderType == ShaderType::Vertex)
+		if(__popcnt(flags & ShaderStage::AllGraphicsBits) > 1)
 		{
-			v = (D3D12_SHADER_VISIBILITY)(v | D3D12_SHADER_VISIBILITY_VERTEX);
-		}
-		else if(shaderType == ShaderType::Pixel)
-		{
-			v = (D3D12_SHADER_VISIBILITY)(v | D3D12_SHADER_VISIBILITY_PIXEL);
+			return D3D12_SHADER_VISIBILITY_ALL;
 		}
 
-		return v;
+		if(flags & ShaderStage::VertexBit)
+		{
+			return D3D12_SHADER_VISIBILITY_VERTEX;
+		}
+
+		if(flags & ShaderStage::PixelBit)
+		{
+			return D3D12_SHADER_VISIBILITY_PIXEL;
+		}
+
+		return D3D12_SHADER_VISIBILITY_ALL;
 	}
 
 	static D3D12_DESCRIPTOR_RANGE_TYPE GetD3DDescriptorRangeType(DescriptorType::Id descType)
@@ -2077,6 +2082,16 @@ namespace RHI
 		rhi.freeListSamplers.Free(index);
 	}
 
+	static void AddShaderVisibility(bool outVis[ShaderType::Count], D3D12_SHADER_VISIBILITY inVis)
+	{
+		switch(inVis)
+		{
+			case D3D12_SHADER_VISIBILITY_VERTEX: outVis[ShaderType::Vertex] = true; break;
+			case D3D12_SHADER_VISIBILITY_PIXEL: outVis[ShaderType::Pixel] = true; break;
+			default: break;
+		}
+	}
+
 	HRootSignature CreateRootSignature(const RootSignatureDesc& rhiDesc)
 	{
 		RootSignature rhiSignature = { 0 };
@@ -2084,6 +2099,8 @@ namespace RHI
 		rhiSignature.samplerTableIndex = UINT32_MAX;
 		rhiSignature.genericDescCount = 0;
 		rhiSignature.samplerDescCount = rhiDesc.samplerCount;
+
+		bool shaderVis[ShaderType::Count] = { 0 };
 
 		//
 		// root constants
@@ -2102,6 +2119,7 @@ namespace RHI
 				p.Constants.RegisterSpace = 0;
 				p.Constants.ShaderRegister = 0;
 				p.ShaderVisibility = GetD3DVisibility((ShaderType::Id)s);
+				AddShaderVisibility(shaderVis, p.ShaderVisibility);
 
 				parameterCount++;
 			}
@@ -2133,6 +2151,7 @@ namespace RHI
 			p.DescriptorTable.NumDescriptorRanges = rhiDesc.genericRangeCount;
 			p.DescriptorTable.pDescriptorRanges = genericRanges;
 			p.ShaderVisibility = GetD3DVisibility(rhiDesc.genericVisibility);
+			AddShaderVisibility(shaderVis, p.ShaderVisibility);
 		}
 
 		//
@@ -2155,6 +2174,7 @@ namespace RHI
 			p.DescriptorTable.NumDescriptorRanges = 1;
 			p.DescriptorTable.pDescriptorRanges = &samplerRange;
 			p.ShaderVisibility = GetD3DVisibility(rhiDesc.samplerVisibility);
+			AddShaderVisibility(shaderVis, p.ShaderVisibility);
 		}
 
 		D3D12_ROOT_SIGNATURE_DESC desc = { 0 };
@@ -2164,11 +2184,11 @@ namespace RHI
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_AMPLIFICATION_SHADER_ROOT_ACCESS |
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_MESH_SHADER_ROOT_ACCESS;
-		if(rhiDesc.constants[ShaderType::Vertex].count == 0)
+		if(!shaderVis[ShaderType::Vertex])
 		{
 			desc.Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS;
 		}
-		if(rhiDesc.constants[ShaderType::Pixel].count == 0)
+		if(!shaderVis[ShaderType::Pixel])
 		{
 			desc.Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
 		}

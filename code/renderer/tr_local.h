@@ -140,7 +140,8 @@ namespace RHI
 			None = 0,
 			VertexBit = RHI_BIT(0),
 			PixelBit = RHI_BIT(1),
-			ComputeBit = RHI_BIT(2)
+			ComputeBit = RHI_BIT(2),
+			AllGraphicsBits = VertexBit | PixelBit
 		};
 	};
 	RHI_ENUM_OPERATORS(ShaderStage::Flags);
