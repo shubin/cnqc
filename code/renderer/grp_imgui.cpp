@@ -101,7 +101,8 @@ static ImGui_ImplDX12_Data bd;
 HSampler sampler;
 HRootSignature rootSignature;
 HPipeline pipeline;
-
+HDescriptorTable descriptorTable;
+HTexture fontAtlas;
 
 
 static void CreateFontAtlas()
@@ -121,7 +122,7 @@ static void CreateFontAtlas()
 	desc.sampleCount = 1;
 	desc.format = TextureFormat::RGBA32_UNorm;
 	desc.committedResource = true;
-	HTexture fontAtlas = CreateTexture(desc);
+	fontAtlas = CreateTexture(desc);
 
 	TextureUpload upload = { 0 };
 	upload.width = width;
@@ -134,15 +135,6 @@ static void CreateFontAtlas()
 
 static void ImGui_ImplDX12_SetupRenderState(ImDrawData* draw_data, ImGui_ImplDX12_RenderBuffers* fr)
 {
-	CmdBindRootSignature(rootSignature);
-	CmdBindPipeline(pipeline);
-	//CmdBindDescriptorTable(rootSignature, descriptorTable);
-	const uint32_t stride = sizeof(ImDrawVert);
-	CmdBindVertexBuffers(1, &fr->VertexBuffer, &stride, NULL);
-	static_assert(sizeof(ImDrawIdx) == 4, "uint32 indices expected!");
-	CmdBindIndexBuffer(fr->IndexBuffer, IndexType::UInt32, 0);
-	CmdSetViewport(0, 0, draw_data->DisplaySize.x, draw_data->DisplaySize.y);
-
 	// Setup orthographic projection matrix into our constant buffer
 	// Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right).
 	VERTEX_CONSTANT_BUFFER_DX12 vertex_constant_buffer;
@@ -160,6 +152,16 @@ static void ImGui_ImplDX12_SetupRenderState(ImDrawData* draw_data, ImGui_ImplDX1
 		};
 		memcpy(&vertex_constant_buffer.mvp, mvp, sizeof(mvp));
 	}
+
+	const uint32_t vertexStride = sizeof(ImDrawVert);
+	static_assert(sizeof(ImDrawIdx) == 4, "uint32 indices expected!");
+
+	CmdBindRootSignature(rootSignature);
+	CmdBindPipeline(pipeline);
+	CmdBindDescriptorTable(rootSignature, descriptorTable);
+	CmdBindVertexBuffers(1, &fr->VertexBuffer, &vertexStride, NULL);
+	CmdBindIndexBuffer(fr->IndexBuffer, IndexType::UInt32, 0);
+	CmdSetViewport(0, 0, draw_data->DisplaySize.x, draw_data->DisplaySize.y);
 	CmdSetRootConstants(rootSignature, ShaderType::Vertex, &vertex_constant_buffer);
 }
 
@@ -304,6 +306,24 @@ void imgui_t::Init()
 	}
 
 	CreateFontAtlas();
+
+	{
+		DescriptorTableDesc desc = { 0 };
+		desc.name = "Dear ImGUI descriptor table";
+		desc.rootSignature = rootSignature;
+		descriptorTable = CreateDescriptorTable(desc);
+
+		DescriptorTableUpdate update = { 0 };
+		update.resourceCount = 1;
+
+		update.type = DescriptorType::Sampler;
+		update.samplers = &sampler;
+		UpdateDescriptorTable(descriptorTable, update);
+
+		update.type = DescriptorType::Texture;
+		update.textures = &fontAtlas;
+		UpdateDescriptorTable(descriptorTable, update);
+	}
 }
 
 void imgui_t::Draw()
@@ -326,7 +346,8 @@ void imgui_t::Draw()
 
 	// @TODO:
 	//DrawGUI();
-	ImGui::ShowAboutWindow();
+	//ImGui::ShowAboutWindow();
+	ImGui::ShowDemoWindow();
 
 	ImGui::EndFrame();
 	ImGui::Render();
