@@ -165,8 +165,7 @@ void mipMapGen_t::Init()
 	{
 		Stage& stage = stages[s];
 		{
-			RootSignatureDesc desc;
-			desc.name = va("mip-map %s root signature", stageNames[s]);
+			RootSignatureDesc desc(va("mip-map %s root signature", stageNames[s]));
 			desc.pipelineType = PipelineType::Compute;
 			desc.constants[ShaderStage::Compute].byteCount = stageRCByteCount[s];
 			desc.AddRange(DescriptorType::RWTexture, 0, MipSlice::Count + MaxTextureMips);
@@ -177,7 +176,7 @@ void mipMapGen_t::Init()
 			stage.descriptorTable = CreateDescriptorTable(desc);
 		}
 		{
-			ComputePipelineDesc desc = { 0 };
+			ComputePipelineDesc desc;
 			desc.name = va("mip-map %s PSO", stageNames[s]);
 			desc.rootSignature = stage.rootSignature;
 			desc.shader = CompileComputeShader(stageShaders[s]);

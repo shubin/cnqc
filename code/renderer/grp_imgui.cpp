@@ -125,8 +125,7 @@ void imgui_t::Init()
 	}
 
 	{
-		RootSignatureDesc desc;
-		desc.name = "Dear ImGUI root signature";
+		RootSignatureDesc desc("Dear ImGUI root signature");
 		desc.pipelineType = PipelineType::Graphics;
 		desc.usingVertexBuffers = true;
 		desc.samplerCount = 1;
@@ -138,9 +137,7 @@ void imgui_t::Init()
 	}
 
 	{
-		GraphicsPipelineDesc desc = { 0 };
-		desc.name = "Dear ImGUI PSO";
-		desc.rootSignature = rootSignature;
+		GraphicsPipelineDesc desc("Dear ImGUI PSO", rootSignature);
 		desc.vertexShader = CompileVertexShader(vs);
 		desc.pixelShader = CompilePixelShader(ps);
 		desc.vertexLayout.bindingStrides[0] = sizeof(ImDrawVert);

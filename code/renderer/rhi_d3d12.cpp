@@ -198,13 +198,10 @@ namespace RHI
 
 	struct Pipeline
 	{
-		union
-		{
-			GraphicsPipelineDesc graphicsDesc;
-			ComputePipelineDesc computeDesc;
-		};
-		ID3D12PipelineState* pso;
-		PipelineType::Id type;
+		GraphicsPipelineDesc graphicsDesc;
+		ComputePipelineDesc computeDesc;
+		ID3D12PipelineState* pso = NULL;
+		PipelineType::Id type = PipelineType::Graphics;
 	};
 
 	struct QueryState
@@ -2406,7 +2403,7 @@ namespace RHI
 		D3D(rhi.device->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&pso)));
 		SetDebugName(pso, rhiDesc.name);
 
-		Pipeline rhiPipeline = { 0 };
+		Pipeline rhiPipeline;
 		rhiPipeline.type = PipelineType::Graphics;
 		rhiPipeline.graphicsDesc = rhiDesc;
 		rhiPipeline.pso = pso;
@@ -2428,7 +2425,7 @@ namespace RHI
 		D3D(rhi.device->CreateComputePipelineState(&desc, IID_PPV_ARGS(&pso)));
 		SetDebugName(pso, rhiDesc.name);
 
-		Pipeline rhiPipeline = { 0 };
+		Pipeline rhiPipeline;
 		rhiPipeline.type = PipelineType::Compute;
 		rhiPipeline.computeDesc = rhiDesc;
 		rhiPipeline.pso = pso;

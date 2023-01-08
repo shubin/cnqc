@@ -243,6 +243,12 @@ namespace RHI
 
 	struct RootSignatureDesc
 	{
+		RootSignatureDesc() = default;
+		RootSignatureDesc(const char* name)
+		{
+			this->name = name;
+		}
+
 		const char* name = "";
 		bool usingVertexBuffers = false;
 		struct PerStageConstants
@@ -290,15 +296,22 @@ namespace RHI
 
 	struct GraphicsPipelineDesc
 	{
-		const char* name;
-		HRootSignature rootSignature;
+		GraphicsPipelineDesc() = default;
+		GraphicsPipelineDesc(const char* name, HRootSignature rootSignature)
+		{
+			this->name = name;
+			this->rootSignature = rootSignature;
+		}
+
+		const char* name = "";
+		HRootSignature rootSignature = RHI_MAKE_NULL_HANDLE();
 		ShaderByteCode vertexShader;
 		ShaderByteCode pixelShader;
 		struct VertexLayout
 		{
 			VertexAttribute attributes[MaxVertexAttributeCount];
-			uint32_t attributeCount;
-			uint32_t bindingStrides[MaxVertexBufferCount]; // total byte size of a vertex for each buffer
+			uint32_t attributeCount = 0;
+			uint32_t bindingStrides[MaxVertexBufferCount] = { 0 }; // total byte size of a vertex for each buffer
 
 			void AddAttribute(
 				uint32_t vertexBufferIndex,
@@ -319,25 +332,27 @@ namespace RHI
 		vertexLayout;
 		struct DepthStencil
 		{
-			bool enableDepthTest;
-			bool enableDepthWrites;
-			ComparisonFunction::Id depthComparison;
-			TextureFormat::Id depthStencilFormat;
+			bool enableDepthTest = true;
+			bool enableDepthWrites = true;
+			ComparisonFunction::Id depthComparison = ComparisonFunction::GreaterEqual;
+			TextureFormat::Id depthStencilFormat = TextureFormat::DepthStencil32_UNorm24_UInt8;
 		}
 		depthStencil;
 		struct Rasterizer
 		{
-			CullMode::Id cullMode;
+			CullMode::Id cullMode = CullMode::Front;
 			// @TODO: depth bias options for polygonOffset
 		}
 		rasterizer;
 		struct RenderTarget
 		{
-			uint32_t q3BlendMode; // GLS_SRCBLEND_BITS and GLS_DSTBLEND_BITS combined
-			TextureFormat::Id format;
+			// @TODO:
+			//uint32_t q3BlendMode = GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
+			uint32_t q3BlendMode = 0x00000005 | 0x00000060;
+			TextureFormat::Id format = TextureFormat::RGBA32_UNorm;
 		}
 		renderTargets[MaxRenderTargetCount];
-		uint32_t renderTargetCount;
+		uint32_t renderTargetCount = 0;
 
 		void AddRenderTarget(uint32_t q3BlendMode, TextureFormat::Id format)
 		{
@@ -350,8 +365,8 @@ namespace RHI
 
 	struct ComputePipelineDesc
 	{
-		const char* name;
-		HRootSignature rootSignature;
+		const char* name = "";
+		HRootSignature rootSignature = RHI_MAKE_NULL_HANDLE();
 		ShaderByteCode shader;
 	};
 

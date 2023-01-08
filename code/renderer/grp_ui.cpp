@@ -83,8 +83,7 @@ float4 main(VOut input) : SV_TARGET
 void ui_t::Init()
 {
 	{
-		RootSignatureDesc desc;
-		desc.name = "UI root signature";
+		RootSignatureDesc desc("UI root signature");
 		desc.usingVertexBuffers = qtrue;
 		desc.constants[ShaderStage::Vertex].byteCount = 8;
 		desc.constants[ShaderStage::Pixel].byteCount = 8;
@@ -105,9 +104,7 @@ void ui_t::Init()
 		UpdateDescriptorTable(descriptorTable, update);
 	}
 	{
-		GraphicsPipelineDesc desc = { 0 };
-		desc.name = "UI PSO";
-		desc.rootSignature = rootSignature;
+		GraphicsPipelineDesc desc("UI PSO", rootSignature);
 		desc.vertexShader = CompileVertexShader(vs);
 		desc.pixelShader = CompilePixelShader(ps);
 		desc.vertexLayout.bindingStrides[0] = sizeof(ui_t::vertex_t);
