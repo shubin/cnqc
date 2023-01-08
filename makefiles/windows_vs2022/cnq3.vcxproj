@@ -281,7 +281,6 @@ copy "..\..\.bin\release_x32\cnq3-x86.pdb" "$(QUAKE3DIR)"</Command>
     <ClInclude Include="..\..\code\client\snd_public.h" />
     <ClInclude Include="..\..\code\imgui\imconfig.h" />
     <ClInclude Include="..\..\code\imgui\imgui.h" />
-    <ClInclude Include="..\..\code\imgui\imgui_impl_dx12.h" />
     <ClInclude Include="..\..\code\imgui\imgui_internal.h" />
     <ClInclude Include="..\..\code\imgui\imstb_rectpack.h" />
     <ClInclude Include="..\..\code\imgui\imstb_textedit.h" />
@@ -342,7 +341,6 @@ copy "..\..\.bin\release_x32\cnq3-x86.pdb" "$(QUAKE3DIR)"</Command>
     <ClCompile Include="..\..\code\imgui\imgui.cpp" />
     <ClCompile Include="..\..\code\imgui\imgui_demo.cpp" />
     <ClCompile Include="..\..\code\imgui\imgui_draw.cpp" />
-    <ClCompile Include="..\..\code\imgui\imgui_impl_dx12.cpp" />
     <ClCompile Include="..\..\code\imgui\imgui_tables.cpp" />
     <ClCompile Include="..\..\code\imgui\imgui_widgets.cpp" />
     <ClCompile Include="..\..\code\qcommon\cm_load.cpp" />

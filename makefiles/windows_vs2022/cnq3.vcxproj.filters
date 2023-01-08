@@ -240,9 +240,6 @@
     <ClInclude Include="..\..\code\imgui\imgui.h">
       <Filter>imgui</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\code\imgui\imgui_impl_dx12.h">
-      <Filter>imgui</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\code\imgui\imgui_internal.h">
       <Filter>imgui</Filter>
     </ClInclude>
@@ -450,9 +447,6 @@
       <Filter>imgui</Filter>
     </ClCompile>
     <ClCompile Include="..\..\code\imgui\imgui_draw.cpp">
-      <Filter>imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\code\imgui\imgui_impl_dx12.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
     <ClCompile Include="..\..\code\imgui\imgui_tables.cpp">
