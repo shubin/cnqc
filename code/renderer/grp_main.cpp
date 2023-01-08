@@ -77,6 +77,7 @@ struct GameplayRenderPipeline : IRenderPipeline
 	void EndFrame() override
 	{
 		EndSurfaces();
+		grp.imgui.Draw();
 		RHI::EndFrame();
 	}
 

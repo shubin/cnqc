@@ -111,7 +111,8 @@ enum projection_t
 {
 	PROJECTION_NONE,
 	PROJECTION_2D,
-	PROJECTION_3D
+	PROJECTION_3D,
+	PROJECTION_IMGUI
 };
 
 struct grp_t
