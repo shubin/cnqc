@@ -122,21 +122,13 @@ void ui_t::Init()
 	maxVertexCount = 64 << 10;
 	maxIndexCount = 8 * maxVertexCount;
 	{
-		BufferDesc desc = { 0 };
-		desc.name = "UI index buffer";
-		desc.byteCount = sizeof(ui_t::index_t) * maxIndexCount * FrameCount;
-		desc.memoryUsage = MemoryUsage::Upload;
-		desc.initialState = ResourceStates::IndexBufferBit;
+		BufferDesc desc("UI index buffer", sizeof(ui_t::index_t) * maxIndexCount * FrameCount, ResourceStates::IndexBufferBit);
 		indexBuffer = CreateBuffer(desc);
 		indices = (ui_t::index_t*)MapBuffer(indexBuffer);
 
 	}
 	{
-		BufferDesc desc = { 0 };
-		desc.name = "UI vertex buffer";
-		desc.byteCount = sizeof(ui_t::vertex_t) * maxVertexCount * FrameCount;
-		desc.memoryUsage = MemoryUsage::Upload;
-		desc.initialState = ResourceStates::VertexBufferBit;
+		BufferDesc desc("UI vertex buffer", sizeof(ui_t::vertex_t) * maxVertexCount * FrameCount, ResourceStates::VertexBufferBit);
 		vertexBuffer = CreateBuffer(desc);
 		vertices = (ui_t::vertex_t*)MapBuffer(vertexBuffer);
 	}

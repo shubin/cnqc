@@ -379,11 +379,21 @@ namespace RHI
 
 	struct BufferDesc
 	{
-		const char* name;
-		uint32_t byteCount;
-		ResourceStates::Flags initialState;
-		MemoryUsage::Id memoryUsage;
-		bool committedResource;
+		BufferDesc() = default;
+		BufferDesc(const char* name_, uint32_t byteCount_, ResourceStates::Flags initialState_)
+		{
+			name = name_;
+			byteCount = byteCount_;
+			initialState = initialState_;
+			memoryUsage = MemoryUsage::Upload;
+			committedResource = true;
+		}
+
+		const char* name = "";
+		uint32_t byteCount = 0;
+		ResourceStates::Flags initialState = ResourceStates::Common;
+		MemoryUsage::Id memoryUsage = MemoryUsage::Upload;
+		bool committedResource = true;
 	};
 
 	struct TextureDesc

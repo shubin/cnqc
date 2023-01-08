@@ -506,12 +506,7 @@ namespace RHI
 	void TextureUploader::Create()
 	{
 		{
-			BufferDesc bufferDesc = { 0 };
-			bufferDesc.name = "upload buffer";
-			bufferDesc.byteCount = 64 << 20;
-			bufferDesc.memoryUsage = MemoryUsage::Upload;
-			bufferDesc.initialState = ResourceStates::CopyDestinationBit;
-			bufferDesc.committedResource = true;
+			BufferDesc bufferDesc("upload buffer", 64 << 20, ResourceStates::CopyDestinationBit);
 			buffer = CreateBuffer(bufferDesc);
 			bufferByteCount = bufferDesc.byteCount;
 			bufferByteOffset = 0;
@@ -1197,21 +1192,13 @@ namespace RHI
 			rhi.nullRWTexture = CreateTexture(desc);
 		}
 		{
-			BufferDesc desc = { 0 };
-			desc.name = "null buffer";
-			desc.byteCount = 256;
-			desc.initialState = ResourceStates::ShaderAccessBits;
+			BufferDesc desc("null buffer", 256, ResourceStates::ShaderAccessBits);
 			desc.memoryUsage = MemoryUsage::GPU;
-			desc.committedResource = true;
 			rhi.nullBuffer = CreateBuffer(desc);
 		}
 		{
-			BufferDesc desc = { 0 };
-			desc.name = "null RW buffer";
-			desc.byteCount = 256;
-			desc.initialState = ResourceStates::UnorderedAccessBit;
+			BufferDesc desc("null RW buffer", 256, ResourceStates::UnorderedAccessBit);
 			desc.memoryUsage = MemoryUsage::GPU;
-			desc.committedResource = true;
 			rhi.nullRWBuffer = CreateBuffer(desc);
 		}
 		rhi.nullSampler = CreateSampler(SamplerDesc());
@@ -1601,12 +1588,9 @@ namespace RHI
 		}
 
 		{
-			BufferDesc desc = { 0 };
-			desc.name = "TimeStamp Readback Buffer";
-			desc.byteCount = MaxDurationQueries * 2 * FrameCount * sizeof(UINT64);
-			desc.initialState = ResourceStates::CopySourceBit;
+			const uint32_t byteCount = MaxDurationQueries * 2 * FrameCount * sizeof(UINT64);
+			BufferDesc desc("TimeStamp Readback Buffer", byteCount, ResourceStates::CopySourceBit);
 			desc.memoryUsage = MemoryUsage::Readback;
-			desc.committedResource = true;
 			rhi.timeStampBuffer = CreateBuffer(desc);
 			rhi.mappedTimeStamps = (UINT64*)MapBuffer(rhi.timeStampBuffer);
 		}
@@ -1823,7 +1807,7 @@ namespace RHI
 		D3D(rhi.allocator->CreateResource(&allocDesc, &desc, resourceState, NULL, &allocation, IID_PPV_ARGS(&resource)));
 		SetDebugName(resource, rhiDesc.name);
 
-		Buffer buffer = { 0 };
+		Buffer buffer = {};
 		buffer.desc = rhiDesc;
 		buffer.allocation = allocation;
 		buffer.buffer = resource;

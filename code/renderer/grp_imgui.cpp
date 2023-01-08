@@ -101,19 +101,11 @@ void imgui_t::Init()
 	{
 		RenderBuffers* fr = &frameResources[i];
 
-		BufferDesc desc = { 0 };
-		desc.committedResource = true;
-		desc.memoryUsage = MemoryUsage::Upload;
+		BufferDesc vtx("Dear ImGUI index buffer", MAX_INDEX_COUNT * sizeof(ImDrawIdx), ResourceStates::IndexBufferBit);
+		fr->indexBuffer = CreateBuffer(vtx);
 
-		desc.name = "Dear ImGUI index buffer";
-		desc.initialState = ResourceStates::IndexBufferBit;
-		desc.byteCount = MAX_INDEX_COUNT * sizeof(ImDrawIdx);
-		fr->indexBuffer = CreateBuffer(desc);
-
-		desc.name = "Dear ImGUI vertex buffer";
-		desc.initialState = ResourceStates::VertexBufferBit;
-		desc.byteCount = MAX_VERTEX_COUNT * sizeof(ImDrawData);
-		fr->vertexBuffer = CreateBuffer(desc);
+		BufferDesc idx("Dear ImGUI vertex buffer", MAX_VERTEX_COUNT * sizeof(ImDrawData), ResourceStates::VertexBufferBit);
+		fr->vertexBuffer = CreateBuffer(idx);
 	}
 
 	// @TODO: BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK
