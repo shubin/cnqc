@@ -24,7 +24,7 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 /*
 to do:
 
-- world rendering
+- 3D/world rendering
 - mip-map generation accounting for r_picmip
 - when creating the root signature, validate that neither of the tables have any gap
 - use root signature 1.1 to use the hints that help the drivers optimize out static resources
@@ -35,7 +35,7 @@ to do:
 - implicit barrier & profiling API: Begin/EndRenderPass
 * partial inits and shutdown
 - clean up the Win32 window creation/update mess
-* move the Dear ImGui rendering outside of the RHI
+- move as much GUI logic as possible out of the RHI (especially render pass timings)
 - leverage rhi.allocator->IsCacheCoherentUMA()
 - defragment on partial inits with D3D12MA?
 - compiler switch for GPU validation
@@ -1123,9 +1123,11 @@ namespace RHI
 		ValidateResourceStateForBarrier(before);
 		ValidateResourceStateForBarrier(after);
 
-		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
 		if(before & after & D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
 		{
+			// note that UAV barriers are unnecessary in a bunch of cases:
+			// - before/after access is read-only
+			// - before/after access is write-only, but to different ranges
 			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
 			barrier.UAV.pResource = resource;
 		}
@@ -2676,12 +2678,6 @@ namespace RHI
 
 	void CmdBarrier(uint32_t texCount, const TextureBarrier* textures, uint32_t buffCount, const BufferBarrier* buffers)
 	{
-		// a UAV barrier is used whenever
-		// D3D12_RESOURCE_STATE_UNORDERED_ACCESS is in both old and new state
-		// if not, texture/buffer barrier is a layout transition
-
-		// @TODO: buffer barriers
-
 		static D3D12_RESOURCE_BARRIER barriers[MAX_DRAWIMAGES * 2];
 		Q_assert(buffCount + texCount <= ARRAY_LEN(barriers));
 
