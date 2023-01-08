@@ -87,7 +87,7 @@ namespace RHI
 		};
 	};
 
-	struct ResourceState
+	struct ResourceStates
 	{
 		enum Flags
 		{
@@ -108,7 +108,7 @@ namespace RHI
 			DepthAccessBits = DepthReadBit | DepthWriteBit
 		};
 	};
-	RHI_ENUM_OPERATORS(ResourceState::Flags);
+	RHI_ENUM_OPERATORS(ResourceStates::Flags);
 
 	struct MemoryUsage
 	{
@@ -122,7 +122,7 @@ namespace RHI
 		};
 	};
 
-	struct ShaderType
+	struct ShaderStage
 	{
 		enum Id
 		{
@@ -133,18 +133,18 @@ namespace RHI
 		};
 	};
 
-	struct ShaderStage
+	struct ShaderStages
 	{
 		enum Flags
 		{
 			None = 0,
-			VertexBit = RHI_BIT(0),
-			PixelBit = RHI_BIT(1),
-			ComputeBit = RHI_BIT(2),
+			VertexBit = 1 << ShaderStage::Vertex,
+			PixelBit = 1 << ShaderStage::Pixel,
+			ComputeBit = 1 << ShaderStage::Compute,
 			AllGraphicsBits = VertexBit | PixelBit
 		};
 	};
-	RHI_ENUM_OPERATORS(ShaderStage::Flags);
+	RHI_ENUM_OPERATORS(ShaderStages::Flags);
 
 	struct DataType
 	{
@@ -249,7 +249,7 @@ namespace RHI
 		{
 			uint32_t count; // in multiples of 4 bytes
 		}
-		constants[ShaderType::Count];
+		constants[ShaderStage::Count];
 		struct DescriptorRange
 		{
 			DescriptorType::Id type;
@@ -259,8 +259,8 @@ namespace RHI
 		genericRanges[64];
 		uint32_t genericRangeCount;
 		uint32_t samplerCount;
-		ShaderStage::Flags genericVisibility;
-		ShaderStage::Flags samplerVisibility;
+		ShaderStages::Flags genericVisibility;
+		ShaderStages::Flags samplerVisibility;
 		PipelineType::Id pipelineType;
 
 		void AddRange(DescriptorType::Id type, uint32_t firstIndex, uint32_t count)
@@ -359,7 +359,7 @@ namespace RHI
 	{
 		const char* name;
 		uint32_t byteCount;
-		ResourceState::Flags initialState;
+		ResourceStates::Flags initialState;
 		MemoryUsage::Id memoryUsage;
 		bool committedResource;
 	};
@@ -371,8 +371,8 @@ namespace RHI
 		uint32_t height;
 		uint32_t mipCount;
 		uint32_t sampleCount;
-		ResourceState::Flags initialState;
-		ResourceState::Flags allowedState;
+		ResourceStates::Flags initialState;
+		ResourceStates::Flags allowedState;
 		TextureFormat::Id format;
 		bool committedResource;
 		bool usePreferredClearValue; // for render targets and depth/stencil buffers
@@ -405,27 +405,27 @@ namespace RHI
 	struct BufferBarrier
 	{
 		BufferBarrier() = default;
-		BufferBarrier(HBuffer handle, ResourceState::Flags after)
+		BufferBarrier(HBuffer handle, ResourceStates::Flags after)
 		{
 			buffer = handle;
 			newState = after;
 		}
 
 		HBuffer buffer = RHI_MAKE_NULL_HANDLE();
-		ResourceState::Flags newState = ResourceState::Common;
+		ResourceStates::Flags newState = ResourceStates::Common;
 	};
 
 	struct TextureBarrier
 	{
 		TextureBarrier() = default;
-		TextureBarrier(HTexture handle, ResourceState::Flags after)
+		TextureBarrier(HTexture handle, ResourceStates::Flags after)
 		{
 			texture = handle;
 			newState = after;
 		}
 
 		HTexture texture = RHI_MAKE_NULL_HANDLE();
-		ResourceState::Flags newState = ResourceState::Common;
+		ResourceStates::Flags newState = ResourceStates::Common;
 	};
 
 	struct DescriptorTableUpdate
@@ -483,7 +483,7 @@ namespace RHI
 	void CmdBindIndexBuffer(HBuffer indexBuffer, IndexType::Id type, uint32_t startByteOffset);
 	void CmdSetViewport(uint32_t x, uint32_t y, uint32_t w, uint32_t h, float minDepth = 0.0f, float maxDepth = 1.0f);
 	void CmdSetScissor(uint32_t x, uint32_t y, uint32_t w, uint32_t h);
-	void CmdSetRootConstants(HRootSignature rootSignature, ShaderType::Id shaderType, const void* constants);
+	void CmdSetRootConstants(HRootSignature rootSignature, ShaderStage::Id shaderType, const void* constants);
 	void CmdDraw(uint32_t vertexCount, uint32_t firstVertex);
 	void CmdDrawIndexed(uint32_t indexCount, uint32_t firstIndex, uint32_t firstVertex);
 	void CmdDispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ);

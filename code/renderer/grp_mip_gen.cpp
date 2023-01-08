@@ -168,8 +168,8 @@ void mipMapGen_t::Init()
 			RootSignatureDesc desc = { 0 };
 			desc.name = va("mip-map %s root signature", stageNames[s]);
 			desc.pipelineType = PipelineType::Compute;
-			desc.constants[ShaderType::Compute].count = stageRCByteCount[s] / 4;
-			desc.genericVisibility = ShaderStage::ComputeBit;
+			desc.constants[ShaderStage::Compute].count = stageRCByteCount[s] / 4;
+			desc.genericVisibility = ShaderStages::ComputeBit;
 			desc.AddRange(DescriptorType::RWTexture, 0, MipSlice::Count + MaxTextureMips);
 			stage.rootSignature = CreateRootSignature(desc);
 		}
@@ -197,8 +197,8 @@ void mipMapGen_t::Init()
 		desc.height = MAX_TEXTURE_SIZE;
 		desc.mipCount = 1;
 		desc.sampleCount = 1;
-		desc.initialState = ResourceState::UnorderedAccessBit;
-		desc.allowedState = ResourceState::UnorderedAccessBit | ResourceState::ComputeShaderAccessBit;
+		desc.initialState = ResourceStates::UnorderedAccessBit;
+		desc.allowedState = ResourceStates::UnorderedAccessBit | ResourceStates::ComputeShaderAccessBit;
 		desc.committedResource = true;
 		textures[MipSlice::Float16_0 + t] = CreateTexture(desc);
 	}
@@ -210,8 +210,8 @@ void mipMapGen_t::Init()
 	desc.height = MAX_TEXTURE_SIZE;
 	desc.mipCount = 1;
 	desc.sampleCount = 1;
-	desc.initialState = ResourceState::UnorderedAccessBit;
-	desc.allowedState = ResourceState::UnorderedAccessBit | ResourceState::ComputeShaderAccessBit;
+	desc.initialState = ResourceStates::UnorderedAccessBit;
+	desc.allowedState = ResourceStates::UnorderedAccessBit | ResourceStates::ComputeShaderAccessBit;
 	desc.committedResource = true;
 	textures[MipSlice::UNorm_0] = CreateTexture(desc);
 }
@@ -282,7 +282,7 @@ void mipMapGen_t::GenerateMipMaps(HTexture texture)
 		CmdBindRootSignature(stage.rootSignature);
 		CmdBindPipeline(stage.pipeline);
 		CmdBindDescriptorTable(stage.rootSignature, stage.descriptorTable);
-		CmdSetRootConstants(stage.rootSignature, ShaderType::Compute, &rc);
+		CmdSetRootConstants(stage.rootSignature, ShaderStage::Compute, &rc);
 		CmdDispatch((w + GroupMask) / GroupSize, (h + GroupMask) / GroupSize, 1);
 	}
 
@@ -290,7 +290,7 @@ void mipMapGen_t::GenerateMipMaps(HTexture texture)
 	for(int i = 0; i < MipSlice::Count; ++i)
 	{
 		barriers[i].texture = textures[i];
-		barriers[i].newState = ResourceState::UnorderedAccessBit;
+		barriers[i].newState = ResourceStates::UnorderedAccessBit;
 	}
 
 	const int mipCount = R_ComputeMipCount(image->width, image->height);
@@ -321,7 +321,7 @@ void mipMapGen_t::GenerateMipMaps(HTexture texture)
 			rc.maxSize[1] = h1 - 1;
 			rc.offset[0] = 1;
 			rc.offset[1] = 0;
-			CmdSetRootConstants(stage.rootSignature, ShaderType::Compute, &rc);
+			CmdSetRootConstants(stage.rootSignature, ShaderStage::Compute, &rc);
 			CmdBarrier(ARRAY_LEN(barriers), barriers);
 			CmdDispatch((w + GroupMask) / GroupSize, (h1 + GroupMask) / GroupSize, 1);
 
@@ -334,7 +334,7 @@ void mipMapGen_t::GenerateMipMaps(HTexture texture)
 			rc.maxSize[1] = h1 - 1;
 			rc.offset[0] = 0;
 			rc.offset[1] = 1;
-			CmdSetRootConstants(stage.rootSignature, ShaderType::Compute, &rc);
+			CmdSetRootConstants(stage.rootSignature, ShaderStage::Compute, &rc);
 			CmdBarrier(ARRAY_LEN(barriers), barriers);
 			CmdDispatch((w + GroupMask) / GroupSize, (h + GroupMask) / GroupSize, 1);
 		}
@@ -354,7 +354,7 @@ void mipMapGen_t::GenerateMipMaps(HTexture texture)
 			CmdBindRootSignature(stage.rootSignature);
 			CmdBindPipeline(stage.pipeline);
 			CmdBindDescriptorTable(stage.rootSignature, stage.descriptorTable);
-			CmdSetRootConstants(stage.rootSignature, ShaderType::Compute, &rc);
+			CmdSetRootConstants(stage.rootSignature, ShaderStage::Compute, &rc);
 			CmdBarrier(ARRAY_LEN(barriers), barriers);
 			CmdDispatch((w + GroupMask) / GroupSize, (h + GroupMask) / GroupSize, 1);
 		}

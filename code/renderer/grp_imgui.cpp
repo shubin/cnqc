@@ -106,12 +106,12 @@ void imgui_t::Init()
 		desc.memoryUsage = MemoryUsage::Upload;
 
 		desc.name = "Dear ImGUI index buffer";
-		desc.initialState = ResourceState::IndexBufferBit;
+		desc.initialState = ResourceStates::IndexBufferBit;
 		desc.byteCount = MAX_INDEX_COUNT * sizeof(ImDrawIdx);
 		fr->indexBuffer = CreateBuffer(desc);
 
 		desc.name = "Dear ImGUI vertex buffer";
-		desc.initialState = ResourceState::VertexBufferBit;
+		desc.initialState = ResourceStates::VertexBufferBit;
 		desc.byteCount = MAX_VERTEX_COUNT * sizeof(ImDrawData);
 		fr->vertexBuffer = CreateBuffer(desc);
 	}
@@ -130,9 +130,9 @@ void imgui_t::Init()
 		desc.pipelineType = PipelineType::Graphics;
 		desc.usingVertexBuffers = true;
 		desc.samplerCount = 1;
-		desc.samplerVisibility = ShaderStage::PixelBit;
-		desc.genericVisibility = ShaderStage::PixelBit;
-		desc.constants[ShaderType::Vertex].count = 16;
+		desc.samplerVisibility = ShaderStages::PixelBit;
+		desc.genericVisibility = ShaderStages::PixelBit;
+		desc.constants[ShaderStage::Vertex].count = 16;
 		desc.AddRange(DescriptorType::Texture, 0, 1);
 		rootSignature = CreateRootSignature(desc);
 	}
@@ -166,8 +166,8 @@ void imgui_t::Init()
 
 		TextureDesc desc = { 0 };
 		desc.name = "Dear ImGUI font atlas";
-		desc.initialState = ResourceState::PixelShaderAccessBit;
-		desc.allowedState = ResourceState::PixelShaderAccessBit;
+		desc.initialState = ResourceStates::PixelShaderAccessBit;
+		desc.allowedState = ResourceStates::PixelShaderAccessBit;
 		desc.width = width;
 		desc.height = height;
 		desc.mipCount = 1;
@@ -276,7 +276,7 @@ void imgui_t::Draw()
 	CmdBindVertexBuffers(1, &fr->vertexBuffer, &vertexStride, NULL);
 	CmdBindIndexBuffer(fr->indexBuffer, IndexType::UInt32, 0);
 	CmdSetViewport(0, 0, draw_data->DisplaySize.x, draw_data->DisplaySize.y);
-	CmdSetRootConstants(rootSignature, ShaderType::Vertex, &vertex_constant_buffer);
+	CmdSetRootConstants(rootSignature, ShaderStage::Vertex, &vertex_constant_buffer);
 
 	// Render command lists
 	// (Because we merged all buffers into a single one, we maintain our own offset into them)

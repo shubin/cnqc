@@ -31,6 +31,7 @@ to do:
 - remove srvIndex or textureIndex from image_t
 	can't remove either for now
 - is it possible to force Resource Binding Tier 2 somehow? are we supposed to run on old HW to test? :(
+	see if WARP allows us to do that?
 - don't do persistent mapping to help out RenderDoc?
 - implicit barrier & profiling API: Begin/EndRenderPass
 * partial inits and shutdown
@@ -182,7 +183,7 @@ namespace RHI
 		};
 		RootSignatureDesc desc;
 		ID3D12RootSignature* signature;
-		PerStageConstants constants[ShaderType::Count];
+		PerStageConstants constants[ShaderStage::Count];
 		UINT genericTableIndex;
 		UINT samplerTableIndex;
 		UINT genericDescCount;
@@ -512,7 +513,7 @@ namespace RHI
 			bufferDesc.name = "upload buffer";
 			bufferDesc.byteCount = 64 << 20;
 			bufferDesc.memoryUsage = MemoryUsage::Upload;
-			bufferDesc.initialState = ResourceState::CopyDestinationBit;
+			bufferDesc.initialState = ResourceStates::CopyDestinationBit;
 			bufferDesc.committedResource = true;
 			buffer = CreateBuffer(bufferDesc);
 			bufferByteCount = bufferDesc.byteCount;
@@ -626,7 +627,7 @@ namespace RHI
 			rhi.commandList = commandList;
 
 			{
-				const TextureBarrier barrier(handle, ResourceState::UnorderedAccessBit);
+				const TextureBarrier barrier(handle, ResourceStates::UnorderedAccessBit);
 				CmdBarrier(1, &barrier);
 			}
 
@@ -809,30 +810,30 @@ namespace RHI
 		return type == IndexType::UInt16 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT;
 	}
 
-	static D3D12_SHADER_VISIBILITY GetD3DVisibility(ShaderType::Id shaderType)
+	static D3D12_SHADER_VISIBILITY GetD3DVisibility(ShaderStage::Id shaderType)
 	{
 		switch(shaderType)
 		{
-			case ShaderType::Vertex: return D3D12_SHADER_VISIBILITY_VERTEX;
-			case ShaderType::Pixel: return D3D12_SHADER_VISIBILITY_PIXEL;
-			case ShaderType::Compute: return D3D12_SHADER_VISIBILITY_ALL; // @TODO: assert here too?
+			case ShaderStage::Vertex: return D3D12_SHADER_VISIBILITY_VERTEX;
+			case ShaderStage::Pixel: return D3D12_SHADER_VISIBILITY_PIXEL;
+			case ShaderStage::Compute: return D3D12_SHADER_VISIBILITY_ALL; // @TODO: assert here too?
 			default: Q_assert(!"Unsupported shader type"); return D3D12_SHADER_VISIBILITY_ALL;
 		}
 	}
 
-	static D3D12_SHADER_VISIBILITY GetD3DVisibility(ShaderStage::Flags flags)
+	static D3D12_SHADER_VISIBILITY GetD3DVisibility(ShaderStages::Flags flags)
 	{
-		if(__popcnt(flags & ShaderStage::AllGraphicsBits) > 1)
+		if(__popcnt(flags & ShaderStages::AllGraphicsBits) > 1)
 		{
 			return D3D12_SHADER_VISIBILITY_ALL;
 		}
 
-		if(flags & ShaderStage::VertexBit)
+		if(flags & ShaderStages::VertexBit)
 		{
 			return D3D12_SHADER_VISIBILITY_VERTEX;
 		}
 
-		if(flags & ShaderStage::PixelBit)
+		if(flags & ShaderStages::PixelBit)
 		{
 			return D3D12_SHADER_VISIBILITY_PIXEL;
 		}
@@ -962,10 +963,10 @@ namespace RHI
 		}
 	}
 
-	static D3D12_RESOURCE_STATES GetD3DResourceStates(ResourceState::Flags flags)
+	static D3D12_RESOURCE_STATES GetD3DResourceStates(ResourceStates::Flags flags)
 	{
 #define ADD_BITS(RHIBit, D3DBits) \
-		if(flags & ResourceState::RHIBit) \
+		if(flags & ResourceStates::RHIBit) \
 		{ \
 			states |= D3DBits; \
 		}
@@ -1116,7 +1117,7 @@ namespace RHI
 	// returns true if the barrier should be used
 	static bool SetBarrier(
 		D3D12_RESOURCE_STATES& currentState, D3D12_RESOURCE_BARRIER& barrier,
-		ResourceState::Flags newState, ID3D12Resource* resource)
+		ResourceStates::Flags newState, ID3D12Resource* resource)
 	{
 		const D3D12_RESOURCE_STATES before = currentState;
 		const D3D12_RESOURCE_STATES after = GetD3DResourceStates(newState);
@@ -1191,8 +1192,8 @@ namespace RHI
 			TextureDesc desc = { 0 };
 			desc.name = "null texture";
 			desc.format = TextureFormat::RGBA32_UNorm;
-			desc.initialState = ResourceState::PixelShaderAccessBit;
-			desc.allowedState = ResourceState::PixelShaderAccessBit;
+			desc.initialState = ResourceStates::PixelShaderAccessBit;
+			desc.allowedState = ResourceStates::PixelShaderAccessBit;
 			desc.mipCount = 1;
 			desc.sampleCount = 1;
 			desc.width = 1;
@@ -1204,8 +1205,8 @@ namespace RHI
 			TextureDesc desc = { 0 };
 			desc.name = "null RW texture";
 			desc.format = TextureFormat::RGBA32_UNorm;
-			desc.initialState = ResourceState::UnorderedAccessBit;
-			desc.allowedState = ResourceState::UnorderedAccessBit | ResourceState::PixelShaderAccessBit;
+			desc.initialState = ResourceStates::UnorderedAccessBit;
+			desc.allowedState = ResourceStates::UnorderedAccessBit | ResourceStates::PixelShaderAccessBit;
 			desc.mipCount = 1;
 			desc.sampleCount = 1;
 			desc.width = 1;
@@ -1217,7 +1218,7 @@ namespace RHI
 			BufferDesc desc = { 0 };
 			desc.name = "null buffer";
 			desc.byteCount = 256;
-			desc.initialState = ResourceState::ShaderAccessBits;
+			desc.initialState = ResourceStates::ShaderAccessBits;
 			desc.memoryUsage = MemoryUsage::GPU;
 			desc.committedResource = true;
 			rhi.nullBuffer = CreateBuffer(desc);
@@ -1226,7 +1227,7 @@ namespace RHI
 			BufferDesc desc = { 0 };
 			desc.name = "null RW buffer";
 			desc.byteCount = 256;
-			desc.initialState = ResourceState::UnorderedAccessBit;
+			desc.initialState = ResourceStates::UnorderedAccessBit;
 			desc.memoryUsage = MemoryUsage::GPU;
 			desc.committedResource = true;
 			rhi.nullRWBuffer = CreateBuffer(desc);
@@ -1626,7 +1627,7 @@ namespace RHI
 			BufferDesc desc = { 0 };
 			desc.name = "TimeStamp Readback Buffer";
 			desc.byteCount = MaxDurationQueries * 2 * FrameCount * sizeof(UINT64);
-			desc.initialState = ResourceState::CopySourceBit;
+			desc.initialState = ResourceStates::CopySourceBit;
 			desc.memoryUsage = MemoryUsage::Readback;
 			desc.committedResource = true;
 			rhi.timeStampBuffer = CreateBuffer(desc);
@@ -1815,7 +1816,7 @@ namespace RHI
 		desc.MipLevels = 1;
 		desc.SampleDesc.Count = 1;
 		desc.SampleDesc.Quality = 0;
-		if(rhiDesc.initialState & ResourceState::UnorderedAccessBit)
+		if(rhiDesc.initialState & ResourceStates::UnorderedAccessBit)
 		{
 			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		}
@@ -1918,19 +1919,19 @@ namespace RHI
 		desc.MipLevels = rhiDesc.mipCount;
 		desc.SampleDesc.Count = rhiDesc.sampleCount;
 		desc.SampleDesc.Quality = 0;
-		if(rhiDesc.allowedState & ResourceState::UnorderedAccessBit)
+		if(rhiDesc.allowedState & ResourceStates::UnorderedAccessBit)
 		{
 			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		}
-		if(rhiDesc.allowedState & ResourceState::RenderTargetBit)
+		if(rhiDesc.allowedState & ResourceStates::RenderTargetBit)
 		{
 			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 		}
-		if(rhiDesc.allowedState & ResourceState::DepthAccessBits)
+		if(rhiDesc.allowedState & ResourceStates::DepthAccessBits)
 		{
 			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 		}
-		if((rhiDesc.allowedState & ResourceState::ShaderAccessBits) == 0)
+		if((rhiDesc.allowedState & ResourceStates::ShaderAccessBits) == 0)
 		{
 			desc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 		}
@@ -1968,7 +1969,7 @@ namespace RHI
 		SetDebugName(resource, rhiDesc.name);
 
 		uint32_t srvIndex = InvalidDescriptorIndex;
-		if(rhiDesc.allowedState & ResourceState::ShaderAccessBits)
+		if(rhiDesc.allowedState & ResourceStates::ShaderAccessBits)
 		{
 			D3D12_SHADER_RESOURCE_VIEW_DESC srv = { 0 };
 			srv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
@@ -1991,7 +1992,7 @@ namespace RHI
 		texture.texture = resource;
 		texture.srvIndex = srvIndex;
 		texture.currentState = D3D12_RESOURCE_STATE_COPY_DEST;
-		if(rhiDesc.allowedState & ResourceState::UnorderedAccessBit)
+		if(rhiDesc.allowedState & ResourceStates::UnorderedAccessBit)
 		{
 			for(uint32_t m = 0; m < rhiDesc.mipCount; ++m)
 			{
@@ -2084,12 +2085,12 @@ namespace RHI
 		rhi.freeListSamplers.Free(index);
 	}
 
-	static void AddShaderVisibility(bool outVis[ShaderType::Count], D3D12_SHADER_VISIBILITY inVis)
+	static void AddShaderVisibility(bool outVis[ShaderStage::Count], D3D12_SHADER_VISIBILITY inVis)
 	{
 		switch(inVis)
 		{
-			case D3D12_SHADER_VISIBILITY_VERTEX: outVis[ShaderType::Vertex] = true; break;
-			case D3D12_SHADER_VISIBILITY_PIXEL: outVis[ShaderType::Pixel] = true; break;
+			case D3D12_SHADER_VISIBILITY_VERTEX: outVis[ShaderStage::Vertex] = true; break;
+			case D3D12_SHADER_VISIBILITY_PIXEL: outVis[ShaderStage::Pixel] = true; break;
 			default: break;
 		}
 	}
@@ -2102,14 +2103,14 @@ namespace RHI
 		rhiSignature.genericDescCount = 0;
 		rhiSignature.samplerDescCount = rhiDesc.samplerCount;
 
-		bool shaderVis[ShaderType::Count] = { 0 };
+		bool shaderVis[ShaderStage::Count] = { 0 };
 
 		//
 		// root constants
 		//
 		int parameterCount = 0;
 		D3D12_ROOT_PARAMETER parameters[16];
-		for(int s = 0; s < ShaderType::Count; ++s)
+		for(int s = 0; s < ShaderStage::Count; ++s)
 		{
 			if(rhiDesc.constants[s].count > 0)
 			{
@@ -2120,13 +2121,13 @@ namespace RHI
 				p.Constants.Num32BitValues = rhiDesc.constants[s].count;
 				p.Constants.RegisterSpace = 0;
 				p.Constants.ShaderRegister = 0;
-				p.ShaderVisibility = GetD3DVisibility((ShaderType::Id)s);
+				p.ShaderVisibility = GetD3DVisibility((ShaderStage::Id)s);
 				AddShaderVisibility(shaderVis, p.ShaderVisibility);
 
 				parameterCount++;
 			}
 		}
-		Q_assert(parameterCount <= ShaderType::Count);
+		Q_assert(parameterCount <= ShaderStage::Count);
 
 		//
 		// CBV SRV UAV table
@@ -2186,11 +2187,11 @@ namespace RHI
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_AMPLIFICATION_SHADER_ROOT_ACCESS |
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_MESH_SHADER_ROOT_ACCESS;
-		if(!shaderVis[ShaderType::Vertex])
+		if(!shaderVis[ShaderStage::Vertex])
 		{
 			desc.Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS;
 		}
-		if(!shaderVis[ShaderType::Pixel])
+		if(!shaderVis[ShaderStage::Pixel])
 		{
 			desc.Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
 		}
@@ -2571,7 +2572,7 @@ namespace RHI
 		rhi.commandList->RSSetScissorRects(1, &rect);
 	}
 
-	void CmdSetRootConstants(HRootSignature rootSignature, ShaderType::Id shaderType, const void* constants)
+	void CmdSetRootConstants(HRootSignature rootSignature, ShaderStage::Id shaderType, const void* constants)
 	{
 		Q_assert(CanWriteCommands());
 		Q_assert(constants);

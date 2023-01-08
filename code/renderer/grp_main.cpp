@@ -136,11 +136,11 @@ struct GameplayRenderPipeline : IRenderPipeline
 		desc.mipCount = mipCount;
 		desc.name = image->name;
 		desc.sampleCount = 1;
-		desc.initialState = ResourceState::PixelShaderAccessBit;
-		desc.allowedState = ResourceState::PixelShaderAccessBit;
+		desc.initialState = ResourceStates::PixelShaderAccessBit;
+		desc.allowedState = ResourceStates::PixelShaderAccessBit;
 		if(mipCount > 1)
 		{
-			desc.allowedState |= ResourceState::UnorderedAccessBit; // for mip-map generation
+			desc.allowedState |= ResourceStates::UnorderedAccessBit; // for mip-map generation
 		}
 		desc.committedResource = true;
 

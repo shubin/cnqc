@@ -86,11 +86,11 @@ void ui_t::Init()
 		RootSignatureDesc desc = { 0 };
 		desc.name = "UI root signature";
 		desc.usingVertexBuffers = qtrue;
-		desc.constants[ShaderType::Vertex].count = 2;
-		desc.constants[ShaderType::Pixel].count = 2;
+		desc.constants[ShaderStage::Vertex].count = 2;
+		desc.constants[ShaderStage::Pixel].count = 2;
 		desc.samplerCount = ARRAY_LEN(grp.samplers);
-		desc.samplerVisibility = ShaderStage::PixelBit;
-		desc.genericVisibility = ShaderStage::PixelBit;
+		desc.samplerVisibility = ShaderStages::PixelBit;
+		desc.genericVisibility = ShaderStages::PixelBit;
 		desc.AddRange(DescriptorType::Texture, 0, MAX_DRAWIMAGES);
 		rootSignature = CreateRootSignature(desc);
 	}
@@ -135,7 +135,7 @@ void ui_t::Init()
 		desc.name = "UI index buffer";
 		desc.byteCount = sizeof(ui_t::index_t) * maxIndexCount * FrameCount;
 		desc.memoryUsage = MemoryUsage::Upload;
-		desc.initialState = ResourceState::IndexBufferBit;
+		desc.initialState = ResourceStates::IndexBufferBit;
 		indexBuffer = CreateBuffer(desc);
 		indices = (ui_t::index_t*)MapBuffer(indexBuffer);
 
@@ -145,7 +145,7 @@ void ui_t::Init()
 		desc.name = "UI vertex buffer";
 		desc.byteCount = sizeof(ui_t::vertex_t) * maxVertexCount * FrameCount;
 		desc.memoryUsage = MemoryUsage::Upload;
-		desc.initialState = ResourceState::VertexBufferBit;
+		desc.initialState = ResourceStates::VertexBufferBit;
 		vertexBuffer = CreateBuffer(desc);
 		vertices = (ui_t::vertex_t*)MapBuffer(vertexBuffer);
 	}
@@ -176,7 +176,7 @@ void ui_t::Begin()
 	CmdBindVertexBuffers(1, &vertexBuffer, &stride, NULL);
 	CmdBindIndexBuffer(indexBuffer, IndexType::UInt32, 0);
 	const float scale[2] = { 2.0f / glConfig.vidWidth, 2.0f / glConfig.vidHeight };
-	CmdSetRootConstants(rootSignature, ShaderType::Vertex, scale);
+	CmdSetRootConstants(rootSignature, ShaderStage::Vertex, scale);
 
 	grp.projection = PROJECTION_2D;
 }
@@ -190,7 +190,7 @@ void ui_t::Draw()
 
 	const uint32_t textureIndex = shader->stages[0]->bundle.image[0]->textureIndex;
 	const uint32_t pixelConstants[2] = { textureIndex, 0 }; // second one is the sampler index
-	CmdSetRootConstants(rootSignature, ShaderType::Pixel, pixelConstants);
+	CmdSetRootConstants(rootSignature, ShaderStage::Pixel, pixelConstants);
 	CmdDrawIndexed(indexCount, firstIndex, 0);
 	firstIndex += indexCount;
 	firstVertex += vertexCount;
