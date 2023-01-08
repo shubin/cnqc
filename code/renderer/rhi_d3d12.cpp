@@ -24,16 +24,15 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 /*
 to do:
 
+- world rendering
+- mip-map generation accounting for r_picmip
 - when creating the root signature, validate that neither of the tables have any gap
 - use root signature 1.1 to use the hints that help the drivers optimize out static resources
 - remove srvIndex or textureIndex from image_t
 	can't remove either for now
 - is it possible to force Resource Binding Tier 2 somehow? are we supposed to run on old HW to test? :(
 - don't do persistent mapping to help out RenderDoc?
-- explicit barrier API
 - implicit barrier & profiling API: Begin/EndRenderPass
-- finish compute dispatch support
-- texture mip-map generation in the RP as a callback to the RHI's Upload function
 * partial inits and shutdown
 - clean up the Win32 window creation/update mess
 - move the Dear ImGui rendering outside of the RHI
