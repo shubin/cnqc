@@ -165,18 +165,18 @@ void MipMapGenerator::Init()
 	{
 		Stage& stage = stages[s];
 		{
-			RootSignatureDesc desc(va("mip-map %s root signature", stageNames[s]));
+			RootSignatureDesc desc(va("mip-map %s", stageNames[s]));
 			desc.pipelineType = PipelineType::Compute;
 			desc.constants[ShaderStage::Compute].byteCount = stageRCByteCount[s];
 			desc.AddRange(DescriptorType::RWTexture, 0, MipSlice::Count + MaxTextureMips);
 			stage.rootSignature = CreateRootSignature(desc);
 		}
 		{
-			const DescriptorTableDesc desc(DescriptorTableDesc(va("mip-map %s descriptor table", stageNames[s]), stage.rootSignature));
+			const DescriptorTableDesc desc(DescriptorTableDesc(va("mip-map %s", stageNames[s]), stage.rootSignature));
 			stage.descriptorTable = CreateDescriptorTable(desc);
 		}
 		{
-			ComputePipelineDesc desc(va("mip-map %s PSO", stageNames[s]), stage.rootSignature);
+			ComputePipelineDesc desc(va("mip-map %s", stageNames[s]), stage.rootSignature);
 			desc.shader = CompileComputeShader(stageShaders[s]);
 			stage.pipeline = CreateComputePipeline(desc);
 		}
@@ -184,14 +184,14 @@ void MipMapGenerator::Init()
 
 	for(int t = 0; t < 2; ++t)
 	{
-		TextureDesc desc(va("mip-map generation texture float16 #%d", t + 1), MAX_TEXTURE_SIZE, MAX_TEXTURE_SIZE);
+		TextureDesc desc(va("mip-map generation float16 #%d", t + 1), MAX_TEXTURE_SIZE, MAX_TEXTURE_SIZE);
 		desc.format = TextureFormat::RGBA64_Float;
 		desc.initialState = ResourceStates::UnorderedAccessBit;
 		desc.allowedState = ResourceStates::UnorderedAccessBit | ResourceStates::ComputeShaderAccessBit;
 		textures[MipSlice::Float16_0 + t] = CreateTexture(desc);
 	}
 
-	TextureDesc desc("mip-map generation texture unorm", MAX_TEXTURE_SIZE, MAX_TEXTURE_SIZE);
+	TextureDesc desc("mip-map generation unorm", MAX_TEXTURE_SIZE, MAX_TEXTURE_SIZE);
 	desc.initialState = ResourceStates::UnorderedAccessBit;
 	desc.allowedState = ResourceStates::UnorderedAccessBit | ResourceStates::ComputeShaderAccessBit;
 	textures[MipSlice::UNorm_0] = CreateTexture(desc);

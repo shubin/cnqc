@@ -83,7 +83,7 @@ float4 main(VOut input) : SV_TARGET
 void UI::Init()
 {
 	{
-		RootSignatureDesc desc("UI root signature");
+		RootSignatureDesc desc("UI");
 		desc.usingVertexBuffers = qtrue;
 		desc.constants[ShaderStage::Vertex].byteCount = 8;
 		desc.constants[ShaderStage::Pixel].byteCount = 8;
@@ -94,14 +94,14 @@ void UI::Init()
 		rootSignature = CreateRootSignature(desc);
 	}
 	{
-		descriptorTable = CreateDescriptorTable(DescriptorTableDesc("UI descriptor table", rootSignature));
+		descriptorTable = CreateDescriptorTable(DescriptorTableDesc("UI", rootSignature));
 
 		DescriptorTableUpdate update;
 		update.SetSamplers(ARRAY_LEN(grp.samplers), grp.samplers);
 		UpdateDescriptorTable(descriptorTable, update);
 	}
 	{
-		GraphicsPipelineDesc desc("UI PSO", rootSignature);
+		GraphicsPipelineDesc desc("UI", rootSignature);
 		desc.vertexShader = CompileVertexShader(vs);
 		desc.pixelShader = CompilePixelShader(ps);
 		desc.vertexLayout.bindingStrides[0] = sizeof(UI::vertex_t);
@@ -122,13 +122,13 @@ void UI::Init()
 	maxVertexCount = 64 << 10;
 	maxIndexCount = 8 * maxVertexCount;
 	{
-		BufferDesc desc("UI index buffer", sizeof(UI::index_t) * maxIndexCount * FrameCount, ResourceStates::IndexBufferBit);
+		BufferDesc desc("UI index", sizeof(UI::index_t) * maxIndexCount * FrameCount, ResourceStates::IndexBufferBit);
 		indexBuffer = CreateBuffer(desc);
 		indices = (UI::index_t*)MapBuffer(indexBuffer);
 
 	}
 	{
-		BufferDesc desc("UI vertex buffer", sizeof(UI::vertex_t) * maxVertexCount * FrameCount, ResourceStates::VertexBufferBit);
+		BufferDesc desc("UI vertex", sizeof(UI::vertex_t) * maxVertexCount * FrameCount, ResourceStates::VertexBufferBit);
 		vertexBuffer = CreateBuffer(desc);
 		vertices = (UI::vertex_t*)MapBuffer(vertexBuffer);
 	}

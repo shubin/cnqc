@@ -151,6 +151,40 @@ namespace RHI
 		};
 	};
 
+#define D3D_RESOURCE_LIST(R) \
+	R(CommandQueue, "command queue") \
+	R(CommandAllocator, "command allocator") \
+	R(PipelineState, "pipeline state") \
+	R(CommandList, "command list") \
+	R(Fence, "fence") \
+	R(RootSignature, "root signature") \
+	R(DescriptorHeap, "descriptor heap") \
+	R(Heap, "heap") \
+	R(QueryHeap, "query heap") \
+	R(Texture, "texture") \
+	R(Buffer, "buffer")
+
+#define R(Enum, Name) Enum,
+	struct D3DResourceType
+	{
+		enum Id
+		{
+			D3D_RESOURCE_LIST(R)
+			Count
+		};
+	};
+#undef R
+
+#define R(Enum, Name) Name,
+	static const char* D3DResourceNames[] =
+	{
+		D3D_RESOURCE_LIST(R)
+		""
+	};
+#undef R
+
+#undef D3D_RESOURCE_LIST
+
 	struct Buffer
 	{
 		BufferDesc desc;
@@ -406,16 +440,18 @@ namespace RHI
 		return false;
 	}
 
-	static void SetDebugName(ID3D12DeviceChild* resource, const char* resourceName)
+	static void SetDebugName(ID3D12DeviceChild* resource, const char* resourceName, D3DResourceType::Id resourceType)
 	{
-		if(resourceName == NULL)
+		if(resourceName == NULL || (uint32_t)resourceType >= D3DResourceType::Count)
 		{
 			return;
 		}
 
+		const char* const name = va("%s %s", resourceName, D3DResourceNames[resourceType]);
+
 		// ID3D12Object::SetName is a Unicode wrapper for
 		// ID3D12Object::SetPrivateData with WKPDID_D3DDebugObjectNameW
-		resource->SetPrivateData(WKPDID_D3DDebugObjectName, strlen(resourceName), resourceName);
+		resource->SetPrivateData(WKPDID_D3DDebugObjectName, strlen(name), name);
 	}
 
 	static UINT64 GetUploadBufferSize(ID3D12Resource* resource, UINT firstSubresource, UINT subresourceCount)
@@ -455,7 +491,7 @@ namespace RHI
 		heapDesc.NumDescriptors = size;
 		heapDesc.NodeMask = 0;
 		D3D(rhi.device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&heap)));
-		SetDebugName(heap, name);
+		SetDebugName(heap, name, D3DResourceType::DescriptorHeap);
 
 		return heap;
 	}
@@ -463,7 +499,7 @@ namespace RHI
 	void Fence::Create(UINT64 value, const char* name)
 	{
 		D3D(rhi.device->CreateFence(value, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)));
-		SetDebugName(fence, name);
+		SetDebugName(fence, name, D3DResourceType::Fence);
 
 		event = CreateEvent(NULL, FALSE, FALSE, NULL);
 		if(event == NULL)
@@ -506,7 +542,7 @@ namespace RHI
 	void TextureUploader::Create()
 	{
 		{
-			BufferDesc bufferDesc("upload buffer", 64 << 20, ResourceStates::CopyDestinationBit);
+			BufferDesc bufferDesc("texture upload", 64 << 20, ResourceStates::CopyDestinationBit);
 			buffer = CreateBuffer(bufferDesc);
 			bufferByteCount = bufferDesc.byteCount;
 			bufferByteOffset = 0;
@@ -519,17 +555,17 @@ namespace RHI
 			desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
 			desc.NodeMask = 0;
 			D3D(rhi.device->CreateCommandQueue(&desc, IID_PPV_ARGS(&commandQueue)));
-			SetDebugName(commandQueue, "compute command queue");
+			SetDebugName(commandQueue, "compute", D3DResourceType::CommandQueue);
 		}
 
 		D3D(rhi.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COMPUTE, IID_PPV_ARGS(&commandAllocator)));
-		SetDebugName(commandAllocator, "compute command allocator");
+		SetDebugName(commandAllocator, "compute", D3DResourceType::CommandAllocator);
 
 		D3D(rhi.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COMPUTE, commandAllocator, NULL, IID_PPV_ARGS(&commandList)));
-		SetDebugName(commandList, "compute command list");
+		SetDebugName(commandList, "compute", D3DResourceType::CommandList);
 		D3D(commandList->Close());
 
-		fence.Create(0, "compute queue fence");
+		fence.Create(0, "compute queue");
 		fenceValue = 0;
 		fenceValueRewind = 0;
 	}
@@ -1181,23 +1217,23 @@ namespace RHI
 	static void CreateNullResources()
 	{
 		{
-			TextureDesc desc("null texture", 1, 1);
+			TextureDesc desc("null", 1, 1);
 			rhi.nullTexture = CreateTexture(desc);
 		}
 		{
-			TextureDesc desc("null RW texture", 1, 1);
+			TextureDesc desc("null RW", 1, 1);
 			desc.format = TextureFormat::RGBA32_UNorm;
 			desc.initialState = ResourceStates::UnorderedAccessBit;
 			desc.allowedState = ResourceStates::UnorderedAccessBit | ResourceStates::PixelShaderAccessBit;
 			rhi.nullRWTexture = CreateTexture(desc);
 		}
 		{
-			BufferDesc desc("null buffer", 256, ResourceStates::ShaderAccessBits);
+			BufferDesc desc("null", 256, ResourceStates::ShaderAccessBits);
 			desc.memoryUsage = MemoryUsage::GPU;
 			rhi.nullBuffer = CreateBuffer(desc);
 		}
 		{
-			BufferDesc desc("null RW buffer", 256, ResourceStates::UnorderedAccessBit);
+			BufferDesc desc("null RW", 256, ResourceStates::UnorderedAccessBit);
 			desc.memoryUsage = MemoryUsage::GPU;
 			rhi.nullRWBuffer = CreateBuffer(desc);
 		}
@@ -1427,7 +1463,7 @@ namespace RHI
 				{
 					D3D(rhi.swapChain->GetBuffer(f, IID_PPV_ARGS(&rhi.renderTargets[f])));
 					rhi.device->CreateRenderTargetView(rhi.renderTargets[f], NULL, rtvHandleIt);
-					SetDebugName(rhi.renderTargets[f], va("Swap Chain RTV #%d", f + 1));
+					SetDebugName(rhi.renderTargets[f], va("swap chain #%d", f + 1), D3DResourceType::Texture);
 					rtvHandleIt.ptr += rhi.rtvIncSize;
 				}
 
@@ -1504,8 +1540,8 @@ namespace RHI
 		}
 #endif
 
-		rhi.descHeapGeneric = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, MaxCPUGenericDescriptors, false, "CBV SRV UAV heap");
-		rhi.descHeapSamplers = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, MaxCPUSamplerDescriptors, false, "sampler heap");
+		rhi.descHeapGeneric = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, MaxCPUGenericDescriptors, false, "all-encompassing CBV SRV UAV");
+		rhi.descHeapSamplers = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, MaxCPUSamplerDescriptors, false, "all-encompassing sampler");
 
 		{
 			D3D12_COMMAND_QUEUE_DESC commandQueueDesc = { 0 };
@@ -1514,7 +1550,7 @@ namespace RHI
 			commandQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
 			commandQueueDesc.NodeMask = 0;
 			D3D(rhi.device->CreateCommandQueue(&commandQueueDesc, IID_PPV_ARGS(&rhi.commandQueue)));
-			SetDebugName(rhi.commandQueue, "Main Command Queue");
+			SetDebugName(rhi.commandQueue, "main", D3DResourceType::CommandQueue);
 		}
 
 		{
@@ -1549,7 +1585,7 @@ namespace RHI
 			rtvHeapDesc.NumDescriptors = FrameCount;
 			rtvHeapDesc.NodeMask = 0;
 			D3D(rhi.device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&rhi.rtvHeap)));
-			SetDebugName(rhi.rtvHeap, "Swap Chain RTV Descriptor Heap");
+			SetDebugName(rhi.rtvHeap, "swap chain RTV", D3DResourceType::DescriptorHeap);
 
 			rhi.rtvIncSize = rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 			rhi.rtvHandle = rhi.rtvHeap->GetCPUDescriptorHandleForHeapStart();
@@ -1561,19 +1597,19 @@ namespace RHI
 			{
 				D3D(rhi.swapChain->GetBuffer(f, IID_PPV_ARGS(&rhi.renderTargets[f])));
 				rhi.device->CreateRenderTargetView(rhi.renderTargets[f], NULL, rtvHandleIt);
-				SetDebugName(rhi.renderTargets[f], va("Swap Chain RTV #%d", f + 1));
+				SetDebugName(rhi.renderTargets[f], va("swap chain #%d", f + 1), D3DResourceType::Texture);
 				rtvHandleIt.ptr += rhi.rtvIncSize;
 
 				D3D(rhi.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&rhi.commandAllocators[f])));
-				SetDebugName(rhi.commandAllocators[f], va("Command Allocator #%d", f + 1));
+				SetDebugName(rhi.commandAllocators[f], va("main #%d", f + 1), D3DResourceType::CommandAllocator);
 			}
 		}
 
 		// get command list ready to use during init
 		D3D(rhi.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, rhi.commandAllocators[rhi.frameIndex], NULL, IID_PPV_ARGS(&rhi.commandList)));
-		SetDebugName(rhi.commandList, "Command List");
+		SetDebugName(rhi.commandList, "main", D3DResourceType::CommandList);
 
-		rhi.fence.Create(rhi.fenceValues[rhi.frameIndex], "Command Queue Fence");
+		rhi.fence.Create(rhi.fenceValues[rhi.frameIndex], "main command queue");
 		rhi.fenceValues[rhi.frameIndex]++;
 
 		rhi.upload.Create();
@@ -1585,11 +1621,12 @@ namespace RHI
 			desc.Count = MaxDurationQueries * 2;
 			desc.NodeMask = 0;
 			D3D(rhi.device->CreateQueryHeap(&desc, IID_PPV_ARGS(&rhi.timeStampHeap)));
+			SetDebugName(rhi.timeStampHeap, "timestamp", D3DResourceType::QueryHeap);
 		}
 
 		{
 			const uint32_t byteCount = MaxDurationQueries * 2 * FrameCount * sizeof(UINT64);
-			BufferDesc desc("TimeStamp Readback Buffer", byteCount, ResourceStates::CopySourceBit);
+			BufferDesc desc("timestamp readback", byteCount, ResourceStates::CopySourceBit);
 			desc.memoryUsage = MemoryUsage::Readback;
 			rhi.timeStampBuffer = CreateBuffer(desc);
 			rhi.mappedTimeStamps = (UINT64*)MapBuffer(rhi.timeStampBuffer);
@@ -1805,7 +1842,7 @@ namespace RHI
 		D3D12MA::Allocation* allocation;
 		ID3D12Resource* resource;
 		D3D(rhi.allocator->CreateResource(&allocDesc, &desc, resourceState, NULL, &allocation, IID_PPV_ARGS(&resource)));
-		SetDebugName(resource, rhiDesc.name);
+		SetDebugName(resource, rhiDesc.name, D3DResourceType::Buffer);
 
 		Buffer buffer = {};
 		buffer.desc = rhiDesc;
@@ -1927,7 +1964,7 @@ namespace RHI
 		D3D12MA::Allocation* allocation;
 		ID3D12Resource* resource;
 		D3D(rhi.allocator->CreateResource(&allocDesc, &desc, D3D12_RESOURCE_STATE_COPY_DEST, pClearValue, &allocation, IID_PPV_ARGS(&resource)));
-		SetDebugName(resource, rhiDesc.name);
+		SetDebugName(resource, rhiDesc.name, D3DResourceType::Texture);
 
 		uint32_t srvIndex = InvalidDescriptorIndex;
 		if(rhiDesc.allowedState & ResourceStates::ShaderAccessBits)
@@ -2176,6 +2213,7 @@ namespace RHI
 		ID3D12RootSignature* signature;
 		D3D(rhi.device->CreateRootSignature(0, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&signature)));
 		COM_RELEASE(blob);
+		SetDebugName(signature, rhiDesc.name, D3DResourceType::RootSignature);
 
 		rhiSignature.desc = rhiDesc;
 		rhiSignature.signature = signature;
@@ -2194,8 +2232,8 @@ namespace RHI
 		const RootSignature& sig = rhi.rootSignatures.Get(desc.rootSignature);
 
 		DescriptorTable table = { 0 };
-		table.genericHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, sig.genericDescCount, true, va("%s CBV SRV UAV", desc.name));
-		table.samplerHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, sig.samplerDescCount, true, va("%s sampler", desc.name));
+		table.genericHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, sig.genericDescCount, true, va("%s GPU-visible CBV SRV UAV", desc.name));
+		table.samplerHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, sig.samplerDescCount, true, va("%s GPU-visible sampler", desc.name));
 
 		const Texture& nullTex = rhi.textures.Get(rhi.nullTexture);
 		const Texture& nullRWTex = rhi.textures.Get(rhi.nullRWTexture);
@@ -2365,7 +2403,7 @@ namespace RHI
 
 		ID3D12PipelineState* pso;
 		D3D(rhi.device->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&pso)));
-		SetDebugName(pso, rhiDesc.name);
+		SetDebugName(pso, rhiDesc.name, D3DResourceType::PipelineState);
 
 		Pipeline rhiPipeline;
 		rhiPipeline.type = PipelineType::Graphics;
@@ -2387,7 +2425,7 @@ namespace RHI
 
 		ID3D12PipelineState* pso;
 		D3D(rhi.device->CreateComputePipelineState(&desc, IID_PPV_ARGS(&pso)));
-		SetDebugName(pso, rhiDesc.name);
+		SetDebugName(pso, rhiDesc.name, D3DResourceType::PipelineState);
 
 		Pipeline rhiPipeline;
 		rhiPipeline.type = PipelineType::Compute;

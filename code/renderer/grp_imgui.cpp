@@ -101,10 +101,10 @@ void ImGUI::Init()
 	{
 		RenderBuffers* fr = &frameResources[i];
 
-		BufferDesc vtx("Dear ImGUI index buffer", MAX_INDEX_COUNT * sizeof(ImDrawIdx), ResourceStates::IndexBufferBit);
+		BufferDesc vtx("Dear ImGUI index", MAX_INDEX_COUNT * sizeof(ImDrawIdx), ResourceStates::IndexBufferBit);
 		fr->indexBuffer = CreateBuffer(vtx);
 
-		BufferDesc idx("Dear ImGUI vertex buffer", MAX_VERTEX_COUNT * sizeof(ImDrawData), ResourceStates::VertexBufferBit);
+		BufferDesc idx("Dear ImGUI vertex", MAX_VERTEX_COUNT * sizeof(ImDrawData), ResourceStates::VertexBufferBit);
 		fr->vertexBuffer = CreateBuffer(idx);
 	}
 
@@ -112,7 +112,7 @@ void ImGUI::Init()
 	sampler = CreateSampler(SamplerDesc(TW_REPEAT, TextureFilter::Linear));
 
 	{
-		RootSignatureDesc desc("Dear ImGUI root signature");
+		RootSignatureDesc desc("Dear ImGUI");
 		desc.pipelineType = PipelineType::Graphics;
 		desc.usingVertexBuffers = true;
 		desc.samplerCount = 1;
@@ -124,7 +124,7 @@ void ImGUI::Init()
 	}
 
 	{
-		GraphicsPipelineDesc desc("Dear ImGUI PSO", rootSignature);
+		GraphicsPipelineDesc desc("Dear ImGUI", rootSignature);
 		desc.vertexShader = CompileVertexShader(vs);
 		desc.pixelShader = CompilePixelShader(ps);
 		desc.vertexLayout.bindingStrides[0] = sizeof(ImDrawVert);
@@ -158,7 +158,7 @@ void ImGUI::Init()
 		// @TODO: use the same big shared descriptor table for SRVs/samplers
 		// as the rest of the GRP?
 
-		descriptorTable = CreateDescriptorTable(DescriptorTableDesc("Dear ImGUI descriptor table", rootSignature));
+		descriptorTable = CreateDescriptorTable(DescriptorTableDesc("Dear ImGUI", rootSignature));
 
 		DescriptorTableUpdate update;
 
