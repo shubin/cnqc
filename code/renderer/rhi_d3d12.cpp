@@ -386,10 +386,7 @@ namespace RHI
 		D3D12MA::Allocator* allocator;
 		ID3D12CommandQueue* commandQueue;
 		IDXGISwapChain3* swapChain;
-		ID3D12DescriptorHeap* rtvHeap;
-		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle;
-		UINT rtvIncSize;
-		ID3D12Resource* renderTargets[FrameCount];
+		HTexture renderTargets[FrameCount];
 		ID3D12CommandAllocator* commandAllocators[FrameCount];
 		ID3D12GraphicsCommandList* commandList;
 		UINT frameIndex;
@@ -1249,6 +1246,7 @@ namespace RHI
 		ADD_BITS(DepthReadBit, D3D12_RESOURCE_STATE_DEPTH_READ);
 		ADD_BITS(DepthWriteBit, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 		ADD_BITS(UnorderedAccessBit, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		ADD_BITS(PresentBit, D3D12_RESOURCE_STATE_PRESENT);
 
 		return states;
 
@@ -1450,6 +1448,21 @@ namespace RHI
 
 		rq.durationQueryCount = fq.durationQueryCount;
 		fq.durationQueryCount = 0;
+	}
+
+	static void GrabSwapChainTextures()
+	{
+		for(uint32_t f = 0; f < FrameCount; ++f)
+		{
+			ID3D12Resource* renderTarget;
+			D3D(rhi.swapChain->GetBuffer(f, IID_PPV_ARGS(&renderTarget)));
+
+			TextureDesc desc(va("swap chain #%d", f + 1), glConfig.vidWidth, glConfig.vidHeight);
+			desc.nativeResource = renderTarget;
+			desc.initialState = ResourceStates::PresentBit;
+			desc.allowedState = ResourceStates::PresentBit | ResourceStates::RenderTargetBit;
+			rhi.renderTargets[f] = CreateTexture(desc);
+		}
 	}
 
 	static void CreateNullResources()
@@ -1687,22 +1700,10 @@ namespace RHI
 				glConfig.vidHeight != desc.BufferDesc.Height)
 			{
 				WaitUntilDeviceIsIdle();
-
-				for(uint32_t f = 0; f < FrameCount; ++f)
-				{
-					COM_RELEASE(rhi.renderTargets[f]);
-				}
 				
 				D3D(rhi.swapChain->ResizeBuffers(desc.BufferCount, glConfig.vidWidth, glConfig.vidHeight, desc.BufferDesc.Format, desc.Flags));				
 
-				D3D12_CPU_DESCRIPTOR_HANDLE rtvHandleIt = rhi.rtvHandle;
-				for(uint32_t f = 0; f < FrameCount; ++f)
-				{
-					D3D(rhi.swapChain->GetBuffer(f, IID_PPV_ARGS(&rhi.renderTargets[f])));
-					rhi.device->CreateRenderTargetView(rhi.renderTargets[f], NULL, rtvHandleIt);
-					SetDebugName(rhi.renderTargets[f], va("swap chain #%d", f + 1), D3DResourceType::Texture);
-					rtvHandleIt.ptr += rhi.rtvIncSize;
-				}
+				GrabSwapChainTextures();
 
 				rhi.frameIndex = rhi.swapChain->GetCurrentBackBufferIndex();
 
@@ -1786,6 +1787,9 @@ namespace RHI
 			rhi.descHeapRTVs.Create(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, MaxCPURTVDescriptors, freeList, "all-encompassing RTV");
 			freeList += MaxCPURTVDescriptors;
 			rhi.descHeapDSVs.Create(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, MaxCPUDSVDescriptors, freeList, "all-encompassing DSV");
+
+			// @TODO: remove test
+			rhi.descHeapRTVs.Allocate();
 		}
 
 		{
@@ -1803,8 +1807,8 @@ namespace RHI
 			DXGI_SWAP_CHAIN_DESC swapChainDesc = { 0 };
 			swapChainDesc.BufferCount = FrameCount;
 			swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-			swapChainDesc.BufferDesc.Width = glInfo.winWidth;
-			swapChainDesc.BufferDesc.Height = glInfo.winHeight;
+			swapChainDesc.BufferDesc.Width = glConfig.vidWidth;
+			swapChainDesc.BufferDesc.Height = glConfig.vidHeight;
 			swapChainDesc.BufferDesc.RefreshRate.Numerator = 0;
 			swapChainDesc.BufferDesc.RefreshRate.Denominator = 1;
 			swapChainDesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
@@ -1821,33 +1825,14 @@ namespace RHI
 			D3D(dxgiSwapChain->QueryInterface(IID_PPV_ARGS(&rhi.swapChain)));
 			rhi.frameIndex = rhi.swapChain->GetCurrentBackBufferIndex();
 			COM_RELEASE(dxgiSwapChain);
+
+			GrabSwapChainTextures();
 		}
 
+		for(UINT f = 0; f < FrameCount; ++f)
 		{
-			D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = { 0 };
-			rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-			rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-			rtvHeapDesc.NumDescriptors = FrameCount;
-			rtvHeapDesc.NodeMask = 0;
-			D3D(rhi.device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&rhi.rtvHeap)));
-			SetDebugName(rhi.rtvHeap, "swap chain RTV", D3DResourceType::DescriptorHeap);
-
-			rhi.rtvIncSize = rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-			rhi.rtvHandle = rhi.rtvHeap->GetCPUDescriptorHandleForHeapStart();
-		}
-
-		{
-			D3D12_CPU_DESCRIPTOR_HANDLE rtvHandleIt = rhi.rtvHandle;
-			for(UINT f = 0; f < FrameCount; ++f)
-			{
-				D3D(rhi.swapChain->GetBuffer(f, IID_PPV_ARGS(&rhi.renderTargets[f])));
-				rhi.device->CreateRenderTargetView(rhi.renderTargets[f], NULL, rtvHandleIt);
-				SetDebugName(rhi.renderTargets[f], va("swap chain #%d", f + 1), D3DResourceType::Texture);
-				rtvHandleIt.ptr += rhi.rtvIncSize;
-
-				D3D(rhi.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&rhi.commandAllocators[f])));
-				SetDebugName(rhi.commandAllocators[f], va("main #%d", f + 1), D3DResourceType::CommandAllocator);
-			}
+			D3D(rhi.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&rhi.commandAllocators[f])));
+			SetDebugName(rhi.commandAllocators[f], va("main #%d", f + 1), D3DResourceType::CommandAllocator);
 		}
 
 		// get command list ready to use during init
@@ -1931,8 +1916,6 @@ namespace RHI
 		COM_RELEASE(rhi.timeStampHeap);
 		COM_RELEASE(rhi.commandList);
 		COM_RELEASE_ARRAY(rhi.commandAllocators);
-		COM_RELEASE_ARRAY(rhi.renderTargets);
-		COM_RELEASE(rhi.rtvHeap);
 		COM_RELEASE(rhi.swapChain);
 		COM_RELEASE(rhi.commandQueue);
 		COM_RELEASE(rhi.infoQueue);
@@ -1973,18 +1956,13 @@ namespace RHI
 
 		rhi.frameDuration = CmdBeginDurationQuery("Whole frame");
 
-		D3D12_RESOURCE_BARRIER barrier = {0};
-		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-		barrier.Transition.pResource = rhi.renderTargets[rhi.frameIndex];
-		barrier.Transition.Subresource = 0; // D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES
-		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-		rhi.commandList->ResourceBarrier(1, &barrier);
+		const TextureBarrier barrier(rhi.renderTargets[rhi.frameIndex], ResourceStates::RenderTargetBit);
+		CmdBarrier(1, &barrier);
 
-		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = { 0 };
-		rtvHandle.ptr = rhi.rtvHandle.ptr + rhi.frameIndex * rhi.rtvIncSize;
+		const uint32_t rtvIndex = rhi.textures.Get(rhi.renderTargets[rhi.frameIndex]).rtvIndex;
+		const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rhi.descHeapRTVs.GetCPUHandle(rtvIndex);
 		rhi.commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, NULL);
+
 		const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 		rhi.commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, NULL);
 
@@ -2018,14 +1996,8 @@ namespace RHI
 		}
 #endif
 
-		D3D12_RESOURCE_BARRIER barrier = { 0 };
-		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-		barrier.Transition.pResource = rhi.renderTargets[rhi.frameIndex];
-		barrier.Transition.Subresource = 0; // D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES
-		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-		rhi.commandList->ResourceBarrier(1, &barrier);
+		const TextureBarrier barrier(rhi.renderTargets[rhi.frameIndex], ResourceStates::PresentBit);
+		CmdBarrier(1, &barrier);
 
 		CmdEndDurationQuery(rhi.frameDuration);
 
@@ -2212,9 +2184,16 @@ namespace RHI
 		}
 
 		// @TODO: initial state -> D3D12_RESOURCE_STATE
-		D3D12MA::Allocation* allocation;
+		D3D12MA::Allocation* allocation = NULL;
 		ID3D12Resource* resource;
-		D3D(rhi.allocator->CreateResource(&allocDesc, &desc, D3D12_RESOURCE_STATE_COPY_DEST, pClearValue, &allocation, IID_PPV_ARGS(&resource)));
+		if(rhiDesc.nativeResource != NULL)
+		{
+			resource = (ID3D12Resource*)rhiDesc.nativeResource;
+		}
+		else
+		{
+			D3D(rhi.allocator->CreateResource(&allocDesc, &desc, D3D12_RESOURCE_STATE_COPY_DEST, pClearValue, &allocation, IID_PPV_ARGS(&resource)));
+		}
 		SetDebugName(resource, rhiDesc.name, D3DResourceType::Texture);
 
 		uint32_t srvIndex = InvalidDescriptorIndex;
@@ -2734,8 +2713,8 @@ namespace RHI
 		Q_assert(CanWriteCommands());
 		Q_assert(colorCount > 0 || colorTargets == NULL);
 
-		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = { 0 };
-		rtvHandle.ptr = rhi.rtvHandle.ptr + rhi.frameIndex * rhi.rtvIncSize;
+		const uint32_t rtvIndex = rhi.textures.Get(rhi.renderTargets[rhi.frameIndex]).rtvIndex;
+		const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rhi.descHeapRTVs.GetCPUHandle(rtvIndex);
 
 		Q_assert(depthStencilTarget != NULL);
 		const Texture& depthStencil = rhi.textures.Get(*depthStencilTarget);

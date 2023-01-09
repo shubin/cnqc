@@ -87,6 +87,7 @@ namespace RHI
 			DepthReadBit = RHI_BIT(9),
 			DepthWriteBit = RHI_BIT(10),
 			UnorderedAccessBit = RHI_BIT(11),
+			PresentBit = RHI_BIT(12),
 			ShaderAccessBits = VertexShaderAccessBit | PixelShaderAccessBit | ComputeShaderAccessBit,
 			DepthAccessBits = DepthReadBit | DepthWriteBit
 		};
@@ -409,6 +410,7 @@ namespace RHI
 		float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 		float clearDepth = 1.0f;
 		byte clearStencil = 0;
+		void* nativeResource = NULL; // ID3D12Resource*, VkImage, etc.
 
 		void SetClearColor(const vec4_t rgba)
 		{
