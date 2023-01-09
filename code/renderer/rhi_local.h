@@ -44,6 +44,7 @@ namespace RHI
 	const uint32_t MaxDurationQueries = 64;
 	const uint32_t MaxTextureMips = 16;
 	const uint32_t InvalidDescriptorIndex = UINT16_MAX;
+	const uint32_t U32WholeRange = UINT32_MAX;
 
 #define RHI_ENUM_OPERATORS(EnumType) \
 	inline EnumType operator|(EnumType a, EnumType b) { return (EnumType)((uint32_t)(a) | (uint32_t)(b)); } \
@@ -583,7 +584,7 @@ namespace RHI
 
 	HBuffer CreateBuffer(const BufferDesc& desc);
 	void DestroyBuffer(HBuffer buffer);
-	void* MapBuffer(HBuffer buffer);
+	uint8_t* MapBuffer(HBuffer buffer);
 	void UnmapBuffer(HBuffer buffer);
 
 	HTexture CreateTexture(const TextureDesc& desc);
@@ -620,6 +621,9 @@ namespace RHI
 	HDurationQuery CmdBeginDurationQuery(const char* name);
 	void CmdEndDurationQuery(HDurationQuery query);
 	void CmdBarrier(uint32_t texCount, const TextureBarrier* textures, uint32_t buffCount = 0, const BufferBarrier* buffers = NULL);
+
+	uint8_t* BeginBufferUpload(HBuffer buffer);
+	void EndBufferUpload(HBuffer buffer);
 
 #if 0
 	void CmdCopyBuffer(HBuffer dst, uint32_t dstOffset, HBuffer src, uint32_t srcOffset, uint32_t byteCount);

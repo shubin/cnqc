@@ -301,6 +301,27 @@ namespace RHI
 		UINT64 fenceValueRewind;
 	};
 
+	struct UploadManager
+	{
+		void Create();
+		void Release();
+		uint8_t* BeginBufferUpload(HBuffer buffer);
+		void EndBufferUpload(HBuffer buffer);
+
+		ID3D12CommandAllocator* commandAllocator;
+		ID3D12GraphicsCommandList* commandList;
+
+		HBuffer uploadHBuffer;
+		uint32_t bufferByteCount;
+		uint32_t bufferByteOffset;
+
+		Fence fence;
+		// fenceValue      : signaled value after last uploaded chunk
+		// fenceValueRewind: signaled value after last uploaded chunk before rewinding the write pointer to the start
+		UINT64 fenceValue;
+		UINT64 fenceValueRewind;
+	};
+
 	struct DescriptorHeap
 	{
 		void Create(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t size, uint16_t* freeListItems, const char* name);
@@ -399,7 +420,8 @@ namespace RHI
 		HBuffer nullRWBuffer; // UAV
 		HSampler nullSampler;
 
-		TextureUploader upload;
+		TextureUploader textureUpload; // @TODO: nuke it!
+		UploadManager upload;
 		StaticUnorderedArray<HTexture, MAX_DRAWIMAGES> texturesToTransition;
 		FrameQueries frameQueries[FrameCount];
 		ResolvedQueries resolvedQueries;
@@ -718,6 +740,94 @@ namespace RHI
 		COM_RELEASE(commandList);
 		COM_RELEASE(commandAllocator);
 		COM_RELEASE(commandQueue);
+	}
+	
+	void UploadManager::Create()
+	{
+		{
+			BufferDesc bufferDesc("texture upload", 128 << 20, ResourceStates::CopyDestinationBit);
+			uploadHBuffer = CreateBuffer(bufferDesc);
+			bufferByteCount = bufferDesc.byteCount;
+			bufferByteOffset = 0;
+		}
+
+		D3D(rhi.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COMPUTE, IID_PPV_ARGS(&commandAllocator)));
+		SetDebugName(commandAllocator, "upload", D3DResourceType::CommandAllocator);
+
+		D3D(rhi.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COMPUTE, commandAllocator, NULL, IID_PPV_ARGS(&commandList)));
+		SetDebugName(commandList, "upload", D3DResourceType::CommandList);
+		D3D(commandList->Close());
+
+		fence.Create(0, "upload");
+		fenceValue = 0;
+		fenceValueRewind = 0;
+	}
+
+	void UploadManager::Release()
+	{
+		fence.Release();
+		COM_RELEASE(commandList);
+		COM_RELEASE(commandAllocator);
+	}
+
+	uint8_t* UploadManager::BeginBufferUpload(HBuffer userHBuffer)
+	{
+		Buffer& userBuffer = rhi.buffers.Get(userHBuffer);
+		const uint32_t uploadByteCount = userBuffer.desc.byteCount;
+		if(uploadByteCount > bufferByteCount)
+		{
+			ri.Error(ERR_FATAL, "Upload request too large!\n");
+		}
+
+		if(bufferByteOffset + uploadByteCount > bufferByteCount)
+		{
+			// not enough space left, force a wait and rewind
+			fence.WaitOnCPU(fenceValueRewind);
+			D3D(commandAllocator->Reset());
+			fenceValueRewind = fenceValue;
+			bufferByteOffset = 0;
+		}
+
+		uint8_t* mapped = NULL;
+		Q_assert(userBuffer.desc.memoryUsage != MemoryUsage::Readback);
+		if(userBuffer.desc.memoryUsage == MemoryUsage::GPU)
+		{
+			mapped = (uint8_t*)MapBuffer(uploadHBuffer);
+		}
+		else
+		{
+			mapped = (uint8_t*)MapBuffer(userHBuffer);
+		}
+
+		// @TODO: store upload instance data
+
+		return mapped;
+	}
+
+	void UploadManager::EndBufferUpload(HBuffer userHBuffer)
+	{
+		// @TODO: fetch upload instance data
+
+		Buffer& userBuffer = rhi.buffers.Get(userHBuffer);
+		//if() // @TODO: 
+		{
+			D3D(commandAllocator->Reset());
+			D3D(commandList->Reset(commandAllocator, NULL));
+
+			// @TODO:
+			//commandList->CopyBufferRegion(userBuffer.buffer, 0);
+
+			ID3D12CommandList* commandLists[] = { commandList };
+			D3D(commandList->Close());
+			rhi.commandQueue->ExecuteCommandLists(ARRAY_LEN(commandLists), commandLists);
+			fenceValue++;
+			rhi.commandQueue->Signal(fence.fence, fenceValue);
+		}
+		
+		const uint32_t uploadByteCount = userBuffer.desc.byteCount;
+		bufferByteOffset = AlignUp(bufferByteOffset + uploadByteCount, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+
+		// @TODO: release upload instance data
 	}
 
 	void DescriptorHeap::Create(D3D12_DESCRIPTOR_HEAP_TYPE heapType, uint32_t size, uint16_t* freeListItems, const char* name)
@@ -1737,7 +1847,7 @@ namespace RHI
 		rhi.fence.Create(rhi.fenceValues[rhi.frameIndex], "main command queue");
 		rhi.fenceValues[rhi.frameIndex]++;
 
-		rhi.upload.Create();
+		rhi.textureUpload.Create();
 
 		{
 			rhi.durationQueryIndex = 0;
@@ -1793,7 +1903,7 @@ namespace RHI
 
 		WaitUntilDeviceIsIdle();
 
-		rhi.upload.Release();
+		rhi.textureUpload.Release();
 		rhi.fence.Release();
 		rhi.descHeapGeneric.Release();
 		rhi.descHeapSamplers.Release();
@@ -1841,7 +1951,7 @@ namespace RHI
 		rhi.currentRootSignature = RHI_MAKE_NULL_HANDLE();
 
 		// wait for pending copies from the upload buffer to textures to be finished
-		rhi.upload.WaitOnGPU(rhi.commandQueue);
+		rhi.textureUpload.WaitOnGPU(rhi.commandQueue);
 
 		// reclaim used memory
 		D3D(rhi.commandAllocators[rhi.frameIndex]->Reset());
@@ -1993,7 +2103,7 @@ namespace RHI
 		rhi.buffers.Remove(handle);
 	}
 
-	void* MapBuffer(HBuffer handle)
+	uint8_t* MapBuffer(HBuffer handle)
 	{
 		Buffer& buffer = rhi.buffers.Get(handle);
 		if(buffer.mapped)
@@ -2006,7 +2116,7 @@ namespace RHI
 		D3D(buffer.buffer->Map(0, NULL, &mappedPtr));
 		buffer.mapped = true;
 
-		return mappedPtr;
+		return (uint8_t*)mappedPtr;
 	}
 
 	void UnmapBuffer(HBuffer handle)
@@ -2172,7 +2282,7 @@ namespace RHI
 
 	void UploadTextureMip0(HTexture handle, const TextureUpload& desc)
 	{
-		rhi.upload.Upload(handle, desc);
+		rhi.textureUpload.Upload(handle, desc);
 	}
 
 	void FinishTextureUpload(HTexture texture)
@@ -2858,6 +2968,8 @@ namespace RHI
 
 	void CmdBarrier(uint32_t texCount, const TextureBarrier* textures, uint32_t buffCount, const BufferBarrier* buffers)
 	{
+		Q_assert(CanWriteCommands());
+
 		static D3D12_RESOURCE_BARRIER barriers[MAX_DRAWIMAGES * 2];
 		Q_assert(buffCount + texCount <= ARRAY_LEN(barriers));
 
@@ -2884,6 +2996,16 @@ namespace RHI
 		{
 			rhi.commandList->ResourceBarrier(barrierCount, barriers);
 		}
+	}
+
+	uint8_t* BeginBufferUpload(HBuffer buffer)
+	{
+		return rhi.upload.BeginBufferUpload(buffer);
+	}
+
+	void EndBufferUpload(HBuffer buffer)
+	{
+		rhi.upload.EndBufferUpload(buffer);
 	}
 
 #if defined(_DEBUG) || defined(CNQ3_DEV)
