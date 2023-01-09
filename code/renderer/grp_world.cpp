@@ -78,16 +78,18 @@ void World::Init()
 		pipeline = CreateGraphicsPipeline(desc);
 	}
 
-	prePassGeo.maxVertexCount = 64 << 20;
+	prePassGeo.maxVertexCount = 1 << 20;
 	prePassGeo.maxIndexCount = 8 * prePassGeo.maxVertexCount;
 	{
 		// @TODO: don't use host-visible buffers...
 		BufferDesc desc("depth pre-pass index", sizeof(Index) * prePassGeo.maxIndexCount, ResourceStates::IndexBufferBit);
+		desc.memoryUsage = MemoryUsage::GPU;
 		prePassGeo.indexBuffer = CreateBuffer(desc);
 	}
 	{
 		// @TODO: don't use host-visible buffers...
 		BufferDesc desc("depth pre-pass vertex", 16 * prePassGeo.maxVertexCount, ResourceStates::VertexBufferBit);
+		desc.memoryUsage = MemoryUsage::GPU;
 		prePassGeo.vertexBuffer = CreateBuffer(desc);
 	}
 }
@@ -140,8 +142,8 @@ void World::Draw()
 
 void World::ProcessWorld(world_t& world)
 {
-	float* vtx = (float*)MapBuffer(prePassGeo.vertexBuffer);
-	Index* idx = (Index*)MapBuffer(prePassGeo.indexBuffer);
+	float* vtx = (float*)BeginBufferUpload(prePassGeo.vertexBuffer);
+	Index* idx = (Index*)BeginBufferUpload(prePassGeo.indexBuffer);
 
 	int firstVertex = 0;
 	int firstIndex = 0;
@@ -207,8 +209,8 @@ void World::ProcessWorld(world_t& world)
 		tess.numIndexes = 0;
 	}
 
-	UnmapBuffer(prePassGeo.vertexBuffer);
-	UnmapBuffer(prePassGeo.indexBuffer);
+	EndBufferUpload(prePassGeo.vertexBuffer);
+	EndBufferUpload(prePassGeo.indexBuffer);
 
 	prePassGeo.vertexCount = firstVertex;
 	prePassGeo.indexCount = firstIndex;

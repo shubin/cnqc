@@ -200,6 +200,8 @@ namespace RHI
 		D3D12_GPU_VIRTUAL_ADDRESS gpuAddress;
 		D3D12_RESOURCE_STATES currentState;
 		bool mapped;
+		bool uploading;
+		UINT64 uploadByteOffset;
 	};
 
 	struct Texture
@@ -314,6 +316,7 @@ namespace RHI
 		HBuffer uploadHBuffer;
 		uint32_t bufferByteCount;
 		uint32_t bufferByteOffset;
+		uint8_t* mappedBuffer;
 
 		Fence fence;
 		// fenceValue      : signaled value after last uploaded chunk
@@ -744,17 +747,16 @@ namespace RHI
 	
 	void UploadManager::Create()
 	{
-		{
-			BufferDesc bufferDesc("texture upload", 128 << 20, ResourceStates::CopyDestinationBit);
-			uploadHBuffer = CreateBuffer(bufferDesc);
-			bufferByteCount = bufferDesc.byteCount;
-			bufferByteOffset = 0;
-		}
+		BufferDesc bufferDesc("texture upload", 128 << 20, ResourceStates::CopyDestinationBit);
+		uploadHBuffer = CreateBuffer(bufferDesc);
+		bufferByteCount = bufferDesc.byteCount;
+		bufferByteOffset = 0;
+		mappedBuffer = MapBuffer(uploadHBuffer);
 
-		D3D(rhi.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COMPUTE, IID_PPV_ARGS(&commandAllocator)));
+		D3D(rhi.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocator)));
 		SetDebugName(commandAllocator, "upload", D3DResourceType::CommandAllocator);
 
-		D3D(rhi.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COMPUTE, commandAllocator, NULL, IID_PPV_ARGS(&commandList)));
+		D3D(rhi.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator, NULL, IID_PPV_ARGS(&commandList)));
 		SetDebugName(commandList, "upload", D3DResourceType::CommandList);
 		D3D(commandList->Close());
 
@@ -765,6 +767,7 @@ namespace RHI
 
 	void UploadManager::Release()
 	{
+		UnmapBuffer(uploadHBuffer);
 		fence.Release();
 		COM_RELEASE(commandList);
 		COM_RELEASE(commandAllocator);
@@ -773,6 +776,8 @@ namespace RHI
 	uint8_t* UploadManager::BeginBufferUpload(HBuffer userHBuffer)
 	{
 		Buffer& userBuffer = rhi.buffers.Get(userHBuffer);
+		Q_assert(!userBuffer.uploading);
+
 		const uint32_t uploadByteCount = userBuffer.desc.byteCount;
 		if(uploadByteCount > bufferByteCount)
 		{
@@ -792,30 +797,34 @@ namespace RHI
 		Q_assert(userBuffer.desc.memoryUsage != MemoryUsage::Readback);
 		if(userBuffer.desc.memoryUsage == MemoryUsage::GPU)
 		{
-			mapped = (uint8_t*)MapBuffer(uploadHBuffer);
+			mapped = mappedBuffer + bufferByteOffset;
+			userBuffer.uploadByteOffset = bufferByteOffset;
 		}
 		else
 		{
 			mapped = (uint8_t*)MapBuffer(userHBuffer);
 		}
+		userBuffer.uploading = true;
 
-		// @TODO: store upload instance data
+		// @TODO: what kind of alignment do we need, if any?
+		bufferByteOffset = AlignUp(bufferByteOffset + uploadByteCount, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 
 		return mapped;
 	}
 
 	void UploadManager::EndBufferUpload(HBuffer userHBuffer)
 	{
-		// @TODO: fetch upload instance data
-
 		Buffer& userBuffer = rhi.buffers.Get(userHBuffer);
-		//if() // @TODO: 
+		Q_assert(userBuffer.uploading);
+
+		Buffer& uploadBuffer = rhi.buffers.Get(uploadHBuffer);
+
+		if(!userBuffer.mapped)
 		{
-			D3D(commandAllocator->Reset());
 			D3D(commandList->Reset(commandAllocator, NULL));
 
-			// @TODO:
-			//commandList->CopyBufferRegion(userBuffer.buffer, 0);
+			const UINT64 byteCount = min(userBuffer.desc.byteCount, uploadBuffer.desc.byteCount);
+			commandList->CopyBufferRegion(userBuffer.buffer, 0, uploadBuffer.buffer, userBuffer.uploadByteOffset, byteCount);
 
 			ID3D12CommandList* commandLists[] = { commandList };
 			D3D(commandList->Close());
@@ -823,11 +832,12 @@ namespace RHI
 			fenceValue++;
 			rhi.commandQueue->Signal(fence.fence, fenceValue);
 		}
-		
-		const uint32_t uploadByteCount = userBuffer.desc.byteCount;
-		bufferByteOffset = AlignUp(bufferByteOffset + uploadByteCount, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+		else
+		{
+			UnmapBuffer(userHBuffer);
+		}
 
-		// @TODO: release upload instance data
+		userBuffer.uploading = false;
 	}
 
 	void DescriptorHeap::Create(D3D12_DESCRIPTOR_HEAP_TYPE heapType, uint32_t size, uint16_t* freeListItems, const char* name)
@@ -1848,6 +1858,7 @@ namespace RHI
 		rhi.fenceValues[rhi.frameIndex]++;
 
 		rhi.textureUpload.Create();
+		rhi.upload.Create();
 
 		{
 			rhi.durationQueryIndex = 0;
@@ -1904,6 +1915,7 @@ namespace RHI
 		WaitUntilDeviceIsIdle();
 
 		rhi.textureUpload.Release();
+		rhi.upload.Release();
 		rhi.fence.Release();
 		rhi.descHeapGeneric.Release();
 		rhi.descHeapSamplers.Release();
