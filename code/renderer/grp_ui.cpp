@@ -104,13 +104,13 @@ void UI::Init()
 		GraphicsPipelineDesc desc("UI", rootSignature);
 		desc.vertexShader = CompileVertexShader(vs);
 		desc.pixelShader = CompilePixelShader(ps);
-		desc.vertexLayout.bindingStrides[0] = sizeof(UI::vertex_t);
+		desc.vertexLayout.bindingStrides[0] = sizeof(UI::Vertex);
 		desc.vertexLayout.AddAttribute(0, ShaderSemantic::Position,
-			DataType::Float32, 2, offsetof(UI::vertex_t, position));
+			DataType::Float32, 2, offsetof(UI::Vertex, position));
 		desc.vertexLayout.AddAttribute(0, ShaderSemantic::TexCoord,
-			DataType::Float32, 2, offsetof(UI::vertex_t, texCoords));
+			DataType::Float32, 2, offsetof(UI::Vertex, texCoords));
 		desc.vertexLayout.AddAttribute(0, ShaderSemantic::Color,
-			DataType::UNorm8, 4, offsetof(UI::vertex_t, color));
+			DataType::UNorm8, 4, offsetof(UI::Vertex, color));
 		desc.depthStencil.depthComparison = ComparisonFunction::Always;
 		desc.depthStencil.depthStencilFormat = TextureFormat::DepthStencil32_UNorm24_UInt8;
 		desc.depthStencil.enableDepthTest = false;
@@ -122,15 +122,14 @@ void UI::Init()
 	maxVertexCount = 64 << 10;
 	maxIndexCount = 8 * maxVertexCount;
 	{
-		BufferDesc desc("UI index", sizeof(UI::index_t) * maxIndexCount * FrameCount, ResourceStates::IndexBufferBit);
+		BufferDesc desc("UI index", sizeof(UI::Index) * maxIndexCount * FrameCount, ResourceStates::IndexBufferBit);
 		indexBuffer = CreateBuffer(desc);
-		indices = (UI::index_t*)MapBuffer(indexBuffer);
-
+		indices = (UI::Index*)MapBuffer(indexBuffer);
 	}
 	{
-		BufferDesc desc("UI vertex", sizeof(UI::vertex_t) * maxVertexCount * FrameCount, ResourceStates::VertexBufferBit);
+		BufferDesc desc("UI vertex", sizeof(UI::Vertex) * maxVertexCount * FrameCount, ResourceStates::VertexBufferBit);
 		vertexBuffer = CreateBuffer(desc);
-		vertices = (UI::vertex_t*)MapBuffer(vertexBuffer);
+		vertices = (UI::Vertex*)MapBuffer(vertexBuffer);
 	}
 }
 
@@ -155,9 +154,9 @@ void UI::Begin()
 	CmdBindRootSignature(rootSignature);
 	CmdBindPipeline(pipeline);
 	CmdBindDescriptorTable(rootSignature, descriptorTable);
-	const uint32_t stride = sizeof(UI::vertex_t);
+	const uint32_t stride = sizeof(UI::Vertex);
 	CmdBindVertexBuffers(1, &vertexBuffer, &stride, NULL);
-	CmdBindIndexBuffer(indexBuffer, IndexType::UInt32, 0);
+	CmdBindIndexBuffer(indexBuffer, indexType, 0);
 	const float scale[2] = { 2.0f / glConfig.vidWidth, 2.0f / glConfig.vidHeight };
 	CmdSetRootConstants(rootSignature, ShaderStage::Vertex, scale);
 

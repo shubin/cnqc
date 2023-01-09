@@ -41,9 +41,11 @@ struct UI
 	const void* StretchPic(const void* data);
 	const void* Triangle(const void* data);
 
-	typedef uint32_t index_t;
+	typedef uint16_t Index;
+	const IndexType::Id indexType = IndexType::UInt16;
+
 #pragma pack(push, 1)
-	struct vertex_t
+	struct Vertex
 	{
 		vec2_t position;
 		vec2_t texCoords;
@@ -61,8 +63,8 @@ struct UI
 	HPipeline pipeline;
 	HBuffer indexBuffer;
 	HBuffer vertexBuffer;
-	index_t* indices; // @TODO: 16-bit indices
-	vertex_t* vertices;
+	Index* indices;
+	Vertex* vertices;
 	uint32_t color;
 	const shader_t* shader;
 };
