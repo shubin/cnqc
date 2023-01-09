@@ -135,6 +135,11 @@ namespace RHI
 	static const uint32_t MaxCPUSamplerDescriptors = RHI_MAX_SAMPLERS * 4;
 	static const uint32_t MaxCPURTVDescriptors = 256;
 	static const uint32_t MaxCPUDSVDescriptors = 64;
+	static const uint32_t MaxCPUDescriptors =
+		MaxCPUGenericDescriptors +
+		MaxCPUSamplerDescriptors +
+		MaxCPURTVDescriptors +
+		MaxCPUDSVDescriptors;
 
 	struct ResourceType
 	{
@@ -296,6 +301,26 @@ namespace RHI
 		UINT64 fenceValueRewind;
 	};
 
+	struct DescriptorHeap
+	{
+		void Create(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t size, uint16_t* freeListItems, const char* name);
+		void Release();
+		uint32_t Allocate();
+		void Free(uint32_t index);
+		D3D12_CPU_DESCRIPTOR_HANDLE GetCPUHandle(uint32_t index);
+		uint32_t CreateSRV(ID3D12Resource* resource, D3D12_SHADER_RESOURCE_VIEW_DESC& desc);
+		uint32_t CreateUAV(ID3D12Resource* resource, D3D12_UNORDERED_ACCESS_VIEW_DESC& desc);
+		uint32_t CreateRTV(ID3D12Resource* resource, D3D12_RENDER_TARGET_VIEW_DESC& desc);
+		uint32_t CreateDSV(ID3D12Resource* resource, D3D12_DEPTH_STENCIL_VIEW_DESC& desc);
+		uint32_t CreateSampler(D3D12_SAMPLER_DESC& desc);
+
+		StaticFreeList<uint16_t, InvalidDescriptorIndex> freeList;
+		ID3D12DescriptorHeap* heap;
+		D3D12_CPU_DESCRIPTOR_HANDLE startAddress;
+		UINT descriptorSize;
+		D3D12_DESCRIPTOR_HEAP_TYPE type;
+	};
+
 	struct DurationQuery
 	{
 		char name[64];
@@ -352,14 +377,12 @@ namespace RHI
 		uint32_t durationQueryIndex;
 		HRootSignature currentRootSignature;
 		HDurationQuery frameDuration;
-		StaticFreeList<uint16_t, MaxCPUGenericDescriptors, InvalidDescriptorIndex> freeListGeneric;
-		StaticFreeList<uint16_t, MaxCPUSamplerDescriptors, InvalidDescriptorIndex> freeListSamplers;
-		StaticFreeList<uint16_t, MaxCPURTVDescriptors, InvalidDescriptorIndex> freeListRTVs;
-		StaticFreeList<uint16_t, MaxCPUDSVDescriptors, InvalidDescriptorIndex> freeListDSVs;
-		ID3D12DescriptorHeap* descHeapGeneric;
-		ID3D12DescriptorHeap* descHeapSamplers;
-		ID3D12DescriptorHeap* descHeapRTVs;
-		ID3D12DescriptorHeap* descHeapDSVs;
+
+		uint16_t descriptorFreeListData[MaxCPUDescriptors];
+		DescriptorHeap descHeapGeneric;
+		DescriptorHeap descHeapSamplers;
+		DescriptorHeap descHeapRTVs;
+		DescriptorHeap descHeapDSVs;
 
 #define POOL(Type, Size) StaticPool<Type, H##Type, ResourceType::Type, Size>
 		POOL(Buffer, 64) buffers;
@@ -695,6 +718,92 @@ namespace RHI
 		COM_RELEASE(commandList);
 		COM_RELEASE(commandAllocator);
 		COM_RELEASE(commandQueue);
+	}
+
+	void DescriptorHeap::Create(D3D12_DESCRIPTOR_HEAP_TYPE heapType, uint32_t size, uint16_t* freeListItems, const char* name)
+	{
+		heap = CreateDescriptorHeap(heapType, size, false, name);
+		freeList.Init(freeListItems, size);
+		startAddress = heap->GetCPUDescriptorHandleForHeapStart();
+		descriptorSize = rhi.device->GetDescriptorHandleIncrementSize(heapType);
+		type = heapType;
+	}
+
+	void DescriptorHeap::Release()
+	{
+		COM_RELEASE(heap);
+	}
+
+	uint32_t DescriptorHeap::Allocate()
+	{
+		return freeList.Allocate();
+	}
+
+	void DescriptorHeap::Free(uint32_t index)
+	{
+		freeList.Free(index);
+	}
+
+	D3D12_CPU_DESCRIPTOR_HANDLE DescriptorHeap::GetCPUHandle(uint32_t index)
+	{
+		D3D12_CPU_DESCRIPTOR_HANDLE handle = startAddress;
+		handle.ptr += index * descriptorSize;
+
+		return handle;
+	}
+
+	uint32_t DescriptorHeap::CreateSRV(ID3D12Resource* resource, D3D12_SHADER_RESOURCE_VIEW_DESC& desc)
+	{
+		Q_assert(resource);
+		Q_assert(type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+		const uint32_t index = freeList.Allocate();
+		rhi.device->CreateShaderResourceView(resource, &desc, GetCPUHandle(index));
+
+		return index;
+	}
+
+	uint32_t DescriptorHeap::CreateUAV(ID3D12Resource* resource, D3D12_UNORDERED_ACCESS_VIEW_DESC& desc)
+	{
+		Q_assert(resource);
+		Q_assert(type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+		const uint32_t index = freeList.Allocate();
+		rhi.device->CreateUnorderedAccessView(resource, NULL, &desc, GetCPUHandle(index));
+
+		return index;
+	}
+
+	uint32_t DescriptorHeap::CreateRTV(ID3D12Resource* resource, D3D12_RENDER_TARGET_VIEW_DESC& desc)
+	{
+		Q_assert(resource);
+		Q_assert(type == D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
+		const uint32_t index = freeList.Allocate();
+		rhi.device->CreateRenderTargetView(resource, &desc, GetCPUHandle(index));
+
+		return index;
+	}
+
+	uint32_t DescriptorHeap::CreateDSV(ID3D12Resource* resource, D3D12_DEPTH_STENCIL_VIEW_DESC& desc)
+	{
+		Q_assert(resource);
+		Q_assert(type == D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+
+		const uint32_t index = freeList.Allocate();
+		rhi.device->CreateDepthStencilView(resource, &desc, GetCPUHandle(index));
+
+		return index;
+	}
+
+	uint32_t DescriptorHeap::CreateSampler(D3D12_SAMPLER_DESC& desc)
+	{
+		Q_assert(type == D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+
+		const uint32_t index = freeList.Allocate();
+		rhi.device->CreateSampler(&desc, GetCPUHandle(index));
+
+		return index;
 	}
 
 	static const char* GetDeviceRemovedReasonString(HRESULT reason)
@@ -1249,14 +1358,11 @@ namespace RHI
 		rhi.nullSampler = CreateSampler(SamplerDesc());
 	}
 
-	static void CopyDescriptor(ID3D12DescriptorHeap* dstHeap, uint32_t dstIndex, ID3D12DescriptorHeap* srcHeap, uint32_t srcIndex, D3D12_DESCRIPTOR_HEAP_TYPE heapType)
+	static void CopyDescriptor(ID3D12DescriptorHeap* dstHeap, uint32_t dstIndex, DescriptorHeap& srcHeap, uint32_t srcIndex)
 	{
-		const UINT incSize = rhi.device->GetDescriptorHandleIncrementSize(heapType);
-		D3D12_CPU_DESCRIPTOR_HANDLE srcHandle = srcHeap->GetCPUDescriptorHandleForHeapStart();
 		D3D12_CPU_DESCRIPTOR_HANDLE dstHandle = dstHeap->GetCPUDescriptorHandleForHeapStart();
-		srcHandle.ptr += srcIndex * incSize;
-		dstHandle.ptr += dstIndex * incSize;
-		rhi.device->CopyDescriptorsSimple(1, dstHandle, srcHandle, heapType);
+		dstHandle.ptr += dstIndex * srcHeap.descriptorSize;
+		rhi.device->CopyDescriptorsSimple(1, dstHandle, srcHeap.GetCPUHandle(srcIndex), srcHeap.type);
 	}
 
 	static bool BeginTable(const char* name, int count)
@@ -1332,8 +1438,10 @@ namespace RHI
 			TableHeader2("Type", "Count");
 
 #define ITEM(Name, Variable) TableRow2(Name, va("%d", (int)Variable.allocatedItemCount))
-			ITEM("CBV/SRV/UAV", rhi.freeListGeneric);
-			ITEM("Samplers", rhi.freeListSamplers);
+			ITEM("CBV/SRV/UAV", rhi.descHeapGeneric.freeList);
+			ITEM("Samplers", rhi.descHeapSamplers.freeList);
+			ITEM("RTV", rhi.descHeapRTVs.freeList);
+			ITEM("DSV", rhi.descHeapDSVs.freeList);
 #undef ITEM
 
 			ImGui::EndTable();
@@ -1549,10 +1657,16 @@ namespace RHI
 		}
 #endif
 
-		rhi.descHeapGeneric = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, MaxCPUGenericDescriptors, false, "all-encompassing CBV SRV UAV");
-		rhi.descHeapSamplers = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, MaxCPUSamplerDescriptors, false, "all-encompassing sampler");
-		rhi.descHeapRTVs = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, MaxCPURTVDescriptors, false, "all-encompassing RTV");
-		rhi.descHeapDSVs = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, MaxCPUDSVDescriptors, false, "all-encompassing DSV");
+		{
+			uint16_t* freeList = rhi.descriptorFreeListData;
+			rhi.descHeapGeneric.Create(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, MaxCPUGenericDescriptors, freeList, "all-encompassing CBV SRV UAV");
+			freeList += MaxCPUGenericDescriptors;
+			rhi.descHeapSamplers.Create(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, MaxCPUSamplerDescriptors, freeList, "all-encompassing sampler");
+			freeList += MaxCPUSamplerDescriptors;
+			rhi.descHeapRTVs.Create(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, MaxCPURTVDescriptors, freeList, "all-encompassing RTV");
+			freeList += MaxCPURTVDescriptors;
+			rhi.descHeapDSVs.Create(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, MaxCPUDSVDescriptors, freeList, "all-encompassing DSV");
+		}
 
 		{
 			D3D12_COMMAND_QUEUE_DESC commandQueueDesc = { 0 };
@@ -1681,6 +1795,10 @@ namespace RHI
 
 		rhi.upload.Release();
 		rhi.fence.Release();
+		rhi.descHeapGeneric.Release();
+		rhi.descHeapSamplers.Release();
+		rhi.descHeapRTVs.Release();
+		rhi.descHeapDSVs.Release();
 
 		DESTROY_POOL(buffers, DestroyBuffer);
 		DESTROY_POOL(textures, DestroyTexture);
@@ -1688,8 +1806,6 @@ namespace RHI
 		DESTROY_POOL(rootSignatures, DestroyRootSignature);
 		DESTROY_POOL(pipelines, DestroyPipeline);
 
-		COM_RELEASE(rhi.descHeapGeneric);
-		COM_RELEASE(rhi.descHeapSamplers);
 		COM_RELEASE(rhi.timeStampHeap);
 		COM_RELEASE(rhi.commandList);
 		COM_RELEASE_ARRAY(rhi.commandAllocators);
@@ -1990,11 +2106,7 @@ namespace RHI
 			srv.Texture2D.MostDetailedMip = 0;
 			srv.Texture2D.PlaneSlice = 0;
 			srv.Texture2D.ResourceMinLODClamp = 0.0f;
-
-			srvIndex = rhi.freeListGeneric.Allocate();
-			D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = rhi.descHeapGeneric->GetCPUDescriptorHandleForHeapStart();
-			srvHandle.ptr += srvIndex * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			rhi.device->CreateShaderResourceView(resource, &srv, srvHandle);
+			srvIndex = rhi.descHeapGeneric.CreateSRV(resource, srv);
 		}
 
 		uint32_t rtvIndex = InvalidDescriptorIndex;
@@ -2005,11 +2117,7 @@ namespace RHI
 			rtv.Format = desc.Format;
 			rtv.Texture2D.MipSlice = 0;
 			rtv.Texture2D.PlaneSlice = 0;
-
-			rtvIndex = rhi.freeListRTVs.Allocate();
-			D3D12_CPU_DESCRIPTOR_HANDLE handle = rhi.descHeapRTVs->GetCPUDescriptorHandleForHeapStart();
-			handle.ptr += rtvIndex * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-
+			rtvIndex = rhi.descHeapRTVs.CreateRTV(resource, rtv);
 			requestTransition = true;
 		}
 
@@ -2021,12 +2129,7 @@ namespace RHI
 			dsv.Format = desc.Format;
 			dsv.Flags = D3D12_DSV_FLAG_NONE; // @TODO:
 			dsv.Texture2D.MipSlice = 0;
-
-			dsvIndex = rhi.freeListDSVs.Allocate();
-			D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = rhi.descHeapDSVs->GetCPUDescriptorHandleForHeapStart();
-			dsvHandle.ptr += dsvIndex * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-			rhi.device->CreateDepthStencilView(resource, &dsv, dsvHandle);
-
+			dsvIndex = rhi.descHeapDSVs.CreateDSV(resource, dsv);
 			requestTransition = true;
 		}
 
@@ -2047,12 +2150,7 @@ namespace RHI
 				uav.Format = desc.Format;
 				uav.Texture2D.MipSlice = m;
 				uav.Texture2D.PlaneSlice = 0;
-
-				const uint32_t index = rhi.freeListGeneric.Allocate();
-				D3D12_CPU_DESCRIPTOR_HANDLE handle = rhi.descHeapGeneric->GetCPUDescriptorHandleForHeapStart();
-				handle.ptr += index * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-				rhi.device->CreateUnorderedAccessView(resource, NULL, &uav, handle);
-				texture.mips[m].uavIndex = index;
+				texture.mips[m].uavIndex = rhi.descHeapGeneric.CreateUAV(resource, uav);
 			}
 		}
 		else
@@ -2087,21 +2185,21 @@ namespace RHI
 		Texture& texture = rhi.textures.Get(handle);
 		if(texture.desc.allowedState & ResourceStates::ShaderAccessBits)
 		{
-			rhi.freeListGeneric.Free(texture.srvIndex);
+			rhi.descHeapGeneric.Free(texture.srvIndex);
 		}
 		if(texture.desc.allowedState & ResourceStates::RenderTargetBit)
 		{
-			rhi.freeListRTVs.Free(texture.rtvIndex);
+			rhi.descHeapRTVs.Free(texture.rtvIndex);
 		}
 		if(texture.desc.allowedState & ResourceStates::DepthWriteBit)
 		{
-			rhi.freeListDSVs.Free(texture.dsvIndex);
+			rhi.descHeapDSVs.Free(texture.dsvIndex);
 		}
 		if(texture.desc.allowedState & ResourceStates::UnorderedAccessBit)
 		{
 			for(uint32_t m = 0; m < texture.desc.mipCount; ++m)
 			{
-				rhi.freeListGeneric.Free(texture.mips[m].uavIndex);
+				rhi.descHeapGeneric.Free(texture.mips[m].uavIndex);
 			}
 		}
 		COM_RELEASE(texture.texture);
@@ -2111,11 +2209,6 @@ namespace RHI
 
 	HSampler CreateSampler(const SamplerDesc& sampler)
 	{
-		const uint32_t index = rhi.freeListSamplers.Allocate();
-
-		D3D12_CPU_DESCRIPTOR_HANDLE address = rhi.descHeapSamplers->GetCPUDescriptorHandleForHeapStart();
-		address.ptr += index * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-
 		const D3D12_TEXTURE_ADDRESS_MODE addressMode = GetD3DTextureAddressMode(sampler.wrapMode);
 		D3D12_FILTER filter = GetD3DFilter(sampler.filterMode);
 		UINT maxAnisotropy = r_ext_max_anisotropy->integer;
@@ -2137,7 +2230,7 @@ namespace RHI
 		desc.MaxAnisotropy = maxAnisotropy;
 		desc.MaxLOD = 0.0f;
 		desc.Filter = filter;
-		rhi.device->CreateSampler(&desc, address);
+		const uint32_t index = rhi.descHeapSamplers.CreateSampler(desc);
 
 		return RHI_MAKE_HANDLE(CreateHandle(ResourceType::Sampler, index, 0));
 	}
@@ -2153,7 +2246,7 @@ namespace RHI
 			return;
 		}
 
-		rhi.freeListSamplers.Free(index);
+		rhi.descHeapSamplers.Free(index);
 	}
 
 	static void AddShaderVisibility(bool outVis[ShaderStage::Count], D3D12_SHADER_VISIBILITY inVis)
@@ -2330,7 +2423,7 @@ namespace RHI
 
 			for(uint32_t i = 0; i < range.count; ++i)
 			{
-				CopyDescriptor(table.genericHeap, range.firstIndex + i, rhi.descHeapGeneric, index, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				CopyDescriptor(table.genericHeap, range.firstIndex + i, rhi.descHeapGeneric, index);
 			}
 		}
 
@@ -2339,7 +2432,7 @@ namespace RHI
 		{
 			Handle type, index, gen;
 			DecomposeHandle(&type, &index, &gen, rhi.nullSampler.v);
-			CopyDescriptor(table.samplerHeap, d, rhi.descHeapSamplers, index, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+			CopyDescriptor(table.samplerHeap, d, rhi.descHeapSamplers, index);
 		}
 
 		return rhi.descriptorTables.Add(table);
@@ -2356,7 +2449,7 @@ namespace RHI
 			for(uint32_t i = 0; i < update.resourceCount; ++i)
 			{
 				const Texture& texture = rhi.textures.Get(update.textures[i]);
-				CopyDescriptor(table.genericHeap, update.firstIndex + i, rhi.descHeapGeneric, texture.srvIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				CopyDescriptor(table.genericHeap, update.firstIndex + i, rhi.descHeapGeneric, texture.srvIndex);
 			}
 		}
 		else if(update.type == DescriptorType::RWTexture && table.genericHeap)
@@ -2381,7 +2474,7 @@ namespace RHI
 
 				for(uint32_t m = start; m < end; ++m)
 				{
-					CopyDescriptor(table.genericHeap, destIndex++, rhi.descHeapGeneric, texture.mips[m].uavIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+					CopyDescriptor(table.genericHeap, destIndex++, rhi.descHeapGeneric, texture.mips[m].uavIndex);
 				}
 			}
 		}
@@ -2391,7 +2484,7 @@ namespace RHI
 			{
 				Handle htype, index, gen;
 				DecomposeHandle(&htype, &index, &gen, update.samplers[i].v);
-				CopyDescriptor(table.samplerHeap, update.firstIndex + i, rhi.descHeapSamplers, index, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+				CopyDescriptor(table.samplerHeap, update.firstIndex + i, rhi.descHeapSamplers, index);
 			}
 		}
 		else
@@ -2524,8 +2617,7 @@ namespace RHI
 
 		Q_assert(depthStencilTarget != NULL);
 		const Texture& depthStencil = rhi.textures.Get(*depthStencilTarget);
-		D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = rhi.descHeapDSVs->GetCPUDescriptorHandleForHeapStart();
-		dsvHandle.ptr += depthStencil.dsvIndex * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+		const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = rhi.descHeapDSVs.GetCPUHandle(depthStencil.dsvIndex);
 		rhi.commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 	}
 

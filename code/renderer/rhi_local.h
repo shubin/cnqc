@@ -899,11 +899,13 @@ namespace RHI
 		uint32_t count;
 	};
 
-	template<typename T, uint32_t N, uint32_t Invalid>
+	template<typename T, uint32_t Invalid>
 	struct StaticFreeList
 	{
-		StaticFreeList()
+		void Init(T* items_, uint32_t size_)
 		{
+			items = items_;
+			size = size_;
 			Clear();
 		}
 
@@ -922,7 +924,7 @@ namespace RHI
 
 		void Free(uint32_t index)
 		{
-			Q_assert(index < N);
+			Q_assert(index < size);
 			// @TODO: fatal error in release
 
 			const T oldList = firstFree;
@@ -933,17 +935,18 @@ namespace RHI
 
 		void Clear()
 		{
-			for(uint32_t i = 0; i < N - 1; ++i)
+			for(uint32_t i = 0; i < size - 1; ++i)
 			{
 				items[i] = i + 1;
 			}
-			items[N - 1] = Invalid;
+			items[size - 1] = Invalid;
 			firstFree = 0;
 			allocatedItemCount = 0;
 		}
 
-		T items[N];
+		T* items;
 		T firstFree;
 		uint32_t allocatedItemCount;
+		uint32_t size;
 	};
 }
