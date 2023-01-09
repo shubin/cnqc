@@ -2000,7 +2000,17 @@ namespace RHI
 		uint32_t rtvIndex = InvalidDescriptorIndex;
 		if(rhiDesc.allowedState & ResourceStates::RenderTargetBit)
 		{
-			// @TODO:
+			D3D12_RENDER_TARGET_VIEW_DESC rtv = { 0 };
+			rtv.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+			rtv.Format = desc.Format;
+			rtv.Texture2D.MipSlice = 0;
+			rtv.Texture2D.PlaneSlice = 0;
+
+			rtvIndex = rhi.freeListRTVs.Allocate();
+			D3D12_CPU_DESCRIPTOR_HANDLE handle = rhi.descHeapRTVs->GetCPUDescriptorHandleForHeapStart();
+			handle.ptr += rtvIndex * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
+			requestTransition = true;
 		}
 
 		uint32_t dsvIndex = InvalidDescriptorIndex;
@@ -2075,6 +2085,25 @@ namespace RHI
 	void DestroyTexture(HTexture handle)
 	{
 		Texture& texture = rhi.textures.Get(handle);
+		if(texture.desc.allowedState & ResourceStates::ShaderAccessBits)
+		{
+			rhi.freeListGeneric.Free(texture.srvIndex);
+		}
+		if(texture.desc.allowedState & ResourceStates::RenderTargetBit)
+		{
+			rhi.freeListRTVs.Free(texture.rtvIndex);
+		}
+		if(texture.desc.allowedState & ResourceStates::DepthWriteBit)
+		{
+			rhi.freeListDSVs.Free(texture.dsvIndex);
+		}
+		if(texture.desc.allowedState & ResourceStates::UnorderedAccessBit)
+		{
+			for(uint32_t m = 0; m < texture.desc.mipCount; ++m)
+			{
+				rhi.freeListGeneric.Free(texture.mips[m].uavIndex);
+			}
+		}
 		COM_RELEASE(texture.texture);
 		COM_RELEASE(texture.allocation);
 		rhi.textures.Remove(handle);
