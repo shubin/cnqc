@@ -36,7 +36,7 @@ struct World
 	void Init();
 	void BeginFrame();
 	void Begin();
-	void Draw();
+	void DrawPrePass();
 	void ProcessWorld(world_t& world);
 
 	typedef uint32_t Index;
@@ -79,7 +79,7 @@ struct UI
 	void Init();
 	void BeginFrame();
 	void Begin();
-	void Draw();
+	void DrawBatch();
 	const void* SetColor(const void* data);
 	const void* StretchPic(const void* data);
 	const void* Triangle(const void* data);

@@ -2719,6 +2719,8 @@ namespace RHI
 		Q_assert(depthStencilTarget != NULL);
 		const Texture& depthStencil = rhi.textures.Get(*depthStencilTarget);
 		const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = rhi.descHeapDSVs.GetCPUHandle(depthStencil.dsvIndex);
+
+		rhi.commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 0.0f, 0, 0, NULL);
 		rhi.commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 	}
 

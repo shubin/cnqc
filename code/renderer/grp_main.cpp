@@ -35,12 +35,6 @@ static const void* SkipCommand(const void* data)
 	return (const void*)(cmd + 1);
 }
 
-static void EndSurfaces()
-{
-	grp.ui.Draw();
-	grp.world.Draw();
-}
-
 
 struct GameplayRenderPipeline : IRenderPipeline
 {
@@ -72,7 +66,7 @@ struct GameplayRenderPipeline : IRenderPipeline
 
 	void EndFrame() override
 	{
-		EndSurfaces();
+		grp.ui.DrawBatch();
 		grp.imgui.Draw();
 		RHI::EndFrame();
 	}
@@ -99,7 +93,7 @@ struct GameplayRenderPipeline : IRenderPipeline
 					data = grp.ui.Triangle(data);
 					break;
 				case RC_DRAW_SURFS:
-					EndSurfaces();
+					grp.world.DrawPrePass();
 					data = SkipCommand<drawSurfsCommand_t>(data);
 					break;
 				case RC_BEGIN_FRAME:

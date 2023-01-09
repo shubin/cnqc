@@ -32,7 +32,7 @@ cbuffer RootConstants
 
 float4 main(float4 position : POSITION) : SV_Position
 {
-	return mul(position, mvp);
+	return mul(mvp, float4(position.xyz, 1.0));
 }
 )grml";
 
@@ -56,7 +56,7 @@ void World::Init()
 	{
 		RootSignatureDesc desc("Z pre-pass");
 		desc.usingVertexBuffers = true;
-		desc.constants[ShaderStage::Vertex].byteCount = 16; // MVP matrix
+		desc.constants[ShaderStage::Vertex].byteCount = 16 * sizeof(float); // MVP matrix
 		desc.constants[ShaderStage::Pixel].byteCount = 0;
 		desc.samplerVisibility = ShaderStages::None;
 		desc.genericVisibility = ShaderStages::None;
@@ -74,7 +74,7 @@ void World::Init()
 		desc.depthStencil.depthStencilFormat = TextureFormat::DepthStencil32_UNorm24_UInt8;
 		desc.depthStencil.enableDepthTest = true;
 		desc.depthStencil.enableDepthWrites = true;
-		desc.rasterizer.cullMode = CullMode::Front;
+		desc.rasterizer.cullMode = CullMode::Back;
 		pipeline = CreateGraphicsPipeline(desc);
 	}
 
@@ -97,7 +97,22 @@ void World::Init()
 void World::BeginFrame()
 {
 	Begin();
+}
 
+void World::Begin()
+{
+	if(grp.renderMode == RenderMode::World)
+	{
+		return;
+	}
+
+	// @TODO: draw current batch...
+
+	grp.renderMode = RenderMode::World;
+}
+
+void World::DrawPrePass()
+{
 	if(tr.world == NULL ||
 		prePassGeo.indexCount <= 0 ||
 		prePassGeo.vertexCount <= 0)
@@ -118,26 +133,9 @@ void World::BeginFrame()
 	CmdSetRootConstants(rootSignature, ShaderStage::Vertex, mvp);
 	CmdBindPipeline(pipeline);
 	CmdBindIndexBuffer(prePassGeo.indexBuffer, indexType, 0);
-	const uint32_t vertexStride = 16;
+	const uint32_t vertexStride = 4 * sizeof(float);
 	CmdBindVertexBuffers(1, &prePassGeo.vertexBuffer, &vertexStride, NULL);
 	CmdDrawIndexed(prePassGeo.indexCount, 0, 0);
-}
-
-void World::Begin()
-{
-	if(grp.renderMode == RenderMode::World)
-	{
-		return;
-	}
-
-	// @TODO: draw current batch...
-
-	grp.renderMode = RenderMode::World;
-}
-
-void World::Draw()
-{
-	//dynamicGeo.EndBatch();
 }
 
 void World::ProcessWorld(world_t& world)
@@ -191,7 +189,7 @@ void World::ProcessWorld(world_t& world)
 			*vtx++ = tess.xyz[v][0];
 			*vtx++ = tess.xyz[v][1];
 			*vtx++ = tess.xyz[v][2];
-			*vtx++ = tess.xyz[v][3];
+			*vtx++ = 1.0f;
 		}
 
 		for(int i = 0; i < tess.numIndexes; ++i)

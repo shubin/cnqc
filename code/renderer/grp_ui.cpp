@@ -163,7 +163,7 @@ void UI::Begin()
 	grp.renderMode = RenderMode::UI;
 }
 
-void UI::Draw()
+void UI::DrawBatch()
 {
 	if(indexCount <= 0)
 	{
@@ -209,7 +209,7 @@ const void* UI::StretchPic(const void* data)
 
 	if(shader != cmd->shader)
 	{
-		Draw();
+		DrawBatch();
 	}
 
 	shader = cmd->shader;
@@ -267,7 +267,7 @@ const void* UI::Triangle(const void* data)
 
 	if(shader != cmd->shader)
 	{
-		Draw();
+		DrawBatch();
 	}
 
 	shader = cmd->shader;
