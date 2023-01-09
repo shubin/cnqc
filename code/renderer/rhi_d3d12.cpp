@@ -2263,7 +2263,7 @@ namespace RHI
 		}
 
 		const HTexture handle = rhi.textures.Add(texture);
-		if(requestTransition)
+		if(requestTransition && rhiDesc.nativeResource == NULL)
 		{
 			rhi.texturesToTransition.Add(handle);
 		}
