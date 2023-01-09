@@ -41,8 +41,9 @@ struct UI
 	const void* StretchPic(const void* data);
 	const void* Triangle(const void* data);
 
-	typedef uint16_t Index;
-	const IndexType::Id indexType = IndexType::UInt16;
+	// 32-bit needed until the render logic is fixed!
+	typedef uint32_t Index;
+	const IndexType::Id indexType = IndexType::UInt32;
 
 #pragma pack(push, 1)
 	struct Vertex
