@@ -31,6 +31,49 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 using namespace RHI;
 
 
+struct World
+{
+	void Init();
+	void BeginFrame();
+	void Begin();
+	void Draw();
+	void ProcessWorld(world_t& world);
+
+	typedef uint32_t Index;
+	const IndexType::Id indexType = IndexType::UInt32;
+
+	struct GeometryBuffer
+	{
+		void EndBatch()
+		{
+			firstIndex += indexCount;
+			firstVertex += vertexCount;
+			indexCount = 0;
+			vertexCount = 0;
+		}
+
+		HBuffer indexBuffer;
+		HBuffer vertexBuffer;
+		int maxIndexCount;
+		int maxVertexCount;
+		int firstIndex;
+		int firstVertex;
+		int indexCount;
+		int vertexCount;
+	};
+
+	//GeometryBuffer dynamicGeo;
+	//GeometryBuffer staticGeo;
+	GeometryBuffer prePassGeo;
+
+	HTexture depthTexture;
+
+	// Z pre-pass
+	HRootSignature rootSignature;
+	HDescriptorTable descriptorTable;
+	HPipeline pipeline; // @TODO: 1 per cull type
+};
+
 struct UI
 {
 	void Init();
@@ -139,6 +182,7 @@ struct RenderMode
 struct GRP
 {
 	UI ui;
+	World world;
 	MipMapGenerator mipMapGen;
 	ImGUI imgui;
 	RenderMode::Id renderMode;

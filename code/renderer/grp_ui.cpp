@@ -119,7 +119,7 @@ void UI::Init()
 		desc.AddRenderTarget(GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, TextureFormat::RGBA32_UNorm);
 		pipeline = CreateGraphicsPipeline(desc);
 	}
-	maxVertexCount = 64 << 10;
+	maxVertexCount = 640 << 10;
 	maxIndexCount = 8 * maxVertexCount;
 	{
 		BufferDesc desc("UI index", sizeof(UI::Index) * maxIndexCount * FrameCount, ResourceStates::IndexBufferBit);
@@ -169,6 +169,8 @@ void UI::Draw()
 	{
 		return;
 	}
+
+	Begin();
 
 	const uint32_t textureIndex = shader->stages[0]->bundle.image[0]->textureIndex;
 	const uint32_t pixelConstants[2] = { textureIndex, 0 }; // second one is the sampler index

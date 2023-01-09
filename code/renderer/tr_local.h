@@ -681,6 +681,12 @@ struct msurface_t {
 	const shader_t* shader;
 	int fogIndex;
 
+	// only set when the associated shader is truly opaque
+	int numVertexes;
+	int numIndexes;
+	int firstVertex;
+	int firstIndex;
+
 	const surfaceType_t* data; // any of srf*_t
 };
 
@@ -1656,8 +1662,12 @@ struct IRenderPipeline
 	virtual void ShutDown(bool fullShutDown) = 0;
 	virtual void BeginFrame() = 0;
 	virtual void EndFrame() = 0;
-	virtual void AddDrawSurface(const surfaceType_t* surface, const shader_t* shader) = 0;
+
 	virtual void ExecuteRenderCommands(const void* data) = 0;
+
+	virtual void AddDrawSurface(const surfaceType_t* surface, const shader_t* shader) = 0;
+	virtual void ProcessWorld( world_t& world ) = 0;
+
 	virtual void CreateTexture(image_t* image, int mipCount, int width, int height) = 0;
 	virtual void UpdateTexture(image_t* image, int mipIndex, int x, int y, int width, int height, const void* data) = 0;
 	virtual void FinalizeTexture(image_t* image) = 0;

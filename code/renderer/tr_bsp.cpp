@@ -1659,6 +1659,7 @@ void RE_LoadWorldMap( const char* name )
 	R_LoadVisibility( &header->lumps[LUMP_VISIBILITY] );
 	R_LoadEntities( &header->lumps[LUMP_ENTITIES] );
 	R_LoadLightGrid( &header->lumps[LUMP_LIGHTGRID] );
+	renderPipeline->ProcessWorld( s_worldData );
 
 	s_worldData.dataSize = (byte*)ri.Hunk_Alloc( 0, h_low ) - startMarker;
 

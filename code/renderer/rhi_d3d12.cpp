@@ -133,6 +133,8 @@ namespace RHI
 	static const D3D_FEATURE_LEVEL FeatureLevel = D3D_FEATURE_LEVEL_12_0;
 	static const uint32_t MaxCPUGenericDescriptors = RHI_MAX_TEXTURES_2D * 4;
 	static const uint32_t MaxCPUSamplerDescriptors = RHI_MAX_SAMPLERS * 4;
+	static const uint32_t MaxCPURTVDescriptors = 256;
+	static const uint32_t MaxCPUDSVDescriptors = 64;
 
 	struct ResourceType
 	{
@@ -201,6 +203,8 @@ namespace RHI
 		D3D12MA::Allocation* allocation;
 		ID3D12Resource* texture;
 		uint32_t srvIndex;
+		uint32_t rtvIndex;
+		uint32_t dsvIndex;
 		D3D12_RESOURCE_STATES currentState;
 		struct Mip
 		{
@@ -350,8 +354,12 @@ namespace RHI
 		HDurationQuery frameDuration;
 		StaticFreeList<uint16_t, MaxCPUGenericDescriptors, InvalidDescriptorIndex> freeListGeneric;
 		StaticFreeList<uint16_t, MaxCPUSamplerDescriptors, InvalidDescriptorIndex> freeListSamplers;
+		StaticFreeList<uint16_t, MaxCPURTVDescriptors, InvalidDescriptorIndex> freeListRTVs;
+		StaticFreeList<uint16_t, MaxCPUDSVDescriptors, InvalidDescriptorIndex> freeListDSVs;
 		ID3D12DescriptorHeap* descHeapGeneric;
 		ID3D12DescriptorHeap* descHeapSamplers;
+		ID3D12DescriptorHeap* descHeapRTVs;
+		ID3D12DescriptorHeap* descHeapDSVs;
 
 #define POOL(Type, Size) StaticPool<Type, H##Type, ResourceType::Type, Size>
 		POOL(Buffer, 64) buffers;
@@ -1079,7 +1087,8 @@ namespace RHI
 
 	static void ValidateResourceStateForBarrier(D3D12_RESOURCE_STATES state)
 	{
-		if(state == D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+		if(state == D3D12_RESOURCE_STATE_UNORDERED_ACCESS ||
+			state == D3D12_RESOURCE_STATE_DEPTH_WRITE)
 		{
 			return;
 		}
@@ -1542,6 +1551,8 @@ namespace RHI
 
 		rhi.descHeapGeneric = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, MaxCPUGenericDescriptors, false, "all-encompassing CBV SRV UAV");
 		rhi.descHeapSamplers = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, MaxCPUSamplerDescriptors, false, "all-encompassing sampler");
+		rhi.descHeapRTVs = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, MaxCPURTVDescriptors, false, "all-encompassing RTV");
+		rhi.descHeapDSVs = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, MaxCPUDSVDescriptors, false, "all-encompassing DSV");
 
 		{
 			D3D12_COMMAND_QUEUE_DESC commandQueueDesc = { 0 };
@@ -1903,6 +1914,8 @@ namespace RHI
 		Q_assert(rhiDesc.mipCount > 0);
 		Q_assert(rhiDesc.mipCount <= MaxTextureMips);
 
+		bool requestTransition = false;
+
 		// alignment must be 64KB (D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT) or 0, which is effectively 64KB.
 		// https://msdn.microsoft.com/en-us/library/windows/desktop/dn903813(v=vs.85).aspx
 		D3D12_RESOURCE_DESC desc = { 0 };
@@ -1984,11 +1997,36 @@ namespace RHI
 			rhi.device->CreateShaderResourceView(resource, &srv, srvHandle);
 		}
 
+		uint32_t rtvIndex = InvalidDescriptorIndex;
+		if(rhiDesc.allowedState & ResourceStates::RenderTargetBit)
+		{
+			// @TODO:
+		}
+
+		uint32_t dsvIndex = InvalidDescriptorIndex;
+		if(rhiDesc.allowedState & ResourceStates::DepthWriteBit)
+		{
+			D3D12_DEPTH_STENCIL_VIEW_DESC dsv = { 0 };
+			dsv.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+			dsv.Format = desc.Format;
+			dsv.Flags = D3D12_DSV_FLAG_NONE; // @TODO:
+			dsv.Texture2D.MipSlice = 0;
+
+			dsvIndex = rhi.freeListDSVs.Allocate();
+			D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = rhi.descHeapDSVs->GetCPUDescriptorHandleForHeapStart();
+			dsvHandle.ptr += dsvIndex * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+			rhi.device->CreateDepthStencilView(resource, &dsv, dsvHandle);
+
+			requestTransition = true;
+		}
+
 		Texture texture = {};
 		texture.desc = rhiDesc;
 		texture.allocation = allocation;
 		texture.texture = resource;
 		texture.srvIndex = srvIndex;
+		texture.rtvIndex = rtvIndex;
+		texture.dsvIndex = dsvIndex;
 		texture.currentState = D3D12_RESOURCE_STATE_COPY_DEST;
 		if(rhiDesc.allowedState & ResourceStates::UnorderedAccessBit)
 		{
@@ -2015,7 +2053,13 @@ namespace RHI
 			}
 		}
 
-		return rhi.textures.Add(texture);
+		const HTexture handle = rhi.textures.Add(texture);
+		if(requestTransition)
+		{
+			rhi.texturesToTransition.Add(handle);
+		}
+
+		return handle;
 	}
 
 	void UploadTextureMip0(HTexture handle, const TextureUpload& desc)
@@ -2439,6 +2483,21 @@ namespace RHI
 	{
 		COM_RELEASE(rhi.pipelines.Get(pipeline).pso);
 		rhi.pipelines.Remove(pipeline);
+	}
+
+	void CmdBindRenderTargets(uint32_t colorCount, const HTexture* colorTargets, const HTexture* depthStencilTarget)
+	{
+		Q_assert(CanWriteCommands());
+		Q_assert(colorCount > 0 || colorTargets == NULL);
+
+		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = { 0 };
+		rtvHandle.ptr = rhi.rtvHandle.ptr + rhi.frameIndex * rhi.rtvIncSize;
+
+		Q_assert(depthStencilTarget != NULL);
+		const Texture& depthStencil = rhi.textures.Get(*depthStencilTarget);
+		D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = rhi.descHeapDSVs->GetCPUDescriptorHandleForHeapStart();
+		dsvHandle.ptr += depthStencil.dsvIndex * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+		rhi.commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 	}
 
 	void CmdBindRootSignature(HRootSignature rootSignature)

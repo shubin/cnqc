@@ -605,6 +605,7 @@ namespace RHI
 	HPipeline CreateComputePipeline(const ComputePipelineDesc& desc);
 	void DestroyPipeline(HPipeline pipeline);
 
+	void CmdBindRenderTargets(uint32_t colorCount, const HTexture* colorTargets, const HTexture* depthStencilTarget);
 	void CmdBindRootSignature(HRootSignature rootSignature);
 	void CmdBindDescriptorTable(HRootSignature sigHandle, HDescriptorTable table);
 	void CmdBindPipeline(HPipeline pipeline);

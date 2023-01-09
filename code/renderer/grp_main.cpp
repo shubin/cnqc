@@ -38,7 +38,7 @@ static const void* SkipCommand(const void* data)
 static void EndSurfaces()
 {
 	grp.ui.Draw();
-	// @TODO: grp.world.Draw();
+	grp.world.Draw();
 }
 
 
@@ -50,6 +50,7 @@ struct GameplayRenderPipeline : IRenderPipeline
 		grp.samplers[0] = CreateSampler(SamplerDesc(TW_REPEAT, TextureFilter::Linear));
 		grp.samplers[1] = CreateSampler(SamplerDesc(TW_CLAMP_TO_EDGE, TextureFilter::Linear));
 		grp.ui.Init();
+		grp.world.Init();
 		grp.mipMapGen.Init();
 		grp.imgui.Init();
 	}
@@ -63,6 +64,7 @@ struct GameplayRenderPipeline : IRenderPipeline
 	{
 		RHI::BeginFrame();
 		grp.ui.BeginFrame();
+		grp.world.BeginFrame();
 
 		// nothing is bound to the command list yet!
 		grp.renderMode = RenderMode::None;
@@ -152,6 +154,11 @@ struct GameplayRenderPipeline : IRenderPipeline
 	void GenerateMipMaps(HTexture texture) override
 	{
 		grp.mipMapGen.GenerateMipMaps(texture);
+	}
+
+	void ProcessWorld(world_t& world) override
+	{
+		grp.world.ProcessWorld(world);
 	}
 };
 
