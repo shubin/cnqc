@@ -262,16 +262,6 @@ namespace RHI
 		};
 	};
 
-	/*struct Queue
-	{
-		void Create();
-		void Release();
-
-		ID3D12CommandQueue* commandQueue;
-		ID3D12CommandAllocator* commandAllocator;
-		ID3D12GraphicsCommandList* commandList;
-	};*/
-
 	struct Fence
 	{
 		void Create(UINT64 value, const char* name);
@@ -375,11 +365,16 @@ namespace RHI
 		ID3D12CommandQueue* commandQueue;
 		IDXGISwapChain3* swapChain;
 		HTexture renderTargets[FrameCount];
-		ID3D12CommandAllocator* commandAllocators[FrameCount];
-		ID3D12GraphicsCommandList* commandList;
+		ID3D12CommandAllocator* mainCommandAllocators[FrameCount];
+		ID3D12GraphicsCommandList* mainCommandList;
+		ID3D12CommandAllocator* tempCommandAllocator;
+		ID3D12GraphicsCommandList* tempCommandList;
+		ID3D12GraphicsCommandList* commandList; // not owned, don't release it!
 		UINT frameIndex;
-		Fence fence;
-		UINT64 fenceValues[FrameCount];
+		Fence mainFence;
+		UINT64 mainFenceValues[FrameCount];
+		Fence tempFence;
+		UINT64 tempFenceValue;
 		ID3D12QueryHeap* timeStampHeap;
 		HBuffer timeStampBuffer;
 		const UINT64* mappedTimeStamps;
@@ -913,18 +908,18 @@ namespace RHI
 
 	static void MoveToNextFrame()
 	{
-		const UINT64 currentFenceValue = rhi.fenceValues[rhi.frameIndex];
-		rhi.fence.Signal(rhi.commandQueue, currentFenceValue);
+		const UINT64 currentFenceValue = rhi.mainFenceValues[rhi.frameIndex];
+		rhi.mainFence.Signal(rhi.commandQueue, currentFenceValue);
 		rhi.frameIndex = rhi.swapChain->GetCurrentBackBufferIndex();
-		rhi.fence.WaitOnCPU(rhi.fenceValues[rhi.frameIndex]);
-		rhi.fenceValues[rhi.frameIndex] = currentFenceValue + 1;
+		rhi.mainFence.WaitOnCPU(rhi.mainFenceValues[rhi.frameIndex]);
+		rhi.mainFenceValues[rhi.frameIndex] = currentFenceValue + 1;
 	}
 
 	static void WaitUntilDeviceIsIdle()
 	{
-		rhi.fence.Signal(rhi.commandQueue, rhi.fenceValues[rhi.frameIndex]);
-		rhi.fence.WaitOnCPU(rhi.fenceValues[rhi.frameIndex]);
-		rhi.fenceValues[rhi.frameIndex]++;
+		rhi.mainFence.Signal(rhi.commandQueue, rhi.mainFenceValues[rhi.frameIndex]);
+		rhi.mainFence.WaitOnCPU(rhi.mainFenceValues[rhi.frameIndex]);
+		rhi.mainFenceValues[rhi.frameIndex]++;
 	}
 
 	static void Present()
@@ -1401,6 +1396,7 @@ namespace RHI
 
 	static void CopyDescriptor(ID3D12DescriptorHeap* dstHeap, uint32_t dstIndex, DescriptorHeap& srcHeap, uint32_t srcIndex)
 	{
+		Q_assert(srcIndex != InvalidDescriptorIndex);
 		D3D12_CPU_DESCRIPTOR_HANDLE dstHandle = dstHeap->GetCPUDescriptorHandleForHeapStart();
 		dstHandle.ptr += dstIndex * srcHeap.descriptorSize;
 		rhi.device->CopyDescriptorsSimple(1, dstHandle, srcHeap.GetCPUHandle(srcIndex), srcHeap.type);
@@ -1617,9 +1613,9 @@ namespace RHI
 
 				for(uint32_t f = 0; f < FrameCount; ++f)
 				{
-					rhi.fenceValues[f] = 0;
+					rhi.mainFenceValues[f] = 0;
 				}
-				rhi.fenceValues[rhi.frameIndex]++;
+				rhi.mainFenceValues[rhi.frameIndex]++;
 			}
 
 			return;
@@ -1739,16 +1735,28 @@ namespace RHI
 
 		for(UINT f = 0; f < FrameCount; ++f)
 		{
-			D3D(rhi.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&rhi.commandAllocators[f])));
-			SetDebugName(rhi.commandAllocators[f], va("main #%d", f + 1), D3DResourceType::CommandAllocator);
+			D3D(rhi.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&rhi.mainCommandAllocators[f])));
+			SetDebugName(rhi.mainCommandAllocators[f], va("main #%d", f + 1), D3DResourceType::CommandAllocator);
 		}
 
 		// get command list ready to use during init
-		D3D(rhi.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, rhi.commandAllocators[rhi.frameIndex], NULL, IID_PPV_ARGS(&rhi.commandList)));
-		SetDebugName(rhi.commandList, "main", D3DResourceType::CommandList);
+		D3D(rhi.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, rhi.mainCommandAllocators[rhi.frameIndex], NULL, IID_PPV_ARGS(&rhi.mainCommandList)));
+		SetDebugName(rhi.mainCommandList, "main", D3DResourceType::CommandList);
 
-		rhi.fence.Create(rhi.fenceValues[rhi.frameIndex], "main command queue");
-		rhi.fenceValues[rhi.frameIndex]++;
+		D3D(rhi.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&rhi.tempCommandAllocator)));
+		SetDebugName(rhi.tempCommandAllocator, "temp", D3DResourceType::CommandAllocator);
+
+		// the temp command list is always left open for the user
+		D3D(rhi.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, rhi.tempCommandAllocator, NULL, IID_PPV_ARGS(&rhi.tempCommandList)));
+		SetDebugName(rhi.tempCommandList, "temp", D3DResourceType::CommandList);
+
+		// the active/bound command list is the main one by default
+		rhi.commandList = rhi.mainCommandList;
+
+		rhi.mainFence.Create(rhi.mainFenceValues[rhi.frameIndex], "main command queue");
+		rhi.mainFenceValues[rhi.frameIndex]++;
+
+		rhi.tempFence.Create(rhi.tempFenceValue, "temp command queue");
 
 		rhi.upload.Create();
 
@@ -1807,7 +1815,8 @@ namespace RHI
 		WaitUntilDeviceIsIdle();
 
 		rhi.upload.Release();
-		rhi.fence.Release();
+		rhi.mainFence.Release();
+		rhi.tempFence.Release();
 		rhi.descHeapGeneric.Release();
 		rhi.descHeapSamplers.Release();
 		rhi.descHeapRTVs.Release();
@@ -1820,8 +1829,10 @@ namespace RHI
 		DESTROY_POOL(pipelines, DestroyPipeline);
 
 		COM_RELEASE(rhi.timeStampHeap);
-		COM_RELEASE(rhi.commandList);
-		COM_RELEASE_ARRAY(rhi.commandAllocators);
+		COM_RELEASE(rhi.mainCommandList);
+		COM_RELEASE_ARRAY(rhi.mainCommandAllocators);
+		COM_RELEASE(rhi.tempCommandList);
+		COM_RELEASE(rhi.tempCommandAllocator);
 		COM_RELEASE(rhi.swapChain);
 		COM_RELEASE(rhi.commandQueue);
 		COM_RELEASE(rhi.infoQueue);
@@ -1849,18 +1860,26 @@ namespace RHI
 
 	void BeginFrame()
 	{
+		Q_assert(rhi.commandList == rhi.mainCommandList);
+
 		rhi.currentRootSignature = RHI_MAKE_NULL_HANDLE();
 
-		// wait for pending copies from the upload buffer to textures to be finished
+		// wait for pending copies from the upload manager to be finished
 		rhi.upload.WaitToStartDrawing(rhi.commandQueue);
 
-		// @TODO: execute and wait on the temporary command list
+		// execute and wait on the temporary command list
+		rhi.tempCommandList->Close();
+		ID3D12CommandList* tempCommandListArray[] = { rhi.tempCommandList };
+		rhi.commandQueue->ExecuteCommandLists(ARRAY_LEN(tempCommandListArray), tempCommandListArray);
+		rhi.tempFenceValue++;
+		rhi.tempFence.Signal(rhi.commandQueue, rhi.tempFenceValue);
+		rhi.tempFence.WaitOnCPU(rhi.tempFenceValue);
+		D3D(rhi.tempCommandAllocator->Reset());
+		D3D(rhi.tempCommandList->Reset(rhi.tempCommandAllocator, NULL));
 
-		// reclaim used memory
-		D3D(rhi.commandAllocators[rhi.frameIndex]->Reset());
-
-		// start recording
-		D3D(rhi.commandList->Reset(rhi.commandAllocators[rhi.frameIndex], NULL));
+		// reclaim used memory and start recording
+		D3D(rhi.mainCommandAllocators[rhi.frameIndex]->Reset());
+		D3D(rhi.commandList->Reset(rhi.mainCommandAllocators[rhi.frameIndex], NULL));
 
 		rhi.frameDuration = CmdBeginDurationQuery("Whole frame");
 
@@ -2892,18 +2911,17 @@ namespace RHI
 		rhi.upload.EndTextureUpload(texture);
 	}
 
-	// @TODO:
-	/*static ID3D12GraphicsCommandList* savedCommandList;
 	void BeginTempCommandList()
 	{
-		savedCommandList = rhi.commandList;
+		Q_assert(rhi.commandList == rhi.mainCommandList);
 		rhi.commandList = rhi.tempCommandList;
 	}
 
 	void EndTempCommandList()
 	{
-		rhi.commandList = savedCommandList;
-	}*/
+		Q_assert(rhi.commandList == rhi.tempCommandList);
+		rhi.commandList = rhi.mainCommandList;
+	}
 
 #if defined(_DEBUG) || defined(CNQ3_DEV)
 

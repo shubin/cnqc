@@ -239,6 +239,8 @@ void MipMapGenerator::GenerateMipMaps(HTexture texture)
 	int w = image->width;
 	int h = image->height;
 
+	BeginTempCommandList();
+
 	// create a linear-space copy of mip 0 into float16 texture 0
 	{
 		Stage& stage = stages[Stage::Start];
@@ -323,4 +325,6 @@ void MipMapGenerator::GenerateMipMaps(HTexture texture)
 			CmdDispatch((w + GroupMask) / GroupSize, (h + GroupMask) / GroupSize, 1);
 		}
 	}
+
+	EndTempCommandList();
 }
