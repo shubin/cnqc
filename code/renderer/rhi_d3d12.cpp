@@ -846,8 +846,9 @@ namespace RHI
 
 		mappedTexture.mappedData = mappedBuffer + bufferByteOffset;
 		mappedTexture.rowCount = numRows;
-		mappedTexture.srcRowByteCount = 0; // @TODO:
-		mappedTexture.dstRowByteCount = srcRowByteCount;
+		mappedTexture.srcRowByteCount = texture.desc.width * 4;
+		//mappedTexture.dstRowByteCount = srcRowByteCount;
+		mappedTexture.dstRowByteCount = AlignUp(layout.Footprint.RowPitch, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
 
 		texture.uploadByteOffset = bufferByteOffset;
 		texture.uploading = true;
@@ -859,7 +860,52 @@ namespace RHI
 		Texture& texture = rhi.textures.Get(htexture);
 		Q_assert(texture.uploading);
 
-		// @TODO:
+		{
+			//const TextureDesc& desc = texture.desc;
+			const D3D12_RESOURCE_DESC textureDesc = texture.texture->GetDesc();
+			UINT numRows;
+			UINT64 totalByteCount, srcRowByteCount;
+			D3D12_PLACED_SUBRESOURCE_FOOTPRINT layout;
+			rhi.device->GetCopyableFootprints(&textureDesc, 0, 1, 0, &layout, &numRows, &srcRowByteCount, &totalByteCount);
+
+			Buffer& buffer = rhi.buffers.Get(uploadHBuffer);
+			D3D12_TEXTURE_COPY_LOCATION dstLoc = { 0 };
+			D3D12_TEXTURE_COPY_LOCATION srcLoc = { 0 };
+			dstLoc.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+			dstLoc.pResource = texture.texture;
+			dstLoc.SubresourceIndex = 0;
+			srcLoc.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+			srcLoc.pResource = buffer.buffer;
+			srcLoc.PlacedFootprint = layout;
+			srcLoc.PlacedFootprint.Offset = texture.uploadByteOffset;
+			D3D12_BOX srcBox = { 0 };
+			srcBox.left = 0;
+			srcBox.top = 0;
+			srcBox.front = 0;
+			srcBox.right = textureDesc.Width;
+			srcBox.bottom = textureDesc.Height;
+			srcBox.back = 1;
+
+			D3D(commandList->Reset(commandAllocator, NULL));
+
+			// @TODO: specify the destination x,y
+			commandList->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, &srcBox);
+
+			ID3D12CommandList* commandLists[] = { commandList };
+			D3D(commandList->Close());
+			rhi.commandQueue->ExecuteCommandLists(ARRAY_LEN(commandLists), commandLists);
+			fenceValue++;
+			rhi.commandQueue->Signal(fence.fence, fenceValue);
+		}
+
+		// @TODO: let the user issue the barrier
+		/*if(desc.x == 0 &&
+			desc.y == 0 &&
+			desc.width == texture.desc.width &&
+			desc.height && texture.desc.height)
+		{
+			rhi.texturesToTransition.Add(htexture);
+		}*/
 	}
 
 	void UploadManager::WaitOnGPU(uint32_t uploadByteCount)

@@ -133,21 +133,32 @@ struct GameplayRenderPipeline : IRenderPipeline
 		UpdateDescriptorTable(grp.ui.descriptorTable, update);
 	}
 
-	void UpdateTexture(image_t* image, int mipIndex, int x, int y, int width, int height, const void* data) override
+	void UpdateTexture(image_t* image, int mipIndex, int x, int y, int width, int height, const byte* data) override
 	{
 		Q_assert(mipIndex == 0); // @TODO: sigh...
 
-		UploadTextureMip0(image->texture, TextureUpload(x, y, width, height, data));
+		// @TODO:
+		//UploadTextureMip0(image->texture, TextureUpload(x, y, width, height, data));
+
+		MappedTexture texture;
+		BeginTextureUpload(texture, image->texture);
+		for(uint32_t r = 0; r < texture.rowCount; ++r)
+		{
+			memcpy(texture.mappedData + r * texture.dstRowByteCount, data + r * texture.srcRowByteCount, texture.srcRowByteCount);
+		}
+		EndTextureUpload(image->texture);
 	}
 
 	void FinalizeTexture(image_t* image) override
 	{
-		FinishTextureUpload(image->texture);
+		// @TODO:
+		//FinishTextureUpload(image->texture);
 	}
 
 	void GenerateMipMaps(HTexture texture) override
 	{
-		grp.mipMapGen.GenerateMipMaps(texture);
+		// @TODO:
+		//grp.mipMapGen.GenerateMipMaps(texture);
 	}
 
 	void ProcessWorld(world_t& world) override

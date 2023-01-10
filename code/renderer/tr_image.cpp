@@ -288,7 +288,7 @@ static void Upload32( image_t* image, unsigned int* data )
 		mipOffset++;
 	}*/
 	renderPipeline->CreateTexture( image, mipCount, w, h );
-	renderPipeline->UpdateTexture( image, 0, 0, 0, w, h, data );
+	renderPipeline->UpdateTexture( image, 0, 0, 0, w, h, (const byte*)data );
 }
 
 
