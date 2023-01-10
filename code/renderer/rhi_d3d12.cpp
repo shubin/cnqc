@@ -218,6 +218,8 @@ namespace RHI
 			uint32_t uavIndex;
 		}
 		mips[MaxTextureMips];
+		bool uploading;
+		uint32_t uploadByteOffset;
 	};
 
 	struct RootSignature
@@ -309,6 +311,9 @@ namespace RHI
 		void Release();
 		uint8_t* BeginBufferUpload(HBuffer buffer);
 		void EndBufferUpload(HBuffer buffer);
+		void BeginTextureUpload(MappedTexture& mappedTexture, HTexture texture);
+		void EndTextureUpload(HTexture texture);
+		void WaitOnGPU(uint32_t uploadByteCount);
 
 		ID3D12CommandAllocator* commandAllocator;
 		ID3D12GraphicsCommandList* commandList;
@@ -776,19 +781,7 @@ namespace RHI
 		Q_assert(!userBuffer.uploading);
 
 		const uint32_t uploadByteCount = userBuffer.desc.byteCount;
-		if(uploadByteCount > bufferByteCount)
-		{
-			ri.Error(ERR_FATAL, "Upload request too large!\n");
-		}
-
-		if(bufferByteOffset + uploadByteCount > bufferByteCount)
-		{
-			// not enough space left, force a wait and rewind
-			fence.WaitOnCPU(fenceValueRewind);
-			D3D(commandAllocator->Reset());
-			fenceValueRewind = fenceValue;
-			bufferByteOffset = 0;
-		}
+		WaitOnGPU(uploadByteCount);
 
 		uint8_t* mapped = NULL;
 		Q_assert(userBuffer.desc.memoryUsage != MemoryUsage::Readback);
@@ -801,9 +794,8 @@ namespace RHI
 		{
 			mapped = (uint8_t*)MapBuffer(userHBuffer);
 		}
-		userBuffer.uploading = true;
 
-		// @TODO: what kind of alignment do we need, if any?
+		userBuffer.uploading = true;
 		bufferByteOffset = AlignUp(bufferByteOffset + uploadByteCount, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 
 		return mapped;
@@ -835,6 +827,56 @@ namespace RHI
 		}
 
 		userBuffer.uploading = false;
+	}
+
+	void UploadManager::BeginTextureUpload(MappedTexture& mappedTexture, HTexture htexture)
+	{
+		Texture& texture = rhi.textures.Get(htexture);
+		Q_assert(!texture.uploading);
+		Q_assert(texture.desc.format == TextureFormat::RGBA32_UNorm); // otherwise the pitch is computed wrong!
+		
+		const uint32_t uploadByteCount = (uint32_t)GetUploadBufferSize(texture.texture, 0, 1);
+		WaitOnGPU(uploadByteCount);
+
+		const D3D12_RESOURCE_DESC textureDesc = texture.texture->GetDesc();
+		UINT numRows;
+		UINT64 totalByteCount, srcRowByteCount;
+		D3D12_PLACED_SUBRESOURCE_FOOTPRINT layout;
+		rhi.device->GetCopyableFootprints(&textureDesc, 0, 1, 0, &layout, &numRows, &srcRowByteCount, &totalByteCount);
+
+		mappedTexture.mappedData = mappedBuffer + bufferByteOffset;
+		mappedTexture.rowCount = numRows;
+		mappedTexture.srcRowByteCount = 0; // @TODO:
+		mappedTexture.dstRowByteCount = srcRowByteCount;
+
+		texture.uploadByteOffset = bufferByteOffset;
+		texture.uploading = true;
+		bufferByteOffset = AlignUp(bufferByteOffset + uploadByteCount, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+	}
+
+	void UploadManager::EndTextureUpload(HTexture htexture)
+	{
+		Texture& texture = rhi.textures.Get(htexture);
+		Q_assert(texture.uploading);
+
+		// @TODO:
+	}
+
+	void UploadManager::WaitOnGPU(uint32_t uploadByteCount)
+	{
+		if(uploadByteCount > bufferByteCount)
+		{
+			ri.Error(ERR_FATAL, "Upload request too large!\n");
+		}
+
+		if(bufferByteOffset + uploadByteCount > bufferByteCount)
+		{
+			// not enough space left, force a wait and rewind
+			fence.WaitOnCPU(fenceValueRewind);
+			D3D(commandAllocator->Reset());
+			fenceValueRewind = fenceValue;
+			bufferByteOffset = 0;
+		}
 	}
 
 	void DescriptorHeap::Create(D3D12_DESCRIPTOR_HEAP_TYPE heapType, uint32_t size, uint16_t* freeListItems, const char* name)
@@ -2999,6 +3041,16 @@ namespace RHI
 	void EndBufferUpload(HBuffer buffer)
 	{
 		rhi.upload.EndBufferUpload(buffer);
+	}
+
+	void BeginTextureUpload(MappedTexture& mappedTexture, HTexture texture)
+	{
+		rhi.upload.BeginTextureUpload(mappedTexture, texture);
+	}
+
+	void EndTextureUpload(HTexture texture)
+	{
+		rhi.upload.EndTextureUpload(texture);
 	}
 
 #if defined(_DEBUG) || defined(CNQ3_DEV)

@@ -576,6 +576,14 @@ namespace RHI
 		}
 	};
 
+	struct MappedTexture
+	{
+		uint8_t* mappedData;
+		uint32_t rowCount;
+		uint32_t srcRowByteCount;
+		uint32_t dstRowByteCount;
+	};
+
 	void Init();
 	void ShutDown(qbool destroyWindow);
 
@@ -626,6 +634,9 @@ namespace RHI
 
 	uint8_t* BeginBufferUpload(HBuffer buffer);
 	void EndBufferUpload(HBuffer buffer);
+
+	void BeginTextureUpload(MappedTexture& mappedTexture, HTexture texture);
+	void EndTextureUpload(HTexture texture);
 
 #if 0
 	void CmdCopyBuffer(HBuffer dst, uint32_t dstOffset, HBuffer src, uint32_t srcOffset, uint32_t byteCount);
