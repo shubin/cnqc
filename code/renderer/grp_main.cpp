@@ -143,7 +143,8 @@ struct GameplayRenderPipeline : IRenderPipeline
 		}
 		::EndTextureUpload(image->texture);
 
-		grp.mipMapGen.GenerateMipMaps(image->texture);
+		// @TODO:
+		//grp.mipMapGen.GenerateMipMaps(image->texture);
 	}
 
 	void BeginTextureUpload(MappedTexture& mappedTexture, image_t* image) override
@@ -155,12 +156,6 @@ struct GameplayRenderPipeline : IRenderPipeline
 	{
 		::EndTextureUpload(image->texture);
 	}
-
-	/*void GenerateMipMaps(HTexture texture) override
-	{
-		// @TODO:
-		//grp.mipMapGen.GenerateMipMaps(texture);
-	}*/
 
 	void ProcessWorld(world_t& world) override
 	{

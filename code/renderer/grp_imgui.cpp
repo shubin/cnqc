@@ -151,7 +151,13 @@ void ImGUI::Init()
 		TextureDesc desc("Dear ImGUI font atlas", width, height, 1);
 		fontAtlas = CreateTexture(desc);
 
-		UploadTextureMip0(fontAtlas, TextureUpload(width, height, pixels));
+		MappedTexture update;
+		BeginTextureUpload(update, fontAtlas);
+		for(uint32_t r = 0; r < update.rowCount; ++r)
+		{
+			memcpy(update.mappedData + r * update.dstRowByteCount, pixels + r * update.srcRowByteCount, update.srcRowByteCount);
+		}
+		EndTextureUpload(fontAtlas);
 	}
 
 	{

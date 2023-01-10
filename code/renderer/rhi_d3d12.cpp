@@ -285,26 +285,6 @@ namespace RHI
 		HANDLE event;
 	};
 
-	struct TextureUploader
-	{
-		void Create();
-		void WaitOnGPU(ID3D12CommandQueue* queue);
-		void Upload(HTexture handle, const TextureUpload& desc);
-		void Release();
-
-		ID3D12CommandQueue* commandQueue;
-		ID3D12CommandAllocator* commandAllocator;
-		ID3D12GraphicsCommandList* commandList;
-		HBuffer buffer;
-		uint32_t bufferByteCount;
-		uint32_t bufferByteOffset;
-		Fence fence;
-		// fenceValue      : signaled value after last uploaded chunk
-		// fenceValueRewind: signaled value after last uploaded chunk before rewinding the write pointer to the start
-		UINT64 fenceValue;
-		UINT64 fenceValueRewind;
-	};
-
 	struct UploadManager
 	{
 		void Create();
@@ -313,7 +293,7 @@ namespace RHI
 		void EndBufferUpload(HBuffer buffer);
 		void BeginTextureUpload(MappedTexture& mappedTexture, HTexture texture);
 		void EndTextureUpload(HTexture texture);
-		void WaitOnGPU(uint32_t uploadByteCount);
+		void WaitToStartDrawing(ID3D12CommandQueue* commandQueue);
 
 		ID3D12CommandAllocator* commandAllocator;
 		ID3D12GraphicsCommandList* commandList;
@@ -328,6 +308,9 @@ namespace RHI
 		// fenceValueRewind: signaled value after last uploaded chunk before rewinding the write pointer to the start
 		UINT64 fenceValue;
 		UINT64 fenceValueRewind;
+
+	private:
+		void WaitToStartUploading(uint32_t uploadByteCount);
 	};
 
 	struct DescriptorHeap
@@ -425,7 +408,6 @@ namespace RHI
 		HBuffer nullRWBuffer; // UAV
 		HSampler nullSampler;
 
-		TextureUploader textureUpload; // @TODO: nuke it!
 		UploadManager upload;
 		StaticUnorderedArray<HTexture, MAX_DRAWIMAGES> texturesToTransition;
 		FrameQueries frameQueries[FrameCount];
@@ -512,15 +494,6 @@ namespace RHI
 		resource->SetPrivateData(WKPDID_D3DDebugObjectName, strlen(name), name);
 	}
 
-	static UINT64 GetUploadBufferSize(ID3D12Resource* resource, UINT firstSubresource, UINT subresourceCount)
-	{
-		UINT64 requiredSize = 0;
-		const D3D12_RESOURCE_DESC desc = resource->GetDesc();
-		rhi.device->GetCopyableFootprints(&desc, firstSubresource, subresourceCount, 0, NULL, NULL, NULL, &requiredSize);
-
-		return requiredSize;
-	}
-
 	static UINT IsPowerOfTwo(UINT x)
 	{
 		return x > 0 && (x & (x - 1)) == 0;
@@ -597,156 +570,6 @@ namespace RHI
 		COM_RELEASE(fence);
 	}
 
-	void TextureUploader::Create()
-	{
-		{
-			BufferDesc bufferDesc("texture upload", 64 << 20, ResourceStates::CopyDestinationBit);
-			buffer = CreateBuffer(bufferDesc);
-			bufferByteCount = bufferDesc.byteCount;
-			bufferByteOffset = 0;
-		}
-
-		{
-			D3D12_COMMAND_QUEUE_DESC desc = { 0 };
-			desc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
-			desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-			desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-			desc.NodeMask = 0;
-			D3D(rhi.device->CreateCommandQueue(&desc, IID_PPV_ARGS(&commandQueue)));
-			SetDebugName(commandQueue, "compute", D3DResourceType::CommandQueue);
-		}
-
-		D3D(rhi.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COMPUTE, IID_PPV_ARGS(&commandAllocator)));
-		SetDebugName(commandAllocator, "compute", D3DResourceType::CommandAllocator);
-
-		D3D(rhi.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COMPUTE, commandAllocator, NULL, IID_PPV_ARGS(&commandList)));
-		SetDebugName(commandList, "compute", D3DResourceType::CommandList);
-		D3D(commandList->Close());
-
-		fence.Create(0, "compute queue");
-		fenceValue = 0;
-		fenceValueRewind = 0;
-	}
-
-	void TextureUploader::WaitOnGPU(ID3D12CommandQueue* queue)
-	{
-		fence.WaitOnGPU(queue, fenceValue);
-	}
-
-	void TextureUploader::Upload(HTexture handle, const TextureUpload& desc)
-	{
-		Texture& texture = rhi.textures.Get(handle);
-
-		// otherwise the pitch is computed wrong!
-		Q_assert(texture.desc.format == TextureFormat::RGBA32_UNorm);
-
-		const UINT64 uploadByteCount = GetUploadBufferSize(texture.texture, 0, 1);
-		if(uploadByteCount > bufferByteCount)
-		{
-			ri.Error(ERR_FATAL, "Upload request too large!\n");
-		}
-
-		if(bufferByteOffset + uploadByteCount > bufferByteCount)
-		{
-			// not enough space left, force a wait and rewind
-			fence.WaitOnCPU(fenceValueRewind);
-			D3D(commandAllocator->Reset());
-			fenceValueRewind = fenceValue;
-			bufferByteOffset = 0;
-		}
-
-		D3D12_RESOURCE_DESC textureDesc = texture.texture->GetDesc();
-		uint64_t textureMemorySize = 0;
-		UINT numRows[16];
-		UINT64 rowSizesInBytes[16];
-		D3D12_PLACED_SUBRESOURCE_FOOTPRINT layouts[16];
-		const uint64_t numSubResources = texture.desc.mipCount;
-		rhi.device->GetCopyableFootprints(&textureDesc, 0, (uint32_t)numSubResources, 0, layouts, numRows, rowSizesInBytes, &textureMemorySize);
-
-		{
-			byte* const uploadMemory = (byte*)MapBuffer(buffer) + bufferByteOffset;
-
-			const byte* sourceSubResourceMemory = (const byte*)desc.data;
-			const uint64_t subResourceIndex = 0;
-			const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& subResourceLayout = layouts[subResourceIndex];
-			const uint64_t subResourceHeight = numRows[subResourceIndex];
-			const uint64_t subResourcePitch = AlignUp(subResourceLayout.Footprint.RowPitch, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
-			const uint64_t sourceRowPitch = desc.width * 4; // @TODO: compute the pitch properly based on the format...
-			uint8_t* destinationSubResourceMemory = uploadMemory + subResourceLayout.Offset;
-
-			for(uint64_t height = 0; height < subResourceHeight; height++)
-			{
-				memcpy(destinationSubResourceMemory, sourceSubResourceMemory, min(subResourcePitch, sourceRowPitch));
-				destinationSubResourceMemory += subResourcePitch;
-				sourceSubResourceMemory += sourceRowPitch;
-			}
-
-			UnmapBuffer(buffer);
-		}
-
-		D3D(commandList->Reset(commandAllocator, NULL));
-
-		{
-			Buffer& bufferRef = rhi.buffers.Get(buffer);
-			D3D12_TEXTURE_COPY_LOCATION dstLoc = { 0 };
-			D3D12_TEXTURE_COPY_LOCATION srcLoc = { 0 };
-			dstLoc.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-			dstLoc.pResource = texture.texture;
-			dstLoc.SubresourceIndex = 0;
-			srcLoc.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-			srcLoc.pResource = bufferRef.buffer;
-			srcLoc.PlacedFootprint = layouts[0];
-			srcLoc.PlacedFootprint.Offset = bufferByteOffset;
-			D3D12_BOX srcBox = { 0 };
-			srcBox.left = 0;
-			srcBox.top = 0;
-			srcBox.front = 0;
-			srcBox.right = desc.width;
-			srcBox.bottom = desc.height;
-			srcBox.back = 1;
-			commandList->CopyTextureRegion(&dstLoc, desc.x, desc.y, 0, &srcLoc, &srcBox);
-		}
-
-		if(texture.desc.mipCount > 1)
-		{
-			ID3D12GraphicsCommandList* const directCommandList = rhi.commandList;
-			rhi.commandList = commandList;
-
-			{
-				const TextureBarrier barrier(handle, ResourceStates::UnorderedAccessBit);
-				CmdBarrier(1, &barrier);
-			}
-
-			//renderPipeline->GenerateMipMaps(handle);
-
-			rhi.commandList = directCommandList;
-		}
-
-		ID3D12CommandList* commandLists[] = { commandList };
-		D3D(commandList->Close());
-		commandQueue->ExecuteCommandLists(ARRAY_LEN(commandLists), commandLists);
-		fenceValue++;
-		commandQueue->Signal(fence.fence, fenceValue);
-
-		bufferByteOffset = AlignUp(bufferByteOffset + uploadByteCount, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
-
-		if(desc.x == 0 &&
-			desc.y == 0 &&
-			desc.width == texture.desc.width &&
-			desc.height && texture.desc.height)
-		{
-			rhi.texturesToTransition.Add(handle);
-		}
-	}
-
-	void TextureUploader::Release()
-	{
-		fence.Release();
-		COM_RELEASE(commandList);
-		COM_RELEASE(commandAllocator);
-		COM_RELEASE(commandQueue);
-	}
-	
 	void UploadManager::Create()
 	{
 		BufferDesc bufferDesc("texture upload", 128 << 20, ResourceStates::CopyDestinationBit);
@@ -781,7 +604,7 @@ namespace RHI
 		Q_assert(!userBuffer.uploading);
 
 		const uint32_t uploadByteCount = userBuffer.desc.byteCount;
-		WaitOnGPU(uploadByteCount);
+		WaitToStartUploading(uploadByteCount);
 
 		uint8_t* mapped = NULL;
 		Q_assert(userBuffer.desc.memoryUsage != MemoryUsage::Readback);
@@ -839,7 +662,7 @@ namespace RHI
 		D3D12_PLACED_SUBRESOURCE_FOOTPRINT layout;
 		UINT64 uploadByteCount;
 		rhi.device->GetCopyableFootprints(&textureDesc, 0, 1, 0, &layout, NULL, NULL, &uploadByteCount);
-		WaitOnGPU(uploadByteCount);
+		WaitToStartUploading(uploadByteCount);
 
 		mappedTexture.mappedData = mappedBuffer + bufferByteOffset;
 		mappedTexture.rowCount = texture.desc.height;
@@ -900,7 +723,12 @@ namespace RHI
 		}*/
 	}
 
-	void UploadManager::WaitOnGPU(uint32_t uploadByteCount)
+	void UploadManager::WaitToStartDrawing(ID3D12CommandQueue* commandQueue)
+	{
+		fence.WaitOnGPU(commandQueue, fenceValue);
+	}
+
+	void UploadManager::WaitToStartUploading(uint32_t uploadByteCount)
 	{
 		if(uploadByteCount > bufferByteCount)
 		{
@@ -1922,7 +1750,6 @@ namespace RHI
 		rhi.fence.Create(rhi.fenceValues[rhi.frameIndex], "main command queue");
 		rhi.fenceValues[rhi.frameIndex]++;
 
-		rhi.textureUpload.Create();
 		rhi.upload.Create();
 
 		{
@@ -1979,7 +1806,6 @@ namespace RHI
 
 		WaitUntilDeviceIsIdle();
 
-		rhi.textureUpload.Release();
 		rhi.upload.Release();
 		rhi.fence.Release();
 		rhi.descHeapGeneric.Release();
@@ -2026,7 +1852,9 @@ namespace RHI
 		rhi.currentRootSignature = RHI_MAKE_NULL_HANDLE();
 
 		// wait for pending copies from the upload buffer to textures to be finished
-		rhi.textureUpload.WaitOnGPU(rhi.commandQueue);
+		rhi.upload.WaitToStartDrawing(rhi.commandQueue);
+
+		// @TODO: execute and wait on the temporary command list
 
 		// reclaim used memory
 		D3D(rhi.commandAllocators[rhi.frameIndex]->Reset());
@@ -2059,23 +1887,6 @@ namespace RHI
 
 	void EndFrame()
 	{
-#if 0
-		if(r_debugUI->integer)
-		{
-			ImGuiIO& io = ImGui::GetIO();
-			io.DisplaySize.x = glConfig.vidWidth;
-			io.DisplaySize.y = glConfig.vidHeight;
-			ImGui_ImplDX12_NewFrame();
-			ImGui::NewFrame();
-			DrawGUI();
-			ImGui::EndFrame();
-			ImGui::Render();
-			rhi.commandList->SetDescriptorHeaps(1, &rhi.imguiHeap);
-			// the following call will set SetGraphicsRootDescriptorTable itself
-			ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), rhi.commandList);
-		}
-#endif
-
 		const TextureBarrier barrier(rhi.renderTargets[rhi.frameIndex], ResourceStates::PresentBit);
 		CmdBarrier(1, &barrier);
 
@@ -2349,16 +2160,6 @@ namespace RHI
 		}
 
 		return handle;
-	}
-
-	void UploadTextureMip0(HTexture handle, const TextureUpload& desc)
-	{
-		rhi.textureUpload.Upload(handle, desc);
-	}
-
-	void FinishTextureUpload(HTexture texture)
-	{
-		rhi.texturesToTransition.Add(texture);
 	}
 
 	void DestroyTexture(HTexture handle)
@@ -3090,6 +2891,19 @@ namespace RHI
 	{
 		rhi.upload.EndTextureUpload(texture);
 	}
+
+	// @TODO:
+	/*static ID3D12GraphicsCommandList* savedCommandList;
+	void BeginTempCommandList()
+	{
+		savedCommandList = rhi.commandList;
+		rhi.commandList = rhi.tempCommandList;
+	}
+
+	void EndTempCommandList()
+	{
+		rhi.commandList = savedCommandList;
+	}*/
 
 #if defined(_DEBUG) || defined(CNQ3_DEV)
 

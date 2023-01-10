@@ -441,35 +441,6 @@ namespace RHI
 		TextureFilter::Id filterMode = TextureFilter::Linear;
 	};
 
-	struct TextureUpload
-	{
-		TextureUpload() = default;
-
-		TextureUpload(uint32_t width_, uint32_t height_, const void* data_)
-		{
-			x = 0;
-			y = 0;
-			width = width_;
-			height = height_;
-			data = data_;
-		}
-
-		TextureUpload(uint32_t x_, uint32_t y_, uint32_t width_, uint32_t height_, const void* data_)
-		{
-			x = x_;
-			y = y_;
-			width = width_;
-			height = height_;
-			data = data_;
-		}
-
-		const void* data;
-		uint32_t x;
-		uint32_t y;
-		uint32_t width;
-		uint32_t height;
-	};
-
 	struct DescriptorTableDesc
 	{
 		DescriptorTableDesc() = default;
@@ -590,8 +561,6 @@ namespace RHI
 	void UnmapBuffer(HBuffer buffer);
 
 	HTexture CreateTexture(const TextureDesc& desc);
-	void UploadTextureMip0(HTexture texture, const TextureUpload& desc);
-	void FinishTextureUpload(HTexture texture);
 	void DestroyTexture(HTexture texture);
 
 	HSampler CreateSampler(const SamplerDesc& sampler);
@@ -629,6 +598,10 @@ namespace RHI
 
 	void BeginTextureUpload(MappedTexture& mappedTexture, HTexture texture);
 	void EndTextureUpload(HTexture texture);
+
+	// the temporary command list is guaranteed to be done executing before the next BeginFrame call ends
+	void BeginTempCommandList();
+	void EndTempCommandList();
 
 #if 0
 	void CmdCopyBuffer(HBuffer dst, uint32_t dstOffset, HBuffer src, uint32_t srcOffset, uint32_t byteCount);
