@@ -210,21 +210,27 @@ void MipMapGenerator::GenerateMipMaps(HTexture texture)
 		}
 	}
 	Q_assert(image);
-	if(image == NULL)
+	if(image == NULL || (image->flags & IMG_NOMIPMAP) != 0)
 	{
 		return;
 	}
 
-	HTexture tableTextures[MipSlice::Count + 1];
-	memcpy(tableTextures, textures, sizeof(tableTextures));
-	tableTextures[MipSlice::Count] = texture;
+	const int mipCount = R_ComputeMipCount(image->width, image->height);
+	if(mipCount <= 1)
+	{
+		return;
+	}
+
+	HTexture textureArray[MipSlice::Count + 1];
+	memcpy(textureArray, textures, sizeof(textureArray));
+	textureArray[MipSlice::Count] = texture;
 
 	for(int s = 0; s < 3; ++s)
 	{
 		Stage& stage = stages[s];
 
 		DescriptorTableUpdate update;
-		update.SetRWTexturesChain(ARRAY_LEN(tableTextures), tableTextures);
+		update.SetRWTexturesChain(ARRAY_LEN(textureArray), textureArray);
 		UpdateDescriptorTable(stage.descriptorTable, update);
 	}
 	
@@ -252,7 +258,6 @@ void MipMapGenerator::GenerateMipMaps(HTexture texture)
 		barriers[i] = TextureBarrier(textures[i], ResourceStates::UnorderedAccessBit);
 	}
 
-	const int mipCount = R_ComputeMipCount(image->width, image->height);
 	for(int i = 1; i < mipCount; ++i)
 	{
 		const int w1 = w;

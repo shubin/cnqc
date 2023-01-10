@@ -142,6 +142,8 @@ struct GameplayRenderPipeline : IRenderPipeline
 			memcpy(texture.mappedData + r * texture.dstRowByteCount, data + r * texture.srcRowByteCount, texture.srcRowByteCount);
 		}
 		::EndTextureUpload(image->texture);
+
+		grp.mipMapGen.GenerateMipMaps(image->texture);
 	}
 
 	void BeginTextureUpload(MappedTexture& mappedTexture, image_t* image) override
