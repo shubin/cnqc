@@ -835,17 +835,14 @@ namespace RHI
 		Q_assert(!texture.uploading);
 		Q_assert(texture.desc.format == TextureFormat::RGBA32_UNorm); // otherwise the pitch is computed wrong!
 		
-		const uint32_t uploadByteCount = (uint32_t)GetUploadBufferSize(texture.texture, 0, 1);
+		const D3D12_RESOURCE_DESC textureDesc = texture.texture->GetDesc();
+		D3D12_PLACED_SUBRESOURCE_FOOTPRINT layout;
+		UINT64 uploadByteCount;
+		rhi.device->GetCopyableFootprints(&textureDesc, 0, 1, 0, &layout, NULL, NULL, &uploadByteCount);
 		WaitOnGPU(uploadByteCount);
 
-		const D3D12_RESOURCE_DESC textureDesc = texture.texture->GetDesc();
-		UINT numRows;
-		UINT64 totalByteCount, srcRowByteCount;
-		D3D12_PLACED_SUBRESOURCE_FOOTPRINT layout;
-		rhi.device->GetCopyableFootprints(&textureDesc, 0, 1, 0, &layout, &numRows, &srcRowByteCount, &totalByteCount);
-
 		mappedTexture.mappedData = mappedBuffer + bufferByteOffset;
-		mappedTexture.rowCount = numRows;
+		mappedTexture.rowCount = texture.desc.height;
 		mappedTexture.srcRowByteCount = texture.desc.width * 4;
 		mappedTexture.dstRowByteCount = AlignUp(layout.Footprint.RowPitch, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
 
@@ -860,10 +857,8 @@ namespace RHI
 		Q_assert(texture.uploading);
 
 		const D3D12_RESOURCE_DESC textureDesc = texture.texture->GetDesc();
-		UINT numRows;
-		UINT64 totalByteCount, srcRowByteCount;
 		D3D12_PLACED_SUBRESOURCE_FOOTPRINT layout;
-		rhi.device->GetCopyableFootprints(&textureDesc, 0, 1, 0, &layout, &numRows, &srcRowByteCount, &totalByteCount);
+		rhi.device->GetCopyableFootprints(&textureDesc, 0, 1, 0, &layout, NULL, NULL, NULL);
 
 		Buffer& buffer = rhi.buffers.Get(uploadHBuffer);
 		D3D12_TEXTURE_COPY_LOCATION dstLoc = { 0 };
