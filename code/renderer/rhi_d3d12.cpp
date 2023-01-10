@@ -362,7 +362,8 @@ namespace RHI
 		IDXGIAdapter1* adapter;
 		ID3D12Device* device;
 		D3D12MA::Allocator* allocator;
-		ID3D12CommandQueue* commandQueue;
+		ID3D12CommandQueue* mainCommandQueue;
+		ID3D12CommandQueue* computeCommandQueue;
 		IDXGISwapChain3* swapChain;
 		HTexture renderTargets[FrameCount];
 		ID3D12CommandAllocator* mainCommandAllocators[FrameCount];
@@ -635,9 +636,9 @@ namespace RHI
 
 			ID3D12CommandList* commandLists[] = { commandList };
 			D3D(commandList->Close());
-			rhi.commandQueue->ExecuteCommandLists(ARRAY_LEN(commandLists), commandLists);
+			rhi.mainCommandQueue->ExecuteCommandLists(ARRAY_LEN(commandLists), commandLists);
 			fenceValue++;
-			rhi.commandQueue->Signal(fence.fence, fenceValue);
+			rhi.mainCommandQueue->Signal(fence.fence, fenceValue);
 		}
 		else
 		{
@@ -702,9 +703,9 @@ namespace RHI
 
 		ID3D12CommandList* commandLists[] = { commandList };
 		D3D(commandList->Close());
-		rhi.commandQueue->ExecuteCommandLists(ARRAY_LEN(commandLists), commandLists);
+		rhi.mainCommandQueue->ExecuteCommandLists(ARRAY_LEN(commandLists), commandLists);
 		fenceValue++;
-		rhi.commandQueue->Signal(fence.fence, fenceValue);
+		rhi.mainCommandQueue->Signal(fence.fence, fenceValue);
 
 		texture.uploading = false;
 
@@ -909,7 +910,7 @@ namespace RHI
 	static void MoveToNextFrame()
 	{
 		const UINT64 currentFenceValue = rhi.mainFenceValues[rhi.frameIndex];
-		rhi.mainFence.Signal(rhi.commandQueue, currentFenceValue);
+		rhi.mainFence.Signal(rhi.mainCommandQueue, currentFenceValue);
 		rhi.frameIndex = rhi.swapChain->GetCurrentBackBufferIndex();
 		rhi.mainFence.WaitOnCPU(rhi.mainFenceValues[rhi.frameIndex]);
 		rhi.mainFenceValues[rhi.frameIndex] = currentFenceValue + 1;
@@ -917,7 +918,7 @@ namespace RHI
 
 	static void WaitUntilDeviceIsIdle()
 	{
-		rhi.mainFence.Signal(rhi.commandQueue, rhi.mainFenceValues[rhi.frameIndex]);
+		rhi.mainFence.Signal(rhi.mainCommandQueue, rhi.mainFenceValues[rhi.frameIndex]);
 		rhi.mainFence.WaitOnCPU(rhi.mainFenceValues[rhi.frameIndex]);
 		rhi.mainFenceValues[rhi.frameIndex]++;
 	}
@@ -1320,7 +1321,7 @@ namespace RHI
 	static void ResolveDurationQueries()
 	{
 		UINT64 gpuFrequency;
-		D3D(rhi.commandQueue->GetTimestampFrequency(&gpuFrequency));
+		D3D(rhi.mainCommandQueue->GetTimestampFrequency(&gpuFrequency));
 		const double frequency = (double)gpuFrequency;
 
 		const uint32_t frameIndex = rhi.frameIndex ^ 1;
@@ -1702,8 +1703,12 @@ namespace RHI
 			commandQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 			commandQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
 			commandQueueDesc.NodeMask = 0;
-			D3D(rhi.device->CreateCommandQueue(&commandQueueDesc, IID_PPV_ARGS(&rhi.commandQueue)));
-			SetDebugName(rhi.commandQueue, "main", D3DResourceType::CommandQueue);
+			D3D(rhi.device->CreateCommandQueue(&commandQueueDesc, IID_PPV_ARGS(&rhi.mainCommandQueue)));
+			SetDebugName(rhi.mainCommandQueue, "main", D3DResourceType::CommandQueue);
+
+			commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
+			D3D(rhi.device->CreateCommandQueue(&commandQueueDesc, IID_PPV_ARGS(&rhi.computeCommandQueue)));
+			SetDebugName(rhi.computeCommandQueue, "compute", D3DResourceType::CommandQueue);
 		}
 
 		{
@@ -1724,7 +1729,7 @@ namespace RHI
 			swapChainDesc.SampleDesc.Quality = 0;
 			swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 			swapChainDesc.Windowed = TRUE;
-			D3D(rhi.factory->CreateSwapChain(rhi.commandQueue, &swapChainDesc, &dxgiSwapChain));
+			D3D(rhi.factory->CreateSwapChain(rhi.mainCommandQueue, &swapChainDesc, &dxgiSwapChain));
 
 			D3D(dxgiSwapChain->QueryInterface(IID_PPV_ARGS(&rhi.swapChain)));
 			rhi.frameIndex = rhi.swapChain->GetCurrentBackBufferIndex();
@@ -1743,11 +1748,11 @@ namespace RHI
 		D3D(rhi.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, rhi.mainCommandAllocators[rhi.frameIndex], NULL, IID_PPV_ARGS(&rhi.mainCommandList)));
 		SetDebugName(rhi.mainCommandList, "main", D3DResourceType::CommandList);
 
-		D3D(rhi.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&rhi.tempCommandAllocator)));
+		D3D(rhi.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COMPUTE, IID_PPV_ARGS(&rhi.tempCommandAllocator)));
 		SetDebugName(rhi.tempCommandAllocator, "temp", D3DResourceType::CommandAllocator);
 
 		// the temp command list is always left open for the user
-		D3D(rhi.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, rhi.tempCommandAllocator, NULL, IID_PPV_ARGS(&rhi.tempCommandList)));
+		D3D(rhi.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COMPUTE, rhi.tempCommandAllocator, NULL, IID_PPV_ARGS(&rhi.tempCommandList)));
 		SetDebugName(rhi.tempCommandList, "temp", D3DResourceType::CommandList);
 
 		// the active/bound command list is the main one by default
@@ -1834,7 +1839,8 @@ namespace RHI
 		COM_RELEASE(rhi.tempCommandList);
 		COM_RELEASE(rhi.tempCommandAllocator);
 		COM_RELEASE(rhi.swapChain);
-		COM_RELEASE(rhi.commandQueue);
+		COM_RELEASE(rhi.computeCommandQueue);
+		COM_RELEASE(rhi.mainCommandQueue);
 		COM_RELEASE(rhi.infoQueue);
 		COM_RELEASE(rhi.allocator);
 		COM_RELEASE(rhi.device);
@@ -1866,7 +1872,7 @@ namespace RHI
 
 		// @TODO: only wait when some work was added
 		// wait for pending copies from the upload manager to be finished
-		rhi.upload.WaitToStartDrawing(rhi.commandQueue);
+		rhi.upload.WaitToStartDrawing(rhi.mainCommandQueue);
 
 		// reclaim used memory and start recording
 		D3D(rhi.mainCommandAllocators[rhi.frameIndex]->Reset());
@@ -1906,7 +1912,7 @@ namespace RHI
 		D3D(rhi.commandList->Close());
 
 		ID3D12CommandList* commandListArray[] = { rhi.commandList };
-		rhi.commandQueue->ExecuteCommandLists(ARRAY_LEN(commandListArray), commandListArray);
+		rhi.mainCommandQueue->ExecuteCommandLists(ARRAY_LEN(commandListArray), commandListArray);
 
 		Present();
 
@@ -2914,11 +2920,12 @@ namespace RHI
 		rhi.commandList = rhi.mainCommandList;
 
 		// execute and wait on the temporary command list
+		ID3D12CommandQueue* const queue = rhi.computeCommandQueue;
 		rhi.tempCommandList->Close();
 		ID3D12CommandList* tempCommandListArray[] = { rhi.tempCommandList };
-		rhi.commandQueue->ExecuteCommandLists(ARRAY_LEN(tempCommandListArray), tempCommandListArray);
+		queue->ExecuteCommandLists(ARRAY_LEN(tempCommandListArray), tempCommandListArray);
 		rhi.tempFenceValue++;
-		rhi.tempFence.Signal(rhi.commandQueue, rhi.tempFenceValue);
+		rhi.tempFence.Signal(queue, rhi.tempFenceValue);
 		rhi.tempFence.WaitOnCPU(rhi.tempFenceValue);
 		D3D(rhi.tempCommandAllocator->Reset());
 		D3D(rhi.tempCommandList->Reset(rhi.tempCommandAllocator, NULL));
