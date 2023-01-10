@@ -42,4 +42,12 @@ namespace RHI
 	RHI_HANDLE_TYPE(HSampler);
 	RHI_HANDLE_TYPE(HDurationQuery);
 #undef RHI_HANDLE_TYPE
+
+	struct MappedTexture
+	{
+		uint8_t* mappedData;
+		uint32_t rowCount;
+		uint32_t srcRowByteCount;
+		uint32_t dstRowByteCount;
+	};
 }

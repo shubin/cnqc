@@ -576,14 +576,6 @@ namespace RHI
 		}
 	};
 
-	struct MappedTexture
-	{
-		uint8_t* mappedData;
-		uint32_t rowCount;
-		uint32_t srcRowByteCount;
-		uint32_t dstRowByteCount;
-	};
-
 	void Init();
 	void ShutDown(qbool destroyWindow);
 

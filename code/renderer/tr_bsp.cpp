@@ -180,6 +180,9 @@ static void R_LoadLightmaps( const lump_t* l )
 	for ( int a = 0; a < numAtlases; ++a ) {
 		tr.lightmaps[a] = R_CreateImage( va("*lightmapatlas%i", a), NULL, sizeX, sizeY, TF_RGBA8, IMG_LMATLAS, TW_CLAMP_TO_EDGE );
 
+		RHI::MappedTexture upload;
+		renderPipeline->BeginTextureUpload( upload, tr.lightmaps[a] );
+
 		for ( int t = 0; t < numTilesPerAtlas && i < numFileLightmaps; ++t ) {
 			for ( int y = 0; y < LMVirtPageSize; ++y ) {
 				const byte* s = p + y * LMVirtPageSize * 3;
@@ -197,7 +200,13 @@ static void R_LoadLightmaps( const lump_t* l )
 
 			const int offX = (t % countX) * LMPhysPageSize;
 			const int offY = (t / countX) * LMPhysPageSize;
-			renderPipeline->UpdateTexture( tr.lightmaps[a], 0, offX, offY, LMPhysPageSize, LMPhysPageSize, image );
+			const int srcRowByteCount = LMPhysPageSize * 4;
+			for(int r = 0; r < LMPhysPageSize; ++r)
+			{
+				const byte* src = image + r * srcRowByteCount;
+				byte* dst = upload.mappedData + (offY + r) * upload.dstRowByteCount + offX * 4;
+				memcpy(dst, src, srcRowByteCount);
+			}
 
 			lightmapBiases[i][0] = (float)(offX + LMBorderSize) / (float)sizeX;
 			lightmapBiases[i][1] = (float)(offY + LMBorderSize) / (float)sizeY;
@@ -206,7 +215,7 @@ static void R_LoadLightmaps( const lump_t* l )
 			++i;
 		}
 
-		renderPipeline->FinalizeTexture( tr.lightmaps[a] );
+		renderPipeline->EndTextureUpload( tr.lightmaps[a] );
 	}
 
 	tr.numLightmaps = numAtlases;

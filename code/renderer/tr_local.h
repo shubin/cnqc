@@ -1666,12 +1666,13 @@ struct IRenderPipeline
 	virtual void ExecuteRenderCommands(const void* data) = 0;
 
 	virtual void AddDrawSurface(const surfaceType_t* surface, const shader_t* shader) = 0;
-	virtual void ProcessWorld( world_t& world ) = 0;
+	virtual void ProcessWorld(world_t& world) = 0;
 
 	virtual void CreateTexture(image_t* image, int mipCount, int width, int height) = 0;
-	virtual void UpdateTexture(image_t* image, int mipIndex, int x, int y, int width, int height, const byte* data) = 0;
-	virtual void FinalizeTexture(image_t* image) = 0;
-	virtual void GenerateMipMaps(RHI::HTexture texture) = 0;
+	virtual void UpdateTexture(image_t* image, const byte* data) = 0;
+	virtual void BeginTextureUpload(RHI::MappedTexture& mappedTexture, image_t* image) = 0;
+	virtual void EndTextureUpload(image_t* image) = 0;
+	//virtual void GenerateMipMaps(RHI::HTexture texture) = 0;
 };
 
 extern IRenderPipeline* renderPipeline;
