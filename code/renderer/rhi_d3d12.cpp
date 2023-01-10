@@ -1864,18 +1864,9 @@ namespace RHI
 
 		rhi.currentRootSignature = RHI_MAKE_NULL_HANDLE();
 
+		// @TODO: only wait when some work was added
 		// wait for pending copies from the upload manager to be finished
 		rhi.upload.WaitToStartDrawing(rhi.commandQueue);
-
-		// execute and wait on the temporary command list
-		rhi.tempCommandList->Close();
-		ID3D12CommandList* tempCommandListArray[] = { rhi.tempCommandList };
-		rhi.commandQueue->ExecuteCommandLists(ARRAY_LEN(tempCommandListArray), tempCommandListArray);
-		rhi.tempFenceValue++;
-		rhi.tempFence.Signal(rhi.commandQueue, rhi.tempFenceValue);
-		rhi.tempFence.WaitOnCPU(rhi.tempFenceValue);
-		D3D(rhi.tempCommandAllocator->Reset());
-		D3D(rhi.tempCommandList->Reset(rhi.tempCommandAllocator, NULL));
 
 		// reclaim used memory and start recording
 		D3D(rhi.mainCommandAllocators[rhi.frameIndex]->Reset());
@@ -2921,6 +2912,16 @@ namespace RHI
 	{
 		Q_assert(rhi.commandList == rhi.tempCommandList);
 		rhi.commandList = rhi.mainCommandList;
+
+		// execute and wait on the temporary command list
+		rhi.tempCommandList->Close();
+		ID3D12CommandList* tempCommandListArray[] = { rhi.tempCommandList };
+		rhi.commandQueue->ExecuteCommandLists(ARRAY_LEN(tempCommandListArray), tempCommandListArray);
+		rhi.tempFenceValue++;
+		rhi.tempFence.Signal(rhi.commandQueue, rhi.tempFenceValue);
+		rhi.tempFence.WaitOnCPU(rhi.tempFenceValue);
+		D3D(rhi.tempCommandAllocator->Reset());
+		D3D(rhi.tempCommandList->Reset(rhi.tempCommandAllocator, NULL));
 	}
 
 #if defined(_DEBUG) || defined(CNQ3_DEV)
