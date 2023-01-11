@@ -157,6 +157,11 @@ void main(uint3 id : SV_DispatchThreadID)
 
 void MipMapGenerator::Init()
 {
+	if(!grp.firstInit)
+	{
+		return;
+	}
+
 	const char* stageNames[] = { "start", "down", "end" };
 	uint32_t stageRCByteCount[] = { sizeof(StartConstants), sizeof(DownConstants), sizeof(EndConstants) };
 	const char* stageShaders[] = { start_cs, down_cs, end_cs };

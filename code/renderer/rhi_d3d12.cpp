@@ -1003,14 +1003,9 @@ namespace RHI
 		HT handle;
 		for(int i = 0; pool.FindNext(&resource, &handle, &i);)
 		{
-			if(fullShutDown)
+			if(fullShutDown || resource->shortLifeTime)
 			{
 				(*DestroyResource)(handle);
-			}
-			else if(resource->shortLifeTime)
-			{
-				(*DestroyResource)(handle);
-				pool.Remove(handle);
 			}
 		}
 

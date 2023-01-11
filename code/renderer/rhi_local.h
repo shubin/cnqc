@@ -728,6 +728,7 @@ namespace RHI
 
 		bool FindNext(T** object, HT* handle, int* index)
 		{
+			Q_assert(object);
 			Q_assert(handle);
 			Q_assert(index);
 

@@ -47,12 +47,19 @@ void World::Init()
 {
 	{
 		TextureDesc desc("depth buffer", glConfig.vidWidth, glConfig.vidHeight);
+		desc.shortLifeTime = true;
 		desc.initialState = ResourceStates::DepthWriteBit;
 		desc.allowedState = ResourceStates::DepthAccessBits;
 		desc.format = TextureFormat::DepthStencil32_UNorm24_UInt8;
 		desc.SetClearDepthStencil(0.0f, 0);
 		depthTexture = CreateTexture(desc);
 	}
+
+	if(!grp.firstInit)
+	{
+		return;
+	}
+
 	{
 		RootSignatureDesc desc("Z pre-pass");
 		desc.usingVertexBuffers = true;

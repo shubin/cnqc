@@ -126,6 +126,7 @@ struct GameplayRenderPipeline : IRenderPipeline
 	void CreateTexture(image_t* image, int mipCount, int width, int height) override
 	{
 		TextureDesc desc(image->name, width, height, mipCount);
+		desc.shortLifeTime = true;
 		if(mipCount > 1)
 		{
 			desc.allowedState |= ResourceStates::UnorderedAccessBit; // for mip-map generation
