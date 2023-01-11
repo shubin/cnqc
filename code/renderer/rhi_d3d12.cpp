@@ -24,6 +24,8 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 /*
 to do:
 
+- fix cpm32's Cthulu texture not having its mip chain generated right
+- insert barriers to transition textures
 - 3D/world rendering
 - mip-map generation accounting for r_picmip
 - when creating the root signature, validate that neither of the tables have any gap
