@@ -173,12 +173,8 @@ void ImGUI::RegisterFontAtlas()
 {
 	ImGuiIO& io = ImGui::GetIO();
 
-	const uint32_t fontIndex = grp.textureIndex++;
+	const uint32_t fontIndex = grp.RegisterTexture(fontAtlas);
 	io.Fonts->SetTexID((ImTextureID)fontIndex);
-
-	DescriptorTableUpdate update;
-	update.SetTextures(1, &fontAtlas, fontIndex);
-	UpdateDescriptorTable(grp.descriptorTable, update);
 }
 
 void ImGUI::Draw()

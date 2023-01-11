@@ -148,41 +148,47 @@ void GRP::CreateTexture(image_t* image, int mipCount, int width, int height)
 		desc.allowedState |= ResourceStates::UnorderedAccessBit; // for mip-map generation
 	}
 
-	// @TODO: shared function for registering a new texture into the descriptor table and returning the SRV index
 	image->texture = ::RHI::CreateTexture(desc);
-	image->textureIndex = textureIndex++;
-
-	DescriptorTableUpdate update;
-	update.SetTextures(1, &image->texture, image->textureIndex);
-	UpdateDescriptorTable(descriptorTable, update);
+	image->textureIndex = RegisterTexture(image->texture);
 }
 
 void GRP::UpdateTexture(image_t* image, const byte* data)
 {
 	MappedTexture texture;
-	::BeginTextureUpload(texture, image->texture);
+	RHI::BeginTextureUpload(texture, image->texture);
 	for(uint32_t r = 0; r < texture.rowCount; ++r)
 	{
 		memcpy(texture.mappedData + r * texture.dstRowByteCount, data + r * texture.srcRowByteCount, texture.srcRowByteCount);
 	}
-	::EndTextureUpload(image->texture);
+	RHI::EndTextureUpload(image->texture);
 		
 	mipMapGen.GenerateMipMaps(image->texture);
 }
 
 void GRP::BeginTextureUpload(MappedTexture& mappedTexture, image_t* image)
 {
-	::BeginTextureUpload(mappedTexture, image->texture);
+	RHI::BeginTextureUpload(mappedTexture, image->texture);
 }
 
 void GRP::EndTextureUpload(image_t* image)
 {
-	::EndTextureUpload(image->texture);
+	RHI::EndTextureUpload(image->texture);
 }
 
 void GRP::ProcessWorld(world_t& world_)
 {
 	world.ProcessWorld(world_);
+}
+
+uint32_t GRP::RegisterTexture(HTexture htexture)
+{
+	const uint32_t index = textureIndex++;
+
+	DescriptorTableUpdate update;
+	update.SetTextures(1, &htexture, index);
+	UpdateDescriptorTable(descriptorTable, update);
+
+	return index;
 }
 
 // @TODO: move out

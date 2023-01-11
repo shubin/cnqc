@@ -193,6 +193,8 @@ struct GRP : IRenderPipeline
 	void EndTextureUpload(image_t* image) override;
 	void ProcessWorld(world_t& world) override;
 
+	uint32_t RegisterTexture(HTexture htexture);
+
 	UI ui;
 	World world;
 	MipMapGenerator mipMapGen;

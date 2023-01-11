@@ -54,12 +54,7 @@ void World::Init()
 		desc.format = TextureFormat::Depth32_Float;
 		desc.SetClearDepthStencil(0.0f, 0);
 		depthTexture = CreateTexture(desc);
-
-		// @TODO: call shared function
-		depthTextureIndex = grp.textureIndex++;
-		DescriptorTableUpdate update;
-		update.SetTextures(1, &depthTexture, depthTextureIndex);
-		UpdateDescriptorTable(grp.descriptorTable, update);
+		depthTextureIndex = grp.RegisterTexture(depthTexture);
 	}
 
 	if(!grp.firstInit)
