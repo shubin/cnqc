@@ -202,6 +202,7 @@ namespace RHI
 		bool mapped;
 		bool uploading;
 		UINT64 uploadByteOffset;
+		bool shortLifeTime = false;
 	};
 
 	struct Texture
@@ -220,6 +221,7 @@ namespace RHI
 		mips[MaxTextureMips];
 		bool uploading;
 		uint32_t uploadByteOffset;
+		bool shortLifeTime = false;
 	};
 
 	struct RootSignature
@@ -235,12 +237,14 @@ namespace RHI
 		UINT samplerTableIndex;
 		UINT genericDescCount;
 		UINT samplerDescCount;
+		bool shortLifeTime = false;
 	};
 
 	struct DescriptorTable
 	{
 		ID3D12DescriptorHeap* genericHeap; // SRV, CBV, UAV
 		ID3D12DescriptorHeap* samplerHeap;
+		bool shortLifeTime = false;
 	};
 
 	struct Pipeline
@@ -249,6 +253,7 @@ namespace RHI
 		ComputePipelineDesc computeDesc;
 		ID3D12PipelineState* pso = NULL;
 		PipelineType::Id type = PipelineType::Graphics;
+		bool shortLifeTime = false;
 	};
 
 	struct QueryState
@@ -398,6 +403,13 @@ namespace RHI
 		POOL(DescriptorTable, 64) descriptorTables;
 		POOL(Pipeline, 64) pipelines;
 #undef POOL
+
+#define DESTROY_POOL_LIST(POOL) \
+		POOL(buffers, DestroyBuffer) \
+		POOL(textures, DestroyTexture) \
+		POOL(rootSignatures, DestroyRootSignature) \
+		POOL(descriptorTables, DestroyDescriptorTable) \
+		POOL(pipelines, DestroyPipeline)
 
 		// null resources, no manual clean-up needed
 		HTexture nullTexture; // SRV
@@ -980,9 +992,32 @@ namespace RHI
 
 	static bool CanWriteCommands()
 	{
-		// @TODO:
-		//return rhi.commandList != NULL && rhi.commandList->???
+		// @TODO: check that the command list is open
 		return rhi.commandList != NULL;
+	}
+
+	template<typename T, typename HT, Handle RT, int N>
+	static void DestroyPool(StaticPool<T, HT, RT, N>& pool, void (*DestroyResource)(HT), bool fullShutDown)
+	{
+		T* resource;
+		HT handle;
+		for(int i = 0; pool.FindNext(&resource, &handle, &i);)
+		{
+			if(fullShutDown)
+			{
+				(*DestroyResource)(handle);
+			}
+			else if(resource->shortLifeTime)
+			{
+				(*DestroyResource)(handle);
+				pool.Remove(handle);
+			}
+		}
+
+		if(fullShutDown)
+		{
+			pool.Clear();
+		}
 	}
 
 	static DXGI_FORMAT GetD3DIndexFormat(IndexType::Id type)
@@ -1626,7 +1661,8 @@ namespace RHI
 
 			int i = 0;
 			Texture* texture;
-			while(rhi.textures.FindNext(&texture, &i))
+			HTexture htexture;
+			while(rhi.textures.FindNext(&texture, &htexture, &i))
 			{
 				if(filter[0] != '\0' && !Com_Filter(filter, texture->desc.name))
 				{
@@ -1873,12 +1909,7 @@ namespace RHI
 
 	void ShutDown(qbool destroyWindow)
 	{
-#define DESTROY_POOL(PoolName, FuncName) \
-		for(int i = 0; rhi.PoolName.FindNext(&handle, &i);) \
-			FuncName(RHI_MAKE_HANDLE(handle)); \
-		rhi.PoolName.Clear()
-
-		Handle handle;
+#define DESTROY_POOL(Name, Func) DestroyPool(rhi.Name, &Func, !!destroyWindow);
 
 		if(!destroyWindow)
 		{
@@ -1886,8 +1917,7 @@ namespace RHI
 
 			rhi.texturesToTransition.Clear();
 
-			// @TODO: the GRP will nuke all 2D textures it has to itself
-			//DESTROY_POOL(textures, DestroyTexture);
+			DESTROY_POOL_LIST(DESTROY_POOL);
 
 			return;
 		}
@@ -1902,11 +1932,7 @@ namespace RHI
 		rhi.descHeapRTVs.Release();
 		rhi.descHeapDSVs.Release();
 
-		DESTROY_POOL(buffers, DestroyBuffer);
-		DESTROY_POOL(textures, DestroyTexture);
-		DESTROY_POOL(descriptorTables, DestroyDescriptorTable);
-		DESTROY_POOL(rootSignatures, DestroyRootSignature);
-		DESTROY_POOL(pipelines, DestroyPipeline);
+		DESTROY_POOL_LIST(DESTROY_POOL);
 
 		COM_RELEASE(rhi.timeStampHeap);
 		COM_RELEASE(rhi.mainCommandList);
@@ -2067,6 +2093,7 @@ namespace RHI
 		buffer.buffer = resource;
 		buffer.gpuAddress = resource->GetGPUVirtualAddress();
 		buffer.currentState = resourceState;
+		buffer.shortLifeTime = rhiDesc.shortLifeTime;
 
 		return rhi.buffers.Add(buffer);
 	}
@@ -2238,6 +2265,7 @@ namespace RHI
 		texture.rtvIndex = rtvIndex;
 		texture.dsvIndex = dsvIndex;
 		texture.currentState = D3D12_RESOURCE_STATE_COPY_DEST;
+		texture.shortLifeTime = rhiDesc.shortLifeTime;
 		if(rhiDesc.allowedState & ResourceStates::UnorderedAccessBit)
 		{
 			for(uint32_t m = 0; m < rhiDesc.mipCount; ++m)
@@ -2471,6 +2499,7 @@ namespace RHI
 
 		rhiSignature.desc = rhiDesc;
 		rhiSignature.signature = signature;
+		rhiSignature.shortLifeTime = rhiDesc.shortLifeTime;
 
 		return rhi.rootSignatures.Add(rhiSignature);
 	}
@@ -2491,6 +2520,7 @@ namespace RHI
 		DescriptorTable table = { 0 };
 		table.genericHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, sig.genericDescCount, true, srvName);
 		table.samplerHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, sig.samplerDescCount, true, samName);
+		table.shortLifeTime = desc.shortLifeTime;
 
 		const Texture& nullTex = rhi.textures.Get(rhi.nullTexture);
 		const Texture& nullRWTex = rhi.textures.Get(rhi.nullRWTexture);
@@ -2667,6 +2697,7 @@ namespace RHI
 		rhiPipeline.type = PipelineType::Graphics;
 		rhiPipeline.graphicsDesc = rhiDesc;
 		rhiPipeline.pso = pso;
+		rhiPipeline.shortLifeTime = rhiDesc.shortLifeTime;
 
 		return rhi.pipelines.Add(rhiPipeline);
 	}
@@ -2690,6 +2721,7 @@ namespace RHI
 		rhiPipeline.type = PipelineType::Compute;
 		rhiPipeline.computeDesc = rhiDesc;
 		rhiPipeline.pso = pso;
+		rhiPipeline.shortLifeTime = rhiDesc.shortLifeTime;
 
 		return rhi.pipelines.Add(rhiPipeline);
 	}

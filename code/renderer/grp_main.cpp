@@ -41,12 +41,18 @@ struct GameplayRenderPipeline : IRenderPipeline
 	void Init() override
 	{
 		RHI::Init();
-		grp.samplers[0] = CreateSampler(SamplerDesc(TW_REPEAT, TextureFilter::Linear));
-		grp.samplers[1] = CreateSampler(SamplerDesc(TW_CLAMP_TO_EDGE, TextureFilter::Linear));
+
+		if(grp.firstInit)
+		{
+			grp.samplers[0] = CreateSampler(SamplerDesc(TW_REPEAT, TextureFilter::Linear));
+			grp.samplers[1] = CreateSampler(SamplerDesc(TW_CLAMP_TO_EDGE, TextureFilter::Linear));
+		}
 		grp.ui.Init();
 		grp.world.Init();
 		grp.mipMapGen.Init();
 		grp.imgui.Init();
+
+		grp.firstInit = false;
 	}
 
 	void ShutDown(bool fullShutDown) override

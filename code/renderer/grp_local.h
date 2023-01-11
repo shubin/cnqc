@@ -185,6 +185,7 @@ struct GRP
 	World world;
 	MipMapGenerator mipMapGen;
 	ImGUI imgui;
+	bool firstInit = true;
 	RenderMode::Id renderMode;
 	uint32_t textureIndex;
 	HSampler samplers[2];

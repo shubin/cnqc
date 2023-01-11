@@ -234,6 +234,7 @@ namespace RHI
 		}
 
 		const char* name = NULL;
+		bool shortLifeTime = false;
 		bool usingVertexBuffers = false;
 		struct PerStageConstants
 		{
@@ -288,6 +289,7 @@ namespace RHI
 		}
 
 		const char* name = NULL;
+		bool shortLifeTime = false;
 		HRootSignature rootSignature = RHI_MAKE_NULL_HANDLE();
 		ShaderByteCode vertexShader;
 		ShaderByteCode pixelShader;
@@ -357,6 +359,7 @@ namespace RHI
 		}
 
 		const char* name = NULL;
+		bool shortLifeTime = false;
 		HRootSignature rootSignature = RHI_MAKE_NULL_HANDLE();
 		ShaderByteCode shader;
 	};
@@ -374,6 +377,7 @@ namespace RHI
 		}
 
 		const char* name = NULL;
+		bool shortLifeTime = false;
 		uint32_t byteCount = 0;
 		ResourceStates::Flags initialState = ResourceStates::Common;
 		MemoryUsage::Id memoryUsage = MemoryUsage::GPU;
@@ -398,6 +402,7 @@ namespace RHI
 		}
 
 		const char* name = NULL;
+		bool shortLifeTime = false;
 		uint32_t width = 0;
 		uint32_t height = 0;
 		uint32_t mipCount = 1;
@@ -451,6 +456,7 @@ namespace RHI
 		}
 
 		const char* name = NULL;
+		bool shortLifeTime = false;
 		HRootSignature rootSignature = RHI_MAKE_NULL_HANDLE();
 	};
 
@@ -720,25 +726,7 @@ namespace RHI
 			return &GetItemRef(handle).item;
 		}
 
-		bool FindNext(T** object, int* index)
-		{
-			Q_assert(object);
-			Q_assert(index);
-
-			for(int i = *index; i < N; ++i)
-			{
-				if(At(i).used)
-				{
-					*object = &At(i).item;
-					*index = i + 1;
-					return true;
-				}
-			}
-
-			return false;
-		}
-
-		bool FindNext(Handle* handle, int* index)
+		bool FindNext(T** object, HT* handle, int* index)
 		{
 			Q_assert(handle);
 			Q_assert(index);
@@ -747,7 +735,8 @@ namespace RHI
 			{
 				if(At(i).used)
 				{
-					*handle = CreateHandle(RT, i, At(i).generation);
+					*object = &At(i).item;
+					*handle = RHI_MAKE_HANDLE(CreateHandle(RT, i, At(i).generation));
 					*index = i + 1;
 					return true;
 				}

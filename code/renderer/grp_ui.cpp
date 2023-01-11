@@ -82,6 +82,11 @@ float4 main(VOut input) : SV_TARGET
 
 void UI::Init()
 {
+	if(!grp.firstInit)
+	{
+		return;
+	}
+
 	{
 		RootSignatureDesc desc("UI");
 		desc.usingVertexBuffers = qtrue;
