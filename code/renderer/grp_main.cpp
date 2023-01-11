@@ -36,157 +36,154 @@ static const void* SkipCommand(const void* data)
 }
 
 
-struct GameplayRenderPipeline : IRenderPipeline
+void GRP::Init()
 {
-	void Init() override
+	RHI::Init();
+
+	if(firstInit)
 	{
-		RHI::Init();
+		samplers[0] = CreateSampler(SamplerDesc(TW_REPEAT, TextureFilter::Linear));
+		samplers[1] = CreateSampler(SamplerDesc(TW_CLAMP_TO_EDGE, TextureFilter::Linear));
 
-		if(grp.firstInit)
-		{
-			grp.samplers[0] = CreateSampler(SamplerDesc(TW_REPEAT, TextureFilter::Linear));
-			grp.samplers[1] = CreateSampler(SamplerDesc(TW_CLAMP_TO_EDGE, TextureFilter::Linear));
+		RootSignatureDesc desc("main");
+		desc.usingVertexBuffers = qtrue;
+		desc.samplerCount = ARRAY_LEN(samplers);
+		desc.samplerVisibility = ShaderStages::PixelBit;
+		desc.genericVisibility = ShaderStages::PixelBit;
+		desc.AddRange(DescriptorType::Texture, 0, MAX_DRAWIMAGES * 2);
+		rootSignatureDesc = desc;
+		rootSignature = CreateRootSignature(desc);
 
-			RootSignatureDesc desc("main");
-			desc.usingVertexBuffers = qtrue;
-			desc.samplerCount = ARRAY_LEN(grp.samplers);
-			desc.samplerVisibility = ShaderStages::PixelBit;
-			desc.genericVisibility = ShaderStages::PixelBit;
-			desc.AddRange(DescriptorType::Texture, 0, MAX_DRAWIMAGES * 2);
-			grp.rootSignatureDesc = desc;
-			grp.rootSignature = CreateRootSignature(desc);
-
-			grp.descriptorTable = CreateDescriptorTable(DescriptorTableDesc("game textures", grp.rootSignature));
-
-			DescriptorTableUpdate update;
-			update.SetSamplers(ARRAY_LEN(grp.samplers), grp.samplers);
-			UpdateDescriptorTable(grp.descriptorTable, update);
-		}
-
-		grp.textureIndex = 0;
-
-		grp.ui.Init();
-		grp.world.Init();
-		grp.mipMapGen.Init();
-		grp.imgui.Init();
-
-		grp.firstInit = false;
-	}
-
-	void ShutDown(bool fullShutDown) override
-	{
-		RHI::ShutDown(fullShutDown);
-	}
-
-	void BeginFrame() override
-	{
-		RHI::BeginFrame();
-		grp.ui.BeginFrame();
-		grp.world.BeginFrame();
-
-		// nothing is bound to the command list yet!
-		grp.renderMode = RenderMode::None;
-	}
-
-	void EndFrame() override
-	{
-		grp.ui.DrawBatch();
-		grp.imgui.Draw();
-		RHI::EndFrame();
-	}
-
-	void AddDrawSurface(const surfaceType_t* surface, const shader_t* shader) override
-	{
-	}
-
-	void ExecuteRenderCommands(const void* data) override
-	{
-		for(;;)
-		{
-			data = PADP(data, sizeof(void*));
-
-			switch(*(const int*)data)
-			{
-				case RC_SET_COLOR:
-					data = grp.ui.SetColor(data);
-					break;
-				case RC_STRETCH_PIC:
-					data = grp.ui.StretchPic(data);
-					break;
-				case RC_TRIANGLE:
-					data = grp.ui.Triangle(data);
-					break;
-				case RC_DRAW_SURFS:
-					grp.world.DrawPrePass();
-					data = SkipCommand<drawSurfsCommand_t>(data);
-					break;
-				case RC_BEGIN_FRAME:
-					data = RB_BeginFrame(data);
-					break;
-				case RC_SWAP_BUFFERS:
-					data = RB_SwapBuffers(data);
-					break;
-				case RC_SCREENSHOT:
-					data = SkipCommand<screenshotCommand_t>(data);
-					break;
-				case RC_VIDEOFRAME:
-					data = SkipCommand<videoFrameCommand_t>(data);
-					break;
-				case RC_END_OF_LIST:
-					return;
-				default:
-					Q_assert(!"Invalid render command ID");
-					return;
-			}
-		}
-	}
-
-	void CreateTexture(image_t* image, int mipCount, int width, int height) override
-	{
-		TextureDesc desc(image->name, width, height, mipCount);
-		desc.shortLifeTime = true;
-		if(mipCount > 1)
-		{
-			desc.allowedState |= ResourceStates::UnorderedAccessBit; // for mip-map generation
-		}
-
-		// @TODO: shared function for registering a new texture into the descriptor table and returning the SRV index
-		image->texture = ::RHI::CreateTexture(desc);
-		image->textureIndex = grp.textureIndex++;
+		descriptorTable = CreateDescriptorTable(DescriptorTableDesc("game textures", rootSignature));
 
 		DescriptorTableUpdate update;
-		update.SetTextures(1, &image->texture, image->textureIndex);
-		UpdateDescriptorTable(grp.descriptorTable, update);
+		update.SetSamplers(ARRAY_LEN(samplers), samplers);
+		UpdateDescriptorTable(descriptorTable, update);
 	}
 
-	void UpdateTexture(image_t* image, const byte* data) override
+	textureIndex = 0;
+
+	ui.Init();
+	world.Init();
+	mipMapGen.Init();
+	imgui.Init();
+
+	firstInit = false;
+}
+
+void GRP::ShutDown(bool fullShutDown)
+{
+	RHI::ShutDown(fullShutDown);
+}
+
+void GRP::BeginFrame()
+{
+	RHI::BeginFrame();
+	ui.BeginFrame();
+	world.BeginFrame();
+
+	// nothing is bound to the command list yet!
+	renderMode = RenderMode::None;
+}
+
+void GRP::EndFrame()
+{
+	ui.DrawBatch();
+	imgui.Draw();
+	RHI::EndFrame();
+}
+
+void GRP::AddDrawSurface(const surfaceType_t* surface, const shader_t* shader)
+{
+}
+
+void GRP::ExecuteRenderCommands(const void* data)
+{
+	for(;;)
 	{
-		MappedTexture texture;
-		::BeginTextureUpload(texture, image->texture);
-		for(uint32_t r = 0; r < texture.rowCount; ++r)
+		data = PADP(data, sizeof(void*));
+
+		switch(*(const int*)data)
 		{
-			memcpy(texture.mappedData + r * texture.dstRowByteCount, data + r * texture.srcRowByteCount, texture.srcRowByteCount);
+			case RC_SET_COLOR:
+				data = ui.SetColor(data);
+				break;
+			case RC_STRETCH_PIC:
+				data = ui.StretchPic(data);
+				break;
+			case RC_TRIANGLE:
+				data = ui.Triangle(data);
+				break;
+			case RC_DRAW_SURFS:
+				world.DrawPrePass();
+				data = SkipCommand<drawSurfsCommand_t>(data);
+				break;
+			case RC_BEGIN_FRAME:
+				data = RB_BeginFrame(data);
+				break;
+			case RC_SWAP_BUFFERS:
+				data = RB_SwapBuffers(data);
+				break;
+			case RC_SCREENSHOT:
+				data = SkipCommand<screenshotCommand_t>(data);
+				break;
+			case RC_VIDEOFRAME:
+				data = SkipCommand<videoFrameCommand_t>(data);
+				break;
+			case RC_END_OF_LIST:
+				return;
+			default:
+				Q_assert(!"Invalid render command ID");
+				return;
 		}
-		::EndTextureUpload(image->texture);
+	}
+}
+
+void GRP::CreateTexture(image_t* image, int mipCount, int width, int height)
+{
+	TextureDesc desc(image->name, width, height, mipCount);
+	desc.shortLifeTime = true;
+	if(mipCount > 1)
+	{
+		desc.allowedState |= ResourceStates::UnorderedAccessBit; // for mip-map generation
+	}
+
+	// @TODO: shared function for registering a new texture into the descriptor table and returning the SRV index
+	image->texture = ::RHI::CreateTexture(desc);
+	image->textureIndex = textureIndex++;
+
+	DescriptorTableUpdate update;
+	update.SetTextures(1, &image->texture, image->textureIndex);
+	UpdateDescriptorTable(descriptorTable, update);
+}
+
+void GRP::UpdateTexture(image_t* image, const byte* data)
+{
+	MappedTexture texture;
+	::BeginTextureUpload(texture, image->texture);
+	for(uint32_t r = 0; r < texture.rowCount; ++r)
+	{
+		memcpy(texture.mappedData + r * texture.dstRowByteCount, data + r * texture.srcRowByteCount, texture.srcRowByteCount);
+	}
+	::EndTextureUpload(image->texture);
 		
-		grp.mipMapGen.GenerateMipMaps(image->texture);
-	}
+	mipMapGen.GenerateMipMaps(image->texture);
+}
 
-	void BeginTextureUpload(MappedTexture& mappedTexture, image_t* image) override
-	{
-		::BeginTextureUpload(mappedTexture, image->texture);
-	}
+void GRP::BeginTextureUpload(MappedTexture& mappedTexture, image_t* image)
+{
+	::BeginTextureUpload(mappedTexture, image->texture);
+}
 
-	void EndTextureUpload(image_t* image) override
-	{
-		::EndTextureUpload(image->texture);
-	}
+void GRP::EndTextureUpload(image_t* image)
+{
+	::EndTextureUpload(image->texture);
+}
 
-	void ProcessWorld(world_t& world) override
-	{
-		grp.world.ProcessWorld(world);
-	}
-};
+void GRP::ProcessWorld(world_t& world_)
+{
+	world.ProcessWorld(world_);
+}
 
-static GameplayRenderPipeline pipeline; // @TODO: move out
-IRenderPipeline* renderPipeline = &pipeline;
+// @TODO: move out
+IRenderPipeline* renderPipeline = &grp;
