@@ -24,7 +24,6 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 /*
 to do:
 
-- allocate texture names and patch the desc.name pointer
 - 3D/world rendering
 - mip-map generation accounting for r_picmip
 - when creating the root signature, validate that neither of the tables have any gap
