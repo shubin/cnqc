@@ -931,4 +931,54 @@ namespace RHI
 		uint32_t allocatedItemCount;
 		uint32_t size;
 	};
+
+	struct LinearAllocator
+	{
+		void Init(byte* data_, uint32_t size_)
+		{
+			data = data_;
+			size = size_;
+			offset = 0;
+		}
+
+		void Clear()
+		{
+			offset = 0;
+		}
+
+		const char* Allocate(const char* string)
+		{
+			const uint32_t l = strlen(string);
+			if(offset + l + 1 > size)
+			{
+				Q_assert(!"StringAllocator ran out of memory");
+				return "out of memory";
+			}
+
+			char* newString = (char*)data + offset;
+			memcpy(newString, string, l);
+			newString[l] = '\0';
+			offset += l + 1;
+
+			return newString;
+		}
+
+		byte* Allocate(uint32_t byteCount)
+		{
+			if(offset + byteCount > size)
+			{
+				Q_assert(!"StringAllocator ran out of memory");
+				return data;
+			}
+
+			byte* newData = data + offset;
+			offset += byteCount;
+
+			return newData;
+		}
+
+		byte* data = NULL;
+		uint32_t size = 0;
+		uint32_t offset = 0;
+	};
 }

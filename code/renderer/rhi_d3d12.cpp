@@ -407,6 +407,8 @@ namespace RHI
 		HBuffer nullRWBuffer; // UAV
 		HSampler nullSampler;
 
+		byte stringData[64 << 10];
+		LinearAllocator stringAllocator;
 		UploadManager upload;
 		StaticUnorderedArray<HTexture, MAX_DRAWIMAGES> texturesToTransition;
 		FrameQueries frameQueries[FrameCount];
@@ -1688,6 +1690,8 @@ namespace RHI
 		// @NOTE: we can't use memset because of the StaticPool members
 		new (&rhi) RHIPrivate();
 
+		rhi.stringAllocator.Init(rhi.stringData, sizeof(rhi.stringData));
+
 #if defined(_DEBUG)
 		if(SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&rhi.debug))))
 		{
@@ -2047,6 +2051,7 @@ namespace RHI
 		D3D12MA::Allocation* allocation;
 		ID3D12Resource* resource;
 		D3D(rhi.allocator->CreateResource(&allocDesc, &desc, resourceState, NULL, &allocation, IID_PPV_ARGS(&resource)));
+		((BufferDesc&)rhiDesc).name = rhi.stringAllocator.Allocate(rhiDesc.name);
 		SetDebugName(resource, rhiDesc.name, D3DResourceType::Buffer);
 
 		Buffer buffer = {};
@@ -2178,6 +2183,7 @@ namespace RHI
 		{
 			D3D(rhi.allocator->CreateResource(&allocDesc, &desc, D3D12_RESOURCE_STATE_COPY_DEST, pClearValue, &allocation, IID_PPV_ARGS(&resource)));
 		}
+		((TextureDesc&)rhiDesc).name = rhi.stringAllocator.Allocate(rhiDesc.name);
 		SetDebugName(resource, rhiDesc.name, D3DResourceType::Texture);
 
 		uint32_t srvIndex = InvalidDescriptorIndex;
@@ -2454,6 +2460,7 @@ namespace RHI
 		ID3D12RootSignature* signature;
 		D3D(rhi.device->CreateRootSignature(0, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&signature)));
 		COM_RELEASE(blob);
+		((RootSignatureDesc&)rhiDesc).name = rhi.stringAllocator.Allocate(rhiDesc.name);
 		SetDebugName(signature, rhiDesc.name, D3DResourceType::RootSignature);
 
 		rhiSignature.desc = rhiDesc;
@@ -2472,9 +2479,12 @@ namespace RHI
 	{
 		const RootSignature& sig = rhi.rootSignatures.Get(desc.rootSignature);
 
+		const char* srvName = rhi.stringAllocator.Allocate(va("%s GPU-visible CBV SRV UAV", desc.name));
+		const char* samName = rhi.stringAllocator.Allocate(va("%s GPU-visible sampler", desc.name));
+
 		DescriptorTable table = { 0 };
-		table.genericHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, sig.genericDescCount, true, va("%s GPU-visible CBV SRV UAV", desc.name));
-		table.samplerHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, sig.samplerDescCount, true, va("%s GPU-visible sampler", desc.name));
+		table.genericHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, sig.genericDescCount, true, srvName);
+		table.samplerHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, sig.samplerDescCount, true, samName);
 
 		const Texture& nullTex = rhi.textures.Get(rhi.nullTexture);
 		const Texture& nullRWTex = rhi.textures.Get(rhi.nullRWTexture);
@@ -2644,6 +2654,7 @@ namespace RHI
 
 		ID3D12PipelineState* pso;
 		D3D(rhi.device->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&pso)));
+		((GraphicsPipelineDesc&)rhiDesc).name = rhi.stringAllocator.Allocate(rhiDesc.name);
 		SetDebugName(pso, rhiDesc.name, D3DResourceType::PipelineState);
 
 		Pipeline rhiPipeline;
@@ -2666,6 +2677,7 @@ namespace RHI
 
 		ID3D12PipelineState* pso;
 		D3D(rhi.device->CreateComputePipelineState(&desc, IID_PPV_ARGS(&pso)));
+		((ComputePipelineDesc&)rhiDesc).name = rhi.stringAllocator.Allocate(rhiDesc.name);
 		SetDebugName(pso, rhiDesc.name, D3DResourceType::PipelineState);
 
 		Pipeline rhiPipeline;
