@@ -24,8 +24,7 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 /*
 to do:
 
-- fix cpm32's Cthulu texture not having its mip chain generated right
-- insert barriers to transition textures
+- allocate texture names and patch the desc.name pointer
 - 3D/world rendering
 - mip-map generation accounting for r_picmip
 - when creating the root signature, validate that neither of the tables have any gap
@@ -1229,6 +1228,27 @@ namespace RHI
 		}
 	}
 
+	static const char* GetNameForD3DResourceStates(D3D12_RESOURCE_STATES states)
+	{
+		switch(states)
+		{
+			case D3D12_RESOURCE_STATE_COMMON: return "common/present";
+			case D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER: return "vertex/constant buffer";
+			case D3D12_RESOURCE_STATE_INDEX_BUFFER: return "index buffer";
+			case D3D12_RESOURCE_STATE_RENDER_TARGET: return "render target";
+			case D3D12_RESOURCE_STATE_UNORDERED_ACCESS: return "UAV";
+			case D3D12_RESOURCE_STATE_DEPTH_WRITE: return "depth write";
+			case D3D12_RESOURCE_STATE_DEPTH_READ: return "depth read";
+			case D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE: return "non-pixel shader resource";
+			case D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE: return "pixel shader resource";
+			case D3D12_RESOURCE_STATE_COPY_DEST: return "copy destination";
+			case D3D12_RESOURCE_STATE_COPY_SOURCE: return "copy source";
+			case D3D12_RESOURCE_STATE_GENERIC_READ: return "generic read";
+			case D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE: return "generic shader resource";
+			default: return "???";
+		}
+	}
+
 	static void ValidateResourceStateForBarrier(D3D12_RESOURCE_STATES state)
 	{
 		if(state == D3D12_RESOURCE_STATE_UNORDERED_ACCESS ||
@@ -1420,7 +1440,7 @@ namespace RHI
 	{
 		ImGui::Text(name);
 
-		return ImGui::BeginTable(name, count, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders);
+		return ImGui::BeginTable(name, count, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable);
 	}
 
 	static void TableHeader2(const char* item0, const char* item1)
@@ -1581,6 +1601,21 @@ namespace RHI
 		}
 	}
 
+	static void DrawTextures()
+	{
+		if(BeginTable("Textures", 2))
+		{
+			int i = 0;
+			Texture* texture;
+			while(rhi.textures.FindNext(&texture, &i))
+			{
+				TableRow2(texture->desc.name, GetNameForD3DResourceStates(texture->currentState));
+			}
+
+			ImGui::EndTable();
+		}
+	}
+
 	typedef void (*UICallback)();
 
 	static void DrawSection(const char* name, UICallback callback)
@@ -1600,6 +1635,7 @@ namespace RHI
 			DrawSection("Performance", &DrawPerfStats);
 			DrawSection("Resources", &DrawResourceUsage);
 			DrawSection("Caps", &DrawCaps);
+			DrawSection("Textures", &DrawTextures);
 			ImGui::EndTabBar();
 		}
 		ImGui::End();
@@ -1898,7 +1934,6 @@ namespace RHI
 
 		WaitForTempCommandList();
 
-		// @TODO: only wait when some work was added
 		// wait for pending copies from the upload manager to be finished
 		rhi.upload.WaitToStartDrawing(rhi.mainCommandQueue);
 
@@ -2198,7 +2233,7 @@ namespace RHI
 		}
 
 		const HTexture handle = rhi.textures.Add(texture);
-		if(requestTransition && rhiDesc.nativeResource == NULL)
+		if(rhiDesc.nativeResource == NULL)
 		{
 			rhi.texturesToTransition.Add(handle);
 		}

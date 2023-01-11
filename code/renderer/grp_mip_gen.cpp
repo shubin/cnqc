@@ -246,6 +246,7 @@ void MipMapGenerator::GenerateMipMaps(HTexture texture)
 	}
 
 	BeginTempCommandList();
+	CmdBarrier(ARRAY_LEN(barriers), barriers);
 
 	// create a linear-space copy of mip 0 into float16 texture 0
 	{
@@ -257,7 +258,6 @@ void MipMapGenerator::GenerateMipMaps(HTexture texture)
 		CmdBindPipeline(stage.pipeline);
 		CmdBindDescriptorTable(stage.rootSignature, stage.descriptorTable);
 		CmdSetRootConstants(stage.rootSignature, ShaderStage::Compute, &rc);
-		CmdBarrier(ARRAY_LEN(barriers), barriers);
 		CmdDispatch((w + GroupMask) / GroupSize, (h + GroupMask) / GroupSize, 1);
 	}
 
