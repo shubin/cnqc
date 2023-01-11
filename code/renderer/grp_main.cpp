@@ -47,6 +47,8 @@ struct GameplayRenderPipeline : IRenderPipeline
 			grp.samplers[0] = CreateSampler(SamplerDesc(TW_REPEAT, TextureFilter::Linear));
 			grp.samplers[1] = CreateSampler(SamplerDesc(TW_CLAMP_TO_EDGE, TextureFilter::Linear));
 		}
+
+		grp.textureIndex = 0;
 		grp.ui.Init();
 		grp.world.Init();
 		grp.mipMapGen.Init();
