@@ -418,8 +418,10 @@ namespace RHI
 		HBuffer nullRWBuffer; // UAV
 		HSampler nullSampler;
 
-		byte stringData[64 << 10];
-		LinearAllocator stringAllocator;
+		byte persStringData[64 << 10];
+		byte tempStringData[64 << 10];
+		LinearAllocator persStringAllocator;
+		LinearAllocator tempStringAllocator;
 		UploadManager upload;
 		StaticUnorderedArray<HTexture, MAX_DRAWIMAGES> texturesToTransition;
 		FrameQueries frameQueries[FrameCount];
@@ -1013,6 +1015,19 @@ namespace RHI
 		{
 			pool.Clear();
 		}
+	}
+
+	static const char* AllocateName(const char* name, bool shortLifeTime)
+	{
+		LinearAllocator& allocator = shortLifeTime ? rhi.tempStringAllocator : rhi.persStringAllocator;
+		
+		return allocator.Allocate(name);
+	}
+
+	template<typename T>
+	static void AllocateAndFixName(const T& desc)
+	{
+		((BufferDesc&)desc).name = AllocateName(desc.name, desc.shortLifeTime);
 	}
 
 	static DXGI_FORMAT GetD3DIndexFormat(IndexType::Id type)
@@ -1722,13 +1737,16 @@ namespace RHI
 				rhi.mainFenceValues[rhi.frameIndex]++;
 			}
 
+			rhi.tempStringAllocator.Clear();
+
 			return;
 		}
 
 		// @NOTE: we can't use memset because of the StaticPool members
 		new (&rhi) RHIPrivate();
 
-		rhi.stringAllocator.Init(rhi.stringData, sizeof(rhi.stringData));
+		rhi.persStringAllocator.Init(rhi.persStringData, sizeof(rhi.persStringData));
+		rhi.tempStringAllocator.Init(rhi.tempStringData, sizeof(rhi.tempStringData));
 
 #if defined(_DEBUG)
 		if(SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&rhi.debug))))
@@ -2079,7 +2097,7 @@ namespace RHI
 		D3D12MA::Allocation* allocation;
 		ID3D12Resource* resource;
 		D3D(rhi.allocator->CreateResource(&allocDesc, &desc, resourceState, NULL, &allocation, IID_PPV_ARGS(&resource)));
-		((BufferDesc&)rhiDesc).name = rhi.stringAllocator.Allocate(rhiDesc.name);
+		AllocateAndFixName(rhiDesc);
 		SetDebugName(resource, rhiDesc.name, D3DResourceType::Buffer);
 
 		Buffer buffer = {};
@@ -2211,7 +2229,7 @@ namespace RHI
 		{
 			D3D(rhi.allocator->CreateResource(&allocDesc, &desc, D3D12_RESOURCE_STATE_COPY_DEST, pClearValue, &allocation, IID_PPV_ARGS(&resource)));
 		}
-		((TextureDesc&)rhiDesc).name = rhi.stringAllocator.Allocate(rhiDesc.name);
+		AllocateAndFixName(rhiDesc);
 		SetDebugName(resource, rhiDesc.name, D3DResourceType::Texture);
 
 		uint32_t srvIndex = InvalidDescriptorIndex;
@@ -2489,7 +2507,7 @@ namespace RHI
 		ID3D12RootSignature* signature;
 		D3D(rhi.device->CreateRootSignature(0, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&signature)));
 		COM_RELEASE(blob);
-		((RootSignatureDesc&)rhiDesc).name = rhi.stringAllocator.Allocate(rhiDesc.name);
+		AllocateAndFixName(rhiDesc);
 		SetDebugName(signature, rhiDesc.name, D3DResourceType::RootSignature);
 
 		rhiSignature.desc = rhiDesc;
@@ -2509,8 +2527,8 @@ namespace RHI
 	{
 		const RootSignature& sig = rhi.rootSignatures.Get(desc.rootSignature);
 
-		const char* srvName = rhi.stringAllocator.Allocate(va("%s GPU-visible CBV SRV UAV", desc.name));
-		const char* samName = rhi.stringAllocator.Allocate(va("%s GPU-visible sampler", desc.name));
+		const char* srvName = AllocateName(va("%s GPU-visible CBV SRV UAV", desc.name), desc.shortLifeTime);
+		const char* samName = AllocateName(va("%s GPU-visible sampler", desc.name), desc.shortLifeTime);
 
 		DescriptorTable table = { 0 };
 		table.genericHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, sig.genericDescCount, true, srvName);
@@ -2685,7 +2703,7 @@ namespace RHI
 
 		ID3D12PipelineState* pso;
 		D3D(rhi.device->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&pso)));
-		((GraphicsPipelineDesc&)rhiDesc).name = rhi.stringAllocator.Allocate(rhiDesc.name);
+		AllocateAndFixName(rhiDesc);
 		SetDebugName(pso, rhiDesc.name, D3DResourceType::PipelineState);
 
 		Pipeline rhiPipeline;
@@ -2709,7 +2727,7 @@ namespace RHI
 
 		ID3D12PipelineState* pso;
 		D3D(rhi.device->CreateComputePipelineState(&desc, IID_PPV_ARGS(&pso)));
-		((ComputePipelineDesc&)rhiDesc).name = rhi.stringAllocator.Allocate(rhiDesc.name);
+		AllocateAndFixName(rhiDesc);
 		SetDebugName(pso, rhiDesc.name, D3DResourceType::PipelineState);
 
 		Pipeline rhiPipeline;
