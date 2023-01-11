@@ -1603,12 +1603,26 @@ namespace RHI
 
 	static void DrawTextures()
 	{
+		static char filter[256];
+		if(ImGui::Button("Clear filter"))
+		{
+			filter[0] = '\0';
+		}
+		ImGui::SameLine();
+		ImGui::InputText(" ", filter, ARRAY_LEN(filter));
+
 		if(BeginTable("Textures", 2))
 		{
+			TableHeader2("Name", "State");
+
 			int i = 0;
 			Texture* texture;
 			while(rhi.textures.FindNext(&texture, &i))
 			{
+				if(filter[0] != '\0' && !Com_Filter(filter, texture->desc.name))
+				{
+					continue;
+				}
 				TableRow2(texture->desc.name, GetNameForD3DResourceStates(texture->currentState));
 			}
 
