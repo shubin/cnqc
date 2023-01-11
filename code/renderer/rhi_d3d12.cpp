@@ -285,6 +285,7 @@ namespace RHI
 		void EndTextureUpload(HTexture texture);
 		void WaitToStartDrawing(ID3D12CommandQueue* commandQueue);
 
+		ID3D12CommandQueue* commandQueue;
 		ID3D12CommandAllocator* commandAllocator;
 		ID3D12GraphicsCommandList* commandList;
 
@@ -370,6 +371,7 @@ namespace RHI
 		ID3D12GraphicsCommandList* mainCommandList;
 		ID3D12CommandAllocator* tempCommandAllocator;
 		ID3D12GraphicsCommandList* tempCommandList;
+		bool tempCommandListOpen = false;
 		ID3D12GraphicsCommandList* commandList; // not owned, don't release it!
 		UINT frameIndex;
 		Fence mainFence;
@@ -568,16 +570,24 @@ namespace RHI
 
 	void UploadManager::Create()
 	{
-		BufferDesc bufferDesc("texture upload", 128 << 20, ResourceStates::CopyDestinationBit);
+		BufferDesc bufferDesc("upload", 128 << 20, ResourceStates::CopyDestinationBit);
 		uploadHBuffer = CreateBuffer(bufferDesc);
 		bufferByteCount = bufferDesc.byteCount;
 		bufferByteOffset = 0;
 		mappedBuffer = MapBuffer(uploadHBuffer);
 
-		D3D(rhi.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocator)));
+		D3D12_COMMAND_QUEUE_DESC queueDesc = { 0 };
+		queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
+		queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+		queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+		queueDesc.NodeMask = 0;
+		D3D(rhi.device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&commandQueue)));
+		SetDebugName(commandQueue, "upload", D3DResourceType::CommandQueue);
+
+		D3D(rhi.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(&commandAllocator)));
 		SetDebugName(commandAllocator, "upload", D3DResourceType::CommandAllocator);
 
-		D3D(rhi.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator, NULL, IID_PPV_ARGS(&commandList)));
+		D3D(rhi.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, commandAllocator, NULL, IID_PPV_ARGS(&commandList)));
 		SetDebugName(commandList, "upload", D3DResourceType::CommandList);
 		D3D(commandList->Close());
 
@@ -590,6 +600,7 @@ namespace RHI
 	{
 		UnmapBuffer(uploadHBuffer);
 		fence.Release();
+		COM_RELEASE(commandQueue);
 		COM_RELEASE(commandList);
 		COM_RELEASE(commandAllocator);
 	}
@@ -636,9 +647,9 @@ namespace RHI
 
 			ID3D12CommandList* commandLists[] = { commandList };
 			D3D(commandList->Close());
-			rhi.mainCommandQueue->ExecuteCommandLists(ARRAY_LEN(commandLists), commandLists);
+			commandQueue->ExecuteCommandLists(ARRAY_LEN(commandLists), commandLists);
 			fenceValue++;
-			rhi.mainCommandQueue->Signal(fence.fence, fenceValue);
+			commandQueue->Signal(fence.fence, fenceValue);
 		}
 		else
 		{
@@ -703,9 +714,9 @@ namespace RHI
 
 		ID3D12CommandList* commandLists[] = { commandList };
 		D3D(commandList->Close());
-		rhi.mainCommandQueue->ExecuteCommandLists(ARRAY_LEN(commandLists), commandLists);
+		commandQueue->ExecuteCommandLists(ARRAY_LEN(commandLists), commandLists);
 		fenceValue++;
-		rhi.mainCommandQueue->Signal(fence.fence, fenceValue);
+		commandQueue->Signal(fence.fence, fenceValue);
 
 		texture.uploading = false;
 
@@ -719,9 +730,9 @@ namespace RHI
 		}*/
 	}
 
-	void UploadManager::WaitToStartDrawing(ID3D12CommandQueue* commandQueue)
+	void UploadManager::WaitToStartDrawing(ID3D12CommandQueue* commandQueue_)
 	{
-		fence.WaitOnGPU(commandQueue, fenceValue);
+		fence.WaitOnGPU(commandQueue_, fenceValue);
 	}
 
 	void UploadManager::WaitToStartUploading(uint32_t uploadByteCount)
@@ -1754,6 +1765,7 @@ namespace RHI
 		// the temp command list is always left open for the user
 		D3D(rhi.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COMPUTE, rhi.tempCommandAllocator, NULL, IID_PPV_ARGS(&rhi.tempCommandList)));
 		SetDebugName(rhi.tempCommandList, "temp", D3DResourceType::CommandList);
+		rhi.tempCommandListOpen = true;
 
 		// the active/bound command list is the main one by default
 		rhi.commandList = rhi.mainCommandList;
@@ -1864,11 +1876,25 @@ namespace RHI
 #undef DESTROY_POOL
 	}
 
+	static void WaitForTempCommandList()
+	{
+		rhi.tempFence.WaitOnCPU(rhi.tempFenceValue);
+		if(rhi.tempCommandListOpen)
+		{
+			rhi.tempCommandList->Close();
+		}
+		D3D(rhi.tempCommandAllocator->Reset());
+		D3D(rhi.tempCommandList->Reset(rhi.tempCommandAllocator, NULL));
+		rhi.tempCommandListOpen = true;
+	}
+
 	void BeginFrame()
 	{
 		Q_assert(rhi.commandList == rhi.mainCommandList);
 
 		rhi.currentRootSignature = RHI_MAKE_NULL_HANDLE();
+
+		WaitForTempCommandList();
 
 		// @TODO: only wait when some work was added
 		// wait for pending copies from the upload manager to be finished
@@ -2912,6 +2938,8 @@ namespace RHI
 	{
 		Q_assert(rhi.commandList == rhi.mainCommandList);
 		rhi.commandList = rhi.tempCommandList;
+
+		WaitForTempCommandList();
 	}
 
 	void EndTempCommandList()
@@ -2926,9 +2954,7 @@ namespace RHI
 		queue->ExecuteCommandLists(ARRAY_LEN(tempCommandListArray), tempCommandListArray);
 		rhi.tempFenceValue++;
 		rhi.tempFence.Signal(queue, rhi.tempFenceValue);
-		rhi.tempFence.WaitOnCPU(rhi.tempFenceValue);
-		D3D(rhi.tempCommandAllocator->Reset());
-		D3D(rhi.tempCommandList->Reset(rhi.tempCommandAllocator, NULL));
+		rhi.tempCommandListOpen = false;
 	}
 
 #if defined(_DEBUG) || defined(CNQ3_DEV)

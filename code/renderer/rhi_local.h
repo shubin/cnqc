@@ -370,14 +370,14 @@ namespace RHI
 			byteCount = byteCount_;
 			initialState = initialState_;
 			memoryUsage = MemoryUsage::Upload;
-			committedResource = true;
+			committedResource = false;
 		}
 
 		const char* name = NULL;
 		uint32_t byteCount = 0;
 		ResourceStates::Flags initialState = ResourceStates::Common;
 		MemoryUsage::Id memoryUsage = MemoryUsage::Upload;
-		bool committedResource = true;
+		bool committedResource = false;
 	};
 
 	struct TextureDesc
@@ -393,7 +393,7 @@ namespace RHI
 			initialState = ResourceStates::PixelShaderAccessBit;
 			allowedState = ResourceStates::PixelShaderAccessBit;
 			format = TextureFormat::RGBA32_UNorm;
-			committedResource = true;
+			committedResource = false;
 			usePreferredClearValue = false;
 		}
 
@@ -405,7 +405,7 @@ namespace RHI
 		ResourceStates::Flags initialState = ResourceStates::PixelShaderAccessBit;
 		ResourceStates::Flags allowedState = ResourceStates::PixelShaderAccessBit;
 		TextureFormat::Id format = TextureFormat::RGBA32_UNorm;
-		bool committedResource = true;
+		bool committedResource = false;
 		bool usePreferredClearValue = false; // for render targets and depth/stencil buffers
 		float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 		float clearDepth = 1.0f;
