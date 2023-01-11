@@ -102,9 +102,11 @@ void ImGUI::Init()
 		FrameResources* fr = &frameResources[i];
 
 		BufferDesc vtx("Dear ImGUI index", MAX_INDEX_COUNT * sizeof(ImDrawIdx), ResourceStates::IndexBufferBit);
+		vtx.memoryUsage = MemoryUsage::Upload;
 		fr->indexBuffer = CreateBuffer(vtx);
 
 		BufferDesc idx("Dear ImGUI vertex", MAX_VERTEX_COUNT * sizeof(ImDrawData), ResourceStates::VertexBufferBit);
+		idx.memoryUsage = MemoryUsage::Upload;
 		fr->vertexBuffer = CreateBuffer(idx);
 	}
 
