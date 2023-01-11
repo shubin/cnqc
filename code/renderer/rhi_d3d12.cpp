@@ -2941,7 +2941,11 @@ namespace RHI
 		Q_assert(rhi.commandList == rhi.mainCommandList);
 		rhi.commandList = rhi.tempCommandList;
 
+		// CPU wait for the temp command list to be done executing on the GPU
 		WaitForTempCommandList();
+
+		// GPU wait for the copy queue to be done executing on the GPU
+		rhi.upload.WaitToStartDrawing(rhi.computeCommandQueue);
 	}
 
 	void EndTempCommandList()

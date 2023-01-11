@@ -239,6 +239,12 @@ void MipMapGenerator::GenerateMipMaps(HTexture texture)
 	int w = image->width;
 	int h = image->height;
 
+	TextureBarrier barriers[MipSlice::Count];
+	for(int i = 0; i < MipSlice::Count; ++i)
+	{
+		barriers[i] = TextureBarrier(textures[i], ResourceStates::UnorderedAccessBit);
+	}
+
 	BeginTempCommandList();
 
 	// create a linear-space copy of mip 0 into float16 texture 0
@@ -251,13 +257,8 @@ void MipMapGenerator::GenerateMipMaps(HTexture texture)
 		CmdBindPipeline(stage.pipeline);
 		CmdBindDescriptorTable(stage.rootSignature, stage.descriptorTable);
 		CmdSetRootConstants(stage.rootSignature, ShaderStage::Compute, &rc);
+		CmdBarrier(ARRAY_LEN(barriers), barriers);
 		CmdDispatch((w + GroupMask) / GroupSize, (h + GroupMask) / GroupSize, 1);
-	}
-
-	TextureBarrier barriers[MipSlice::Count];
-	for(int i = 0; i < MipSlice::Count; ++i)
-	{
-		barriers[i] = TextureBarrier(textures[i], ResourceStates::UnorderedAccessBit);
 	}
 
 	for(int i = 1; i < mipCount; ++i)
@@ -326,5 +327,6 @@ void MipMapGenerator::GenerateMipMaps(HTexture texture)
 		}
 	}
 
+	CmdBarrier(ARRAY_LEN(barriers), barriers);
 	EndTempCommandList();
 }
