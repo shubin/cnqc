@@ -159,7 +159,7 @@ namespace RHI
 		{
 			RGBA32_UNorm,
 			RGBA64_Float,
-			DepthStencil32_UNorm24_UInt8,
+			Depth32_Float,
 			Count
 		};
 	};
@@ -321,7 +321,7 @@ namespace RHI
 			bool enableDepthTest = true;
 			bool enableDepthWrites = true;
 			ComparisonFunction::Id depthComparison = ComparisonFunction::GreaterEqual;
-			TextureFormat::Id depthStencilFormat = TextureFormat::DepthStencil32_UNorm24_UInt8;
+			TextureFormat::Id depthStencilFormat = TextureFormat::Depth32_Float;
 		}
 		depthStencil;
 		struct Rasterizer

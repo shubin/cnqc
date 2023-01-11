@@ -141,7 +141,7 @@ void ImGUI::Init()
 		desc.vertexLayout.AddAttribute(0, ShaderSemantic::Color,
 			DataType::UNorm8, 4, offsetof(ImDrawVert, col));
 		desc.depthStencil.depthComparison = ComparisonFunction::Always;
-		desc.depthStencil.depthStencilFormat = TextureFormat::DepthStencil32_UNorm24_UInt8;
+		desc.depthStencil.depthStencilFormat = TextureFormat::Depth32_Float;
 		desc.depthStencil.enableDepthTest = false;
 		desc.depthStencil.enableDepthWrites = false;
 		desc.rasterizer.cullMode = CullMode::None;

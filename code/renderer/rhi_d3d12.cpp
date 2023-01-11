@@ -806,6 +806,11 @@ namespace RHI
 		Q_assert(resource);
 		Q_assert(type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
+		if(desc.Format == DXGI_FORMAT_D32_FLOAT)
+		{
+			desc.Format = DXGI_FORMAT_R32_FLOAT;
+		}
+
 		const uint32_t index = freeList.Allocate();
 		rhi.device->CreateShaderResourceView(resource, &desc, GetCPUHandle(index));
 
@@ -1151,7 +1156,7 @@ namespace RHI
 		{
 			case TextureFormat::RGBA32_UNorm: return DXGI_FORMAT_R8G8B8A8_UNORM;
 			case TextureFormat::RGBA64_Float: return DXGI_FORMAT_R16G16B16A16_FLOAT;
-			case TextureFormat::DepthStencil32_UNorm24_UInt8: return DXGI_FORMAT_D24_UNORM_S8_UINT;
+			case TextureFormat::Depth32_Float: return DXGI_FORMAT_D32_FLOAT;
 			default: Q_assert(!"Unsupported texture format"); return DXGI_FORMAT_R8G8B8A8_UNORM;
 		}
 	}

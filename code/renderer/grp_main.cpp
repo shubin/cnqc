@@ -64,6 +64,7 @@ struct GameplayRenderPipeline : IRenderPipeline
 		}
 
 		grp.textureIndex = 0;
+
 		grp.ui.Init();
 		grp.world.Init();
 		grp.mipMapGen.Init();

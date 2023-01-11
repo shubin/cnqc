@@ -50,16 +50,16 @@ void World::Init()
 		TextureDesc desc("depth buffer", glConfig.vidWidth, glConfig.vidHeight);
 		desc.shortLifeTime = true;
 		desc.initialState = ResourceStates::DepthWriteBit;
-		desc.allowedState = ResourceStates::DepthAccessBits;
-		desc.format = TextureFormat::DepthStencil32_UNorm24_UInt8;
+		desc.allowedState = ResourceStates::DepthAccessBits | ResourceStates::PixelShaderAccessBit;
+		desc.format = TextureFormat::Depth32_Float;
 		desc.SetClearDepthStencil(0.0f, 0);
 		depthTexture = CreateTexture(desc);
 
 		// @TODO: call shared function
-		/*depthTextureIndex = grp.textureIndex++;
+		depthTextureIndex = grp.textureIndex++;
 		DescriptorTableUpdate update;
 		update.SetTextures(1, &depthTexture, depthTextureIndex);
-		UpdateDescriptorTable(grp.descriptorTable, update);*/
+		UpdateDescriptorTable(grp.descriptorTable, update);
 	}
 
 	if(!grp.firstInit)
@@ -85,7 +85,7 @@ void World::Init()
 		desc.pixelShader = CompilePixelShader(zpp_ps);
 		desc.vertexLayout.AddAttribute(0, ShaderSemantic::Position, DataType::Float32, 4, 0);
 		desc.depthStencil.depthComparison = ComparisonFunction::GreaterEqual;
-		desc.depthStencil.depthStencilFormat = TextureFormat::DepthStencil32_UNorm24_UInt8;
+		desc.depthStencil.depthStencilFormat = TextureFormat::Depth32_Float;
 		desc.depthStencil.enableDepthTest = true;
 		desc.depthStencil.enableDepthWrites = true;
 		desc.rasterizer.cullMode = CullMode::Back;
@@ -130,8 +130,8 @@ void World::DrawPrePass()
 		return;
 	}
 
-	/*TextureBarrier tb(depthTexture, ResourceStates::DepthWriteBit);
-	CmdBarrier(1, &tb);*/
+	TextureBarrier tb(depthTexture, ResourceStates::DepthWriteBit);
+	CmdBarrier(1, &tb);
 
 	// @TODO: grab the right rects...
 	CmdSetViewport(0, 0, glConfig.vidWidth, glConfig.vidHeight);
@@ -153,12 +153,12 @@ void World::DrawPrePass()
 
 void World::DrawGUI()
 {
-	/*TextureBarrier tb(depthTexture, ResourceStates::DepthReadBit);
-	CmdBarrier(1, &tb);*/
+	TextureBarrier tb(depthTexture, ResourceStates::DepthReadBit);
+	CmdBarrier(1, &tb);
 	if(ImGui::Begin("depth", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 	{
-		//ImGui::Image((ImTextureID)depthTextureIndex, ImVec2(640, 360));
-		ImGui::Image(30, ImVec2(640, 360));
+		ImGui::Image((ImTextureID)depthTextureIndex, ImVec2(640, 360));
+		//ImGui::Image(30, ImVec2(640, 360));
 	}
 	ImGui::End();
 }
