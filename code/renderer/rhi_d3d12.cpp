@@ -1445,44 +1445,51 @@ namespace RHI
 		return ImGui::BeginTable(name, count, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable);
 	}
 
-	static void TableHeader2(const char* item0, const char* item1)
+	static void TableHeader(int count, ...)
 	{
-		ImGui::TableSetupColumn(item0);
-		ImGui::TableSetupColumn(item1);
+		va_list args;
+		va_start(args, count);
+		for(int i = 0; i < count; ++i)
+		{
+			const char* header = va_arg(args, const char*);
+			ImGui::TableSetupColumn(header);
+		}
+		va_end(args);
+
 		ImGui::TableHeadersRow();
 	}
 
-	static void TableRow2(const char* item0, const char* item1)
+	static void TableRow(int count, ...)
 	{
 		ImGui::TableNextRow();
-		ImGui::TableSetColumnIndex(0);
-		ImGui::Text(item0);
-		ImGui::TableSetColumnIndex(1);
-		ImGui::Text(item1);
+
+		va_list args;
+		va_start(args, count);
+		for(int i = 0; i < count; ++i)
+		{
+			const char* item = va_arg(args, const char*);
+			ImGui::TableSetColumnIndex(i);
+			ImGui::Text(item);
+		}
+		va_end(args);
 	}
 
 	static void TableRow2Bool(const char* item0, bool item1)
 	{
-		TableRow2(item0, item1 ? "YES" : "NO");
+		TableRow(2, item0, item1 ? "YES" : "NO");
 	}
 
 	static void DrawPerfStats()
 	{
 		if(BeginTable("GPU timings", 2))
 		{
-			ImGui::TableSetupColumn("Pass");
-			ImGui::TableSetupColumn("Micro-seconds");
-			ImGui::TableHeadersRow();
+			TableHeader(2, "Pass", "Micro-seconds");
 
 			const ResolvedQueries& rq = rhi.resolvedQueries;
 			for(uint32_t q = 0; q < rq.durationQueryCount; ++q)
 			{
 				const ResolvedDurationQuery& rdq = rq.durationQueries[q];
-				ImGui::TableNextRow();
-				ImGui::TableSetColumnIndex(0);
-				ImGui::Text(rdq.name);
-				ImGui::TableSetColumnIndex(1);
-				ImGui::Text("%d", (int)rdq.gpuMicroSeconds);
+				TableRow(2, rdq.name, va("%d", (int)rdq.gpuMicroSeconds));
 			}
 
 			ImGui::EndTable();
@@ -1493,9 +1500,9 @@ namespace RHI
 	{
 		if(BeginTable("Handles", 2))
 		{
-			TableHeader2("Type", "Count");
+			TableHeader(2, "Type", "Count");
 
-#define ITEM(Name, Variable) TableRow2(Name, va("%d", (int)Variable.CountUsedSlots()))
+#define ITEM(Name, Variable) TableRow(2, Name, va("%d", (int)Variable.CountUsedSlots()))
 			ITEM("Buffers", rhi.buffers);
 			ITEM("Textures", rhi.textures);
 			ITEM("Root Signatures", rhi.rootSignatures);
@@ -1508,9 +1515,9 @@ namespace RHI
 
 		if(BeginTable("Descriptors", 2))
 		{
-			TableHeader2("Type", "Count");
+			TableHeader(2, "Type", "Count");
 
-#define ITEM(Name, Variable) TableRow2(Name, va("%d", (int)Variable.allocatedItemCount))
+#define ITEM(Name, Variable) TableRow(2, Name, va("%d", (int)Variable.allocatedItemCount))
 			ITEM("CBV/SRV/UAV", rhi.descHeapGeneric.freeList);
 			ITEM("Samplers", rhi.descHeapSamplers.freeList);
 			ITEM("RTV", rhi.descHeapRTVs.freeList);
@@ -1526,13 +1533,13 @@ namespace RHI
 			rhi.allocator->GetBudget(&budget, NULL);
 			TableRow2Bool("UMA", rhi.allocator->IsUMA());
 			TableRow2Bool("Cache coherent UMA", rhi.allocator->IsCacheCoherentUMA());
-			TableRow2("Total", Com_FormatBytes(rhi.allocator->GetMemoryCapacity(DXGI_MEMORY_SEGMENT_GROUP_LOCAL)));
-			TableRow2("Budget", Com_FormatBytes(budget.BudgetBytes));
-			TableRow2("Usage", Com_FormatBytes(budget.UsageBytes));
-			TableRow2("Allocated", Com_FormatBytes(budget.Stats.BlockBytes));
-			TableRow2("Used", Com_FormatBytes(budget.Stats.AllocationBytes));
-			TableRow2("Block count", va("%d", budget.Stats.BlockCount));
-			TableRow2("Allocation count", va("%d", budget.Stats.AllocationCount));
+			TableRow(2, "Total", Com_FormatBytes(rhi.allocator->GetMemoryCapacity(DXGI_MEMORY_SEGMENT_GROUP_LOCAL)));
+			TableRow(2, "Budget", Com_FormatBytes(budget.BudgetBytes));
+			TableRow(2, "Usage", Com_FormatBytes(budget.UsageBytes));
+			TableRow(2, "Allocated", Com_FormatBytes(budget.Stats.BlockBytes));
+			TableRow(2, "Used", Com_FormatBytes(budget.Stats.AllocationBytes));
+			TableRow(2, "Block count", va("%d", budget.Stats.BlockCount));
+			TableRow(2, "Allocation count", va("%d", budget.Stats.AllocationCount));
 
 			ImGui::EndTable();
 		}
@@ -1553,7 +1560,7 @@ namespace RHI
 					case D3D12_RESOURCE_BINDING_TIER_3: tier = "3"; break;
 					default: break;
 				}
-				TableRow2("Resource binding tier", tier);
+				TableRow(2, "Resource binding tier", tier);
 			}
 
 			D3D12_FEATURE_DATA_ARCHITECTURE arch0 = { 0 };
@@ -1572,7 +1579,7 @@ namespace RHI
 					case D3D_ROOT_SIGNATURE_VERSION_1_1: version = "1.1";
 					default: break;
 				}
-				TableRow2("Root signature version", version);
+				TableRow(2, "Root signature version", version);
 			}
 
 			D3D12_FEATURE_DATA_D3D12_OPTIONS5 options5 = { 0 };
@@ -1586,7 +1593,7 @@ namespace RHI
 					case D3D12_RENDER_PASS_TIER_2: tier = "2";
 					default: break;
 				}
-				TableRow2("Render passes tier", tier);
+				TableRow(2, "Render passes tier", tier);
 
 				tier = "Unknown";
 				switch(options5.RaytracingTier)
@@ -1596,7 +1603,7 @@ namespace RHI
 					case D3D12_RAYTRACING_TIER_1_1: tier = "1.1";
 					default: break;
 				}
-				TableRow2("Raytracing tier (DXR)", tier);
+				TableRow(2, "Raytracing tier (DXR)", tier);
 			}
 
 			ImGui::EndTable();
@@ -1615,7 +1622,7 @@ namespace RHI
 
 		if(BeginTable("Textures", 2))
 		{
-			TableHeader2("Name", "State");
+			TableHeader(2, "Name", "State");
 
 			int i = 0;
 			Texture* texture;
@@ -1625,7 +1632,7 @@ namespace RHI
 				{
 					continue;
 				}
-				TableRow2(texture->desc.name, GetNameForD3DResourceStates(texture->currentState));
+				TableRow(2, texture->desc.name, GetNameForD3DResourceStates(texture->currentState));
 			}
 
 			ImGui::EndTable();
