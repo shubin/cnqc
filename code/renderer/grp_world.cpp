@@ -54,6 +54,12 @@ void World::Init()
 		desc.format = TextureFormat::DepthStencil32_UNorm24_UInt8;
 		desc.SetClearDepthStencil(0.0f, 0);
 		depthTexture = CreateTexture(desc);
+
+		// @TODO: call shared function
+		/*depthTextureIndex = grp.textureIndex++;
+		DescriptorTableUpdate update;
+		update.SetTextures(1, &depthTexture, depthTextureIndex);
+		UpdateDescriptorTable(grp.descriptorTable, update);*/
 	}
 
 	if(!grp.firstInit)
@@ -124,6 +130,9 @@ void World::DrawPrePass()
 		return;
 	}
 
+	/*TextureBarrier tb(depthTexture, ResourceStates::DepthWriteBit);
+	CmdBarrier(1, &tb);*/
+
 	// @TODO: grab the right rects...
 	CmdSetViewport(0, 0, glConfig.vidWidth, glConfig.vidHeight);
 	CmdSetScissor(0, 0, glConfig.vidWidth, glConfig.vidHeight);
@@ -140,28 +149,18 @@ void World::DrawPrePass()
 	const uint32_t vertexStride = 4 * sizeof(float);
 	CmdBindVertexBuffers(1, &prePassGeo.vertexBuffer, &vertexStride, NULL);
 	CmdDrawIndexed(prePassGeo.indexCount, 0, 0);
+}
 
-#if 0
-	image_t* image = NULL;
-	for(int i = 0; i < tr.numImages; ++i)
+void World::DrawGUI()
+{
+	/*TextureBarrier tb(depthTexture, ResourceStates::DepthReadBit);
+	CmdBarrier(1, &tb);*/
+	if(ImGui::Begin("depth", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 	{
-		if(tr.images[i]->texture == depthTexture)
-		{
-			image = tr.images[i];
-			break;
-		}
+		//ImGui::Image((ImTextureID)depthTextureIndex, ImVec2(640, 360));
+		ImGui::Image(30, ImVec2(640, 360));
 	}
-	if(image != NULL)
-	{
-		TextureBarrier tb(depthTexture, ResourceStates::DepthReadBit);
-		CmdBarrier(1, &tb);
-		if(ImGui::Begin("depth"))
-		{
-			ImGui::Image((ImTextureID)image->textureIndex, ImVec2(640, 360));
-		}
-		ImGui::End();
-	}
-#endif
+	ImGui::End();
 }
 
 void World::ProcessWorld(world_t& world)

@@ -37,6 +37,7 @@ struct World
 	void BeginFrame();
 	void Begin();
 	void DrawPrePass();
+	void DrawGUI();
 	void ProcessWorld(world_t& world);
 
 	typedef uint32_t Index;
@@ -67,6 +68,7 @@ struct World
 	GeometryBuffer prePassGeo;
 
 	HTexture depthTexture;
+	uint32_t depthTextureIndex;
 
 	// Z pre-pass
 	HRootSignature rootSignature;

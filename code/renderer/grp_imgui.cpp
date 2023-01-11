@@ -196,6 +196,7 @@ void ImGUI::Draw()
 
 	ImGui::NewFrame();
 	R_GUI_RHI();
+	grp.world.DrawGUI();
 	ImGui::EndFrame();
 	ImGui::Render();
 

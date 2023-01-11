@@ -149,6 +149,7 @@ struct GameplayRenderPipeline : IRenderPipeline
 			desc.allowedState |= ResourceStates::UnorderedAccessBit; // for mip-map generation
 		}
 
+		// @TODO: shared function for registering a new texture into the descriptor table and returning the SRV index
 		image->texture = ::RHI::CreateTexture(desc);
 		image->textureIndex = grp.textureIndex++;
 
