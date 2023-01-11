@@ -573,6 +573,7 @@ namespace RHI
 	void UploadManager::Create()
 	{
 		BufferDesc bufferDesc("upload", 128 << 20, ResourceStates::CopyDestinationBit);
+		bufferDesc.memoryUsage = MemoryUsage::Upload;
 		uploadHBuffer = CreateBuffer(bufferDesc);
 		bufferByteCount = bufferDesc.byteCount;
 		bufferByteOffset = 0;
@@ -2114,8 +2115,7 @@ namespace RHI
 
 		bool requestTransition = false;
 
-		// alignment must be 64KB (D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT) or 0, which is effectively 64KB.
-		// https://msdn.microsoft.com/en-us/library/windows/desktop/dn903813(v=vs.85).aspx
+		// Alignment 0 is the same as specifying D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT
 		D3D12_RESOURCE_DESC desc = { 0 };
 		desc.Alignment = 0;
 		desc.DepthOrArraySize = 1;

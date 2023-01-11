@@ -50,7 +50,7 @@ void World::Init()
 		desc.initialState = ResourceStates::DepthWriteBit;
 		desc.allowedState = ResourceStates::DepthAccessBits;
 		desc.format = TextureFormat::DepthStencil32_UNorm24_UInt8;
-		desc.SetClearDepthStencil(1.0f, 0);
+		desc.SetClearDepthStencil(0.0f, 0);
 		depthTexture = CreateTexture(desc);
 	}
 	{
@@ -81,15 +81,11 @@ void World::Init()
 	prePassGeo.maxVertexCount = 1 << 20;
 	prePassGeo.maxIndexCount = 8 * prePassGeo.maxVertexCount;
 	{
-		// @TODO: don't use host-visible buffers...
 		BufferDesc desc("depth pre-pass index", sizeof(Index) * prePassGeo.maxIndexCount, ResourceStates::IndexBufferBit);
-		desc.memoryUsage = MemoryUsage::GPU;
 		prePassGeo.indexBuffer = CreateBuffer(desc);
 	}
 	{
-		// @TODO: don't use host-visible buffers...
 		BufferDesc desc("depth pre-pass vertex", 16 * prePassGeo.maxVertexCount, ResourceStates::VertexBufferBit);
-		desc.memoryUsage = MemoryUsage::GPU;
 		prePassGeo.vertexBuffer = CreateBuffer(desc);
 	}
 }

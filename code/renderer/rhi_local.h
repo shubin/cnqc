@@ -369,14 +369,14 @@ namespace RHI
 			name = name_;
 			byteCount = byteCount_;
 			initialState = initialState_;
-			memoryUsage = MemoryUsage::Upload;
+			memoryUsage = MemoryUsage::GPU;
 			committedResource = false;
 		}
 
 		const char* name = NULL;
 		uint32_t byteCount = 0;
 		ResourceStates::Flags initialState = ResourceStates::Common;
-		MemoryUsage::Id memoryUsage = MemoryUsage::Upload;
+		MemoryUsage::Id memoryUsage = MemoryUsage::GPU;
 		bool committedResource = false;
 	};
 

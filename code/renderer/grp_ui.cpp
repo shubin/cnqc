@@ -123,11 +123,13 @@ void UI::Init()
 	maxIndexCount = 8 * maxVertexCount;
 	{
 		BufferDesc desc("UI index", sizeof(UI::Index) * maxIndexCount * FrameCount, ResourceStates::IndexBufferBit);
+		desc.memoryUsage = MemoryUsage::Upload;
 		indexBuffer = CreateBuffer(desc);
 		indices = (UI::Index*)MapBuffer(indexBuffer);
 	}
 	{
 		BufferDesc desc("UI vertex", sizeof(UI::Vertex) * maxVertexCount * FrameCount, ResourceStates::VertexBufferBit);
+		desc.memoryUsage = MemoryUsage::Upload;
 		vertexBuffer = CreateBuffer(desc);
 		vertices = (UI::Vertex*)MapBuffer(vertexBuffer);
 	}
