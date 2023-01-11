@@ -1442,6 +1442,7 @@ namespace RHI
 			D3D(rhi.swapChain->GetBuffer(f, IID_PPV_ARGS(&renderTarget)));
 
 			TextureDesc desc(va("swap chain #%d", f + 1), glConfig.vidWidth, glConfig.vidHeight);
+			desc.shortLifeTime = true;
 			desc.nativeResource = renderTarget;
 			desc.initialState = ResourceStates::PresentBit;
 			desc.allowedState = ResourceStates::PresentBit | ResourceStates::RenderTargetBit;
