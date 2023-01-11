@@ -791,6 +791,24 @@ static void WIN_RegisterMonitorCommands()
 }
 
 
+static void WIN_SetThreadName( PCWSTR name )
+{
+	// SetThreadDescription is only available since Windows 10 version 1607
+
+	typedef HRESULT (WINAPI *SetThreadDescription_t)( HANDLE, PCWSTR );
+
+	HINSTANCE module = LoadLibraryA( "KernelBase.dll" );
+	if ( module == NULL )
+		return;
+
+	SetThreadDescription_t pSetThreadDescription = (SetThreadDescription_t)GetProcAddress( module, "SetThreadDescription" );
+	if ( pSetThreadDescription != NULL )
+		(*pSetThreadDescription)( GetCurrentThread(), name );
+
+	FreeLibrary( module );
+}
+
+
 ///////////////////////////////////////////////////////////////
 
 
@@ -807,6 +825,8 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 #endif
 
 	WIN_InstallExceptionHandlers();
+
+	WIN_SetThreadName( L"main thread" );
 
 	// done here so the early console can be shown on the primary monitor
 	WIN_InitMonitorList();
