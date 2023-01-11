@@ -46,6 +46,21 @@ struct GameplayRenderPipeline : IRenderPipeline
 		{
 			grp.samplers[0] = CreateSampler(SamplerDesc(TW_REPEAT, TextureFilter::Linear));
 			grp.samplers[1] = CreateSampler(SamplerDesc(TW_CLAMP_TO_EDGE, TextureFilter::Linear));
+
+			RootSignatureDesc desc("main");
+			desc.usingVertexBuffers = qtrue;
+			desc.samplerCount = ARRAY_LEN(grp.samplers);
+			desc.samplerVisibility = ShaderStages::PixelBit;
+			desc.genericVisibility = ShaderStages::PixelBit;
+			desc.AddRange(DescriptorType::Texture, 0, MAX_DRAWIMAGES * 2);
+			grp.rootSignatureDesc = desc;
+			grp.rootSignature = CreateRootSignature(desc);
+
+			grp.descriptorTable = CreateDescriptorTable(DescriptorTableDesc("game textures", grp.rootSignature));
+
+			DescriptorTableUpdate update;
+			update.SetSamplers(ARRAY_LEN(grp.samplers), grp.samplers);
+			UpdateDescriptorTable(grp.descriptorTable, update);
 		}
 
 		grp.textureIndex = 0;
@@ -139,7 +154,7 @@ struct GameplayRenderPipeline : IRenderPipeline
 
 		DescriptorTableUpdate update;
 		update.SetTextures(1, &image->texture, image->textureIndex);
-		UpdateDescriptorTable(grp.ui.descriptorTable, update);
+		UpdateDescriptorTable(grp.descriptorTable, update);
 	}
 
 	void UpdateTexture(image_t* image, const byte* data) override

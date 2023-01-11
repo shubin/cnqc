@@ -88,22 +88,11 @@ void UI::Init()
 	}
 
 	{
-		RootSignatureDesc desc("UI");
-		desc.usingVertexBuffers = qtrue;
+		RootSignatureDesc desc = grp.rootSignatureDesc;
+		desc.name = "UI";
 		desc.constants[ShaderStage::Vertex].byteCount = 8;
 		desc.constants[ShaderStage::Pixel].byteCount = 8;
-		desc.samplerCount = ARRAY_LEN(grp.samplers);
-		desc.samplerVisibility = ShaderStages::PixelBit;
-		desc.genericVisibility = ShaderStages::PixelBit;
-		desc.AddRange(DescriptorType::Texture, 0, MAX_DRAWIMAGES);
 		rootSignature = CreateRootSignature(desc);
-	}
-	{
-		descriptorTable = CreateDescriptorTable(DescriptorTableDesc("UI", rootSignature));
-
-		DescriptorTableUpdate update;
-		update.SetSamplers(ARRAY_LEN(grp.samplers), grp.samplers);
-		UpdateDescriptorTable(descriptorTable, update);
 	}
 	{
 		GraphicsPipelineDesc desc("UI", rootSignature);
@@ -160,7 +149,7 @@ void UI::Begin()
 	CmdSetScissor(0, 0, glConfig.vidWidth, glConfig.vidHeight);
 	CmdBindRootSignature(rootSignature);
 	CmdBindPipeline(pipeline);
-	CmdBindDescriptorTable(rootSignature, descriptorTable);
+	CmdBindDescriptorTable(rootSignature, grp.descriptorTable);
 	const uint32_t stride = sizeof(UI::Vertex);
 	CmdBindVertexBuffers(1, &vertexBuffer, &stride, NULL);
 	CmdBindIndexBuffer(indexBuffer, indexType, 0);

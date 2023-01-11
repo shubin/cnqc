@@ -34,6 +34,11 @@ struct VertexRC
 {
 	float mvp[16];
 };
+
+struct PixelRC
+{
+	uint32_t texture;
+};
 #pragma pack(pop)
 
 static const char* vs = R"grml(
@@ -67,6 +72,11 @@ PS_INPUT main(VS_INPUT input)
 )grml";
 
 static const char* ps = R"grml(
+cbuffer vertexBuffer : register(b0)
+{
+	uint TextureIndex;
+};
+
 struct PS_INPUT
 {
 	float4 pos : SV_POSITION;
@@ -75,11 +85,11 @@ struct PS_INPUT
 };
 
 SamplerState sampler0 : register(s0);
-Texture2D texture0 : register(t0);
+Texture2D textures[4096] : register(t0);
 
 float4 main(PS_INPUT input) : SV_Target
 {
-	float4 out_col = input.col * texture0.Sample(sampler0, input.uv);
+	float4 out_col = input.col * textures[TextureIndex].Sample(sampler0, input.uv);
 	return out_col;
 }
 )grml";
@@ -90,6 +100,7 @@ void ImGUI::Init()
 	ImGuiIO& io = ImGui::GetIO();
 	if(io.BackendRendererUserData != NULL)
 	{
+		RegisterFontAtlas();
 		return;
 	}
 
@@ -110,18 +121,11 @@ void ImGUI::Init()
 		fr->vertexBuffer = CreateBuffer(idx);
 	}
 
-	// @TODO: BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK
-	sampler = CreateSampler(SamplerDesc(TW_REPEAT, TextureFilter::Linear));
-
 	{
-		RootSignatureDesc desc("Dear ImGUI");
-		desc.pipelineType = PipelineType::Graphics;
-		desc.usingVertexBuffers = true;
-		desc.samplerCount = 1;
-		desc.samplerVisibility = ShaderStages::PixelBit;
-		desc.genericVisibility = ShaderStages::PixelBit;
+		RootSignatureDesc desc = grp.rootSignatureDesc;
+		desc.name = "Dear ImGUI";
 		desc.constants[ShaderStage::Vertex].byteCount = sizeof(VertexRC);
-		desc.AddRange(DescriptorType::Texture, 0, 1);
+		desc.constants[ShaderStage::Pixel].byteCount = sizeof(PixelRC);
 		rootSignature = CreateRootSignature(desc);
 	}
 
@@ -160,22 +164,21 @@ void ImGUI::Init()
 			memcpy(update.mappedData + r * update.dstRowByteCount, pixels + r * update.srcRowByteCount, update.srcRowByteCount);
 		}
 		EndTextureUpload(fontAtlas);
+
+		RegisterFontAtlas();
 	}
+}
 
-	{
-		// @TODO: use the same big shared descriptor table for SRVs/samplers
-		// as the rest of the GRP?
+void ImGUI::RegisterFontAtlas()
+{
+	ImGuiIO& io = ImGui::GetIO();
 
-		descriptorTable = CreateDescriptorTable(DescriptorTableDesc("Dear ImGUI", rootSignature));
+	const uint32_t fontIndex = grp.textureIndex++;
+	io.Fonts->SetTexID((ImTextureID)fontIndex);
 
-		DescriptorTableUpdate update;
-
-		update.SetSamplers(1, &sampler);
-		UpdateDescriptorTable(descriptorTable, update);
-
-		update.SetTextures(1, &fontAtlas);
-		UpdateDescriptorTable(descriptorTable, update);
-	}
+	DescriptorTableUpdate update;
+	update.SetTextures(1, &fontAtlas, fontIndex);
+	UpdateDescriptorTable(grp.descriptorTable, update);
 }
 
 void ImGUI::Draw()
@@ -238,7 +241,7 @@ void ImGUI::Draw()
 
 	CmdBindRootSignature(rootSignature);
 	CmdBindPipeline(pipeline);
-	CmdBindDescriptorTable(rootSignature, descriptorTable);
+	CmdBindDescriptorTable(rootSignature, grp.descriptorTable);
 	CmdBindVertexBuffers(1, &fr->vertexBuffer, &vertexStride, NULL);
 	CmdBindIndexBuffer(fr->indexBuffer, IndexType::UInt32, 0);
 	CmdSetViewport(0, 0, drawData->DisplaySize.x, drawData->DisplaySize.y);
@@ -263,6 +266,9 @@ void ImGUI::Draw()
 			{
 				continue;
 			}
+
+			const PixelRC pixelRC = { (uint32_t)cmd->TextureId };
+			CmdSetRootConstants(rootSignature, ShaderStage::Pixel, &pixelRC);
 
 			// Apply Scissor/clipping rectangle, Draw
 			CmdSetScissor(clip_min.x, clip_min.y, clip_max.x - clip_min.x, clip_max.y - clip_min.y);

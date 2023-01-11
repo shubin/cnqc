@@ -22,6 +22,7 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 
 
 #include "grp_local.h"
+#include "../imgui/imgui.h"
 
 
 static const char* zpp_vs = R"grml(
@@ -139,6 +140,28 @@ void World::DrawPrePass()
 	const uint32_t vertexStride = 4 * sizeof(float);
 	CmdBindVertexBuffers(1, &prePassGeo.vertexBuffer, &vertexStride, NULL);
 	CmdDrawIndexed(prePassGeo.indexCount, 0, 0);
+
+#if 0
+	image_t* image = NULL;
+	for(int i = 0; i < tr.numImages; ++i)
+	{
+		if(tr.images[i]->texture == depthTexture)
+		{
+			image = tr.images[i];
+			break;
+		}
+	}
+	if(image != NULL)
+	{
+		TextureBarrier tb(depthTexture, ResourceStates::DepthReadBit);
+		CmdBarrier(1, &tb);
+		if(ImGui::Begin("depth"))
+		{
+			ImGui::Image((ImTextureID)image->textureIndex, ImVec2(640, 360));
+		}
+		ImGui::End();
+	}
+#endif
 }
 
 void World::ProcessWorld(world_t& world)

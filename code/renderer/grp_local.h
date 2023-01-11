@@ -103,7 +103,6 @@ struct UI
 	int indexCount;
 	int vertexCount;
 	HRootSignature rootSignature;
-	HDescriptorTable descriptorTable;
 	HPipeline pipeline;
 	HBuffer indexBuffer;
 	HBuffer vertexBuffer;
@@ -151,6 +150,7 @@ struct MipMapGenerator
 struct ImGUI
 {
 	void Init();
+	void RegisterFontAtlas();
 	void Draw();
 
 	struct FrameResources
@@ -159,10 +159,8 @@ struct ImGUI
 		HBuffer vertexBuffer;
 	};
 
-	HSampler sampler;
 	HRootSignature rootSignature;
 	HPipeline pipeline;
-	HDescriptorTable descriptorTable;
 	HTexture fontAtlas;
 	FrameResources frameResources[FrameCount];
 };
@@ -187,6 +185,10 @@ struct GRP
 	ImGUI imgui;
 	bool firstInit = true;
 	RenderMode::Id renderMode;
+
+	RootSignatureDesc rootSignatureDesc;
+	HRootSignature rootSignature;
+	HDescriptorTable descriptorTable;
 	uint32_t textureIndex;
 	HSampler samplers[2];
 };
