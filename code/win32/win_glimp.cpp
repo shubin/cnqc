@@ -167,6 +167,7 @@ static qbool GLW_CreateWindow()
 			r.top = 0;
 			r.right = glInfo.winWidth;
 			r.bottom = glInfo.winHeight;
+			AdjustWindowRect( &r, style, FALSE );
 
 			const int w = r.right - r.left;
 			const int h = r.bottom - r.top;
