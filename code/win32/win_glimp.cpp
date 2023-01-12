@@ -81,116 +81,81 @@ static qbool GLW_CreateWindow()
 	//
 	// create the HWND if one does not already exist
 	//
-	if ( !g_wv.hWnd )
+	const qbool createWindow = !g_wv.hWnd; 
+	if (createWindow) 
 	{
 		g_wv.inputInitialized = qfalse;
+	}
 
-		RECT r;
-		r.left = 0;
-		r.top = 0;
-		r.right  = glInfo.winWidth;
-		r.bottom = glInfo.winHeight;
+	RECT desiredRect;
+	desiredRect.left = 0;
+	desiredRect.top = 0;
+	desiredRect.right = glInfo.winWidth;
+	desiredRect.bottom = glInfo.winHeight;
 
-		int style = WS_VISIBLE | WS_CLIPCHILDREN;
-		int exstyle = 0;
+	int style = WS_VISIBLE | WS_CLIPCHILDREN;
+	int exstyle = 0;
 
-		if ( glInfo.winFullscreen )
-		{
-			style |= WS_POPUP;
-			exstyle |= WS_EX_TOPMOST;
-		}
-		else
-		{
-			style |= WS_OVERLAPPED | WS_BORDER | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
-			AdjustWindowRect( &r, style, FALSE );
-		}
+	if (glInfo.winFullscreen) {
+		style |= WS_POPUP;
+		exstyle |= WS_EX_TOPMOST;
+	} else {
+		style |= WS_OVERLAPPED | WS_BORDER | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+		AdjustWindowRect(&desiredRect, style, FALSE);
+	}
 
-		const int w = r.right - r.left;
-		const int h = r.bottom - r.top;
+	const int w = desiredRect.right - desiredRect.left;
+	const int h = desiredRect.bottom - desiredRect.top;
 
-		const RECT& monRect = g_wv.monitorRects[g_wv.monitor];
+	const RECT& monRect = g_wv.monitorRects[g_wv.monitor];
 
-		int dx = 0;
-		int dy = 0;
+	int dx = 0;
+	int dy = 0;
 
-		if ( !glInfo.winFullscreen )
-		{
-			dx = ri.Cvar_Get( "vid_xpos", "0", 0 )->integer;
-			dy = ri.Cvar_Get( "vid_ypos", "0", 0 )->integer;
-			dx = Com_ClampInt( 0, max( 0, monRect.right - monRect.left - w ), dx );
-			dy = Com_ClampInt( 0, max( 0, monRect.bottom - monRect.top - h ), dy );
-		}
+	if (!glInfo.winFullscreen) {
+		dx = ri.Cvar_Get("vid_xpos", "0", 0)->integer;
+		dy = ri.Cvar_Get("vid_ypos", "0", 0)->integer;
+		dx = Com_ClampInt(0, max(0, monRect.right - monRect.left - w), dx);
+		dy = Com_ClampInt(0, max(0, monRect.bottom - monRect.top - h), dy);
+	}
 
-		const int x = monRect.left + dx;
-		const int y = monRect.top + dy;
+	const int x = monRect.left + dx;
+	const int y = monRect.top + dy;
 
+	if (createWindow)
+	{
 		g_wv.duringCreateWindow = qtrue;
-		g_wv.hWnd = CreateWindowEx( exstyle, CLIENT_WINDOW_TITLE, " " CLIENT_WINDOW_TITLE, style,
-				x, y, w, h, NULL, NULL, g_wv.hInstance, NULL );
+		g_wv.hWnd = CreateWindowEx(exstyle, CLIENT_WINDOW_TITLE, " " CLIENT_WINDOW_TITLE, style,
+		                           x, y, w, h, NULL, NULL, g_wv.hInstance, NULL);
 		g_wv.duringCreateWindow = qfalse;
 
-		if ( !g_wv.hWnd )
-			ri.Error( ERR_FATAL, "GLW_CreateWindow() - Couldn't create window" );
+		if (!g_wv.hWnd)
+			ri.Error(ERR_FATAL, "GLW_CreateWindow() - Couldn't create window");
 
-		ShowWindow( g_wv.hWnd, SW_SHOW );
-		UpdateWindow( g_wv.hWnd );
-		ri.Printf( PRINT_DEVELOPER, "...created window@%d,%d (%dx%d)\n", x, y, w, h );
+		ShowWindow(g_wv.hWnd, SW_SHOW);
+		UpdateWindow(g_wv.hWnd);
+
+		ri.Printf(PRINT_DEVELOPER, "...created window@%d,%d (%dx%d)\n", x, y, w, h);
 	}
 	else
 	{
-		//ri.Printf( PRINT_DEVELOPER, "...window already present, CreateWindowEx skipped\n" );
-
-		// @TODO: unify this crap
-
 		const LONG_PTR oldStyle = GetWindowLongPtrA(g_wv.hWnd, GWL_STYLE);
 		const qbool fullScreen = (oldStyle & WS_POPUP) != 0;
-		RECT r;
-		GetClientRect(g_wv.hWnd, &r);
-		if(r.right - r.left != glInfo.winWidth ||
-			r.bottom - r.top != glInfo.winHeight ||
+		RECT currentRect;
+		GetClientRect(g_wv.hWnd, &currentRect);
+		if(currentRect.right - currentRect.left != glInfo.winWidth ||
+			currentRect.bottom - currentRect.top != glInfo.winHeight ||
 			fullScreen != glInfo.winFullscreen)
 		{
-			LONG_PTR style = WS_VISIBLE | WS_CLIPCHILDREN;
-			LONG_PTR exstyle = 0;
-
-			if(glInfo.winFullscreen)
-			{
-				style |= WS_POPUP;
-				exstyle |= WS_EX_TOPMOST;
-			}
-			else
-			{
-				style |= WS_OVERLAPPED | WS_BORDER | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
-			}
-
-			r.left = 0;
-			r.top = 0;
-			r.right = glInfo.winWidth;
-			r.bottom = glInfo.winHeight;
-			AdjustWindowRect( &r, style, FALSE );
-
-			const int w = r.right - r.left;
-			const int h = r.bottom - r.top;
-
-			const RECT& monRect = g_wv.monitorRects[g_wv.monitor];
-
-			int dx = 0;
-			int dy = 0;
-
-			if(!glInfo.winFullscreen)
-			{
-				dx = ri.Cvar_Get("vid_xpos", "0", 0)->integer;
-				dy = ri.Cvar_Get("vid_ypos", "0", 0)->integer;
-				dx = Com_ClampInt(0, max(0, monRect.right - monRect.left - w), dx);
-				dy = Com_ClampInt(0, max(0, monRect.bottom - monRect.top - h), dy);
-			}
-
-			const int x = monRect.left + dx;
-			const int y = monRect.top + dy;
-
 			SetWindowLongPtrA(g_wv.hWnd, GWL_STYLE, style);
 			SetWindowLongPtrA(g_wv.hWnd, GWL_EXSTYLE, exstyle);
 			MoveWindow(g_wv.hWnd, x, y, w, h, TRUE);
+			
+			ri.Printf(PRINT_DEVELOPER, "...window already present, window was adjusted\n");
+		} 
+		else 
+		{
+			ri.Printf(PRINT_DEVELOPER, "...window already present, no change was needed\n");
 		}
 	}
 
