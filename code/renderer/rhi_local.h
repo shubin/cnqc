@@ -553,6 +553,24 @@ namespace RHI
 		}
 	};
 
+	struct Rect 
+	{
+	    Rect() = default;
+
+		Rect(uint32_t x_, uint32_t y_, uint32_t w_, uint32_t h_)
+	    {
+		    x = x_;
+		    y = y_;
+		    w = w_;
+		    h = h_;
+		}
+
+	    uint32_t x = 0;
+	    uint32_t y = 0;
+	    uint32_t w = 0;
+	    uint32_t h = 0;
+	};
+
 	void Init();
 	void ShutDown(qbool destroyWindow);
 
@@ -599,6 +617,8 @@ namespace RHI
 	HDurationQuery CmdBeginDurationQuery(const char* name);
 	void CmdEndDurationQuery(HDurationQuery query);
 	void CmdBarrier(uint32_t texCount, const TextureBarrier* textures, uint32_t buffCount = 0, const BufferBarrier* buffers = NULL);
+    void CmdClearColorTarget(HTexture texture, const vec4_t clearColor, const Rect* rect = NULL);
+    void CmdClearDepthTarget(HTexture texture, float clearDepth, const Rect* rect = NULL);
 
 	uint8_t* BeginBufferUpload(HBuffer buffer);
 	void EndBufferUpload(HBuffer buffer);

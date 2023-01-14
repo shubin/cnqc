@@ -2020,13 +2020,6 @@ namespace RHI
 		const TextureBarrier barrier(rhi.renderTargets[rhi.frameIndex], ResourceStates::RenderTargetBit);
 		CmdBarrier(1, &barrier);
 
-		const uint32_t rtvIndex = rhi.textures.Get(rhi.renderTargets[rhi.frameIndex]).rtvIndex;
-		const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rhi.descHeapRTVs.GetCPUHandle(rtvIndex);
-		rhi.commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, NULL);
-
-		const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-		rhi.commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, NULL);
-
 		static TextureBarrier barriers[MAX_DRAWIMAGES];
 		for(uint32_t t = 0; t < rhi.texturesToTransition.count; ++t)
 		{
@@ -2765,7 +2758,7 @@ namespace RHI
 		Q_assert(CanWriteCommands());
 		Q_assert(colorCount > 0 || colorTargets == NULL);
 
-		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[MaxRenderTargetCount];
+		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[MaxRenderTargetCount] = {};
 	    for (uint32_t t = 0; t < colorCount; ++t) 
 		{
 		    const uint32_t rtvIndex = rhi.textures.Get(colorTargets[t]).rtvIndex;
@@ -2779,9 +2772,6 @@ namespace RHI
 		    const Texture& depthStencil = rhi.textures.Get(*depthStencilTarget);
 		    dsvHandle = rhi.descHeapDSVs.GetCPUHandle(depthStencil.dsvIndex);
 		    dsvHandlePtr = &dsvHandle;
-			// TODO:
-			// doesn't belong here
-		    rhi.commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 0.0f, 0, 0, NULL);
 	    }
 		
 	    rhi.commandList->OMSetRenderTargets(colorCount, rtvHandles, FALSE, dsvHandlePtr);
@@ -3052,6 +3042,49 @@ namespace RHI
 		{
 			rhi.commandList->ResourceBarrier(barrierCount, barriers);
 		}
+	}
+
+	void CmdClearColorTarget(HTexture texture, const vec4_t clearColor, const Rect* rect)
+	{
+	    Q_assert(CanWriteCommands());
+
+		D3D12_RECT* d3dRectPtr = NULL;
+	    D3D12_RECT d3dRect = {};
+	    UINT rectCount = 0;
+	    if (rect != NULL) {
+		    rectCount = 1;
+		    d3dRect.left = rect->x;
+		    d3dRect.top = rect->y;
+		    d3dRect.right = rect->x + rect->w;
+		    d3dRect.bottom = rect->y + rect->h;
+		    d3dRectPtr = &d3dRect;
+	    }
+
+		const Texture& renderTarget = rhi.textures.Get(texture);
+	    const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rhi.descHeapRTVs.GetCPUHandle(renderTarget.rtvIndex);
+	    rhi.commandList->ClearRenderTargetView(rtvHandle, clearColor, rectCount, d3dRectPtr);
+	}
+
+	void CmdClearDepthTarget(HTexture texture, float clearDepth, const Rect* rect)
+	{
+	    Q_assert(CanWriteCommands());
+
+		D3D12_RECT* d3dRectPtr = NULL;
+	    D3D12_RECT d3dRect = {};
+	    UINT rectCount = 0;
+	    if (rect != NULL) 
+		{
+			rectCount = 1;
+		    d3dRect.left = rect->x;
+		    d3dRect.top = rect->y;
+		    d3dRect.right = rect->x + rect->w;
+			d3dRect.bottom = rect->y + rect->h;
+			d3dRectPtr = &d3dRect;
+		}
+
+		const Texture& depthStencil = rhi.textures.Get(texture);
+	    const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = rhi.descHeapDSVs.GetCPUHandle(depthStencil.dsvIndex);
+	    rhi.commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, clearDepth, 0, rectCount, d3dRectPtr);
 	}
 
 	uint8_t* BeginBufferUpload(HBuffer buffer)

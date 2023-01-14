@@ -82,6 +82,10 @@ void GRP::BeginFrame()
 	ui.BeginFrame();
 	world.BeginFrame();
 
+	HTexture swapChain = GetSwapChainTexture();
+	CmdBindRenderTargets(1, &swapChain, NULL);
+	CmdClearColorTarget(swapChain, colorPink);
+
 	// nothing is bound to the command list yet!
 	renderMode = RenderMode::None;
 }

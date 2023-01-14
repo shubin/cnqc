@@ -137,6 +137,7 @@ void World::DrawPrePass()
 
 	const HTexture swapChain = GetSwapChainTexture();
 	CmdBindRenderTargets(1, &swapChain, &depthTexture);
+	CmdClearDepthTarget(depthTexture, 0.0f);
 
 	float mvp[16];
 	R_MultMatrix(tr.viewParms.world.modelMatrix, tr.viewParms.projectionMatrix, mvp);
