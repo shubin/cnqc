@@ -117,7 +117,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>Winmm.lib;ws2_32.lib;Version.lib;d3d12.lib;dxgi.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\.build\debug_x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\.build\debug_x64;..\..\code\nvapi;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions> ..\..\code\win32\winquake.res /STACK:8388608 /MANIFEST:EMBED /MANIFESTINPUT:..\..\code\win32\client.manifest %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
@@ -186,7 +186,7 @@ copy "..\..\.bin\debug_x32\cnq3-x86.pdb" "$(QUAKE3DIR)"</Command>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>Winmm.lib;ws2_32.lib;Version.lib;d3d12.lib;dxgi.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\.build\release_x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\.build\release_x64;..\..\code\nvapi;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions> ..\..\code\win32\winquake.res /STACK:8388608 /MANIFEST:EMBED /MANIFESTINPUT:..\..\code\win32\client.manifest /OPT:REF /OPT:ICF %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>

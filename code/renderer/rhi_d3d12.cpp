@@ -115,6 +115,8 @@ One mitigation for this restriction is the diligent use of Null descriptors.
 #define D3D12MA_D3D12_HEADERS_ALREADY_INCLUDED
 #include "D3D12MemAlloc.h"
 #include "../imgui/imgui.h"
+#include "../nvapi/nvapi.h"
+#pragma comment(lib, "nvapi64")
 
 
 #if defined(_DEBUG) || defined(CNQ3_DEV)
@@ -1924,6 +1926,19 @@ namespace RHI
 		D3D(rhi.commandList->Close());
 
 		WaitUntilDeviceIsIdle();
+
+		{
+		    if (NvAPI_Initialize() == NvAPI_Status::NVAPI_OK) 
+			{
+			    NvU64 total = 0;
+			    NvU64 free = 0;			
+			    NvAPI_Status code = NvAPI_D3D12_QueryCpuVisibleVidmem(rhi.device, &total, &free);
+			    if (code == NvAPI_Status::NVAPI_OK)
+				{
+				    __debugbreak();
+			    }
+			}
+		}
 
 		glInfo.maxTextureSize = MAX_TEXTURE_SIZE;
 		glInfo.maxAnisotropy = 16;
