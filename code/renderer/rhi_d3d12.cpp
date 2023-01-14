@@ -2063,6 +2063,11 @@ namespace RHI
 		return rhi.frameIndex;
 	}
 
+	HTexture GetSwapChainTexture()
+	{
+	    return rhi.renderTargets[rhi.frameIndex];
+	}
+
 	HBuffer CreateBuffer(const BufferDesc& rhiDesc)
 	{
 		// alignment must be 64KB (D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT) or 0, which is effectively 64KB.
@@ -2760,15 +2765,26 @@ namespace RHI
 		Q_assert(CanWriteCommands());
 		Q_assert(colorCount > 0 || colorTargets == NULL);
 
-		const uint32_t rtvIndex = rhi.textures.Get(rhi.renderTargets[rhi.frameIndex]).rtvIndex;
-		const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rhi.descHeapRTVs.GetCPUHandle(rtvIndex);
+		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[MaxRenderTargetCount];
+	    for (uint32_t t = 0; t < colorCount; ++t) 
+		{
+		    const uint32_t rtvIndex = rhi.textures.Get(colorTargets[t]).rtvIndex;
+		    rtvHandles[t] = rhi.descHeapRTVs.GetCPUHandle(rtvIndex);
+		}
 
-		Q_assert(depthStencilTarget != NULL);
-		const Texture& depthStencil = rhi.textures.Get(*depthStencilTarget);
-		const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = rhi.descHeapDSVs.GetCPUHandle(depthStencil.dsvIndex);
-
-		rhi.commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 0.0f, 0, 0, NULL);
-		rhi.commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+		D3D12_CPU_DESCRIPTOR_HANDLE* dsvHandlePtr = NULL;
+		D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle;
+		if (depthStencilTarget != NULL) 
+		{
+		    const Texture& depthStencil = rhi.textures.Get(*depthStencilTarget);
+		    dsvHandle = rhi.descHeapDSVs.GetCPUHandle(depthStencil.dsvIndex);
+		    dsvHandlePtr = &dsvHandle;
+			// TODO:
+			// doesn't belong here
+		    rhi.commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 0.0f, 0, 0, NULL);
+	    }
+		
+	    rhi.commandList->OMSetRenderTargets(colorCount, rtvHandles, FALSE, dsvHandlePtr);
 	}
 
 	void CmdBindRootSignature(HRootSignature rootSignature)

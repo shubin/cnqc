@@ -560,6 +560,7 @@ namespace RHI
 	void EndFrame();
 
 	uint32_t GetFrameIndex();
+    HTexture GetSwapChainTexture();
 
 	HBuffer CreateBuffer(const BufferDesc& desc);
 	void DestroyBuffer(HBuffer buffer);
