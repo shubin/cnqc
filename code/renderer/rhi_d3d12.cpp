@@ -2060,6 +2060,8 @@ namespace RHI
 
 		rhi.frameDuration = CmdBeginDurationQuery("Whole frame");
 
+		rhi.commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
 		const TextureBarrier barrier(rhi.renderTargets[rhi.frameIndex], ResourceStates::RenderTargetBit);
 		CmdBarrier(1, &barrier);
 
@@ -2884,11 +2886,6 @@ namespace RHI
 		Q_assert(CanWriteCommands());
 
 		const Pipeline& pipe = rhi.pipelines.Get(pipeline);
-		if(pipe.type == PipelineType::Graphics)
-		{
-			// @TODO: grab from pipe + cache
-			rhi.commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		}
 		rhi.commandList->SetPipelineState(pipe.pso);
 	}
 
