@@ -60,6 +60,7 @@ struct DynamicVertexRC
 {
 	float mvp[16];
 	float clipPlane[4];
+	uint32_t bufferIndex;
 	uint32_t bufferByteOffset;
 };
 
@@ -94,6 +95,7 @@ cbuffer RootConstants
 {
 	float4x4 mvp;
 	float4 clipPlane;
+	uint bufferIndex;
 	uint bufferByteOffset;
 };
 
@@ -228,6 +230,8 @@ void World::Init()
 
 void World::BeginFrame()
 {
+	dynVertexBuffers[GetFrameIndex()].Rewind();
+	dynIndexBuffers[GetFrameIndex()].Rewind();
 }
 
 void World::Begin()
@@ -343,6 +347,8 @@ void World::DrawBatch()
 		return;
 	}
 
+	Q_assert(dynVertexBuffer.batchCount == 0);
+	Q_assert(dynIndexBuffer.batchCount == 0);
 	SmallestVertex* vtx = (SmallestVertex*)(BeginBufferUpload(dynVertexBuffer.buffer) + dynVertexBuffer.batchFirst + dynVertexBuffer.batchCount);
 	Index* idx = (Index*)BeginBufferUpload(dynIndexBuffer.buffer) + dynIndexBuffer.batchFirst + dynIndexBuffer.batchCount;
 
@@ -371,7 +377,8 @@ void World::DrawBatch()
 	DynamicVertexRC vertexRC;
 	R_MultMatrix(backEnd.orient.modelMatrix, backEnd.viewParms.projectionMatrix, vertexRC.mvp);
 	memcpy(vertexRC.clipPlane, clipPlane, sizeof(vertexRC.clipPlane));
-	vertexRC.bufferByteOffset = 0;
+	vertexRC.bufferIndex = GetFrameIndex();
+	vertexRC.bufferByteOffset = dynVertexBuffer.batchFirst;
 	CmdSetRootConstants(dynRootSignature, ShaderStage::Vertex, &vertexRC);
 
 	DynamicPixelRC pixelRC;

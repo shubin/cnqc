@@ -60,6 +60,12 @@ struct GeometryBuffer
 		batchCount = 0;
 	}
 
+	void Rewind()
+	{
+		batchFirst = 0;
+		batchCount = 0;
+	}
+
 	HBuffer buffer = RHI_MAKE_NULL_HANDLE();
 	uint32_t byteCount = 0;
 	uint32_t stride = 0;
