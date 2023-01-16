@@ -144,6 +144,9 @@ void UI::Begin()
 		return;
 	}
 
+	const HTexture swapChain = GetSwapChainTexture();
+	CmdBindRenderTargets(1, &swapChain, NULL);
+
 	// UI always uses the entire render surface
 	CmdSetViewportAndScissor(0, 0, glConfig.vidWidth, glConfig.vidHeight);
 

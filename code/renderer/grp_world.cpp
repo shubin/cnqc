@@ -185,8 +185,8 @@ void World::DrawPrePass()
 	CmdBindPipeline(pipeline);
 	CmdBindDescriptorTable(rootSignature, descriptorTable);
 
-	const HTexture swapChain = GetSwapChainTexture();
-	CmdBindRenderTargets(1, &swapChain, &depthTexture);
+	// @TODO: evaluate later whether binding the color target here is OK?
+	CmdBindRenderTargets(0, NULL, &depthTexture);
 	CmdClearDepthTarget(depthTexture, 0.0f);
 
 	float mvp[16];
@@ -306,6 +306,9 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 
 	Begin();
 	DrawPrePass();
+
+	const HTexture swapChain = GetSwapChainTexture();
+	CmdBindRenderTargets(1, &swapChain, &depthTexture);
 
 	const drawSurf_t* drawSurfs = cmd.drawSurfs;
 	const int opaqueCount = cmd.numDrawSurfs - cmd.numTranspSurfs;
