@@ -82,9 +82,9 @@ struct UI
 	void BeginFrame();
 	void Begin();
 	void DrawBatch();
-	const void* SetColor(const void* data);
-	const void* StretchPic(const void* data);
-	const void* Triangle(const void* data);
+	void UISetColor(const uiSetColorCommand_t& cmd);
+	void UIDrawQuad(const uiDrawQuadCommand_t& cmd);
+	void UIDrawTriangle(const uiDrawTriangleCommand_t& cmd);
 
 	// 32-bit needed until the render logic is fixed!
 	typedef uint32_t Index;
@@ -186,12 +186,15 @@ struct GRP : IRenderPipeline
 	void BeginFrame() override;
 	void EndFrame() override;
 	void AddDrawSurface(const surfaceType_t* surface, const shader_t* shader) override;
-	void ExecuteRenderCommands(const void* data) override;
 	void CreateTexture(image_t* image, int mipCount, int width, int height) override;
-	void UpdateTexture(image_t* image, const byte* data) override;
+	void UpoadTextureAndGenerateMipMaps(image_t* image, const byte* data) override;
 	void BeginTextureUpload(MappedTexture& mappedTexture, image_t* image) override;
 	void EndTextureUpload(image_t* image) override;
 	void ProcessWorld(world_t& world) override;
+
+	void UISetColor(const uiSetColorCommand_t& cmd) override { ui.UISetColor(cmd); }
+	void UIDrawQuad(const uiDrawQuadCommand_t& cmd) override { ui.UIDrawQuad(cmd); }
+	void UIDrawTriangle(const uiDrawTriangleCommand_t& cmd) override { ui.UIDrawTriangle(cmd); }
 
 	uint32_t RegisterTexture(HTexture htexture);
 

@@ -101,48 +101,6 @@ void GRP::AddDrawSurface(const surfaceType_t* surface, const shader_t* shader)
 {
 }
 
-void GRP::ExecuteRenderCommands(const void* data)
-{
-	for(;;)
-	{
-		data = PADP(data, sizeof(void*));
-
-		switch(*(const int*)data)
-		{
-			case RC_SET_COLOR:
-				data = ui.SetColor(data);
-				break;
-			case RC_STRETCH_PIC:
-				data = ui.StretchPic(data);
-				break;
-			case RC_TRIANGLE:
-				data = ui.Triangle(data);
-				break;
-			case RC_DRAW_SURFS:
-				world.DrawPrePass();
-				data = SkipCommand<drawSurfsCommand_t>(data);
-				break;
-			case RC_BEGIN_FRAME:
-				data = RB_BeginFrame(data);
-				break;
-			case RC_SWAP_BUFFERS:
-				data = RB_SwapBuffers(data);
-				break;
-			case RC_SCREENSHOT:
-				data = SkipCommand<screenshotCommand_t>(data);
-				break;
-			case RC_VIDEOFRAME:
-				data = SkipCommand<videoFrameCommand_t>(data);
-				break;
-			case RC_END_OF_LIST:
-				return;
-			default:
-				Q_assert(!"Invalid render command ID");
-				return;
-		}
-	}
-}
-
 void GRP::CreateTexture(image_t* image, int mipCount, int width, int height)
 {
 	TextureDesc desc(image->name, width, height, mipCount);
@@ -156,7 +114,7 @@ void GRP::CreateTexture(image_t* image, int mipCount, int width, int height)
 	image->textureIndex = RegisterTexture(image->texture);
 }
 
-void GRP::UpdateTexture(image_t* image, const byte* data)
+void GRP::UpoadTextureAndGenerateMipMaps(image_t* image, const byte* data)
 {
 	MappedTexture texture;
 	RHI::BeginTextureUpload(texture, image->texture);

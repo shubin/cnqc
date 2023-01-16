@@ -1454,7 +1454,7 @@ typedef struct {
 typedef struct {
 	int		commandId;
 	float	color[4];
-} setColorCommand_t;
+} uiSetColorCommand_t;
 
 typedef struct {
 	int		commandId;
@@ -1484,7 +1484,7 @@ typedef struct {
 	float	w, h;
 	float	s1, t1;
 	float	s2, t2;
-} stretchPicCommand_t;
+} uiDrawQuadCommand_t;
 
 typedef struct {
 	int		commandId;
@@ -1495,7 +1495,7 @@ typedef struct {
 	float	s0, t0;
 	float	s1, t1;
 	float	s2, t2;
-} triangleCommand_t;
+} uiDrawTriangleCommand_t;
 
 typedef struct {
 	int		commandId;
@@ -1663,16 +1663,17 @@ struct IRenderPipeline
 	virtual void BeginFrame() = 0;
 	virtual void EndFrame() = 0;
 
-	virtual void ExecuteRenderCommands(const void* data) = 0;
-
 	virtual void AddDrawSurface(const surfaceType_t* surface, const shader_t* shader) = 0;
 	virtual void ProcessWorld(world_t& world) = 0;
 
 	virtual void CreateTexture(image_t* image, int mipCount, int width, int height) = 0;
-	virtual void UpdateTexture(image_t* image, const byte* data) = 0;
+	virtual void UpoadTextureAndGenerateMipMaps(image_t* image, const byte* data) = 0;
 	virtual void BeginTextureUpload(RHI::MappedTexture& mappedTexture, image_t* image) = 0;
 	virtual void EndTextureUpload(image_t* image) = 0;
-	//virtual void GenerateMipMaps(RHI::HTexture texture) = 0;
+
+	virtual void UISetColor(const uiSetColorCommand_t& cmd) = 0;
+	virtual void UIDrawQuad(const uiDrawQuadCommand_t& cmd) = 0;
+	virtual void UIDrawTriangle(const uiDrawTriangleCommand_t& cmd) = 0;
 };
 
 extern IRenderPipeline* renderPipeline;

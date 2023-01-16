@@ -288,7 +288,7 @@ static void Upload32( image_t* image, unsigned int* data )
 		mipOffset++;
 	}*/
 	renderPipeline->CreateTexture( image, mipCount, w, h );
-	renderPipeline->UpdateTexture( image, (const byte*)data );
+	renderPipeline->UpoadTextureAndGenerateMipMaps( image, (const byte*)data );
 }
 
 

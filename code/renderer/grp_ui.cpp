@@ -178,37 +178,31 @@ void UI::DrawBatch()
 	vertexCount = 0;
 }
 
-const void* UI::SetColor(const void* data)
+void UI::UISetColor(const uiSetColorCommand_t& cmd)
 {
-	const setColorCommand_t* cmd = (const setColorCommand_t*)data;
-
 	byte* const colors = (byte*)&color;
-	colors[0] = (byte)(cmd->color[0] * 255.0f);
-	colors[1] = (byte)(cmd->color[1] * 255.0f);
-	colors[2] = (byte)(cmd->color[2] * 255.0f);
-	colors[3] = (byte)(cmd->color[3] * 255.0f);
-
-	return (const void*)(cmd + 1);
+	colors[0] = (byte)(cmd.color[0] * 255.0f);
+	colors[1] = (byte)(cmd.color[1] * 255.0f);
+	colors[2] = (byte)(cmd.color[2] * 255.0f);
+	colors[3] = (byte)(cmd.color[3] * 255.0f);
 }
 
-const void* UI::StretchPic(const void* data)
+void UI::UIDrawQuad(const uiDrawQuadCommand_t& cmd)
 {
-	const stretchPicCommand_t* cmd = (const stretchPicCommand_t*)data;
-
 	if(vertexCount + 4 > maxVertexCount ||
 		indexCount + 6 > maxIndexCount)
 	{
-		return (const void*)(cmd + 1);
+		return;
 	}
 
 	Begin();
 
-	if(shader != cmd->shader)
+	if(shader != cmd.shader)
 	{
 		DrawBatch();
 	}
 
-	shader = cmd->shader;
+	shader = cmd.shader;
 
 	const int v = firstVertex + vertexCount;
 	const int i = firstIndex + indexCount;
@@ -222,51 +216,47 @@ const void* UI::StretchPic(const void* data)
 	indices[i + 4] = v + 0;
 	indices[i + 5] = v + 1;
 
-	vertices[v + 0].position[0] = cmd->x;
-	vertices[v + 0].position[1] = cmd->y;
-	vertices[v + 0].texCoords[0] = cmd->s1;
-	vertices[v + 0].texCoords[1] = cmd->t1;
+	vertices[v + 0].position[0] = cmd.x;
+	vertices[v + 0].position[1] = cmd.y;
+	vertices[v + 0].texCoords[0] = cmd.s1;
+	vertices[v + 0].texCoords[1] = cmd.t1;
 	vertices[v + 0].color = color;
 
-	vertices[v + 1].position[0] = cmd->x + cmd->w;
-	vertices[v + 1].position[1] = cmd->y;
-	vertices[v + 1].texCoords[0] = cmd->s2;
-	vertices[v + 1].texCoords[1] = cmd->t1;
+	vertices[v + 1].position[0] = cmd.x + cmd.w;
+	vertices[v + 1].position[1] = cmd.y;
+	vertices[v + 1].texCoords[0] = cmd.s2;
+	vertices[v + 1].texCoords[1] = cmd.t1;
 	vertices[v + 1].color = color;
 
-	vertices[v + 2].position[0] = cmd->x + cmd->w;
-	vertices[v + 2].position[1] = cmd->y + cmd->h;
-	vertices[v + 2].texCoords[0] = cmd->s2;
-	vertices[v + 2].texCoords[1] = cmd->t2;
+	vertices[v + 2].position[0] = cmd.x + cmd.w;
+	vertices[v + 2].position[1] = cmd.y + cmd.h;
+	vertices[v + 2].texCoords[0] = cmd.s2;
+	vertices[v + 2].texCoords[1] = cmd.t2;
 	vertices[v + 2].color = color;
 
-	vertices[v + 3].position[0] = cmd->x;
-	vertices[v + 3].position[1] = cmd->y + cmd->h;
-	vertices[v + 3].texCoords[0] = cmd->s1;
-	vertices[v + 3].texCoords[1] = cmd->t2;
+	vertices[v + 3].position[0] = cmd.x;
+	vertices[v + 3].position[1] = cmd.y + cmd.h;
+	vertices[v + 3].texCoords[0] = cmd.s1;
+	vertices[v + 3].texCoords[1] = cmd.t2;
 	vertices[v + 3].color = color;
-
-	return (const void*)(cmd + 1);
 }
 
-const void* UI::Triangle(const void* data)
+void UI::UIDrawTriangle(const uiDrawTriangleCommand_t& cmd)
 {
-	const triangleCommand_t* cmd = (const triangleCommand_t*)data;
-
 	if(vertexCount + 3 > maxVertexCount ||
 		indexCount + 3 > maxIndexCount)
 	{
-		return (const void*)(cmd + 1);
+		return;
 	}
 
 	Begin();
 
-	if(shader != cmd->shader)
+	if(shader != cmd.shader)
 	{
 		DrawBatch();
 	}
 
-	shader = cmd->shader;
+	shader = cmd.shader;
 
 	const int v = firstVertex + vertexCount;
 	const int i = firstIndex + indexCount;
@@ -277,23 +267,21 @@ const void* UI::Triangle(const void* data)
 	indices[i + 1] = v + 1;
 	indices[i + 2] = v + 2;
 
-	vertices[v + 0].position[0] = cmd->x0;
-	vertices[v + 0].position[1] = cmd->y0;
-	vertices[v + 0].texCoords[0] = cmd->s0;
-	vertices[v + 0].texCoords[1] = cmd->t0;
+	vertices[v + 0].position[0] = cmd.x0;
+	vertices[v + 0].position[1] = cmd.y0;
+	vertices[v + 0].texCoords[0] = cmd.s0;
+	vertices[v + 0].texCoords[1] = cmd.t0;
 	vertices[v + 0].color = color;
 
-	vertices[v + 1].position[0] = cmd->x1;
-	vertices[v + 1].position[1] = cmd->y1;
-	vertices[v + 1].texCoords[0] = cmd->s1;
-	vertices[v + 1].texCoords[1] = cmd->t1;
+	vertices[v + 1].position[0] = cmd.x1;
+	vertices[v + 1].position[1] = cmd.y1;
+	vertices[v + 1].texCoords[0] = cmd.s1;
+	vertices[v + 1].texCoords[1] = cmd.t1;
 	vertices[v + 1].color = color;
 
-	vertices[v + 2].position[0] = cmd->x2;
-	vertices[v + 2].position[1] = cmd->y2;
-	vertices[v + 2].texCoords[0] = cmd->s2;
-	vertices[v + 2].texCoords[1] = cmd->t2;
+	vertices[v + 2].position[0] = cmd.x2;
+	vertices[v + 2].position[1] = cmd.y2;
+	vertices[v + 2].texCoords[0] = cmd.s2;
+	vertices[v + 2].texCoords[1] = cmd.t2;
 	vertices[v + 2].color = color;
-
-	return (const void*)(cmd + 1);
 }

@@ -43,7 +43,7 @@ static void RB_Set2D()
 
 static const void* RB_SetColor( const void* data )
 {
-	const setColorCommand_t* cmd = (const setColorCommand_t*)data;
+	const uiSetColorCommand_t* cmd = (const uiSetColorCommand_t*)data;
 
 	backEnd.color2D[0] = (byte)(cmd->color[0] * 255);
 	backEnd.color2D[1] = (byte)(cmd->color[1] * 255);
@@ -56,7 +56,7 @@ static const void* RB_SetColor( const void* data )
 
 static const void* RB_StretchPic( const void* data )
 {
-	const stretchPicCommand_t* cmd = (const stretchPicCommand_t*)data;
+	const uiDrawQuadCommand_t* cmd = (const uiDrawQuadCommand_t*)data;
 
 	if ( !backEnd.projection2D )
 		RB_Set2D();
@@ -124,7 +124,7 @@ static const void* RB_StretchPic( const void* data )
 
 static const void* RB_Triangle( const void* data )
 {
-	const triangleCommand_t* cmd = (const triangleCommand_t*)data;
+	const uiDrawTriangleCommand_t* cmd = (const uiDrawTriangleCommand_t*)data;
 
 	if ( !backEnd.projection2D )
 		RB_Set2D();

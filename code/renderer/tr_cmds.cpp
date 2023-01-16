@@ -33,7 +33,6 @@ void R_IssueRenderCommands()
 	cmdList->used = 0;
 
 	//RB_ExecuteRenderCommands( cmdList->cmds );
-	renderPipeline->ExecuteRenderCommands( cmdList->cmds );
 }
 
 
@@ -54,13 +53,13 @@ void* R_FindRenderCommand( renderCommand_t type )
 
 		switch ( *(const int *)data ) {
 		case RC_SET_COLOR:
-			data = (char*)data + sizeof(setColorCommand_t);
+			data = (char*)data + sizeof(uiSetColorCommand_t);
 			break;
 		case RC_STRETCH_PIC:
-			data = (char*)data + sizeof(stretchPicCommand_t);
+			data = (char*)data + sizeof(uiDrawQuadCommand_t);
 			break;
 		case RC_TRIANGLE:
-			data = (char*)data + sizeof(triangleCommand_t);
+			data = (char*)data + sizeof(uiDrawTriangleCommand_t);
 			break;
 		case RC_DRAW_SURFS:
 			data = (char*)data + sizeof(drawSurfsCommand_t);
@@ -156,51 +155,51 @@ void R_AddDrawSurfCmd( drawSurf_t* drawSurfs, int numDrawSurfs, int numTranspSur
 
 void RE_SetColor( const float* rgba )
 {
-	R_CMD_RET( setColorCommand_t, RC_SET_COLOR );
-
 	if ( !rgba )
 		rgba = colorWhite;
 
-	cmd->color[0] = rgba[0];
-	cmd->color[1] = rgba[1];
-	cmd->color[2] = rgba[2];
-	cmd->color[3] = rgba[3];
+	uiSetColorCommand_t cmd;
+	cmd.color[0] = rgba[0];
+	cmd.color[1] = rgba[1];
+	cmd.color[2] = rgba[2];
+	cmd.color[3] = rgba[3];
+	renderPipeline->UISetColor( cmd );
 }
 
 
 void RE_StretchPic( float x, float y, float w, float h, float s1, float t1, float s2, float t2, qhandle_t hShader )
 {
-	R_CMD_RET( stretchPicCommand_t, RC_STRETCH_PIC );
-
-	cmd->shader = R_GetShaderByHandle( hShader );
-	cmd->x = x;
-	cmd->y = y;
-	cmd->w = w;
-	cmd->h = h;
-	cmd->s1 = s1;
-	cmd->t1 = t1;
-	cmd->s2 = s2;
-	cmd->t2 = t2;
+	uiDrawQuadCommand_t cmd;
+	cmd.shader = R_GetShaderByHandle( hShader );
+	cmd.x = x;
+	cmd.y = y;
+	cmd.w = w;
+	cmd.h = h;
+	cmd.s1 = s1;
+	cmd.t1 = t1;
+	cmd.s2 = s2;
+	cmd.t2 = t2;
+	renderPipeline->UIDrawQuad( cmd );
 }
 
 
 void RE_DrawTriangle( float x0, float y0, float x1, float y1, float x2, float y2, float s0, float t0, float s1, float t1, float s2, float t2, qhandle_t hShader )
 {
-	R_CMD_RET( triangleCommand_t, RC_TRIANGLE );
-
-	cmd->shader = R_GetShaderByHandle( hShader );
-	cmd->x0 = x0;
-	cmd->y0 = y0;
-	cmd->x1 = x1;
-	cmd->y1 = y1;
-	cmd->x2 = x2;
-	cmd->y2 = y2;
-	cmd->s0 = s0;
-	cmd->t0 = t0;
-	cmd->s1 = s1;
-	cmd->t1 = t1;
-	cmd->s2 = s2;
-	cmd->t2 = t2;
+	uiDrawTriangleCommand_t cmd;
+	cmd.shader = R_GetShaderByHandle( hShader );
+	cmd.x0 = x0;
+	cmd.y0 = y0;
+	cmd.x1 = x1;
+	cmd.y1 = y1;
+	cmd.x2 = x2;
+	cmd.y2 = y2;
+	cmd.s0 = s0;
+	cmd.t0 = t0;
+	cmd.s1 = s1;
+	cmd.t1 = t1;
+	cmd.s2 = s2;
+	cmd.t2 = t2;
+	renderPipeline->UIDrawTriangle( cmd );
 }
 
 
@@ -215,7 +214,8 @@ void RE_BeginFrame( stereoFrame_t stereoFrame )
 	tr.frameSceneNum = 0;
 
 	// delayed screenshot
-	if ( r_delayedScreenshotPending ) {
+	// @TODO:
+	/*if(r_delayedScreenshotPending) {
 		r_delayedScreenshotFrame++;
 		if ( r_delayedScreenshotFrame >= 2 ) {
 			R_CMD_NORET( screenshotCommand_t, RC_SCREENSHOT );
@@ -223,12 +223,13 @@ void RE_BeginFrame( stereoFrame_t stereoFrame )
 			r_delayedScreenshotPending = qfalse;
 			r_delayedScreenshotFrame = 0;
 		}
-	}
+	}*/
 
 	//
 	// draw buffer stuff
 	//
-	R_CMD_NORET( beginFrameCommand_t, RC_BEGIN_FRAME );
+	const beginFrameCommand_t cmd = { RC_BEGIN_FRAME };
+	RB_BeginFrame( &cmd );
 }
 
 
@@ -257,14 +258,13 @@ void RE_EndFrame( int* pcFE, int* pc2D, int* pc3D, qbool render )
 	}
 
 	if ( render ) {
-		{
-			// forcing the sub-scope to prevent variable shadowing
-			R_CMD_END( swapBuffersCommand_t, RC_SWAP_BUFFERS );
-		}
-		if ( delayScreenshot ) {
+		const swapBuffersCommand_t cmd = { RC_SWAP_BUFFERS };
+		RB_SwapBuffers( &cmd );
+		// @TODO:
+		/*if(delayScreenshot) {
 			R_CMD_END( screenshotCommand_t, RC_SCREENSHOT );
 			*cmd = r_delayedScreenshot;
-		}
+		}*/
 	} else {
 		R_ClearFrame();
 	}
