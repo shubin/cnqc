@@ -1583,6 +1583,14 @@ namespace RHI
 		{
 			D3D12MA::Budget budget;
 			rhi.allocator->GetBudget(&budget, NULL);
+			NvU64 cvvTotal, cvvFree;
+			if(NvAPI_D3D12_QueryCpuVisibleVidmem(rhi.device, &cvvTotal, &cvvFree) != NvAPI_Status::NVAPI_OK)
+			{
+				cvvTotal = 0;
+				cvvFree = 0;
+			}
+			TableRow(2, "CPU Visible VRAM Total", Com_FormatBytes(cvvTotal));
+			TableRow(2, "CPU Visible VRAM Free", Com_FormatBytes(cvvFree));
 			TableRow2Bool("UMA", rhi.allocator->IsUMA());
 			TableRow2Bool("Cache coherent UMA", rhi.allocator->IsCacheCoherentUMA());
 			TableRow(2, "Total", Com_FormatBytes(rhi.allocator->GetMemoryCapacity(DXGI_MEMORY_SEGMENT_GROUP_LOCAL)));
@@ -1928,15 +1936,30 @@ namespace RHI
 		WaitUntilDeviceIsIdle();
 
 		{
-		    if (NvAPI_Initialize() == NvAPI_Status::NVAPI_OK) 
+			const NvAPI_Status nr = NvAPI_Initialize();
+			if(nr == NvAPI_Status::NVAPI_OK)
 			{
-			    NvU64 total = 0;
-			    NvU64 free = 0;			
-			    NvAPI_Status code = NvAPI_D3D12_QueryCpuVisibleVidmem(rhi.device, &total, &free);
-			    if (code == NvAPI_Status::NVAPI_OK)
+				NvAPI_ShortString version;
+				if(NvAPI_GetInterfaceVersionString(version) == NvAPI_Status::NVAPI_OK)
 				{
-				    __debugbreak();
-			    }
+					ri.Printf(PRINT_ALL, "Opened nvapi.dll (%s)\n", version);
+				}
+				else
+				{
+					ri.Printf(PRINT_ALL, "Opened nvapi.dll\n");
+				}
+			}
+			else
+			{
+				NvAPI_ShortString desc;
+				if(NvAPI_GetErrorMessage(nr, desc) == NvAPI_Status::NVAPI_OK)
+				{
+					ri.Printf(PRINT_WARNING, "Failed to load nvapi.dll: %s\n", desc);
+				}
+				else
+				{
+					ri.Printf(PRINT_WARNING, "Failed to load nvapi.dll\n");
+				}
 			}
 		}
 
@@ -1987,6 +2010,8 @@ namespace RHI
 		COM_RELEASE(rhi.factory);
 		COM_RELEASE(rhi.dxgiInfoQueue);
 		COM_RELEASE(rhi.debug);
+
+		NvAPI_Unload();
 		
 #if defined(_DEBUG)
 		IDXGIDebug1* debug = NULL;
