@@ -37,6 +37,7 @@ struct World
 	void BeginFrame();
 	void Begin();
 	void DrawPrePass();
+	void DrawBatch();
 	void DrawGUI();
 	void ProcessWorld(world_t& world);
 	void DrawSceneView(const drawSceneViewCommand_t& cmd);
@@ -63,6 +64,10 @@ struct World
 		int indexCount;
 		int vertexCount;
 	};
+
+	// @TODO: in the future, once backEnd gets nuked
+	//trRefdef_t refdef;
+	//viewParms_t viewParms;
 
 	//GeometryBuffer dynamicGeo;
 	//GeometryBuffer staticGeo;
@@ -196,7 +201,7 @@ struct GRP : IRenderPipeline
 	void UISetColor(const uiSetColorCommand_t& cmd) override { ui.UISetColor(cmd); }
 	void UIDrawQuad(const uiDrawQuadCommand_t& cmd) override { ui.UIDrawQuad(cmd); }
 	void UIDrawTriangle(const uiDrawTriangleCommand_t& cmd) override { ui.UIDrawTriangle(cmd); }
-	void DrawSceneView(const drawSceneViewCommand_t& cmd) override { world.DrawSceneView(cmd); }
+	void DrawSceneView(const drawSceneViewCommand_t& cmd) override { ui.DrawBatch(); world.DrawSceneView(cmd); }
 
 	uint32_t RegisterTexture(HTexture htexture);
 

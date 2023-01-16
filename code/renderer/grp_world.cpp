@@ -110,7 +110,61 @@ void World::Begin()
 		return;
 	}
 
-	// @TODO: draw current batch...
+	// copy viewParms.projectionMatrix
+	// apply viewParms.viewportX, viewParms.viewportY, viewParms.viewportWidth, viewParms.viewportHeight
+
+	// @TODO: this should be moved out of the RP since none of the decision-making is RP-specific
+#if 0
+	bool shouldClearColor = qfalse;
+	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+	if(backEnd.rdflags & RDF_HYPERSPACE) // @TODO: who sets that up again?
+	{
+		const float c = RB_HyperspaceColor();
+		clearColor[0] = c;
+		clearColor[1] = c;
+		clearColor[2] = c;
+		shouldClearColor = qtrue;
+	}
+	else if(r_fastsky->integer && !(backEnd.rdflags & RDF_NOWORLDMODEL))
+	{
+		shouldClearColor = qtrue;
+	}
+	if(shouldClearColor)
+	{
+		ClearColor(clearColor);
+	}
+#endif
+
+	if(backEnd.viewParms.isPortal)
+	{
+		float plane[4];
+		plane[0] = backEnd.viewParms.portalPlane.normal[0];
+		plane[1] = backEnd.viewParms.portalPlane.normal[1];
+		plane[2] = backEnd.viewParms.portalPlane.normal[2];
+		plane[3] = backEnd.viewParms.portalPlane.dist;
+
+		float plane2[4];
+		plane2[0] = DotProduct(backEnd.viewParms.orient.axis[0], plane);
+		plane2[1] = DotProduct(backEnd.viewParms.orient.axis[1], plane);
+		plane2[2] = DotProduct(backEnd.viewParms.orient.axis[2], plane);
+		plane2[3] = DotProduct(plane, backEnd.viewParms.orient.origin) - plane[3];
+
+		float* o = plane;
+		const float* m = s_flipMatrix;
+		const float* v = plane2;
+		o[0] = m[0] * v[0] + m[4] * v[1] + m[8] * v[2] + m[12] * v[3];
+		o[1] = m[1] * v[0] + m[5] * v[1] + m[9] * v[2] + m[13] * v[3];
+		o[2] = m[2] * v[0] + m[6] * v[1] + m[10] * v[2] + m[14] * v[3];
+		o[3] = m[3] * v[0] + m[7] * v[1] + m[11] * v[2] + m[15] * v[3];
+
+		// @TODO: copy plane
+	}
+	else
+	{
+		const float clipPlane[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+
+		// @TODO: copy clipPlane
+	}
 
 	grp.renderMode = RenderMode::World;
 }
@@ -145,6 +199,10 @@ void World::DrawPrePass()
 	const uint32_t vertexStride = 4 * sizeof(float);
 	CmdBindVertexBuffers(1, &prePassGeo.vertexBuffer, &vertexStride, NULL);
 	CmdDrawIndexed(prePassGeo.indexCount, 0, 0);
+}
+
+void World::DrawBatch()
+{
 }
 
 void World::DrawGUI()
@@ -203,8 +261,6 @@ void World::ProcessWorld(world_t& world)
 		}
 		*/
 
-		// @TODO:
-		//UploadVertexData(firstVertex, firstIndex, surfVertexCount, surfIndexCount);
 		for(int v = 0; v < tess.numVertexes; ++v)
 		{
 			*vtx++ = tess.xyz[v][0];
@@ -239,5 +295,116 @@ void World::ProcessWorld(world_t& world)
 
 void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 {
+	Begin();
 	DrawPrePass();
+
+	const drawSurf_t* drawSurfs = cmd.drawSurfs;
+	const int opaqueCount = cmd.numDrawSurfs - cmd.numTranspSurfs;
+	//const int transpCount = cmd.numTranspSurfs;
+	const double originalTime = backEnd.refdef.floatTime;
+
+	const shader_t* shader = NULL;
+	unsigned int sort = (unsigned int)-1;
+	int oldEntityNum = -1;
+	backEnd.currentEntity = &tr.worldEntity;
+	qbool oldDepthRange = qfalse;
+	qbool depthRange = qfalse;
+
+	int i;
+	const drawSurf_t* drawSurf;
+	for(i = 0, drawSurf = drawSurfs; i < opaqueCount; ++i, ++drawSurf)
+	{
+		int fogNum;
+		int entityNum;
+		R_DecomposeSort(drawSurf->sort, &entityNum, &shader, &fogNum);
+
+		sort = drawSurf->sort;
+
+		//
+		// change the modelview matrix if needed
+		//
+		if(entityNum != oldEntityNum)
+		{
+			depthRange = qfalse;
+
+			if(entityNum != ENTITYNUM_WORLD)
+			{
+				backEnd.currentEntity = &backEnd.refdef.entities[entityNum];
+				if(backEnd.currentEntity->intShaderTime)
+					backEnd.refdef.floatTime = originalTime - (double)backEnd.currentEntity->e.shaderTime.iShaderTime / 1000.0;
+				else
+					backEnd.refdef.floatTime = originalTime - backEnd.currentEntity->e.shaderTime.fShaderTime;
+				// we have to reset the shaderTime as well otherwise image animations start
+				// from the wrong frame
+				tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
+
+				// set up the transformation matrix
+				R_RotateForEntity(backEnd.currentEntity, &backEnd.viewParms, &backEnd.orient);
+
+				if(backEnd.currentEntity->e.renderfx & RF_DEPTHHACK)
+				{
+					// hack the depth range to prevent view model from poking into walls
+					depthRange = qtrue;
+				}
+			}
+			else
+			{
+				backEnd.currentEntity = &tr.worldEntity;
+				backEnd.refdef.floatTime = originalTime;
+				backEnd.orient = backEnd.viewParms.world;
+				// we have to reset the shaderTime as well otherwise image animations on
+				// the world (like water) continue with the wrong frame
+				tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
+			}
+
+			//gal.SetModelViewMatrix(backEnd.orient.modelMatrix);
+
+			//
+			// change depthrange if needed
+			//
+			if(oldDepthRange != depthRange)
+			{
+				if(depthRange)
+				{
+					//gal.SetDepthRange(0, 0.3);
+				}
+				else
+				{
+					//gal.SetDepthRange(0, 1);
+				}
+				oldDepthRange = depthRange;
+			}
+
+			oldEntityNum = entityNum;
+		}
+
+		//const int firstVertex = tess.numVertexes;
+		//const int firstIndex = tess.numIndexes;
+		const int firstVertex = 0;
+		const int firstIndex = 0;
+		rb_surfaceTable[*drawSurf->surface](drawSurf->surface);
+		const int numVertexes = tess.numVertexes - firstVertex;
+		const int numIndexes = tess.numIndexes - firstIndex;
+		RB_DeformTessGeometry(firstVertex, numVertexes, firstIndex, numIndexes);
+		for(int s = 0; s < shader->numStages; ++s)
+		{
+			R_ComputeColors(shader->stages[s], tess.svars[s], firstVertex, numVertexes);
+			R_ComputeTexCoords(shader->stages[s], tess.svars[s], firstVertex, numVertexes, qfalse);
+		}
+
+		// upload batch data
+
+		DrawBatch();
+	}
+
+	backEnd.refdef.floatTime = originalTime;
+
+	DrawBatch();
+
+	// go back to the world model-view matrix
+	//gal.SetModelViewMatrix(backEnd.viewParms.world.modelMatrix);
+	if(depthRange)
+	{
+		//gal.SetDepthRange(0, 1);
+	}
 }
