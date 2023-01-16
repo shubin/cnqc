@@ -101,7 +101,6 @@ void World::Init()
 
 void World::BeginFrame()
 {
-	Begin();
 }
 
 void World::Begin()
@@ -118,8 +117,7 @@ void World::Begin()
 
 void World::DrawPrePass()
 {
-	if(tr.world == NULL ||
-		prePassGeo.indexCount <= 0 ||
+	if(prePassGeo.indexCount <= 0 ||
 		prePassGeo.vertexCount <= 0)
 	{
 		return;
@@ -237,4 +235,9 @@ void World::ProcessWorld(world_t& world)
 	prePassGeo.indexCount = firstIndex;
 	prePassGeo.firstVertex = 0;
 	prePassGeo.firstIndex = 0;
+}
+
+void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
+{
+	DrawPrePass();
 }

@@ -62,7 +62,7 @@ void* R_FindRenderCommand( renderCommand_t type )
 			data = (char*)data + sizeof(uiDrawTriangleCommand_t);
 			break;
 		case RC_DRAW_SURFS:
-			data = (char*)data + sizeof(drawSurfsCommand_t);
+			data = (char*)data + sizeof(drawSceneViewCommand_t);
 			break;
 		case RC_BEGIN_FRAME:
 			data = (char*)data + sizeof(beginFrameCommand_t);
@@ -140,14 +140,13 @@ void *R_GetCommandBuffer( int bytes, qbool endFrame ) {
 
 void R_AddDrawSurfCmd( drawSurf_t* drawSurfs, int numDrawSurfs, int numTranspSurfs )
 {
-	R_CMD_RET( drawSurfsCommand_t, RC_DRAW_SURFS );
-
-	cmd->drawSurfs = drawSurfs;
-	cmd->numDrawSurfs = numDrawSurfs;
-	cmd->numTranspSurfs = numTranspSurfs;
-
-	cmd->refdef = tr.refdef;
-	cmd->viewParms = tr.viewParms;
+	drawSceneViewCommand_t cmd;
+	cmd.drawSurfs = drawSurfs;
+	cmd.numDrawSurfs = numDrawSurfs;
+	cmd.numTranspSurfs = numTranspSurfs;
+	cmd.refdef = tr.refdef;
+	cmd.viewParms = tr.viewParms;
+	renderPipeline->DrawSceneView( cmd );
 }
 
 

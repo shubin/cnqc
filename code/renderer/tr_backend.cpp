@@ -559,7 +559,7 @@ static void R_DebugPolygon( int colorMask, int numPoints, const float* points )
 
 static const void* RB_DrawSurfs( const void* data )
 {
-	const drawSurfsCommand_t* cmd = (const drawSurfsCommand_t*)data;
+	const drawSceneViewCommand_t* cmd = (const drawSceneViewCommand_t*)data;
 
 	// finish any 2D drawing if needed
 	if ( tess.numIndexes )

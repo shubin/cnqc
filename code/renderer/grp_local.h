@@ -39,6 +39,7 @@ struct World
 	void DrawPrePass();
 	void DrawGUI();
 	void ProcessWorld(world_t& world);
+	void DrawSceneView(const drawSceneViewCommand_t& cmd);
 
 	typedef uint32_t Index;
 	const IndexType::Id indexType = IndexType::UInt32;
@@ -195,6 +196,7 @@ struct GRP : IRenderPipeline
 	void UISetColor(const uiSetColorCommand_t& cmd) override { ui.UISetColor(cmd); }
 	void UIDrawQuad(const uiDrawQuadCommand_t& cmd) override { ui.UIDrawQuad(cmd); }
 	void UIDrawTriangle(const uiDrawTriangleCommand_t& cmd) override { ui.UIDrawTriangle(cmd); }
+	void DrawSceneView(const drawSceneViewCommand_t& cmd) override { world.DrawSceneView(cmd); }
 
 	uint32_t RegisterTexture(HTexture htexture);
 

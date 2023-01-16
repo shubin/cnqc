@@ -1504,7 +1504,7 @@ typedef struct {
 	int numDrawSurfs;
 	int numTranspSurfs;
 	drawSurf_t* drawSurfs;
-} drawSurfsCommand_t;
+} drawSceneViewCommand_t;
 
 typedef struct {
 	int commandId;
@@ -1674,6 +1674,7 @@ struct IRenderPipeline
 	virtual void UISetColor(const uiSetColorCommand_t& cmd) = 0;
 	virtual void UIDrawQuad(const uiDrawQuadCommand_t& cmd) = 0;
 	virtual void UIDrawTriangle(const uiDrawTriangleCommand_t& cmd) = 0;
+	virtual void DrawSceneView(const drawSceneViewCommand_t& cmd) = 0;
 };
 
 extern IRenderPipeline* renderPipeline;
