@@ -43,6 +43,23 @@ struct GeometryBuffer
 		batchCount = 0;
 	}
 
+	bool CanAdd(uint32_t count_)
+	{
+		return batchCount + count_ <= totalCount;
+	}
+
+	void EndBatch()
+	{
+		batchFirst += batchCount;
+		batchCount = 0;
+	}
+
+	void EndBatch(uint32_t size)
+	{
+		batchFirst += size;
+		batchCount = 0;
+	}
+
 	HBuffer buffer = RHI_MAKE_NULL_HANDLE();
 	uint32_t byteCount = 0;
 	uint32_t stride = 0;
@@ -85,8 +102,8 @@ struct World
 	HRootSignature dynRootSignature;
 	HDescriptorTable dynDescriptorTable;
 	HPipeline dynPipeline; // @TODO: 1 per cull type
-	GeometryBuffer dynIndexBuffer;
-	GeometryBuffer dynVertexBuffer;
+	GeometryBuffer dynIndexBuffers[FrameCount];
+	GeometryBuffer dynVertexBuffers[FrameCount];
 };
 
 struct UI

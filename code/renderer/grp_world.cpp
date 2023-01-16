@@ -39,6 +39,12 @@ struct VertexStage
 	uint32_t color;
 };
 
+struct SmallestVertex
+{
+	VertexBase base;
+	VertexStage stage0;
+};
+
 struct LargestVertex
 {
 	VertexBase base;
@@ -203,17 +209,20 @@ void World::Init()
 		desc.AddRenderTarget(GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO, TextureFormat::RGBA32_UNorm);
 		dynPipeline = CreateGraphicsPipeline(desc);
 	}
-	dynVertexBuffer.Init(SHADER_MAX_VERTEXES, sizeof(LargestVertex));
-	dynIndexBuffer.Init(SHADER_MAX_INDEXES, sizeof(Index));
+	for(uint32_t f = 0; f < FrameCount; ++f)
 	{
-		BufferDesc desc("dynamic vertex", dynVertexBuffer.byteCount, ResourceStates::ConstantBufferBit);
-		desc.memoryUsage = MemoryUsage::Upload;
-		dynVertexBuffer.buffer = CreateBuffer(desc);
-	}
-	{
-		BufferDesc desc("dynamic index", dynIndexBuffer.byteCount, ResourceStates::IndexBufferBit);
-		desc.memoryUsage = MemoryUsage::Upload;
-		dynIndexBuffer.buffer = CreateBuffer(desc);
+		dynVertexBuffers[f].Init(SHADER_MAX_VERTEXES * sizeof(LargestVertex), 1);
+		dynIndexBuffers[f].Init(SHADER_MAX_INDEXES, sizeof(Index));
+		{
+			BufferDesc desc("dynamic vertex", dynVertexBuffers[f].byteCount, ResourceStates::ConstantBufferBit);
+			desc.memoryUsage = MemoryUsage::Upload;
+			dynVertexBuffers[f].buffer = CreateBuffer(desc);
+		}
+		{
+			BufferDesc desc("dynamic index", dynIndexBuffers[f].byteCount, ResourceStates::IndexBufferBit);
+			desc.memoryUsage = MemoryUsage::Upload;
+			dynIndexBuffers[f].buffer = CreateBuffer(desc);
+		}
 	}
 }
 
@@ -325,6 +334,40 @@ void World::DrawBatch()
 		return;
 	}
 
+	GeometryBuffer& dynVertexBuffer = dynVertexBuffers[GetFrameIndex()];
+	GeometryBuffer& dynIndexBuffer = dynIndexBuffers[GetFrameIndex()];
+
+	if(!dynVertexBuffer.CanAdd(tess.numVertexes) ||
+		!dynIndexBuffer.CanAdd(tess.numIndexes))
+	{
+		return;
+	}
+
+	SmallestVertex* vtx = (SmallestVertex*)(BeginBufferUpload(dynVertexBuffer.buffer) + dynVertexBuffer.batchFirst + dynVertexBuffer.batchCount);
+	Index* idx = (Index*)BeginBufferUpload(dynIndexBuffer.buffer) + dynIndexBuffer.batchFirst + dynIndexBuffer.batchCount;
+
+	for(int i = 0; i < tess.numIndexes; ++i)
+	{
+		*idx++ = tess.indexes[i];
+	}
+
+	for(int v = 0; v < tess.numVertexes; ++v)
+	{
+		vtx->base.position[0] = tess.xyz[v][0];
+		vtx->base.position[1] = tess.xyz[v][1];
+		vtx->base.position[2] = tess.xyz[v][2];
+		vtx->base.normal[0] = 0.0f;
+		vtx->base.normal[1] = 0.0f;
+		vtx->base.normal[2] = 0.0f;
+		vtx->stage0.texCoords[0] = tess.svars[0].texcoords[v][0];
+		vtx->stage0.texCoords[1] = tess.svars[0].texcoords[v][1];
+		vtx->stage0.color = *(uint32_t*)&tess.svars[0].colors[v][0];
+		vtx++;
+	}
+
+	EndBufferUpload(dynVertexBuffer.buffer);
+	EndBufferUpload(dynIndexBuffer.buffer);
+
 	DynamicVertexRC vertexRC;
 	R_MultMatrix(backEnd.orient.modelMatrix, backEnd.viewParms.projectionMatrix, vertexRC.mvp);
 	memcpy(vertexRC.clipPlane, clipPlane, sizeof(vertexRC.clipPlane));
@@ -338,6 +381,8 @@ void World::DrawBatch()
 
 	CmdDrawIndexed(dynIndexBuffer.batchCount, dynIndexBuffer.batchFirst, 0);
 
+	dynVertexBuffer.EndBatch(tess.numVertexes);
+	dynIndexBuffer.EndBatch(tess.numIndexes);
 	tess.numVertexes = 0;
 	tess.numIndexes = 0;
 }
@@ -446,7 +491,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 	const HTexture swapChain = GetSwapChainTexture();
 	CmdBindRenderTargets(1, &swapChain, &depthTexture);
 
-	CmdBindIndexBuffer(dynIndexBuffer.buffer, indexType, 0);
+	CmdBindIndexBuffer(dynIndexBuffers[GetFrameIndex()].buffer, indexType, 0);
 
 	const drawSurf_t* drawSurfs = cmd.drawSurfs;
 	const int opaqueCount = cmd.numDrawSurfs - cmd.numTranspSurfs;
