@@ -2729,6 +2729,10 @@ namespace RHI
 			rtOut.DestBlend = GetD3DDestBlend(rtIn.q3BlendMode);
 			rtOut.SrcBlendAlpha = GetAlphaBlendFromColorBlend(rtOut.SrcBlend);
 			rtOut.DestBlendAlpha = GetAlphaBlendFromColorBlend(rtOut.DestBlend);
+			if(rtOut.SrcBlend == D3D12_BLEND_ONE && rtOut.DestBlend == D3D12_BLEND_ZERO)
+			{
+				rtOut.BlendEnable = FALSE;
+			}
 			desc.RTVFormats[t] = GetD3DFormat(rtIn.format);
 		}
 		desc.NumRenderTargets = rhiDesc.renderTargetCount;
