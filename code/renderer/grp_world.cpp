@@ -25,6 +25,46 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 #include "../imgui/imgui.h"
 
 
+#pragma pack(push, 1)
+
+struct VertexBase
+{
+	vec3_t position;
+	vec3_t normal;
+};
+
+struct VertexStage
+{
+	vec2_t texCoords;
+	uint32_t color;
+};
+
+struct LargestVertex
+{
+	VertexBase base;
+	VertexStage stages[MAX_SHADER_STAGES];
+};
+
+struct ZPPVertexRC
+{
+	float mvp[16];
+};
+
+struct DynamicVertexRC
+{
+	float mvp[16];
+	float clipPlane[4];
+	uint32_t bufferByteOffset;
+};
+
+struct DynamicPixelRC
+{
+	uint32_t textureIndex;
+	uint32_t samplerIndex;
+};
+
+#pragma pack(pop)
+
 static const char* zpp_vs = R"grml(
 cbuffer RootConstants
 {
@@ -40,6 +80,38 @@ float4 main(float4 position : POSITION) : SV_Position
 static const char* zpp_ps = R"grml(
 void main()
 {
+}
+)grml";
+
+static const char* dyn_vs = R"grml(
+cbuffer RootConstants
+{
+	float4x4 mvp;
+	float4 clipPlane;
+	uint bufferByteOffset;
+};
+
+float4 main() : SV_Position
+{
+	//return mul(mvp, float4(position.xyz, 1.0));
+	return float4(0, 0, 0, 0);
+}
+)grml";
+
+static const char* dyn_ps = R"grml(
+cbuffer RootConstants
+{
+	uint textureIndex;
+	uint samplerIndex;
+};
+
+Texture2D textures2D[2048] : register(t0);
+SamplerState samplers[2] : register(s0);
+
+float4 main() : SV_TARGET
+{
+	//return textures2D[textureIndex].Sample(samplers[samplerIndex], input.texCoords) * input.color;
+	return float4(0.0, 0.5, 0.0, 1.0);
 }
 )grml";
 
@@ -62,20 +134,23 @@ void World::Init()
 		return;
 	}
 
+	//
+	// depth pre-pass
+	//
 	{
 		RootSignatureDesc desc("Z pre-pass");
 		desc.usingVertexBuffers = true;
-		desc.constants[ShaderStage::Vertex].byteCount = 16 * sizeof(float); // MVP matrix
+		desc.constants[ShaderStage::Vertex].byteCount = sizeof(ZPPVertexRC);
 		desc.constants[ShaderStage::Pixel].byteCount = 0;
 		desc.samplerVisibility = ShaderStages::None;
 		desc.genericVisibility = ShaderStages::None;
-		rootSignature = CreateRootSignature(desc);
+		zppRootSignature = CreateRootSignature(desc);
 	}
 	{
-		descriptorTable = CreateDescriptorTable(DescriptorTableDesc("Z pre-pass", rootSignature));
+		zppDescriptorTable = CreateDescriptorTable(DescriptorTableDesc("Z pre-pass", zppRootSignature));
 	}
 	{
-		GraphicsPipelineDesc desc("Z pre-pass", rootSignature);
+		GraphicsPipelineDesc desc("Z pre-pass", zppRootSignature);
 		desc.vertexShader = CompileVertexShader(zpp_vs);
 		desc.pixelShader = CompilePixelShader(zpp_ps);
 		desc.vertexLayout.AddAttribute(0, ShaderSemantic::Position, DataType::Float32, 4, 0);
@@ -84,9 +159,8 @@ void World::Init()
 		desc.depthStencil.enableDepthTest = true;
 		desc.depthStencil.enableDepthWrites = true;
 		desc.rasterizer.cullMode = CullMode::Back;
-		pipeline = CreateGraphicsPipeline(desc);
+		zppPipeline = CreateGraphicsPipeline(desc);
 	}
-
 	prePassGeo.maxVertexCount = 1 << 20;
 	prePassGeo.maxIndexCount = 8 * prePassGeo.maxVertexCount;
 	{
@@ -96,6 +170,45 @@ void World::Init()
 	{
 		BufferDesc desc("depth pre-pass vertex", 16 * prePassGeo.maxVertexCount, ResourceStates::VertexBufferBit);
 		prePassGeo.vertexBuffer = CreateBuffer(desc);
+	}
+
+	//
+	// dynamic (streamed) geometry
+	//
+	{
+		RootSignatureDesc desc("dynamic");
+		desc.usingVertexBuffers = false;
+		desc.constants[ShaderStage::Vertex].byteCount = sizeof(DynamicVertexRC);
+		desc.constants[ShaderStage::Pixel].byteCount = sizeof(DynamicPixelRC);
+		desc.samplerVisibility = ShaderStages::PixelBit;
+		desc.genericVisibility = ShaderStages::VertexBit | ShaderStages::PixelBit;
+		dynRootSignature = CreateRootSignature(desc);
+	}
+	{
+		dynDescriptorTable = CreateDescriptorTable(DescriptorTableDesc("dynamic", dynRootSignature));
+	}
+	{
+		GraphicsPipelineDesc desc("dynamic", dynRootSignature);
+		desc.vertexShader = CompileVertexShader(dyn_vs);
+		desc.pixelShader = CompilePixelShader(dyn_ps);
+		desc.depthStencil.depthComparison = ComparisonFunction::GreaterEqual;
+		desc.depthStencil.depthStencilFormat = TextureFormat::Depth32_Float;
+		desc.depthStencil.enableDepthTest = true;
+		desc.depthStencil.enableDepthWrites = true;
+		desc.rasterizer.cullMode = CullMode::Back;
+		dynPipeline = CreateGraphicsPipeline(desc);
+	}
+	dynamicGeo.maxVertexCount = SHADER_MAX_VERTEXES;
+	dynamicGeo.maxIndexCount = SHADER_MAX_INDEXES;
+	{
+		BufferDesc desc("dynamic index", sizeof(Index) * dynamicGeo.maxIndexCount, ResourceStates::IndexBufferBit);
+		desc.memoryUsage = MemoryUsage::Upload;
+		dynamicGeo.indexBuffer = CreateBuffer(desc);
+	}
+	{
+		BufferDesc desc("dynamic vertex", sizeof(LargestVertex) * dynamicGeo.maxVertexCount, ResourceStates::VertexBufferBit);
+		desc.memoryUsage = MemoryUsage::Upload;
+		dynamicGeo.vertexBuffer = CreateBuffer(desc);
 	}
 }
 
@@ -157,13 +270,11 @@ void World::Begin()
 		o[2] = m[2] * v[0] + m[6] * v[1] + m[10] * v[2] + m[14] * v[3];
 		o[3] = m[3] * v[0] + m[7] * v[1] + m[11] * v[2] + m[15] * v[3];
 
-		// @TODO: copy plane
+		memcpy(clipPlane, plane, sizeof(clipPlane));
 	}
 	else
 	{
-		const float clipPlane[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-
-		// @TODO: copy clipPlane
+		memset(clipPlane, 0, sizeof(clipPlane));
 	}
 
 	grp.renderMode = RenderMode::World;
@@ -181,9 +292,9 @@ void World::DrawPrePass()
 	TextureBarrier tb(depthTexture, ResourceStates::DepthWriteBit);
 	CmdBarrier(1, &tb);
 
-	CmdBindRootSignature(rootSignature);
-	CmdBindPipeline(pipeline);
-	CmdBindDescriptorTable(rootSignature, descriptorTable);
+	CmdBindRootSignature(zppRootSignature);
+	CmdBindPipeline(zppPipeline);
+	CmdBindDescriptorTable(zppRootSignature, zppDescriptorTable);
 
 	// @TODO: evaluate later whether binding the color target here is OK?
 	CmdBindRenderTargets(0, NULL, &depthTexture);
@@ -191,8 +302,8 @@ void World::DrawPrePass()
 
 	float mvp[16];
 	R_MultMatrix(backEnd.viewParms.world.modelMatrix, backEnd.viewParms.projectionMatrix, mvp);
-	CmdSetRootConstants(rootSignature, ShaderStage::Vertex, mvp);
-	CmdBindPipeline(pipeline);
+	CmdSetRootConstants(zppRootSignature, ShaderStage::Vertex, mvp);
+	CmdBindPipeline(zppPipeline);
 	CmdBindIndexBuffer(prePassGeo.indexBuffer, indexType, 0);
 	const uint32_t vertexStride = 4 * sizeof(float);
 	CmdBindVertexBuffers(1, &prePassGeo.vertexBuffer, &vertexStride, NULL);
@@ -209,6 +320,9 @@ void World::DrawBatch()
 
 	// backEnd.orient.modelMatrix
 	// backEnd.viewParms.projectionMatrix
+
+	tess.numVertexes = 0;
+	tess.numIndexes = 0;
 }
 
 void World::DrawGUI()
@@ -329,6 +443,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 		int fogNum;
 		int entityNum;
 		R_DecomposeSort(drawSurf->sort, &entityNum, &shader, &fogNum);
+		tess.shader = shader; // @TODO: should be the one of the current batch...
 
 		sort = drawSurf->sort;
 

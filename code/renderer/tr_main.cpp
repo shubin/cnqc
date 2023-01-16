@@ -1081,7 +1081,7 @@ static float SurfGreyscaleAmount( const shader_t* shader )
 
 void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int fogIndex )
 {
-	/*if(tr.refdef.numDrawSurfs >= MAX_DRAWSURFS)
+	if (tr.refdef.numDrawSurfs >= MAX_DRAWSURFS)
 		return;
 
 	drawSurf_t* const drawSurf = &tr.refdef.drawSurfs[tr.refdef.numDrawSurfs++];
@@ -1089,7 +1089,8 @@ void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int fo
 	drawSurf->surface = surface;
 	drawSurf->model = tr.currentModel != NULL ? tr.currentModel->index : 0;
 	drawSurf->shaderNum = shader->index;
-	drawSurf->greyscale = SurfGreyscaleAmount( shader );*/
+	drawSurf->greyscale = SurfGreyscaleAmount( shader );
+
 	renderPipeline->AddDrawSurface(surface, shader);
 }
 

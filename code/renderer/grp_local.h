@@ -69,17 +69,24 @@ struct World
 	//trRefdef_t refdef;
 	//viewParms_t viewParms;
 
-	//GeometryBuffer dynamicGeo;
+	GeometryBuffer dynamicGeo;
 	//GeometryBuffer staticGeo;
 	GeometryBuffer prePassGeo;
 
 	HTexture depthTexture;
 	uint32_t depthTextureIndex;
 
+	float clipPlane[4];
+
 	// Z pre-pass
-	HRootSignature rootSignature;
-	HDescriptorTable descriptorTable;
-	HPipeline pipeline; // @TODO: 1 per cull type
+	HRootSignature zppRootSignature;
+	HDescriptorTable zppDescriptorTable;
+	HPipeline zppPipeline; // @TODO: 1 per cull type
+
+	// dynamic
+	HRootSignature dynRootSignature;
+	HDescriptorTable dynDescriptorTable;
+	HPipeline dynPipeline; // @TODO: 1 per cull type
 };
 
 struct UI
