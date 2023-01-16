@@ -220,3 +220,14 @@ struct GRP : IRenderPipeline
 };
 
 extern GRP grp;
+
+inline void CmdSetViewportAndScissor(uint32_t x, uint32_t y, uint32_t w, uint32_t h)
+{
+	CmdSetViewport(x, y, w, h);
+	CmdSetScissor(x, y, w, h);
+}
+
+inline void CmdSetViewportAndScissor(const viewParms_t& vp)
+{
+	CmdSetViewportAndScissor(vp.viewportX, vp.viewportY, vp.viewportWidth, vp.viewportHeight);
+}

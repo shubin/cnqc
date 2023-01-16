@@ -144,9 +144,9 @@ void UI::Begin()
 		return;
 	}
 
-	// @TODO: grab the right rects...
-	CmdSetViewport(0, 0, glConfig.vidWidth, glConfig.vidHeight);
-	CmdSetScissor(0, 0, glConfig.vidWidth, glConfig.vidHeight);
+	// UI always uses the entire render surface
+	CmdSetViewportAndScissor(0, 0, glConfig.vidWidth, glConfig.vidHeight);
+
 	CmdBindRootSignature(rootSignature);
 	CmdBindPipeline(pipeline);
 	CmdBindDescriptorTable(rootSignature, grp.descriptorTable);

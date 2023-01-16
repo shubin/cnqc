@@ -110,8 +110,8 @@ void World::Begin()
 		return;
 	}
 
-	// copy viewParms.projectionMatrix
-	// apply viewParms.viewportX, viewParms.viewportY, viewParms.viewportWidth, viewParms.viewportHeight
+	// copy backEnd.viewParms.projectionMatrix
+	CmdSetViewportAndScissor(backEnd.viewParms);
 
 	// @TODO: this should be moved out of the RP since none of the decision-making is RP-specific
 #if 0
@@ -171,7 +171,8 @@ void World::Begin()
 
 void World::DrawPrePass()
 {
-	if(prePassGeo.indexCount <= 0 ||
+	if(tr.world == NULL ||
+		prePassGeo.indexCount <= 0 ||
 		prePassGeo.vertexCount <= 0)
 	{
 		return;
@@ -180,9 +181,6 @@ void World::DrawPrePass()
 	TextureBarrier tb(depthTexture, ResourceStates::DepthWriteBit);
 	CmdBarrier(1, &tb);
 
-	// @TODO: grab the right rects...
-	CmdSetViewport(0, 0, glConfig.vidWidth, glConfig.vidHeight);
-	CmdSetScissor(0, 0, glConfig.vidWidth, glConfig.vidHeight);
 	CmdBindRootSignature(rootSignature);
 	CmdBindPipeline(pipeline);
 	CmdBindDescriptorTable(rootSignature, descriptorTable);
@@ -192,7 +190,7 @@ void World::DrawPrePass()
 	CmdClearDepthTarget(depthTexture, 0.0f);
 
 	float mvp[16];
-	R_MultMatrix(tr.viewParms.world.modelMatrix, tr.viewParms.projectionMatrix, mvp);
+	R_MultMatrix(backEnd.viewParms.world.modelMatrix, backEnd.viewParms.projectionMatrix, mvp);
 	CmdSetRootConstants(rootSignature, ShaderStage::Vertex, mvp);
 	CmdBindPipeline(pipeline);
 	CmdBindIndexBuffer(prePassGeo.indexBuffer, indexType, 0);
@@ -203,6 +201,14 @@ void World::DrawPrePass()
 
 void World::DrawBatch()
 {
+	if(tess.numVertexes <= 0 ||
+		tess.numIndexes <= 0)
+	{
+		return;
+	}
+
+	// backEnd.orient.modelMatrix
+	// backEnd.viewParms.projectionMatrix
 }
 
 void World::DrawGUI()
@@ -295,6 +301,9 @@ void World::ProcessWorld(world_t& world)
 
 void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 {
+	backEnd.refdef = cmd.refdef;
+	backEnd.viewParms = cmd.viewParms;
+
 	Begin();
 	DrawPrePass();
 
