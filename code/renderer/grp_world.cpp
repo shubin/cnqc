@@ -161,15 +161,19 @@ void World::Init()
 		desc.rasterizer.cullMode = CullMode::Back;
 		zppPipeline = CreateGraphicsPipeline(desc);
 	}
-	prePassGeo.maxVertexCount = 1 << 20;
-	prePassGeo.maxIndexCount = 8 * prePassGeo.maxVertexCount;
 	{
-		BufferDesc desc("depth pre-pass index", sizeof(Index) * prePassGeo.maxIndexCount, ResourceStates::IndexBufferBit);
-		prePassGeo.indexBuffer = CreateBuffer(desc);
-	}
-	{
-		BufferDesc desc("depth pre-pass vertex", 16 * prePassGeo.maxVertexCount, ResourceStates::VertexBufferBit);
-		prePassGeo.vertexBuffer = CreateBuffer(desc);
+		const uint32_t maxVertexCount = 1 << 20;
+		const uint32_t maxIndexCount = 8 * maxVertexCount;
+		zppVertexBuffer.Init(maxVertexCount, 16);
+		zppIndexBuffer.Init(maxIndexCount, sizeof(Index));
+		{
+			BufferDesc desc("depth pre-pass vertex", zppVertexBuffer.byteCount, ResourceStates::VertexBufferBit);
+			zppVertexBuffer.buffer = CreateBuffer(desc);
+		}
+		{
+			BufferDesc desc("depth pre-pass index", zppIndexBuffer.byteCount, ResourceStates::IndexBufferBit);
+			zppIndexBuffer.buffer = CreateBuffer(desc);
+		}
 	}
 
 	//
@@ -196,19 +200,20 @@ void World::Init()
 		desc.depthStencil.enableDepthTest = true;
 		desc.depthStencil.enableDepthWrites = true;
 		desc.rasterizer.cullMode = CullMode::Back;
+		desc.AddRenderTarget(GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO, TextureFormat::RGBA32_UNorm);
 		dynPipeline = CreateGraphicsPipeline(desc);
 	}
-	dynamicGeo.maxVertexCount = SHADER_MAX_VERTEXES;
-	dynamicGeo.maxIndexCount = SHADER_MAX_INDEXES;
+	dynVertexBuffer.Init(SHADER_MAX_VERTEXES, sizeof(LargestVertex));
+	dynIndexBuffer.Init(SHADER_MAX_INDEXES, sizeof(Index));
 	{
-		BufferDesc desc("dynamic index", sizeof(Index) * dynamicGeo.maxIndexCount, ResourceStates::IndexBufferBit);
+		BufferDesc desc("dynamic vertex", dynVertexBuffer.byteCount, ResourceStates::ConstantBufferBit);
 		desc.memoryUsage = MemoryUsage::Upload;
-		dynamicGeo.indexBuffer = CreateBuffer(desc);
+		dynVertexBuffer.buffer = CreateBuffer(desc);
 	}
 	{
-		BufferDesc desc("dynamic vertex", sizeof(LargestVertex) * dynamicGeo.maxVertexCount, ResourceStates::VertexBufferBit);
+		BufferDesc desc("dynamic index", dynIndexBuffer.byteCount, ResourceStates::IndexBufferBit);
 		desc.memoryUsage = MemoryUsage::Upload;
-		dynamicGeo.vertexBuffer = CreateBuffer(desc);
+		dynIndexBuffer.buffer = CreateBuffer(desc);
 	}
 }
 
@@ -225,6 +230,9 @@ void World::Begin()
 
 	// copy backEnd.viewParms.projectionMatrix
 	CmdSetViewportAndScissor(backEnd.viewParms);
+
+	TextureBarrier tb(depthTexture, ResourceStates::DepthWriteBit);
+	CmdBarrier(1, &tb);
 
 	// @TODO: this should be moved out of the RP since none of the decision-making is RP-specific
 #if 0
@@ -244,7 +252,7 @@ void World::Begin()
 	}
 	if(shouldClearColor)
 	{
-		ClearColor(clearColor);
+		CmdClearColorTarget();
 	}
 #endif
 
@@ -283,14 +291,11 @@ void World::Begin()
 void World::DrawPrePass()
 {
 	if(tr.world == NULL ||
-		prePassGeo.indexCount <= 0 ||
-		prePassGeo.vertexCount <= 0)
+		zppIndexBuffer.batchCount == 0 ||
+		zppVertexBuffer.batchCount == 0)
 	{
 		return;
 	}
-
-	TextureBarrier tb(depthTexture, ResourceStates::DepthWriteBit);
-	CmdBarrier(1, &tb);
 
 	CmdBindRootSignature(zppRootSignature);
 	CmdBindPipeline(zppPipeline);
@@ -304,22 +309,34 @@ void World::DrawPrePass()
 	R_MultMatrix(backEnd.viewParms.world.modelMatrix, backEnd.viewParms.projectionMatrix, mvp);
 	CmdSetRootConstants(zppRootSignature, ShaderStage::Vertex, mvp);
 	CmdBindPipeline(zppPipeline);
-	CmdBindIndexBuffer(prePassGeo.indexBuffer, indexType, 0);
+	CmdBindIndexBuffer(zppIndexBuffer.buffer, indexType, 0);
 	const uint32_t vertexStride = 4 * sizeof(float);
-	CmdBindVertexBuffers(1, &prePassGeo.vertexBuffer, &vertexStride, NULL);
-	CmdDrawIndexed(prePassGeo.indexCount, 0, 0);
+	CmdBindVertexBuffers(1, &zppVertexBuffer.buffer, &vertexStride, NULL);
+	CmdDrawIndexed(zppIndexBuffer.batchCount, 0, 0);
 }
 
 void World::DrawBatch()
 {
 	if(tess.numVertexes <= 0 ||
-		tess.numIndexes <= 0)
+		tess.numIndexes <= 0 ||
+		tess.shader->numStages == 0)
 	{
+		// @TODO: make sure we never get tess.shader->numStages 0 here in the first place
 		return;
 	}
 
-	// backEnd.orient.modelMatrix
-	// backEnd.viewParms.projectionMatrix
+	DynamicVertexRC vertexRC;
+	R_MultMatrix(backEnd.orient.modelMatrix, backEnd.viewParms.projectionMatrix, vertexRC.mvp);
+	memcpy(vertexRC.clipPlane, clipPlane, sizeof(vertexRC.clipPlane));
+	vertexRC.bufferByteOffset = 0;
+	CmdSetRootConstants(dynRootSignature, ShaderStage::Vertex, &vertexRC);
+
+	DynamicPixelRC pixelRC;
+	pixelRC.textureIndex = tess.shader->stages[0]->bundle.image[0]->textureIndex;
+	pixelRC.samplerIndex = 0;
+	CmdSetRootConstants(dynRootSignature, ShaderStage::Pixel, &pixelRC);
+
+	CmdDrawIndexed(dynIndexBuffer.batchCount, dynIndexBuffer.batchFirst, 0);
 
 	tess.numVertexes = 0;
 	tess.numIndexes = 0;
@@ -339,8 +356,8 @@ void World::DrawGUI()
 
 void World::ProcessWorld(world_t& world)
 {
-	float* vtx = (float*)BeginBufferUpload(prePassGeo.vertexBuffer);
-	Index* idx = (Index*)BeginBufferUpload(prePassGeo.indexBuffer);
+	float* vtx = (float*)BeginBufferUpload(zppVertexBuffer.buffer);
+	Index* idx = (Index*)BeginBufferUpload(zppIndexBuffer.buffer);
 
 	int firstVertex = 0;
 	int firstIndex = 0;
@@ -365,8 +382,8 @@ void World::ProcessWorld(world_t& world)
 		{
 			continue;
 		}
-		if(firstVertex + surfVertexCount >= prePassGeo.maxVertexCount ||
-			firstIndex + surfIndexCount >= prePassGeo.maxIndexCount)
+		if(firstVertex + surfVertexCount >= zppVertexBuffer.totalCount ||
+			firstIndex + surfIndexCount >= zppIndexBuffer.totalCount)
 		{
 			break;
 		}
@@ -404,13 +421,13 @@ void World::ProcessWorld(world_t& world)
 		tess.numIndexes = 0;
 	}
 
-	EndBufferUpload(prePassGeo.vertexBuffer);
-	EndBufferUpload(prePassGeo.indexBuffer);
+	EndBufferUpload(zppVertexBuffer.buffer);
+	EndBufferUpload(zppIndexBuffer.buffer);
 
-	prePassGeo.vertexCount = firstVertex;
-	prePassGeo.indexCount = firstIndex;
-	prePassGeo.firstVertex = 0;
-	prePassGeo.firstIndex = 0;
+	zppVertexBuffer.batchCount = firstVertex;
+	zppIndexBuffer.batchCount = firstIndex;
+	zppVertexBuffer.batchFirst = 0;
+	zppIndexBuffer.batchFirst = 0;
 }
 
 void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
@@ -419,10 +436,17 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 	backEnd.viewParms = cmd.viewParms;
 
 	Begin();
+
 	DrawPrePass();
+
+	CmdBindRootSignature(dynRootSignature);
+	CmdBindPipeline(dynPipeline);
+	CmdBindDescriptorTable(dynRootSignature, dynDescriptorTable);
 
 	const HTexture swapChain = GetSwapChainTexture();
 	CmdBindRenderTargets(1, &swapChain, &depthTexture);
+
+	CmdBindIndexBuffer(dynIndexBuffer.buffer, indexType, 0);
 
 	const drawSurf_t* drawSurfs = cmd.drawSurfs;
 	const int opaqueCount = cmd.numDrawSurfs - cmd.numTranspSurfs;

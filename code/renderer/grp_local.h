@@ -31,6 +31,26 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 using namespace RHI;
 
 
+struct GeometryBuffer
+{
+	void Init(uint32_t count_, uint32_t stride_)
+	{
+		buffer = RHI_MAKE_NULL_HANDLE();
+		byteCount = count_ * stride_;
+		stride = stride_;
+		totalCount = count_;
+		batchFirst = 0;
+		batchCount = 0;
+	}
+
+	HBuffer buffer = RHI_MAKE_NULL_HANDLE();
+	uint32_t byteCount = 0;
+	uint32_t stride = 0;
+	uint32_t totalCount = 0;
+	uint32_t batchFirst = 0;
+	uint32_t batchCount = 0;
+};
+
 struct World
 {
 	void Init();
@@ -45,33 +65,9 @@ struct World
 	typedef uint32_t Index;
 	const IndexType::Id indexType = IndexType::UInt32;
 
-	struct GeometryBuffer
-	{
-		void EndBatch()
-		{
-			firstIndex += indexCount;
-			firstVertex += vertexCount;
-			indexCount = 0;
-			vertexCount = 0;
-		}
-
-		HBuffer indexBuffer;
-		HBuffer vertexBuffer;
-		int maxIndexCount;
-		int maxVertexCount;
-		int firstIndex;
-		int firstVertex;
-		int indexCount;
-		int vertexCount;
-	};
-
 	// @TODO: in the future, once backEnd gets nuked
 	//trRefdef_t refdef;
 	//viewParms_t viewParms;
-
-	GeometryBuffer dynamicGeo;
-	//GeometryBuffer staticGeo;
-	GeometryBuffer prePassGeo;
 
 	HTexture depthTexture;
 	uint32_t depthTextureIndex;
@@ -82,11 +78,15 @@ struct World
 	HRootSignature zppRootSignature;
 	HDescriptorTable zppDescriptorTable;
 	HPipeline zppPipeline; // @TODO: 1 per cull type
+	GeometryBuffer zppIndexBuffer;
+	GeometryBuffer zppVertexBuffer;
 
 	// dynamic
 	HRootSignature dynRootSignature;
 	HDescriptorTable dynDescriptorTable;
 	HPipeline dynPipeline; // @TODO: 1 per cull type
+	GeometryBuffer dynIndexBuffer;
+	GeometryBuffer dynVertexBuffer;
 };
 
 struct UI
