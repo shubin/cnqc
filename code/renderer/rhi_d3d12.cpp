@@ -38,6 +38,8 @@ to do:
 - clean up the Win32 window creation/update mess
 - move as much GUI logic as possible out of the RHI (especially render pass timings)
 - leverage rhi.allocator->IsCacheCoherentUMA()
+	- buffers: create with CPU access, map the destination buffer directly
+	- textures: create with undefined layout and CPU access, upload data in 1 step with WriteToSubresource
 - defragment on partial inits with D3D12MA?
 - compiler switch for GPU validation
 - use ID3D12Device4::CreateCommandList1 to create closed command lists
@@ -48,8 +50,9 @@ to do:
 	and ALLOW_TEARING set on both the flip mode swap chain and Present() flags
 	will enable true immediate independent flip mode and give us the lowest latency possible
 - NvAPI_D3D_GetLatency to get (simulated) input to display latency
-- NvAPI_D3D_IsGSyncCapable / NvAPI_D3D_IsGSyncActive for diagnostics
+- NvAPI_D3D_IsGSyncCapable / NvAPI_D3D_IsGSyncActive for diagnostics -> nope, that's for D3D9-11
 - CVar for setting the gpuPreference_t
+- resources that should be committed: depth buffer, render targets, static geometry - optional: large textures
 */
 
 /*
