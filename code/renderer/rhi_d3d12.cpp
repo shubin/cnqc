@@ -204,6 +204,9 @@ namespace RHI
 		ID3D12Resource* buffer;
 		D3D12_GPU_VIRTUAL_ADDRESS gpuAddress;
 		D3D12_RESOURCE_STATES currentState;
+		uint32_t cbvIndex;
+		uint32_t srvIndex;
+		uint32_t uavIndex;
 		bool mapped;
 		bool uploading;
 		UINT64 uploadByteOffset;
@@ -325,6 +328,7 @@ namespace RHI
 		uint32_t CreateUAV(ID3D12Resource* resource, D3D12_UNORDERED_ACCESS_VIEW_DESC& desc);
 		uint32_t CreateRTV(ID3D12Resource* resource, D3D12_RENDER_TARGET_VIEW_DESC& desc);
 		uint32_t CreateDSV(ID3D12Resource* resource, D3D12_DEPTH_STENCIL_VIEW_DESC& desc);
+		uint32_t CreateCBV(D3D12_CONSTANT_BUFFER_VIEW_DESC& desc);
 		uint32_t CreateSampler(D3D12_SAMPLER_DESC& desc);
 
 		StaticFreeList<uint16_t, InvalidDescriptorIndex> freeList;
@@ -851,6 +855,16 @@ namespace RHI
 
 		const uint32_t index = freeList.Allocate();
 		rhi.device->CreateDepthStencilView(resource, &desc, GetCPUHandle(index));
+
+		return index;
+	}
+
+	uint32_t DescriptorHeap::CreateCBV(D3D12_CONSTANT_BUFFER_VIEW_DESC& desc)
+	{
+		Q_assert(type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+		const uint32_t index = freeList.Allocate();
+		rhi.device->CreateConstantBufferView(&desc, GetCPUHandle(index));
 
 		return index;
 	}
@@ -2153,6 +2167,46 @@ namespace RHI
 		AllocateAndFixName(rhiDesc);
 		SetDebugName(resource, rhiDesc.name, D3DResourceType::Buffer);
 
+		uint32_t srvIndex = InvalidDescriptorIndex;
+		if(rhiDesc.initialState & ResourceStates::ShaderAccessBits)
+		{
+			D3D12_SHADER_RESOURCE_VIEW_DESC srv = {};
+			srv.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+			//srv.Format = DXGI_FORMAT_UNKNOWN; // @TODO: structured buffer
+			srv.Format = DXGI_FORMAT_R32_TYPELESS;
+			srv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			srv.Buffer.FirstElement = 0;
+			srv.Buffer.NumElements = rhiDesc.byteCount / 4;
+			srv.Buffer.StructureByteStride = 0;
+			//srv.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE; // @TODO: structured buffer
+			srv.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
+			srvIndex = rhi.descHeapGeneric.CreateSRV(resource, srv);
+		}
+
+		uint32_t cbvIndex = InvalidDescriptorIndex;
+		if(rhiDesc.initialState & ResourceStates::ConstantBufferBit)
+		{
+			D3D12_CONSTANT_BUFFER_VIEW_DESC cbv = { 0 };
+			cbv.BufferLocation = resource->GetGPUVirtualAddress();
+			cbv.SizeInBytes = rhiDesc.byteCount;
+			cbvIndex = rhi.descHeapGeneric.CreateCBV(cbv);
+		}
+
+		uint32_t uavIndex = InvalidDescriptorIndex;
+		// @TODO:
+		/*if(rhiDesc.initialState & ResourceStates::UnorderedAccessBit)
+		{
+			D3D12_UNORDERED_ACCESS_VIEW_DESC uav = { 0 };
+			uav.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+			uav.Format = DXGI_FORMAT_R8G8B8A8_UNORM; // @TODO: is this field needed?
+			uav.Buffer.CounterOffsetInBytes = ;
+			uav.Buffer.FirstElement = 0;
+			uav.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE; // flag RAW?
+			uav.Buffer.NumElements = ;
+			uav.Buffer.StructureByteStride = ;
+			uavIndex = rhi.descHeapGeneric.CreateUAV(resource, uav);
+		}*/
+
 		Buffer buffer = {};
 		buffer.desc = rhiDesc;
 		buffer.allocation = allocation;
@@ -2160,6 +2214,8 @@ namespace RHI
 		buffer.gpuAddress = resource->GetGPUVirtualAddress();
 		buffer.currentState = resourceState;
 		buffer.shortLifeTime = rhiDesc.shortLifeTime;
+		buffer.cbvIndex = cbvIndex;
+		buffer.uavIndex = uavIndex;
 
 		return rhi.buffers.Add(buffer);
 	}
@@ -2488,6 +2544,11 @@ namespace RHI
 			r.OffsetInDescriptorsFromTableStart = rIn.firstIndex;
 			r.RangeType = GetD3DDescriptorRangeType(rIn.type);
 			r.RegisterSpace = 0;
+			if(rIn.type == DescriptorType::Buffer)
+			{
+				// @TODO: or bump up BaseShaderRegister, or let the user decide
+				r.RegisterSpace = 1;
+			}
 			rhiSignature.genericDescCount += rIn.count;
 		}
 		if(rhiSignature.genericDescCount > 0)
@@ -2590,8 +2651,8 @@ namespace RHI
 
 		const Texture& nullTex = rhi.textures.Get(rhi.nullTexture);
 		const Texture& nullRWTex = rhi.textures.Get(rhi.nullRWTexture);
-		//const Buffer& nullBuffer = rhi.buffers.Get(rhi.nullBuffer);
-		//const Buffer& nullRWBuffer = rhi.buffers.Get(rhi.nullRWBuffer);
+		const Buffer& nullBuffer = rhi.buffers.Get(rhi.nullBuffer);
+		const Buffer& nullRWBuffer = rhi.buffers.Get(rhi.nullRWBuffer);
 
 		// bind null CBV SRV UAV resources
 		for(uint32_t r = 0; r < sig.desc.genericRangeCount; ++r)
@@ -2603,8 +2664,8 @@ namespace RHI
 			{
 				case DescriptorType::Texture: index = nullTex.srvIndex; break;
 				case DescriptorType::RWTexture: index = nullRWTex.mips[0].uavIndex; break;
-				//case DescriptorType::Buffer: index = nullBuffer.XXX; break;
-				//case DescriptorType::RWBuffer: index = nullRWBuffer.XXX; break;
+				case DescriptorType::Buffer: index = nullBuffer.srvIndex; break;
+				case DescriptorType::RWBuffer: index = nullRWBuffer.uavIndex; break;
 				default: Q_assert(!"Unsupported descriptor type"); continue;
 			}
 

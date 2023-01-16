@@ -188,12 +188,14 @@ void World::Init()
 	// dynamic (streamed) geometry
 	//
 	{
-		RootSignatureDesc desc("dynamic");
+		RootSignatureDesc desc = grp.rootSignatureDesc;
+		desc.name = "dynamic";
 		desc.usingVertexBuffers = false;
 		desc.constants[ShaderStage::Vertex].byteCount = sizeof(DynamicVertexRC);
 		desc.constants[ShaderStage::Pixel].byteCount = sizeof(DynamicPixelRC);
 		desc.samplerVisibility = ShaderStages::PixelBit;
 		desc.genericVisibility = ShaderStages::VertexBit | ShaderStages::PixelBit;
+		desc.AddRange(DescriptorType::Buffer, MAX_DRAWIMAGES * 2, 2);
 		dynRootSignature = CreateRootSignature(desc);
 	}
 	{
@@ -216,7 +218,7 @@ void World::Init()
 		dynVertexBuffers[f].Init(SHADER_MAX_VERTEXES * sizeof(LargestVertex), 1);
 		dynIndexBuffers[f].Init(SHADER_MAX_INDEXES, sizeof(Index));
 		{
-			BufferDesc desc("dynamic vertex", dynVertexBuffers[f].byteCount, ResourceStates::ConstantBufferBit);
+			BufferDesc desc("dynamic vertex", dynVertexBuffers[f].byteCount, ResourceStates::VertexShaderAccessBit);
 			desc.memoryUsage = MemoryUsage::Upload;
 			dynVertexBuffers[f].buffer = CreateBuffer(desc);
 		}
