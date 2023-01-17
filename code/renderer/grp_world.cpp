@@ -416,6 +416,9 @@ void World::DrawBatch()
 		return;
 	}
 
+	Q_assert(posBuffer.batchFirst == db.stages[0].texCoords.batchFirst);
+	Q_assert(posBuffer.batchFirst == db.stages[0].colors.batchFirst);
+
 	Q_assert(posBuffer.batchCount == 0);
 	Q_assert(idxBuffer.batchCount == 0);
 	float* pos = (float*)BeginBufferUpload(posBuffer.buffer) + 3 * (posBuffer.batchFirst + posBuffer.batchCount);
@@ -459,7 +462,8 @@ void World::DrawBatch()
 		uint32_t* col = colArray[s];
 		for(int v = 0; v < tess.numVertexes; ++v)
 		{
-			*col++ = *(uint32_t*)&sv.colors[v][0];
+			//*col++ = *(uint32_t*)&sv.colors[v][0];
+			*col++ = 0xFFFFFFFF;
 		}
 	}
 
