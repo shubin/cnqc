@@ -258,7 +258,7 @@ void World::Init()
 	{
 		DynamicBuffers& db = dynBuffers[f];
 
-		const int MaxDynamicVertexCount = 65536;
+		const int MaxDynamicVertexCount = 256 << 10;
 		const int MaxDynamicIndexCount = MaxDynamicVertexCount * 8;
 
 		{
