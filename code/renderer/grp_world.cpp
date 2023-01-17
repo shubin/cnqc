@@ -283,6 +283,10 @@ void World::Begin()
 	TextureBarrier tb(depthTexture, ResourceStates::DepthWriteBit);
 	CmdBarrier(1, &tb);
 
+	// @TODO: evaluate later whether binding the color target here is OK?
+	CmdBindRenderTargets(0, NULL, &depthTexture);
+	CmdClearDepthTarget(depthTexture, 0.0f);
+
 	// @TODO: this should be moved out of the RP since none of the decision-making is RP-specific
 #if 0
 	bool shouldClearColor = qfalse;
@@ -349,10 +353,6 @@ void World::DrawPrePass()
 	CmdBindRootSignature(zppRootSignature);
 	CmdBindPipeline(zppPipeline);
 	CmdBindDescriptorTable(zppRootSignature, zppDescriptorTable);
-
-	// @TODO: evaluate later whether binding the color target here is OK?
-	CmdBindRenderTargets(0, NULL, &depthTexture);
-	CmdClearDepthTarget(depthTexture, 0.0f);
 
 	float mvp[16];
 	R_MultMatrix(backEnd.viewParms.world.modelMatrix, backEnd.viewParms.projectionMatrix, mvp);
