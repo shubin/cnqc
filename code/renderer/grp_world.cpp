@@ -618,7 +618,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 
 	Begin();
 
-	DrawPrePass();
+	//DrawPrePass();
 
 	CmdBindRootSignature(dynRootSignature);
 	CmdBindPipeline(dynPipeline);
