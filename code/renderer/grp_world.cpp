@@ -508,6 +508,9 @@ void World::ProcessWorld(world_t& world)
 	zppIndexBuffer.batchFirst = 0;
 #endif
 
+	statBuffers.vertexBuffers.BeginUpload();
+	statBuffers.indexBuffer.BeginUpload();
+
 	for(int s = 0; s < world.numsurfaces; ++s)
 	{
 		msurface_t* const surf = &world.surfaces[s];
@@ -556,6 +559,9 @@ void World::ProcessWorld(world_t& world)
 		statBuffers.vertexBuffers.EndBatch(surfVertexCount);
 		statBuffers.indexBuffer.EndBatch(surfIndexCount);
 	}
+
+	statBuffers.vertexBuffers.EndUpload();
+	statBuffers.indexBuffer.EndUpload();
 
 	tess.numVertexes = 0;
 	tess.numIndexes = 0;

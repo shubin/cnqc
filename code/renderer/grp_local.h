@@ -186,7 +186,7 @@ struct IndexBuffer : BufferBase
 
 	void BeginUpload()
 	{
-		mapped = (uint32_t*)(uint32_t*)BeginBufferUpload(buffer);
+		mapped = (uint32_t*)BeginBufferUpload(buffer);
 	}
 
 	void EndUpload()
