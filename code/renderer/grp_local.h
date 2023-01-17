@@ -392,6 +392,7 @@ struct GRP : IRenderPipeline
 	void BeginTextureUpload(MappedTexture& mappedTexture, image_t* image) override;
 	void EndTextureUpload(image_t* image) override;
 	void ProcessWorld(world_t& world) override;
+	void ProcessModel(model_t& model) override;
 
 	void UISetColor(const uiSetColorCommand_t& cmd) override { ui.UISetColor(cmd); }
 	void UIDrawQuad(const uiDrawQuadCommand_t& cmd) override { ui.UIDrawQuad(cmd); }

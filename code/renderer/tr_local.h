@@ -1665,6 +1665,7 @@ struct IRenderPipeline
 
 	virtual void AddDrawSurface(const surfaceType_t* surface, const shader_t* shader) = 0;
 	virtual void ProcessWorld(world_t& world) = 0;
+	virtual void ProcessModel(model_t& model) = 0;
 
 	virtual void CreateTexture(image_t* image, int mipCount, int width, int height) = 0;
 	virtual void UpoadTextureAndGenerateMipMaps(image_t* image, const byte* data) = 0;

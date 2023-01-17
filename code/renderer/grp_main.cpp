@@ -142,6 +142,11 @@ void GRP::ProcessWorld(world_t& world_)
 	world.ProcessWorld(world_);
 }
 
+void GRP::ProcessModel(model_t& model)
+{
+	// @TODO: !!!
+}
+
 uint32_t GRP::RegisterTexture(HTexture htexture)
 {
 	const uint32_t index = textureIndex++;
