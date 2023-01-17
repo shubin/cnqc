@@ -419,12 +419,12 @@ static void R_SetupProjection()
 	//
 	// set up projection matrix
 	//
-	zNear	= 1.0f;
-	zFar	= tr.viewParms.zFar;
+	zNear = tr.viewParms.zFar;
+	zFar  = 1.0f;
 
 	height = 2.0f * zNear * tan( tr.refdef.fov_y * M_PI / 360.0f );
-	width = 2.0f * zNear * tan( tr.refdef.fov_x * M_PI / 360.0f );
-	depth = zFar - zNear;
+	width  = 2.0f * zNear * tan( tr.refdef.fov_x * M_PI / 360.0f );
+	depth  = zFar - zNear;
 
 	tr.viewParms.projectionMatrix[0] = 2 * zNear / width;
 	tr.viewParms.projectionMatrix[4] = 0;
