@@ -109,10 +109,30 @@ struct VertexBuffers : BufferBase
 		}
 	}
 
+	void BeginUpload()
+	{
+		for(uint32_t b = 0; b < BufferCount; ++b)
+		{
+			mapped[b] = BeginBufferUpload(buffers[b]);
+		}
+	}
+
+	void EndUpload()
+	{
+		for(uint32_t b = 0; b < BufferCount; ++b)
+		{
+			EndBufferUpload(buffers[b]);
+			mapped[b] = NULL;
+		}
+	}
+
 	void Upload(uint32_t firstStage, uint32_t stageCount)
 	{
+		Q_assert(mapped[0] != NULL);
+
 		const uint32_t batchOffset = batchFirst + batchCount;
-		float* pos = (float*)BeginBufferUpload(buffers[BasePosition]) + 3 * batchOffset;
+
+		float* pos = (float*)mapped[BasePosition] + 3 * batchOffset;
 		for(int v = 0; v < tess.numVertexes; ++v)
 		{
 			pos[0] = tess.xyz[v][0];
@@ -120,27 +140,34 @@ struct VertexBuffers : BufferBase
 			pos[2] = tess.xyz[v][2];
 			pos += 3;
 		}
-		EndBufferUpload(buffers[BasePosition]);
+
+		float* nor = (float*)mapped[BaseNormal] + 3 * batchOffset;
+		for(int v = 0; v < tess.numVertexes; ++v)
+		{
+			nor[0] = tess.normal[v][0];
+			nor[1] = tess.normal[v][1];
+			nor[2] = tess.normal[v][2];
+			nor += 3;
+		}
 
 		for(uint32_t s = 0; s < stageCount; ++s)
 		{
-			HBuffer tcBuffer = buffers[BaseCount + s * StageCount + StageTexCoords];
-			HBuffer colBuffer = buffers[BaseCount + s * StageCount + StageColors];
-			float* tc = (float*)BeginBufferUpload(tcBuffer) + 2 * batchOffset;
-			uint32_t* col = (uint32_t*)BeginBufferUpload(colBuffer) + batchOffset;
-
 			const stageVars_t& sv = tess.svars[s + firstStage];
-			memcpy(tc, &sv.texcoords[0], tess.numVertexes * sizeof(vec2_t));
-			memcpy(col, &sv.colors[0], tess.numVertexes * sizeof(color4ub_t));
 
-			EndBufferUpload(tcBuffer);
-			EndBufferUpload(colBuffer);
+			uint8_t* const tcBuffer = mapped[BaseCount + s * StageCount + StageTexCoords];
+			float* tc = (float*)tcBuffer + 2 * batchOffset;
+			memcpy(tc, &sv.texcoords[0], tess.numVertexes * sizeof(vec2_t));
+
+			uint8_t* const colBuffer = mapped[BaseCount + s * StageCount + StageColors];
+			uint32_t* col = (uint32_t*)colBuffer + batchOffset;
+			memcpy(col, &sv.colors[0], tess.numVertexes * sizeof(color4ub_t));
 		}
 	}
 
 	static const uint32_t BufferCount = BaseCount + StageCount * MAX_SHADER_STAGES;
 	HBuffer buffers[BufferCount] = {};
 	uint32_t strides[BufferCount] = {};
+	uint8_t* mapped[BufferCount] = {};
 };
 
 struct IndexBuffer : BufferBase
@@ -157,14 +184,27 @@ struct IndexBuffer : BufferBase
 		buffer = CreateBuffer(desc);
 	}
 
+	void BeginUpload()
+	{
+		mapped = (uint32_t*)(uint32_t*)BeginBufferUpload(buffer);
+	}
+
+	void EndUpload()
+	{
+		EndBufferUpload(buffer);
+		mapped = NULL;
+	}
+
 	void Upload()
 	{
-		uint32_t* idx = (uint32_t*)BeginBufferUpload(buffer) + batchFirst + batchCount;
+		Q_assert(mapped != NULL);
+
+		uint32_t* const idx = mapped + batchFirst + batchCount;
 		memcpy(idx, &tess.indexes[0], tess.numIndexes * sizeof(uint32_t));
-		EndBufferUpload(buffer);
 	}
 
 	HBuffer buffer = RHI_MAKE_NULL_HANDLE();
+	uint32_t* mapped = NULL;
 };
 
 struct GeometryBuffer : BufferBase

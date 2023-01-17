@@ -269,8 +269,8 @@ void World::Init()
 	{
 		const int MaxVertexCount = 256 << 10;
 		const int MaxIndexCount = MaxVertexCount * 8;
-		statBuffers.vertexBuffers.Create("static #%d", MemoryUsage::GPU, MaxVertexCount);
-		statBuffers.indexBuffer.Create("static #%d", MemoryUsage::GPU, MaxIndexCount);
+		statBuffers.vertexBuffers.Create("static", MemoryUsage::GPU, MaxVertexCount);
+		statBuffers.indexBuffer.Create("static", MemoryUsage::GPU, MaxIndexCount);
 	}
 }
 
@@ -391,8 +391,13 @@ void World::DrawBatch()
 		return;
 	}
 
+	db.vertexBuffers.BeginUpload();
 	db.vertexBuffers.Upload(0, 1);
+	db.vertexBuffers.EndUpload();
+
+	db.indexBuffer.BeginUpload();
 	db.indexBuffer.Upload();
+	db.indexBuffer.EndUpload();
 
 	DynamicVertexRC vertexRC;
 	R_MultMatrix(backEnd.orient.modelMatrix, backEnd.viewParms.projectionMatrix, vertexRC.mvp);
