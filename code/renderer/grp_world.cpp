@@ -440,80 +440,70 @@ void World::DrawGUI()
 
 void World::ProcessWorld(world_t& world)
 {
-#if 0
-	float* vtx = (float*)BeginBufferUpload(zppVertexBuffer.buffer);
-	Index* idx = (Index*)BeginBufferUpload(zppIndexBuffer.buffer);
-
-	int firstVertex = 0;
-	int firstIndex = 0;
-	for(int s = 0; s < world.numsurfaces; ++s)
 	{
-		msurface_t* const surf = &world.surfaces[s];
-		surf->numVertexes = 0;
-		surf->numIndexes = 0;
-		surf->firstVertex = 0;
-		surf->firstIndex = 0;
+		float* vtx = (float*)BeginBufferUpload(zppVertexBuffer.buffer);
+		Index* idx = (Index*)BeginBufferUpload(zppIndexBuffer.buffer);
 
-		// @TODO: make sure it's static as well!
-		if(surf->shader->numStages == 0)
+		int firstVertex = 0;
+		int firstIndex = 0;
+		for(int s = 0; s < world.numsurfaces; ++s)
 		{
-			continue;
+			msurface_t* const surf = &world.surfaces[s];
+			surf->numVertexes = 0;
+			surf->numIndexes = 0;
+			surf->firstVertex = 0;
+			surf->firstIndex = 0;
+
+			// @TODO: make sure it's static as well!
+			if(surf->shader->numStages == 0)
+			{
+				continue;
+			}
+
+			rb_surfaceTable[*surf->data](surf->data);
+			const int surfVertexCount = tess.numVertexes;
+			const int surfIndexCount = tess.numIndexes;
+			if(surfVertexCount <= 0 || surfIndexCount <= 0)
+			{
+				continue;
+			}
+			if(firstVertex + surfVertexCount >= zppVertexBuffer.totalCount ||
+				firstIndex + surfIndexCount >= zppIndexBuffer.totalCount)
+			{
+				break;
+			}
+
+			for(int v = 0; v < tess.numVertexes; ++v)
+			{
+				*vtx++ = tess.xyz[v][0];
+				*vtx++ = tess.xyz[v][1];
+				*vtx++ = tess.xyz[v][2];
+				*vtx++ = 1.0f;
+			}
+
+			for(int i = 0; i < tess.numIndexes; ++i)
+			{
+				*idx++ = tess.indexes[i] + firstVertex;
+			}
+
+			surf->numVertexes = tess.numVertexes;
+			surf->numIndexes = tess.numIndexes;
+			surf->firstVertex = firstVertex;
+			surf->firstIndex = firstIndex;
+			firstVertex += surfVertexCount;
+			firstIndex += surfIndexCount;
+			tess.numVertexes = 0;
+			tess.numIndexes = 0;
 		}
 
-		rb_surfaceTable[*surf->data](surf->data);
-		const int surfVertexCount = tess.numVertexes;
-		const int surfIndexCount = tess.numIndexes;
-		if(surfVertexCount <= 0 || surfIndexCount <= 0)
-		{
-			continue;
-		}
-		if(firstVertex + surfVertexCount >= zppVertexBuffer.totalCount ||
-			firstIndex + surfIndexCount >= zppIndexBuffer.totalCount)
-		{
-			break;
-		}
+		EndBufferUpload(zppVertexBuffer.buffer);
+		EndBufferUpload(zppIndexBuffer.buffer);
 
-		/*
-		// @TODO: compute all attributes for static geo
-		for(int i = 0; i < surf->shader->numStages; ++i)
-		{
-			const shaderStage_t* const stage = surf->shader->stages[i];
-			R_ComputeColors(stage, tess.svars[i], 0, tess.numVertexes);
-			R_ComputeTexCoords(stage, tess.svars[i], 0, tess.numVertexes, qfalse);
-		}
-		*/
-
-		for(int v = 0; v < tess.numVertexes; ++v)
-		{
-			*vtx++ = tess.xyz[v][0];
-			*vtx++ = tess.xyz[v][1];
-			*vtx++ = tess.xyz[v][2];
-			*vtx++ = 1.0f;
-		}
-
-		for(int i = 0; i < tess.numIndexes; ++i)
-		{
-			*idx++ = tess.indexes[i] + firstVertex;
-		}
-
-		surf->numVertexes = tess.numVertexes;
-		surf->numIndexes = tess.numIndexes;
-		surf->firstVertex = firstVertex;
-		surf->firstIndex = firstIndex;
-		firstVertex += surfVertexCount;
-		firstIndex += surfIndexCount;
-		tess.numVertexes = 0;
-		tess.numIndexes = 0;
+		zppVertexBuffer.batchCount = firstVertex;
+		zppIndexBuffer.batchCount = firstIndex;
+		zppVertexBuffer.batchFirst = 0;
+		zppIndexBuffer.batchFirst = 0;
 	}
-
-	EndBufferUpload(zppVertexBuffer.buffer);
-	EndBufferUpload(zppIndexBuffer.buffer);
-
-	zppVertexBuffer.batchCount = firstVertex;
-	zppIndexBuffer.batchCount = firstIndex;
-	zppVertexBuffer.batchFirst = 0;
-	zppIndexBuffer.batchFirst = 0;
-#endif
 
 	statBuffers.vertexBuffers.BeginUpload();
 	statBuffers.indexBuffer.BeginUpload();
