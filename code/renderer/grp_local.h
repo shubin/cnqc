@@ -261,6 +261,17 @@ struct World
 
 	float clipPlane[4];
 
+	struct BufferFamily
+	{
+		enum Id
+		{
+			Invalid,
+			PrePass,
+			Static,
+			Dynamic
+		};
+	};
+
 	// Z pre-pass
 	HRootSignature zppRootSignature;
 	HDescriptorTable zppDescriptorTable;
@@ -271,9 +282,9 @@ struct World
 	// shared
 	HRootSignature rootSignature;
 	HPipeline pipeline; // @TODO: 1 per cull type
-	bool staticVertexBuffersBound;
-	bool staticIndexBufferBound;
-	uint32_t staticVertexBufferCountBound;
+	BufferFamily::Id boundVertexBuffers;
+	BufferFamily::Id boundIndexBuffer;
+	uint32_t boundStaticVertexBuffersCount;
 
 	// dynamic
 	GeometryBuffers dynBuffers[FrameCount];
