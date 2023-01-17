@@ -386,7 +386,7 @@ void World::DrawBatch()
 
 	Q_assert(posBuffer.batchCount == 0);
 	Q_assert(idxBuffer.batchCount == 0);
-	float* pos = (float*)(BeginBufferUpload(posBuffer.buffer) + posBuffer.batchFirst + posBuffer.batchCount);
+	float* pos = (float*)BeginBufferUpload(posBuffer.buffer) + 3 * (posBuffer.batchFirst + posBuffer.batchCount);
 	Index* idx = (Index*)BeginBufferUpload(idxBuffer.buffer) + idxBuffer.batchFirst + idxBuffer.batchCount;
 
 	for(int i = 0; i < tess.numIndexes; ++i)
@@ -417,7 +417,7 @@ void World::DrawBatch()
 
 	CmdBindVertexBuffers(1, &db.positions.buffer, &db.positions.stride, NULL);
 
-	CmdDrawIndexed(tess.numIndexes, idxBuffer.batchFirst, 0);
+	CmdDrawIndexed(tess.numIndexes, idxBuffer.batchFirst, posBuffer.batchFirst);
 
 	posBuffer.EndBatch(tess.numVertexes);
 	idxBuffer.EndBatch(tess.numIndexes);
