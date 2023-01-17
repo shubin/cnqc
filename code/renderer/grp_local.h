@@ -246,6 +246,8 @@ struct World
 	void DrawGUI();
 	void ProcessWorld(world_t& world);
 	void DrawSceneView(const drawSceneViewCommand_t& cmd);
+	void BindVertexBuffers(bool staticGeo, uint32_t count);
+	void BindIndexBuffer(bool staticGeo);
 
 	typedef uint32_t Index;
 	const IndexType::Id indexType = IndexType::UInt32;
@@ -269,6 +271,9 @@ struct World
 	// shared
 	HRootSignature rootSignature;
 	HPipeline pipeline; // @TODO: 1 per cull type
+	bool staticVertexBuffersBound;
+	bool staticIndexBufferBound;
+	uint32_t staticVertexBufferCountBound;
 
 	// dynamic
 	GeometryBuffers dynBuffers[FrameCount];

@@ -1264,6 +1264,60 @@ static int R_CompareDrawSurfNoKey( const void* aPtr, const void* bPtr )
 }
 
 
+static bool HasStaticGeo(const drawSurf_t* drawSurf)
+{
+	return
+		drawSurf->msurface != NULL &&
+		drawSurf->msurface->numIndexes > 0 &&
+		drawSurf->msurface->numVertexes > 0;
+}
+
+
+static int CompareDrawSurfGeneric(const void* aPtr, const void* bPtr)
+{
+	const drawSurf_t* a = (const drawSurf_t*)aPtr;
+	const drawSurf_t* b = (const drawSurf_t*)bPtr;
+
+	// opaque first
+	const int opaqueA = tr.shaders[a->shaderNum]->sort <= SS_OPAQUE;
+	const int opaqueB = tr.shaders[b->shaderNum]->sort <= SS_OPAQUE;
+	if(opaqueA != opaqueB)
+	{
+		return opaqueB - opaqueA;
+	}
+
+	// @TODO: PSO
+
+	// static/dynamic
+	const bool staticGeoA = HasStaticGeo(a);
+	const bool staticGeoB = HasStaticGeo(b);
+	if(staticGeoA != staticGeoB)
+	{
+		return (int)staticGeoA - (int)staticGeoB;
+	}
+
+	// shader
+	if(a->shaderNum != b->shaderNum)
+	{
+		return a->shaderNum - b->shaderNum;
+	}
+
+	// entity number
+	int entityNumA, entityNumB;
+	const shader_t* shaderA;
+	const shader_t* shaderB;
+	int fogNumA, fogNumB;
+	R_DecomposeSort(a->sort, &entityNumA, &shaderA, &fogNumA);
+	R_DecomposeSort(b->sort, &entityNumB, &shaderB, &fogNumB);
+	if(entityNumA != entityNumB)
+	{
+		return entityNumA - entityNumB;
+	}
+
+	return 0;
+}
+
+
 static void R_SortDrawSurfs( int firstDrawSurf, int firstLitSurf )
 {
 	const int numDrawSurfs = tr.refdef.numDrawSurfs - firstDrawSurf;
@@ -1277,7 +1331,8 @@ static void R_SortDrawSurfs( int firstDrawSurf, int firstLitSurf )
 	}
 
 	// sort the drawsurfs by sort type, then shader, then entity, etc
-	R_RadixSort( drawSurfs, numDrawSurfs );
+	//R_RadixSort( drawSurfs, numDrawSurfs );
+	qsort( drawSurfs, numDrawSurfs, sizeof(drawSurf_t), &CompareDrawSurfGeneric );
 
 	const shader_t* shader;
 	int fogNum, entityNum;

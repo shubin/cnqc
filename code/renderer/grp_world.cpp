@@ -277,6 +277,12 @@ void World::Init()
 void World::BeginFrame()
 {
 	dynBuffers[GetFrameIndex()].Rewind();
+
+	CmdBindVertexBuffers(4, statBuffers.vertexBuffers.buffers, statBuffers.vertexBuffers.strides, NULL);
+	CmdBindIndexBuffer(statBuffers.indexBuffer.buffer, indexType, 0);
+	staticVertexBuffersBound = true;
+	staticIndexBufferBound = true;
+	staticVertexBufferCountBound = 4;
 }
 
 void World::Begin()
@@ -409,8 +415,8 @@ void World::DrawBatch()
 	pixelRC.samplerIndex = 0;
 	CmdSetRootConstants(rootSignature, ShaderStage::Pixel, &pixelRC);
 
-	CmdBindVertexBuffers(4, db.vertexBuffers.buffers, db.vertexBuffers.strides, NULL);
-	CmdBindIndexBuffer(dynBuffers[GetFrameIndex()].indexBuffer.buffer, indexType, 0);
+	BindVertexBuffers(false, 4);
+	BindIndexBuffer(false);
 	CmdDrawIndexed(tess.numIndexes, db.indexBuffer.batchFirst, db.vertexBuffers.batchFirst);
 
 	db.indexBuffer.EndBatch(tess.numIndexes);
@@ -681,8 +687,8 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			pixelRC.samplerIndex = 0;
 			CmdSetRootConstants(rootSignature, ShaderStage::Pixel, &pixelRC);
 
-			CmdBindVertexBuffers(4, statBuffers.vertexBuffers.buffers, statBuffers.vertexBuffers.strides, NULL);
-			CmdBindIndexBuffer(statBuffers.indexBuffer.buffer, indexType, 0);
+			BindVertexBuffers(true, 4);
+			BindIndexBuffer(true);
 			CmdDrawIndexed(drawSurf->msurface->numIndexes, drawSurf->msurface->firstIndex, drawSurf->msurface->firstVertex);
 
 			tess.numVertexes = 0;
@@ -715,4 +721,29 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 	{
 		//gal.SetDepthRange(0, 1);
 	}
+}
+
+void World::BindVertexBuffers(bool staticGeo, uint32_t count)
+{
+	if(staticGeo == staticVertexBuffersBound && count == staticVertexBufferCountBound)
+	{
+		return;
+	}
+
+	VertexBuffers& vb = staticGeo ? statBuffers.vertexBuffers : dynBuffers[GetFrameIndex()].vertexBuffers;
+	CmdBindVertexBuffers(count, vb.buffers, vb.strides, NULL);
+	staticVertexBuffersBound = staticGeo;
+	staticVertexBufferCountBound = count;
+}
+
+void World::BindIndexBuffer(bool staticGeo)
+{
+	if(staticGeo == staticIndexBufferBound)
+	{
+		return;
+	}
+
+	IndexBuffer& ib = staticGeo ? statBuffers.indexBuffer : dynBuffers[GetFrameIndex()].indexBuffer;
+	CmdBindIndexBuffer(ib.buffer, indexType, 0);
+	staticIndexBufferBound = staticGeo;
 }
