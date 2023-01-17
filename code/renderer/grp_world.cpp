@@ -374,7 +374,6 @@ void World::DrawBatch()
 	}
 
 	DynamicBuffers& db = dynBuffers[GetFrameIndex()];
-
 	if(!db.vertexBuffers.CanAdd(tess.numVertexes) ||
 		!db.indexBuffer.CanAdd(tess.numIndexes))
 	{
@@ -382,62 +381,8 @@ void World::DrawBatch()
 		return;
 	}
 
-#if 0
-	Q_assert(posBuffer.batchCount == 0);
-	Q_assert(idxBuffer.batchCount == 0);
-	float* pos = (float*)BeginBufferUpload(posBuffer.buffer) + 3 * (posBuffer.batchFirst + posBuffer.batchCount);
-	Index* idx = (Index*)BeginBufferUpload(idxBuffer.buffer) + idxBuffer.batchFirst + idxBuffer.batchCount;
-
-	float* tcArray[MAX_SHADER_STAGES];
-	uint32_t* colArray[MAX_SHADER_STAGES];
-	for(int s = 0; s < 1; ++s)
-	{
-		GeometryBuffer& tcBuffer = db.stages[s].texCoords;
-		GeometryBuffer& colBuffer = db.stages[s].colors;
-		tcArray[s] = (float*)BeginBufferUpload(tcBuffer.buffer) + 2 * (tcBuffer.batchFirst + tcBuffer.batchCount);
-		colArray[s] = (uint32_t*)BeginBufferUpload(colBuffer.buffer) + colBuffer.batchFirst + colBuffer.batchCount;
-	}
-
-	for(int i = 0; i < tess.numIndexes; ++i)
-	{
-		*idx++ = tess.indexes[i];
-	}
-
-	for(int v = 0; v < tess.numVertexes; ++v)
-	{
-		pos[0] = tess.xyz[v][0];
-		pos[1] = tess.xyz[v][1];
-		pos[2] = tess.xyz[v][2];
-		pos += 3;
-	}
-
-	for(int s = 0; s < 1; ++s)
-	{
-		stageVars_t& sv = tess.svars[s];
-
-		float* tc = tcArray[s];
-		for(int v = 0; v < tess.numVertexes; ++v)
-		{
-			tc[0] = sv.texcoords[v][0];
-			tc[1] = sv.texcoords[v][1];
-			tc += 2;
-		}
-
-		uint32_t* col = colArray[s];
-		for(int v = 0; v < tess.numVertexes; ++v)
-		{
-			*col++ = *(uint32_t*)&sv.colors[v][0];
-		}
-	}
-
-	for(int s = 0; s < 1; ++s)
-	{
-		EndBufferUpload(db.stages[s].texCoords.buffer);
-		EndBufferUpload(db.stages[s].colors.buffer);
-	}
-	EndBufferUpload(posBuffer.buffer);
-	EndBufferUpload(idxBuffer.buffer);
-#endif
+	db.vertexBuffers.Upload(0, 1);
+	db.indexBuffer.Upload();
 
 	DynamicVertexRC vertexRC;
 	R_MultMatrix(backEnd.orient.modelMatrix, backEnd.viewParms.projectionMatrix, vertexRC.mvp);

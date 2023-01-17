@@ -56,7 +56,6 @@ struct BufferBase
 		batchCount = 0;
 	}
 
-	HBuffer buffer = RHI_MAKE_NULL_HANDLE();
 	uint32_t totalCount = 0;
 	uint32_t batchFirst = 0;
 	uint32_t batchCount = 0;
@@ -89,20 +88,53 @@ struct VertexBuffers : BufferBase
 		desc.name = va("%s position vertex", name);
 		desc.byteCount = vertexCount * sizeof(vec3_t);
 		buffers[BasePosition] = CreateBuffer(desc);
+		strides[BasePosition] = sizeof(vec3_t);
 
 		desc.name = va("%s normal vertex", name);
 		desc.byteCount = vertexCount * sizeof(vec3_t);
 		buffers[BaseNormal] = CreateBuffer(desc);
+		strides[BaseNormal] = sizeof(vec3_t);
 
 		for(uint32_t s = 0; s < MAX_SHADER_STAGES; ++s)
 		{
 			desc.name = va("%s tex coords #%d vertex", name, (int)s + 1);
 			desc.byteCount = vertexCount * sizeof(vec2_t);
 			buffers[BaseCount + s * StageCount + StageTexCoords] = CreateBuffer(desc);
+			strides[BaseCount + s * StageCount + StageTexCoords] = sizeof(vec2_t);
 
 			desc.name = va("%s color #%d vertex", name, (int)s + 1);
 			desc.byteCount = vertexCount * sizeof(color4ub_t);
 			buffers[BaseCount + s * StageCount + StageColors] = CreateBuffer(desc);
+			strides[BaseCount + s * StageCount + StageColors] = sizeof(color4ub_t);
+		}
+	}
+
+	void Upload(uint32_t firstStage, uint32_t stageCount)
+	{
+		const uint32_t batchOffset = batchFirst + batchCount;
+		float* pos = (float*)BeginBufferUpload(buffers[BasePosition]) + 3 * batchOffset;
+		for(int v = 0; v < tess.numVertexes; ++v)
+		{
+			pos[0] = tess.xyz[v][0];
+			pos[1] = tess.xyz[v][1];
+			pos[2] = tess.xyz[v][2];
+			pos += 3;
+		}
+		EndBufferUpload(buffers[BasePosition]);
+
+		for(uint32_t s = 0; s < stageCount; ++s)
+		{
+			HBuffer tcBuffer = buffers[BaseCount + s * StageCount + StageTexCoords];
+			HBuffer colBuffer = buffers[BaseCount + s * StageCount + StageColors];
+			float* tc = (float*)BeginBufferUpload(tcBuffer) + 2 * batchOffset;
+			uint32_t* col = (uint32_t*)BeginBufferUpload(colBuffer) + batchOffset;
+
+			const stageVars_t& sv = tess.svars[s + firstStage];
+			memcpy(tc, &sv.texcoords[0], tess.numVertexes * sizeof(vec2_t));
+			memcpy(col, &sv.colors[0], tess.numVertexes * sizeof(color4ub_t));
+
+			EndBufferUpload(tcBuffer);
+			EndBufferUpload(colBuffer);
 		}
 	}
 
@@ -124,6 +156,15 @@ struct IndexBuffer : BufferBase
 		desc.byteCount = indexCount * sizeof(uint32_t);
 		buffer = CreateBuffer(desc);
 	}
+
+	void Upload()
+	{
+		void* idx = BeginBufferUpload(buffer) + batchFirst + batchCount;
+		memcpy(idx, &tess.indexes[0], tess.numIndexes * sizeof(uint32_t));
+		EndBufferUpload(buffer);
+	}
+
+	HBuffer buffer = RHI_MAKE_NULL_HANDLE();
 };
 
 struct GeometryBuffer : BufferBase
