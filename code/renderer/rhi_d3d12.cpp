@@ -406,7 +406,7 @@ namespace RHI
 		DescriptorHeap descHeapDSVs;
 
 #define POOL(Type, Size) StaticPool<Type, H##Type, ResourceType::Type, Size>
-		POOL(Buffer, 64) buffers;
+		POOL(Buffer, 128) buffers;
 		POOL(Texture, MAX_DRAWIMAGES * 2) textures;
 		POOL(RootSignature, 64) rootSignatures;
 		POOL(DescriptorTable, 64) descriptorTables;

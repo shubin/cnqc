@@ -262,6 +262,16 @@ void World::Init()
 		db.vertexBuffers.Create(va("dynamic #%d", f + 1), MemoryUsage::Upload, MaxDynamicVertexCount);
 		db.indexBuffer.Create(va("dynamic #%d", f + 1), MemoryUsage::Upload, MaxDynamicIndexCount);
 	}
+
+	//
+	// static (GPU-resident) geometry
+	//
+	{
+		const int MaxVertexCount = 256 << 10;
+		const int MaxIndexCount = MaxVertexCount * 8;
+		statBuffers.vertexBuffers.Create("static #%d", MemoryUsage::GPU, MaxVertexCount);
+		statBuffers.indexBuffer.Create("static #%d", MemoryUsage::GPU, MaxIndexCount);
+	}
 }
 
 void World::BeginFrame()
@@ -418,6 +428,7 @@ void World::DrawGUI()
 
 void World::ProcessWorld(world_t& world)
 {
+#if 0
 	float* vtx = (float*)BeginBufferUpload(zppVertexBuffer.buffer);
 	Index* idx = (Index*)BeginBufferUpload(zppIndexBuffer.buffer);
 
@@ -490,6 +501,59 @@ void World::ProcessWorld(world_t& world)
 	zppIndexBuffer.batchCount = firstIndex;
 	zppVertexBuffer.batchFirst = 0;
 	zppIndexBuffer.batchFirst = 0;
+#endif
+
+	for(int s = 0; s < world.numsurfaces; ++s)
+	{
+		msurface_t* const surf = &world.surfaces[s];
+		surf->numVertexes = 0;
+		surf->numIndexes = 0;
+		surf->firstVertex = 0;
+		surf->firstIndex = 0;
+
+		// @TODO: make sure it's static as well!
+		if(surf->shader->numStages == 0)
+		{
+			continue;
+		}
+
+		tess.numVertexes = 0;
+		tess.numIndexes = 0;
+		rb_surfaceTable[*surf->data](surf->data);
+		const int surfVertexCount = tess.numVertexes;
+		const int surfIndexCount = tess.numIndexes;
+		if(surfVertexCount <= 0 || surfIndexCount <= 0)
+		{
+			continue;
+		}
+		
+		if(!statBuffers.vertexBuffers.CanAdd(surfVertexCount) ||
+			!statBuffers.indexBuffer.CanAdd(surfIndexCount))
+		{
+			break;
+		}
+
+		for(int i = 0; i < surf->shader->numStages; ++i)
+		{
+			const shaderStage_t* const stage = surf->shader->stages[i];
+			R_ComputeColors(stage, tess.svars[i], 0, tess.numVertexes);
+			R_ComputeTexCoords(stage, tess.svars[i], 0, tess.numVertexes, qfalse);
+		}
+
+		statBuffers.vertexBuffers.Upload(0, surf->shader->numStages);
+		statBuffers.indexBuffer.Upload();
+
+		surf->numVertexes = surfVertexCount;
+		surf->numIndexes = surfIndexCount;
+		surf->firstVertex = statBuffers.vertexBuffers.batchFirst;
+		surf->firstIndex = statBuffers.indexBuffer.batchFirst;
+
+		statBuffers.vertexBuffers.EndBatch(surfVertexCount);
+		statBuffers.indexBuffer.EndBatch(surfIndexCount);
+	}
+
+	tess.numVertexes = 0;
+	tess.numIndexes = 0;
 }
 
 void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
