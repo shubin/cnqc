@@ -258,23 +258,26 @@ void World::Init()
 	{
 		DynamicBuffers& db = dynBuffers[f];
 
+		const int MaxDynamicVertexCount = 65536;
+		const int MaxDynamicIndexCount = MaxDynamicVertexCount * 8;
+
 		{
-			db.positions.Init(SHADER_MAX_VERTEXES, sizeof(vec3_t));
+			db.indices.Init(MaxDynamicIndexCount, sizeof(Index));
+			BufferDesc desc("dynamic index", db.indices.byteCount, ResourceStates::IndexBufferBit);
+			desc.memoryUsage = MemoryUsage::Upload;
+			db.indices.buffer = CreateBuffer(desc);
+		}
+		{
+			db.positions.Init(MaxDynamicVertexCount, sizeof(vec3_t));
 			BufferDesc desc("dynamic position vertex", db.positions.byteCount, ResourceStates::VertexBufferBit);
 			desc.memoryUsage = MemoryUsage::Upload;
 			db.positions.buffer = CreateBuffer(desc);
 		}
 		{
-			db.normals.Init(SHADER_MAX_VERTEXES, sizeof(vec3_t));
+			db.normals.Init(MaxDynamicVertexCount, sizeof(vec3_t));
 			BufferDesc desc("dynamic normal vertex", db.normals.byteCount, ResourceStates::VertexBufferBit);
 			desc.memoryUsage = MemoryUsage::Upload;
 			db.normals.buffer = CreateBuffer(desc);
-		}
-		{
-			db.indices.Init(SHADER_MAX_INDEXES, sizeof(Index));
-			BufferDesc desc("dynamic index", db.indices.byteCount, ResourceStates::IndexBufferBit);
-			desc.memoryUsage = MemoryUsage::Upload;
-			db.indices.buffer = CreateBuffer(desc);
 		}
 
 		for(uint32_t s = 0; s < MAX_SHADER_STAGES; ++s)
@@ -282,13 +285,13 @@ void World::Init()
 			DynamicBuffers::Stage& bs = db.stages[s];
 
 			{
-				bs.texCoords.Init(SHADER_MAX_VERTEXES, sizeof(vec2_t));
+				bs.texCoords.Init(MaxDynamicVertexCount, sizeof(vec2_t));
 				BufferDesc desc(va("dynamic tex coords #%d vertex", s + 1), bs.texCoords.byteCount, ResourceStates::VertexBufferBit);
 				desc.memoryUsage = MemoryUsage::Upload;
 				bs.texCoords.buffer = CreateBuffer(desc);
 			}
 			{
-				bs.colors.Init(SHADER_MAX_VERTEXES, sizeof(color4ub_t));
+				bs.colors.Init(MaxDynamicVertexCount, sizeof(color4ub_t));
 				BufferDesc desc(va("dynamic color #%d vertex", s + 1), bs.colors.byteCount, ResourceStates::VertexBufferBit);
 				desc.memoryUsage = MemoryUsage::Upload;
 				bs.colors.buffer = CreateBuffer(desc);
@@ -411,8 +414,11 @@ void World::DrawBatch()
 	GeometryBuffer& idxBuffer = db.indices;
 
 	if(!posBuffer.CanAdd(tess.numVertexes) ||
-		!idxBuffer.CanAdd(tess.numIndexes))
+		!idxBuffer.CanAdd(tess.numIndexes) ||
+		!db.stages[0].texCoords.CanAdd(tess.numVertexes) ||
+		!db.stages[0].colors.CanAdd(tess.numVertexes))
 	{
+		Q_assert(!"Dynamic buffer too small!");
 		return;
 	}
 
@@ -462,8 +468,7 @@ void World::DrawBatch()
 		uint32_t* col = colArray[s];
 		for(int v = 0; v < tess.numVertexes; ++v)
 		{
-			//*col++ = *(uint32_t*)&sv.colors[v][0];
-			*col++ = 0xFFFFFFFF;
+			*col++ = *(uint32_t*)&sv.colors[v][0];
 		}
 	}
 

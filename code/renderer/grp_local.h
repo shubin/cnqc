@@ -45,7 +45,7 @@ struct GeometryBuffer
 
 	bool CanAdd(uint32_t count_)
 	{
-		return batchCount + count_ <= totalCount;
+		return batchFirst + batchCount + count_ <= totalCount;
 	}
 
 	void EndBatch()
