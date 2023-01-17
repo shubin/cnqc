@@ -157,7 +157,6 @@ SamplerState samplers[2] : register(s0);
 float4 main(VOut input) : SV_TARGET
 {
 	return textures2D[textureIndex].Sample(samplers[samplerIndex], input.texCoords0) * input.color0;
-	//return input.color0;
 }
 )grml";
 
@@ -506,6 +505,11 @@ void World::DrawBatch()
 
 	posBuffer.EndBatch(tess.numVertexes);
 	idxBuffer.EndBatch(tess.numIndexes);
+	for(int s = 0; s < 1; ++s)
+	{
+		db.stages[s].texCoords.EndBatch(tess.numVertexes);
+		db.stages[s].colors.EndBatch(tess.numVertexes);
+	}
 	tess.numVertexes = 0;
 	tess.numIndexes = 0;
 }
