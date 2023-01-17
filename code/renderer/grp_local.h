@@ -159,7 +159,7 @@ struct IndexBuffer : BufferBase
 
 	void Upload()
 	{
-		void* idx = BeginBufferUpload(buffer) + batchFirst + batchCount;
+		uint32_t* idx = (uint32_t*)BeginBufferUpload(buffer) + batchFirst + batchCount;
 		memcpy(idx, &tess.indexes[0], tess.numIndexes * sizeof(uint32_t));
 		EndBufferUpload(buffer);
 	}
