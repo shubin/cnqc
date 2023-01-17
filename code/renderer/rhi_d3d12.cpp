@@ -308,10 +308,7 @@ namespace RHI
 		uint8_t* mappedBuffer;
 
 		Fence fence;
-		// fenceValue      : signaled value after last uploaded chunk
-		// fenceValueRewind: signaled value after last uploaded chunk before rewinding the write pointer to the start
 		UINT64 fenceValue;
-		UINT64 fenceValueRewind;
 
 	private:
 		void WaitToStartUploading(uint32_t uploadByteCount);
@@ -619,7 +616,6 @@ namespace RHI
 
 		fence.Create(0, "upload");
 		fenceValue = 0;
-		fenceValueRewind = 0;
 	}
 
 	void UploadManager::Release()
@@ -770,10 +766,8 @@ namespace RHI
 
 		if(bufferByteOffset + uploadByteCount > bufferByteCount)
 		{
-			// not enough space left, force a wait and rewind
-			fence.WaitOnCPU(fenceValueRewind);
+			fence.WaitOnCPU(fenceValue);
 			D3D(commandAllocator->Reset());
-			fenceValueRewind = fenceValue;
 			bufferByteOffset = 0;
 		}
 	}
