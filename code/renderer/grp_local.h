@@ -31,18 +31,8 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 using namespace RHI;
 
 
-struct GeometryBuffer
+struct BufferBase
 {
-	void Init(uint32_t count_, uint32_t stride_)
-	{
-		buffer = RHI_MAKE_NULL_HANDLE();
-		byteCount = count_ * stride_;
-		stride = stride_;
-		totalCount = count_;
-		batchFirst = 0;
-		batchCount = 0;
-	}
-
 	bool CanAdd(uint32_t count_)
 	{
 		return batchFirst + batchCount + count_ <= totalCount;
@@ -67,11 +57,90 @@ struct GeometryBuffer
 	}
 
 	HBuffer buffer = RHI_MAKE_NULL_HANDLE();
-	uint32_t byteCount = 0;
-	uint32_t stride = 0;
 	uint32_t totalCount = 0;
 	uint32_t batchFirst = 0;
 	uint32_t batchCount = 0;
+};
+
+struct VertexBuffers : BufferBase
+{
+	enum BaseId
+	{
+		BasePosition,
+		BaseNormal,
+		BaseCount
+	};
+
+	enum StageId
+	{
+		StageTexCoords = 0,
+		StageColors = 1,
+		StageCount = 2
+	};
+
+	void Create(const char* name, MemoryUsage::Id memoryUsage, uint32_t vertexCount)
+	{
+		totalCount = vertexCount;
+
+		BufferDesc desc = {};
+		desc.initialState = ResourceStates::VertexBufferBit;
+		desc.memoryUsage = memoryUsage;
+		
+		desc.name = va("%s position vertex", name);
+		desc.byteCount = vertexCount * sizeof(vec3_t);
+		buffers[BasePosition] = CreateBuffer(desc);
+
+		desc.name = va("%s normal vertex", name);
+		desc.byteCount = vertexCount * sizeof(vec3_t);
+		buffers[BaseNormal] = CreateBuffer(desc);
+
+		for(uint32_t s = 0; s < MAX_SHADER_STAGES; ++s)
+		{
+			desc.name = va("%s tex coords #%d vertex", name, (int)s + 1);
+			desc.byteCount = vertexCount * sizeof(vec2_t);
+			buffers[BaseCount + s * StageCount + StageTexCoords] = CreateBuffer(desc);
+
+			desc.name = va("%s color #%d vertex", name, (int)s + 1);
+			desc.byteCount = vertexCount * sizeof(color4ub_t);
+			buffers[BaseCount + s * StageCount + StageColors] = CreateBuffer(desc);
+		}
+	}
+
+	static const uint32_t BufferCount = BaseCount + StageCount * MAX_SHADER_STAGES;
+	HBuffer buffers[BufferCount] = {};
+	uint32_t strides[BufferCount] = {};
+};
+
+struct IndexBuffer : BufferBase
+{
+	void Create(const char* name, MemoryUsage::Id memoryUsage, uint32_t indexCount)
+	{
+		totalCount = indexCount;
+
+		BufferDesc desc = {};
+		desc.initialState = ResourceStates::IndexBufferBit;
+		desc.memoryUsage = memoryUsage;
+		desc.name = va("%s index", name);
+		desc.byteCount = indexCount * sizeof(uint32_t);
+		buffer = CreateBuffer(desc);
+	}
+};
+
+struct GeometryBuffer : BufferBase
+{
+	void Init(uint32_t count_, uint32_t stride_)
+	{
+		buffer = RHI_MAKE_NULL_HANDLE();
+		byteCount = count_ * stride_;
+		stride = stride_;
+		totalCount = count_;
+		batchFirst = 0;
+		batchCount = 0;
+	}
+
+	HBuffer buffer = RHI_MAKE_NULL_HANDLE();
+	uint32_t byteCount = 0;
+	uint32_t stride = 0;
 };
 
 struct World
@@ -109,30 +178,12 @@ struct World
 	{
 		void Rewind()
 		{
-			indices.Rewind();
-			positions.Rewind();
-			normals.Rewind();
-			for(uint32_t s = 0; s < ARRAY_LEN(stages); ++s)
-			{
-				stages[s].Rewind();
-			}
+			vertexBuffers.Rewind();
+			indexBuffer.Rewind();
 		}
 
-		struct Stage
-		{
-			void Rewind()
-			{
-				texCoords.Rewind();
-				colors.Rewind();
-			}
-
-			GeometryBuffer texCoords;
-			GeometryBuffer colors;
-		};
-		GeometryBuffer indices;
-		GeometryBuffer positions;
-		GeometryBuffer normals;
-		Stage stages[MAX_SHADER_STAGES];
+		VertexBuffers vertexBuffers;
+		IndexBuffer indexBuffer;
 	};
 	HRootSignature dynRootSignature;
 	HPipeline dynPipeline; // @TODO: 1 per cull type
