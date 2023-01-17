@@ -184,6 +184,18 @@ struct GeometryBuffer : BufferBase
 	uint32_t stride = 0;
 };
 
+struct GeometryBuffers
+{
+	void Rewind()
+	{
+		vertexBuffers.Rewind();
+		indexBuffer.Rewind();
+	}
+
+	VertexBuffers vertexBuffers;
+	IndexBuffer indexBuffer;
+};
+
 struct World
 {
 	void Init();
@@ -214,21 +226,15 @@ struct World
 	GeometryBuffer zppIndexBuffer;
 	GeometryBuffer zppVertexBuffer;
 
-	// dynamic
-	struct DynamicBuffers
-	{
-		void Rewind()
-		{
-			vertexBuffers.Rewind();
-			indexBuffer.Rewind();
-		}
+	// shared
+	HRootSignature rootSignature;
+	HPipeline pipeline; // @TODO: 1 per cull type
 
-		VertexBuffers vertexBuffers;
-		IndexBuffer indexBuffer;
-	};
-	HRootSignature dynRootSignature;
-	HPipeline dynPipeline; // @TODO: 1 per cull type
-	DynamicBuffers dynBuffers[FrameCount];
+	// dynamic
+	GeometryBuffers dynBuffers[FrameCount];
+
+	// static
+	GeometryBuffers statBuffers;
 };
 
 struct UI

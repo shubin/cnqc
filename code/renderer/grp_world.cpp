@@ -232,11 +232,11 @@ void World::Init()
 		desc.constants[ShaderStage::Pixel].byteCount = sizeof(DynamicPixelRC);
 		desc.samplerVisibility = ShaderStages::PixelBit;
 		desc.genericVisibility = ShaderStages::VertexBit | ShaderStages::PixelBit;
-		dynRootSignature = CreateRootSignature(desc);
+		rootSignature = CreateRootSignature(desc);
 	}
 	{
 		uint32_t a = 0;
-		GraphicsPipelineDesc desc("dynamic", dynRootSignature);
+		GraphicsPipelineDesc desc("dynamic", rootSignature);
 		desc.vertexShader = CompileVertexShader(dyn_vs);
 		desc.pixelShader = CompilePixelShader(dyn_ps);
 		desc.vertexLayout.AddAttribute(a++, ShaderSemantic::Position, DataType::Float32, 3, 0);
@@ -252,13 +252,13 @@ void World::Init()
 		desc.depthStencil.enableDepthWrites = true;
 		desc.rasterizer.cullMode = CullMode::Back;
 		desc.AddRenderTarget(GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO, TextureFormat::RGBA32_UNorm);
-		dynPipeline = CreateGraphicsPipeline(desc);
+		pipeline = CreateGraphicsPipeline(desc);
 	}
 	for(uint32_t f = 0; f < FrameCount; ++f)
 	{
 		const int MaxDynamicVertexCount = 256 << 10;
 		const int MaxDynamicIndexCount = MaxDynamicVertexCount * 8;
-		DynamicBuffers& db = dynBuffers[f];
+		GeometryBuffers& db = dynBuffers[f];
 		db.vertexBuffers.Create(va("dynamic #%d", f + 1), MemoryUsage::Upload, MaxDynamicVertexCount);
 		db.indexBuffer.Create(va("dynamic #%d", f + 1), MemoryUsage::Upload, MaxDynamicIndexCount);
 	}
@@ -373,7 +373,7 @@ void World::DrawBatch()
 		return;
 	}
 
-	DynamicBuffers& db = dynBuffers[GetFrameIndex()];
+	GeometryBuffers& db = dynBuffers[GetFrameIndex()];
 	if(!db.vertexBuffers.CanAdd(tess.numVertexes) ||
 		!db.indexBuffer.CanAdd(tess.numIndexes))
 	{
@@ -387,12 +387,12 @@ void World::DrawBatch()
 	DynamicVertexRC vertexRC;
 	R_MultMatrix(backEnd.orient.modelMatrix, backEnd.viewParms.projectionMatrix, vertexRC.mvp);
 	memcpy(vertexRC.clipPlane, clipPlane, sizeof(vertexRC.clipPlane));
-	CmdSetRootConstants(dynRootSignature, ShaderStage::Vertex, &vertexRC);
+	CmdSetRootConstants(rootSignature, ShaderStage::Vertex, &vertexRC);
 
 	DynamicPixelRC pixelRC;
 	pixelRC.textureIndex = tess.shader->stages[0]->bundle.image[0]->textureIndex;
 	pixelRC.samplerIndex = 0;
-	CmdSetRootConstants(dynRootSignature, ShaderStage::Pixel, &pixelRC);
+	CmdSetRootConstants(rootSignature, ShaderStage::Pixel, &pixelRC);
 
 	CmdBindVertexBuffers(4, db.vertexBuffers.buffers, db.vertexBuffers.strides, NULL);
 	CmdDrawIndexed(tess.numIndexes, db.indexBuffer.batchFirst, db.vertexBuffers.batchFirst);
@@ -501,9 +501,9 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 
 	//DrawPrePass();
 
-	CmdBindRootSignature(dynRootSignature);
-	CmdBindPipeline(dynPipeline);
-	CmdBindDescriptorTable(dynRootSignature, grp.descriptorTable);
+	CmdBindRootSignature(rootSignature);
+	CmdBindPipeline(pipeline);
+	CmdBindDescriptorTable(rootSignature, grp.descriptorTable);
 
 	const HTexture swapChain = GetSwapChainTexture();
 	CmdBindRenderTargets(1, &swapChain, &depthTexture);
