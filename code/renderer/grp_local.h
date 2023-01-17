@@ -135,7 +135,6 @@ struct World
 		Stage stages[MAX_SHADER_STAGES];
 	};
 	HRootSignature dynRootSignature;
-	HDescriptorTable dynDescriptorTable;
 	HPipeline dynPipeline; // @TODO: 1 per cull type
 	DynamicBuffers dynBuffers[FrameCount];
 };

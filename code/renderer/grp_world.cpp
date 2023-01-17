@@ -156,8 +156,8 @@ SamplerState samplers[2] : register(s0);
 
 float4 main(VOut input) : SV_TARGET
 {
-	//return textures2D[textureIndex].Sample(samplers[samplerIndex], input.texCoords0) * input.color0;
-	return input.color0;
+	return textures2D[textureIndex].Sample(samplers[samplerIndex], input.texCoords0) * input.color0;
+	//return input.color0;
 }
 )grml";
 
@@ -234,9 +234,6 @@ void World::Init()
 		desc.samplerVisibility = ShaderStages::PixelBit;
 		desc.genericVisibility = ShaderStages::VertexBit | ShaderStages::PixelBit;
 		dynRootSignature = CreateRootSignature(desc);
-	}
-	{
-		dynDescriptorTable = CreateDescriptorTable(DescriptorTableDesc("dynamic", dynRootSignature));
 	}
 	{
 		uint32_t a = 0;
@@ -612,7 +609,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 
 	CmdBindRootSignature(dynRootSignature);
 	CmdBindPipeline(dynPipeline);
-	CmdBindDescriptorTable(dynRootSignature, dynDescriptorTable);
+	CmdBindDescriptorTable(dynRootSignature, grp.descriptorTable);
 
 	const HTexture swapChain = GetSwapChainTexture();
 	CmdBindRenderTargets(1, &swapChain, &depthTexture);
