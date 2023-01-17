@@ -419,8 +419,8 @@ static void R_SetupProjection()
 	//
 	// set up projection matrix
 	//
-	zNear = tr.viewParms.zFar;
-	zFar  = 1.0f;
+	zNear = 1.0f;
+	zFar  = tr.viewParms.zFar;
 
 	height = 2.0f * zNear * tan( tr.refdef.fov_y * M_PI / 360.0f );
 	width  = 2.0f * zNear * tan( tr.refdef.fov_x * M_PI / 360.0f );
@@ -438,13 +438,8 @@ static void R_SetupProjection()
 
 	tr.viewParms.projectionMatrix[2] = 0;
 	tr.viewParms.projectionMatrix[6] = 0;
-	if ( 1 ) { // D3D12
-		tr.viewParms.projectionMatrix[10] = -zFar / depth;
-		tr.viewParms.projectionMatrix[14] = -zFar * zNear / depth;
-	} else { // some other APIs that match OpenGL in the future?
-		tr.viewParms.projectionMatrix[10] = -( zFar + zNear ) / depth;
-		tr.viewParms.projectionMatrix[14] = -2 * zFar * zNear / depth;
-	}
+	tr.viewParms.projectionMatrix[10] = zNear / depth;
+	tr.viewParms.projectionMatrix[14] = zFar * zNear / depth;
 
 	tr.viewParms.projectionMatrix[3] = 0;
 	tr.viewParms.projectionMatrix[7] = 0;

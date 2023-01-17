@@ -525,14 +525,15 @@ void World::DrawBatch()
 
 void World::DrawGUI()
 {
+#if 0
 	TextureBarrier tb(depthTexture, ResourceStates::DepthReadBit);
 	CmdBarrier(1, &tb);
 	if(ImGui::Begin("depth", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 	{
 		ImGui::Image((ImTextureID)depthTextureIndex, ImVec2(640, 360));
-		//ImGui::Image(30, ImVec2(640, 360));
 	}
 	ImGui::End();
+#endif
 }
 
 void World::ProcessWorld(world_t& world)
