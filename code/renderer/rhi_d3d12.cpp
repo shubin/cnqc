@@ -2761,13 +2761,14 @@ namespace RHI
 		desc.SampleDesc.Count = 1;
 		desc.SampleMask = UINT_MAX;
 
+		UINT semanticIndices[ShaderSemantic::Count] = { 0 };
 		D3D12_INPUT_ELEMENT_DESC inputElementDescs[MaxVertexAttributeCount];
 		for(int a = 0; a < rhiDesc.vertexLayout.attributeCount; ++a)
 		{
 			const VertexAttribute& va = rhiDesc.vertexLayout.attributes[a];
 			D3D12_INPUT_ELEMENT_DESC& ied = inputElementDescs[a];
 			ied.SemanticName = GetD3DSemanticName(va.semantic);
-			ied.SemanticIndex = 0; // @TODO: need this if we want e.g. 2+ texture coordinates when interleaving
+			ied.SemanticIndex = semanticIndices[va.semantic]++;
 			ied.Format = GetD3DFormat(va.dataType, va.vectorLength);
 			ied.InputSlot = va.vertexBufferIndex;
 			ied.AlignedByteOffset = va.structByteOffset;

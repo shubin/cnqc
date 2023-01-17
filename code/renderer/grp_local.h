@@ -105,11 +105,39 @@ struct World
 	GeometryBuffer zppVertexBuffer;
 
 	// dynamic
+	struct DynamicBuffers
+	{
+		void Rewind()
+		{
+			indices.Rewind();
+			positions.Rewind();
+			normals.Rewind();
+			for(uint32_t s = 0; s < ARRAY_LEN(stages); ++s)
+			{
+				stages[s].Rewind();
+			}
+		}
+
+		struct Stage
+		{
+			void Rewind()
+			{
+				texCoords.Rewind();
+				colors.Rewind();
+			}
+
+			GeometryBuffer texCoords;
+			GeometryBuffer colors;
+		};
+		GeometryBuffer indices;
+		GeometryBuffer positions;
+		GeometryBuffer normals;
+		Stage stages[MAX_SHADER_STAGES];
+	};
 	HRootSignature dynRootSignature;
 	HDescriptorTable dynDescriptorTable;
 	HPipeline dynPipeline; // @TODO: 1 per cull type
-	GeometryBuffer dynIndexBuffers[FrameCount];
-	GeometryBuffer dynVertexBuffers[FrameCount];
+	DynamicBuffers dynBuffers[FrameCount];
 };
 
 struct UI

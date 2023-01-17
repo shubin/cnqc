@@ -27,30 +27,6 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 
 #pragma pack(push, 1)
 
-struct VertexBase
-{
-	vec3_t position;
-	vec3_t normal;
-};
-
-struct VertexStage
-{
-	vec2_t texCoords;
-	uint32_t color;
-};
-
-struct SmallestVertex
-{
-	VertexBase base;
-	VertexStage stage0;
-};
-
-struct LargestVertex
-{
-	VertexBase base;
-	VertexStage stages[MAX_SHADER_STAGES];
-};
-
 struct ZPPVertexRC
 {
 	float mvp[16];
@@ -60,8 +36,6 @@ struct DynamicVertexRC
 {
 	float mvp[16];
 	float clipPlane[4];
-	uint32_t bufferIndex;
-	uint32_t bufferByteOffset;
 };
 
 struct DynamicPixelRC
@@ -94,15 +68,34 @@ static const char* dyn_vs = R"grml(
 cbuffer RootConstants
 {
 	float4x4 mvp;
-	float4 clipPlane;
-	uint bufferIndex;
-	uint bufferByteOffset;
+	float4 clipPlane; // @TODO: set output clip distance
 };
 
-float4 main() : SV_Position
+struct VIn
 {
-	//return mul(mvp, float4(position.xyz, 1.0));
-	return float4(0, 0, 0, 0);
+	float3 position : POSITION;
+	//float3 normal : NORMAL;
+	//float2 texCoords : TEXCOORD0;
+	//float4 color : COLOR0;
+};
+
+struct VOut
+{
+	float4 position : SV_Position;
+	//float3 normal : NORMAL;
+	//float2 texCoords : TEXCOORD0;
+	//float4 color : COLOR0;
+};
+
+VOut main(VIn input)
+{
+	VOut output;
+	output.position = mul(mvp, float4(input.position, 1.0));
+	//output.normal = input.normal; // @TODO:
+	//output.texCoords = input.texCoords;
+	//output.color = input.color;
+
+	return output;
 }
 )grml";
 
@@ -113,10 +106,18 @@ cbuffer RootConstants
 	uint samplerIndex;
 };
 
+struct VOut
+{
+	float4 position : SV_Position;
+	//float3 normal : NORMAL;
+	//float2 texCoords : TEXCOORD0;
+	//float4 color : COLOR0;
+};
+
 Texture2D textures2D[2048] : register(t0);
 SamplerState samplers[2] : register(s0);
 
-float4 main() : SV_TARGET
+float4 main(VOut input) : SV_TARGET
 {
 	//return textures2D[textureIndex].Sample(samplers[samplerIndex], input.texCoords) * input.color;
 	return float4(0.0, 0.5, 0.0, 1.0);
@@ -190,21 +191,29 @@ void World::Init()
 	{
 		RootSignatureDesc desc = grp.rootSignatureDesc;
 		desc.name = "dynamic";
-		desc.usingVertexBuffers = false;
+		desc.usingVertexBuffers = true;
 		desc.constants[ShaderStage::Vertex].byteCount = sizeof(DynamicVertexRC);
 		desc.constants[ShaderStage::Pixel].byteCount = sizeof(DynamicPixelRC);
 		desc.samplerVisibility = ShaderStages::PixelBit;
 		desc.genericVisibility = ShaderStages::VertexBit | ShaderStages::PixelBit;
-		desc.AddRange(DescriptorType::Buffer, MAX_DRAWIMAGES * 2, 2);
 		dynRootSignature = CreateRootSignature(desc);
 	}
 	{
 		dynDescriptorTable = CreateDescriptorTable(DescriptorTableDesc("dynamic", dynRootSignature));
 	}
 	{
+		uint32_t a = 0;
 		GraphicsPipelineDesc desc("dynamic", dynRootSignature);
 		desc.vertexShader = CompileVertexShader(dyn_vs);
 		desc.pixelShader = CompilePixelShader(dyn_ps);
+		desc.vertexLayout.AddAttribute(a++, ShaderSemantic::Position, DataType::Float32, 3, 0);
+		// @TODO:
+		/*desc.vertexLayout.AddAttribute(a++, ShaderSemantic::Normal, DataType::Float32, 2, 0);
+		for(int s = 0; s < MAX_SHADER_STAGES; ++s)
+		{
+			desc.vertexLayout.AddAttribute(a++, ShaderSemantic::TexCoord, DataType::Float32, 2, 0);
+			desc.vertexLayout.AddAttribute(a++, ShaderSemantic::Color, DataType::UNorm8, 4, 0);
+		}*/
 		desc.depthStencil.depthComparison = ComparisonFunction::GreaterEqual;
 		desc.depthStencil.depthStencilFormat = TextureFormat::Depth32_Float;
 		desc.depthStencil.enableDepthTest = true;
@@ -215,25 +224,50 @@ void World::Init()
 	}
 	for(uint32_t f = 0; f < FrameCount; ++f)
 	{
-		dynVertexBuffers[f].Init(SHADER_MAX_VERTEXES * sizeof(LargestVertex), 1);
-		dynIndexBuffers[f].Init(SHADER_MAX_INDEXES, sizeof(Index));
+		DynamicBuffers& db = dynBuffers[f];
+
 		{
-			BufferDesc desc("dynamic vertex", dynVertexBuffers[f].byteCount, ResourceStates::VertexShaderAccessBit);
+			db.positions.Init(SHADER_MAX_VERTEXES, sizeof(vec3_t));
+			BufferDesc desc("dynamic position vertex", db.positions.byteCount, ResourceStates::VertexBufferBit);
 			desc.memoryUsage = MemoryUsage::Upload;
-			dynVertexBuffers[f].buffer = CreateBuffer(desc);
+			db.positions.buffer = CreateBuffer(desc);
 		}
 		{
-			BufferDesc desc("dynamic index", dynIndexBuffers[f].byteCount, ResourceStates::IndexBufferBit);
+			db.normals.Init(SHADER_MAX_VERTEXES, sizeof(vec3_t));
+			BufferDesc desc("dynamic normal vertex", db.normals.byteCount, ResourceStates::VertexBufferBit);
 			desc.memoryUsage = MemoryUsage::Upload;
-			dynIndexBuffers[f].buffer = CreateBuffer(desc);
+			db.normals.buffer = CreateBuffer(desc);
+		}
+		{
+			db.indices.Init(SHADER_MAX_INDEXES, sizeof(Index));
+			BufferDesc desc("dynamic index", db.indices.byteCount, ResourceStates::IndexBufferBit);
+			desc.memoryUsage = MemoryUsage::Upload;
+			db.indices.buffer = CreateBuffer(desc);
+		}
+
+		for(uint32_t s = 0; s < MAX_SHADER_STAGES; ++s)
+		{
+			DynamicBuffers::Stage& bs = db.stages[s];
+
+			{
+				bs.texCoords.Init(SHADER_MAX_VERTEXES, sizeof(vec2_t));
+				BufferDesc desc(va("dynamic tex coords #%d vertex", s + 1), bs.texCoords.byteCount, ResourceStates::VertexBufferBit);
+				desc.memoryUsage = MemoryUsage::Upload;
+				bs.texCoords.buffer = CreateBuffer(desc);
+			}
+			{
+				bs.colors.Init(SHADER_MAX_VERTEXES, sizeof(color4ub_t));
+				BufferDesc desc(va("dynamic color #%d vertex", s + 1), bs.colors.byteCount, ResourceStates::VertexBufferBit);
+				desc.memoryUsage = MemoryUsage::Upload;
+				bs.colors.buffer = CreateBuffer(desc);
+			}
 		}
 	}
 }
 
 void World::BeginFrame()
 {
-	dynVertexBuffers[GetFrameIndex()].Rewind();
-	dynIndexBuffers[GetFrameIndex()].Rewind();
+	dynBuffers[GetFrameIndex()].Rewind();
 }
 
 void World::Begin()
@@ -340,19 +374,20 @@ void World::DrawBatch()
 		return;
 	}
 
-	GeometryBuffer& dynVertexBuffer = dynVertexBuffers[GetFrameIndex()];
-	GeometryBuffer& dynIndexBuffer = dynIndexBuffers[GetFrameIndex()];
+	DynamicBuffers& db = dynBuffers[GetFrameIndex()];
+	GeometryBuffer& posBuffer = db.positions;
+	GeometryBuffer& idxBuffer = db.indices;
 
-	if(!dynVertexBuffer.CanAdd(tess.numVertexes) ||
-		!dynIndexBuffer.CanAdd(tess.numIndexes))
+	if(!posBuffer.CanAdd(tess.numVertexes) ||
+		!idxBuffer.CanAdd(tess.numIndexes))
 	{
 		return;
 	}
 
-	Q_assert(dynVertexBuffer.batchCount == 0);
-	Q_assert(dynIndexBuffer.batchCount == 0);
-	SmallestVertex* vtx = (SmallestVertex*)(BeginBufferUpload(dynVertexBuffer.buffer) + dynVertexBuffer.batchFirst + dynVertexBuffer.batchCount);
-	Index* idx = (Index*)BeginBufferUpload(dynIndexBuffer.buffer) + dynIndexBuffer.batchFirst + dynIndexBuffer.batchCount;
+	Q_assert(posBuffer.batchCount == 0);
+	Q_assert(idxBuffer.batchCount == 0);
+	float* pos = (float*)(BeginBufferUpload(posBuffer.buffer) + posBuffer.batchFirst + posBuffer.batchCount);
+	Index* idx = (Index*)BeginBufferUpload(idxBuffer.buffer) + idxBuffer.batchFirst + idxBuffer.batchCount;
 
 	for(int i = 0; i < tess.numIndexes; ++i)
 	{
@@ -361,26 +396,18 @@ void World::DrawBatch()
 
 	for(int v = 0; v < tess.numVertexes; ++v)
 	{
-		vtx->base.position[0] = tess.xyz[v][0];
-		vtx->base.position[1] = tess.xyz[v][1];
-		vtx->base.position[2] = tess.xyz[v][2];
-		vtx->base.normal[0] = 0.0f;
-		vtx->base.normal[1] = 0.0f;
-		vtx->base.normal[2] = 0.0f;
-		vtx->stage0.texCoords[0] = tess.svars[0].texcoords[v][0];
-		vtx->stage0.texCoords[1] = tess.svars[0].texcoords[v][1];
-		vtx->stage0.color = *(uint32_t*)&tess.svars[0].colors[v][0];
-		vtx++;
+		pos[0] = tess.xyz[v][0];
+		pos[1] = tess.xyz[v][1];
+		pos[2] = tess.xyz[v][2];
+		pos += 3;
 	}
 
-	EndBufferUpload(dynVertexBuffer.buffer);
-	EndBufferUpload(dynIndexBuffer.buffer);
+	EndBufferUpload(posBuffer.buffer);
+	EndBufferUpload(idxBuffer.buffer);
 
 	DynamicVertexRC vertexRC;
 	R_MultMatrix(backEnd.orient.modelMatrix, backEnd.viewParms.projectionMatrix, vertexRC.mvp);
 	memcpy(vertexRC.clipPlane, clipPlane, sizeof(vertexRC.clipPlane));
-	vertexRC.bufferIndex = GetFrameIndex();
-	vertexRC.bufferByteOffset = dynVertexBuffer.batchFirst;
 	CmdSetRootConstants(dynRootSignature, ShaderStage::Vertex, &vertexRC);
 
 	DynamicPixelRC pixelRC;
@@ -388,10 +415,12 @@ void World::DrawBatch()
 	pixelRC.samplerIndex = 0;
 	CmdSetRootConstants(dynRootSignature, ShaderStage::Pixel, &pixelRC);
 
-	CmdDrawIndexed(dynIndexBuffer.batchCount, dynIndexBuffer.batchFirst, 0);
+	CmdBindVertexBuffers(1, &db.positions.buffer, &db.positions.stride, NULL);
 
-	dynVertexBuffer.EndBatch(tess.numVertexes);
-	dynIndexBuffer.EndBatch(tess.numIndexes);
+	CmdDrawIndexed(tess.numIndexes, idxBuffer.batchFirst, 0);
+
+	posBuffer.EndBatch(tess.numVertexes);
+	idxBuffer.EndBatch(tess.numIndexes);
 	tess.numVertexes = 0;
 	tess.numIndexes = 0;
 }
@@ -500,7 +529,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 	const HTexture swapChain = GetSwapChainTexture();
 	CmdBindRenderTargets(1, &swapChain, &depthTexture);
 
-	CmdBindIndexBuffer(dynIndexBuffers[GetFrameIndex()].buffer, indexType, 0);
+	CmdBindIndexBuffer(dynBuffers[GetFrameIndex()].indices.buffer, indexType, 0);
 
 	const drawSurf_t* drawSurfs = cmd.drawSurfs;
 	const int opaqueCount = cmd.numDrawSurfs - cmd.numTranspSurfs;

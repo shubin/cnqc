@@ -39,7 +39,7 @@ namespace RHI
 	// 2. number of frames in the back buffer
 	const uint32_t FrameCount = 2;
 	const uint32_t MaxVertexBufferCount = 16;
-	const uint32_t MaxVertexAttributeCount = 16;
+	const uint32_t MaxVertexAttributeCount = 32;
 	const uint32_t MaxRenderTargetCount = 8;
 	const uint32_t MaxDurationQueries = 64;
 	const uint32_t MaxTextureMips = 16;
