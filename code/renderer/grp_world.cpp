@@ -71,29 +71,56 @@ cbuffer RootConstants
 	float4 clipPlane; // @TODO: set output clip distance
 };
 
+#define STAGE_ATTRIBS(Index) \
+	float2 texCoords##Index : TEXCOORD##Index; \
+	float4 color##Index : COLOR##Index;
+
 struct VIn
 {
 	float3 position : POSITION;
-	//float3 normal : NORMAL;
-	//float2 texCoords : TEXCOORD0;
-	//float4 color : COLOR0;
+	float3 normal : NORMAL;
+	STAGE_ATTRIBS(0)
+	STAGE_ATTRIBS(1)
+	STAGE_ATTRIBS(2)
+	STAGE_ATTRIBS(3)
+	STAGE_ATTRIBS(4)
+	STAGE_ATTRIBS(5)
+	STAGE_ATTRIBS(6)
+	STAGE_ATTRIBS(7)
 };
 
 struct VOut
 {
 	float4 position : SV_Position;
-	//float3 normal : NORMAL;
-	//float2 texCoords : TEXCOORD0;
-	//float4 color : COLOR0;
+	float3 normal : NORMAL;
+	STAGE_ATTRIBS(0)
+	STAGE_ATTRIBS(1)
+	STAGE_ATTRIBS(2)
+	STAGE_ATTRIBS(3)
+	STAGE_ATTRIBS(4)
+	STAGE_ATTRIBS(5)
+	STAGE_ATTRIBS(6)
+	STAGE_ATTRIBS(7)
 };
+
+#undef STAGE_ATTRIBS
+#define STAGE_ATTRIBS(Index) \
+	output.texCoords##Index = input.texCoords##Index; \
+	output.color##Index = input.color##Index;
 
 VOut main(VIn input)
 {
 	VOut output;
 	output.position = mul(mvp, float4(input.position, 1.0));
-	//output.normal = input.normal; // @TODO:
-	//output.texCoords = input.texCoords;
-	//output.color = input.color;
+	output.normal = input.normal;
+	STAGE_ATTRIBS(0)
+	STAGE_ATTRIBS(1)
+	STAGE_ATTRIBS(2)
+	STAGE_ATTRIBS(3)
+	STAGE_ATTRIBS(4)
+	STAGE_ATTRIBS(5)
+	STAGE_ATTRIBS(6)
+	STAGE_ATTRIBS(7)
 
 	return output;
 }
@@ -106,12 +133,22 @@ cbuffer RootConstants
 	uint samplerIndex;
 };
 
+#define STAGE_ATTRIBS(Index) \
+	float2 texCoords##Index : TEXCOORD##Index; \
+	float4 color##Index : COLOR##Index;
+
 struct VOut
 {
 	float4 position : SV_Position;
-	//float3 normal : NORMAL;
-	//float2 texCoords : TEXCOORD0;
-	//float4 color : COLOR0;
+	float3 normal : NORMAL;
+	STAGE_ATTRIBS(0)
+	STAGE_ATTRIBS(1)
+	STAGE_ATTRIBS(2)
+	STAGE_ATTRIBS(3)
+	STAGE_ATTRIBS(4)
+	STAGE_ATTRIBS(5)
+	STAGE_ATTRIBS(6)
+	STAGE_ATTRIBS(7)
 };
 
 Texture2D textures2D[2048] : register(t0);
@@ -119,8 +156,7 @@ SamplerState samplers[2] : register(s0);
 
 float4 main(VOut input) : SV_TARGET
 {
-	//return textures2D[textureIndex].Sample(samplers[samplerIndex], input.texCoords) * input.color;
-	return float4(0.0, 0.5, 0.0, 1.0);
+	return textures2D[textureIndex].Sample(samplers[samplerIndex], input.texCoords0) * input.color0;
 }
 )grml";
 
@@ -207,13 +243,12 @@ void World::Init()
 		desc.vertexShader = CompileVertexShader(dyn_vs);
 		desc.pixelShader = CompilePixelShader(dyn_ps);
 		desc.vertexLayout.AddAttribute(a++, ShaderSemantic::Position, DataType::Float32, 3, 0);
-		// @TODO:
-		/*desc.vertexLayout.AddAttribute(a++, ShaderSemantic::Normal, DataType::Float32, 2, 0);
+		desc.vertexLayout.AddAttribute(a++, ShaderSemantic::Normal, DataType::Float32, 2, 0);
 		for(int s = 0; s < MAX_SHADER_STAGES; ++s)
 		{
 			desc.vertexLayout.AddAttribute(a++, ShaderSemantic::TexCoord, DataType::Float32, 2, 0);
 			desc.vertexLayout.AddAttribute(a++, ShaderSemantic::Color, DataType::UNorm8, 4, 0);
-		}*/
+		}
 		desc.depthStencil.depthComparison = ComparisonFunction::GreaterEqual;
 		desc.depthStencil.depthStencilFormat = TextureFormat::Depth32_Float;
 		desc.depthStencil.enableDepthTest = true;
