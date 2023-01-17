@@ -201,7 +201,7 @@ static void R_AddWorldSurface( msurface_t* surf )
 
 	surf->vcVisible = tr.viewCount;
 
-	R_AddDrawSurf( surf->data, surf->shader, surf->fogIndex );
+	R_AddDrawSurf( surf->data, surf->shader, surf->fogIndex, surf );
 }
 
 

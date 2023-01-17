@@ -512,13 +512,16 @@ typedef enum {
 	SF_MAX = 0x7fffffff			// ensures that sizeof( surfaceType_t ) == sizeof( int )
 } surfaceType_t;
 
+struct msurface_t;
+
 struct drawSurf_t {
 	// we keep the sort key at the top instead of the pointer
 	// to allow for slightly cleaner code gen in the radix sort code
 	unsigned				sort;		// bit combination for fast compares
 	float					depth;		// transparent surface's midpoint's depth
 	const surfaceType_t*	surface;	// any of surface*_t
-	qhandle_t				model;		// MD3 model handle
+	const msurface_t*		msurface;	// map surface, can be NULL
+	qhandle_t				model;		// MD3 model handle, can be 0
 	int						index;		// transparent surface's registration order
 	float					shaderSort;	// transparent surface's shader sort
 	int						shaderNum;	// unsorted shader index, for when we need to do fix-ups
@@ -1100,7 +1103,7 @@ void R_AddMD3Surfaces( trRefEntity_t *e );
 
 void R_AddPolygonSurfaces();
 
-void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int fogIndex );
+void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int fogIndex, const msurface_t* msurface = NULL );
 void R_AddLitSurf( const surfaceType_t* surface, const shader_t* shader, int fogIndex );
 unsigned int R_ComposeSort( int entityNum, const shader_t *shader, int fogNum );
 void R_DecomposeSort( unsigned sort, int *entityNum, const shader_t **shader, int *fogNum );

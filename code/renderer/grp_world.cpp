@@ -410,6 +410,7 @@ void World::DrawBatch()
 	CmdSetRootConstants(rootSignature, ShaderStage::Pixel, &pixelRC);
 
 	CmdBindVertexBuffers(4, db.vertexBuffers.buffers, db.vertexBuffers.strides, NULL);
+	CmdBindIndexBuffer(dynBuffers[GetFrameIndex()].indexBuffer.buffer, indexType, 0);
 	CmdDrawIndexed(tess.numIndexes, db.indexBuffer.batchFirst, db.vertexBuffers.batchFirst);
 
 	db.indexBuffer.EndBatch(tess.numIndexes);
@@ -583,8 +584,6 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 	const HTexture swapChain = GetSwapChainTexture();
 	CmdBindRenderTargets(1, &swapChain, &depthTexture);
 
-	CmdBindIndexBuffer(dynBuffers[GetFrameIndex()].indexBuffer.buffer, indexType, 0);
-
 	const drawSurf_t* drawSurfs = cmd.drawSurfs;
 	const int opaqueCount = cmd.numDrawSurfs - cmd.numTranspSurfs;
 	//const int transpCount = cmd.numTranspSurfs;
@@ -666,23 +665,44 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			oldEntityNum = entityNum;
 		}
 
-		//const int firstVertex = tess.numVertexes;
-		//const int firstIndex = tess.numIndexes;
-		const int firstVertex = 0;
-		const int firstIndex = 0;
-		rb_surfaceTable[*drawSurf->surface](drawSurf->surface);
-		const int numVertexes = tess.numVertexes - firstVertex;
-		const int numIndexes = tess.numIndexes - firstIndex;
-		RB_DeformTessGeometry(firstVertex, numVertexes, firstIndex, numIndexes);
-		for(int s = 0; s < shader->numStages; ++s)
+		const bool staticGeo =
+			drawSurf->msurface != NULL &&
+			drawSurf->msurface->numIndexes > 0 &&
+			drawSurf->msurface->numVertexes > 0;
+		if(staticGeo)
 		{
-			R_ComputeColors(shader->stages[s], tess.svars[s], firstVertex, numVertexes);
-			R_ComputeTexCoords(shader->stages[s], tess.svars[s], firstVertex, numVertexes, qfalse);
+			DynamicVertexRC vertexRC;
+			R_MultMatrix(backEnd.orient.modelMatrix, backEnd.viewParms.projectionMatrix, vertexRC.mvp);
+			memcpy(vertexRC.clipPlane, clipPlane, sizeof(vertexRC.clipPlane));
+			CmdSetRootConstants(rootSignature, ShaderStage::Vertex, &vertexRC);
+
+			DynamicPixelRC pixelRC;
+			pixelRC.textureIndex = tess.shader->stages[0]->bundle.image[0]->textureIndex;
+			pixelRC.samplerIndex = 0;
+			CmdSetRootConstants(rootSignature, ShaderStage::Pixel, &pixelRC);
+
+			CmdBindVertexBuffers(4, statBuffers.vertexBuffers.buffers, statBuffers.vertexBuffers.strides, NULL);
+			CmdBindIndexBuffer(statBuffers.indexBuffer.buffer, indexType, 0);
+			CmdDrawIndexed(drawSurf->msurface->numIndexes, drawSurf->msurface->firstIndex, drawSurf->msurface->firstVertex);
+
+			tess.numVertexes = 0;
+			tess.numIndexes = 0;
 		}
-
-		// upload batch data
-
-		DrawBatch();
+		else
+		{
+			const int firstVertex = 0;
+			const int firstIndex = 0;
+			rb_surfaceTable[*drawSurf->surface](drawSurf->surface);
+			const int numVertexes = tess.numVertexes - firstVertex;
+			const int numIndexes = tess.numIndexes - firstIndex;
+			RB_DeformTessGeometry(firstVertex, numVertexes, firstIndex, numIndexes);
+			for(int s = 0; s < shader->numStages; ++s)
+			{
+				R_ComputeColors(shader->stages[s], tess.svars[s], firstVertex, numVertexes);
+				R_ComputeTexCoords(shader->stages[s], tess.svars[s], firstVertex, numVertexes, qfalse);
+			}
+			DrawBatch();
+		}
 	}
 
 	backEnd.refdef.floatTime = originalTime;
