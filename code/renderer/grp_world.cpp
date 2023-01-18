@@ -339,21 +339,6 @@ void World::BeginFrame()
 
 void World::Begin()
 {
-	if(grp.renderMode == RenderMode::World)
-	{
-		return;
-	}
-
-	// copy backEnd.viewParms.projectionMatrix
-	CmdSetViewportAndScissor(backEnd.viewParms);
-
-	TextureBarrier tb(depthTexture, ResourceStates::DepthWriteBit);
-	CmdBarrier(1, &tb);
-
-	// @TODO: evaluate later whether binding the color target here is OK?
-	CmdBindRenderTargets(0, NULL, &depthTexture);
-	CmdClearDepthTarget(depthTexture, 0.0f);
-
 	// @TODO: this should be moved out of the RP since none of the decision-making is RP-specific
 #if 0
 	bool shouldClearColor = qfalse;
@@ -405,6 +390,17 @@ void World::Begin()
 		memset(clipPlane, 0, sizeof(clipPlane));
 	}
 
+	if(grp.renderMode == RenderMode::World)
+	{
+		return;
+	}
+
+	// copy backEnd.viewParms.projectionMatrix
+	CmdSetViewportAndScissor(backEnd.viewParms);
+
+	TextureBarrier tb(depthTexture, ResourceStates::DepthWriteBit);
+	CmdBarrier(1, &tb);
+
 	grp.renderMode = RenderMode::World;
 }
 
@@ -417,6 +413,9 @@ void World::DrawPrePass()
 	{
 		return;
 	}
+
+	// @TODO: evaluate later whether binding the color target here is OK?
+	CmdBindRenderTargets(0, NULL, &depthTexture);
 
 	CmdBindRootSignature(zppRootSignature);
 	CmdBindPipeline(zppPipeline);
@@ -662,6 +661,8 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 	backEnd.viewParms = cmd.viewParms;
 
 	Begin();
+
+	CmdClearDepthTarget(depthTexture, 0.0f);
 
 	DrawPrePass();
 
