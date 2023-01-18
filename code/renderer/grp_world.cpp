@@ -698,12 +698,15 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 		if(hasStaticGeo)
 		{
 			// @TODO: grab a CPU-resident pre-computed index buffer instead of tessellating on demand...
+			const int firstCPUVertex = tess.numVertexes;
 			const int firstCPUIndex = tess.numIndexes;
 			R_TessellateSurface(drawSurf->surface);
 			const int numIndexes = tess.numIndexes - firstCPUIndex;
+			//Q_assert(numIndexes == drawSurf->msurface->numIndexes); // will fail on occasion...
 			const int firstGPUVertex = drawSurf->msurface->firstVertex;
 			for(int i = firstCPUIndex; i < firstCPUIndex + numIndexes; ++i)
 			{
+				tess.indexes[i] -= firstCPUVertex;
 				tess.indexes[i] += firstGPUVertex;
 			}
 		}
