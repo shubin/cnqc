@@ -474,6 +474,9 @@ void World::ProcessWorld(world_t& world)
 				continue;
 			}
 
+			tess.numVertexes = 0;
+			tess.numIndexes = 0;
+			tess.shader = surf->shader; // unsure if needed, but just in case
 			R_TessellateSurface(surf->data);
 			const int surfVertexCount = tess.numVertexes;
 			const int surfIndexCount = tess.numIndexes;
@@ -538,6 +541,7 @@ void World::ProcessWorld(world_t& world)
 
 		tess.numVertexes = 0;
 		tess.numIndexes = 0;
+		tess.shader = surf->shader; // needed by R_ComputeTexCoords at least
 		R_TessellateSurface(surf->data);
 		const int surfVertexCount = tess.numVertexes;
 		const int surfIndexCount = tess.numIndexes;
