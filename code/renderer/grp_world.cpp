@@ -590,7 +590,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 
 	Begin();
 
-	DrawPrePass();
+	//DrawPrePass();
 
 	CmdBindRootSignature(rootSignature);
 	CmdBindPipeline(pipeline);
@@ -700,8 +700,10 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			// through 2 function pointers
 			int estVertexCount, estIndexCount;
 			R_ComputeTessellatedSize(&estVertexCount, &estIndexCount, drawSurf->surface);
-			if(tess.numVertexes + estVertexCount > SHADER_MAX_VERTEXES ||
-				tess.numIndexes + estIndexCount > SHADER_MAX_INDEXES)
+			// >= shouldn't be necessary but it's the overflow check currently used within
+			// R_TessellateSurface, so we have to be at least as aggressive as it is
+			if(tess.numVertexes + estVertexCount >= SHADER_MAX_VERTEXES ||
+				tess.numIndexes + estIndexCount >= SHADER_MAX_INDEXES)
 			{
 				EndBatch();
 				BeginBatch(shader, hasStaticGeo);
