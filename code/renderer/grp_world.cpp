@@ -504,6 +504,11 @@ void World::DrawGUI()
 void World::ProcessWorld(world_t& world)
 {
 	{
+		zppVertexBuffer.batchFirst = 0;
+		zppIndexBuffer.batchFirst = 0;
+		zppVertexBuffer.batchCount = 0;
+		zppIndexBuffer.batchCount = 0;
+
 		float* vtx = (float*)BeginBufferUpload(zppVertexBuffer.buffer);
 		Index* idx = (Index*)BeginBufferUpload(zppIndexBuffer.buffer);
 
@@ -570,6 +575,9 @@ void World::ProcessWorld(world_t& world)
 		zppVertexBuffer.batchFirst = 0;
 		zppIndexBuffer.batchFirst = 0;
 	}
+
+	statBuffers.vertexBuffers.Rewind();
+	statBuffers.indexBuffer.Rewind();
 
 	statBuffers.vertexBuffers.BeginUpload();
 	statBuffers.indexBuffer.BeginUpload();
