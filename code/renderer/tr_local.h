@@ -528,7 +528,8 @@ struct drawSurf_t {
 	float					greyscale;  // how monochrome to draw all the stages
 };
 
-extern void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])( const void* );
+void R_TessellateSurface( const surfaceType_t* surfType );
+void R_ComputeTessellatedSize( int* numVertexes, int* numIndexes, const surfaceType_t* surfType );
 
 
 struct litSurf_t {

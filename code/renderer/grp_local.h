@@ -242,7 +242,8 @@ struct World
 	void BeginFrame();
 	void Begin();
 	void DrawPrePass();
-	void DrawBatch();
+	void BeginBatch(const shader_t* shader, bool hasStaticGeo);
+	void EndBatch();
 	void DrawGUI();
 	void ProcessWorld(world_t& world);
 	void DrawSceneView(const drawSceneViewCommand_t& cmd);
@@ -285,6 +286,7 @@ struct World
 	BufferFamily::Id boundVertexBuffers;
 	BufferFamily::Id boundIndexBuffer;
 	uint32_t boundStaticVertexBuffersCount;
+	bool batchHasStaticGeo;
 
 	// dynamic
 	GeometryBuffers dynBuffers[FrameCount];

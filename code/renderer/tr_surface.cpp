@@ -828,7 +828,7 @@ static void RB_SurfaceEntity( surfaceType_t* surfType )
 }
 
 
-void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])( const void* ) = {
+static void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])( const void* ) = {
 	(void(*)( const void* ))RB_SurfaceBad,			// SF_BAD
 	(void(*)( const void* ))RB_SurfaceSkip,			// SF_SKIP
 	(void(*)( const void* ))RB_SurfaceFace,			// SF_FACE
@@ -839,3 +839,93 @@ void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])( const void* ) = {
 	(void(*)( const void* ))RB_SurfaceSkip,			// SF_FLARE
 	(void(*)( const void* ))RB_SurfaceEntity,		// SF_ENTITY
 };
+
+
+void R_TessellateSurface( const surfaceType_t* surfType )
+{
+	rb_surfaceTable[ *surfType ]( surfType );
+}
+
+
+static void RB_SurfaceSizeEmpty( int* numVertexes, int* numIndexes, const surfaceType_t* )
+{
+	*numVertexes = 0;
+	*numIndexes = 0;
+}
+
+
+static void RB_SurfaceSizeFace( int* numVertexes, int* numIndexes, const srfSurfaceFace_t* surf )
+{
+	*numVertexes = surf->numVerts;
+	*numIndexes = surf->numIndexes;
+}
+
+
+static void RB_SurfaceSizeGrid( int* numVertexes, int* numIndexes, const srfGridMesh_t* surf )
+{
+	// @TODO: estimate properly...
+	tess.numVertexes = 0;
+	tess.numIndexes = 0;
+	RB_SurfaceGrid((srfGridMesh_t*)surf);
+	*numVertexes = tess.numVertexes;
+	*numIndexes = tess.numIndexes;
+	tess.numVertexes = 0;
+	tess.numIndexes = 0;
+}
+
+
+static void RB_SurfaceSizeTriangles( int* numVertexes, int* numIndexes, const srfTriangles_t* surf )
+{
+	*numVertexes = surf->numVerts;
+	*numIndexes = surf->numIndexes;
+}
+
+
+static void RB_SurfaceSizePolychain( int* numVertexes, int* numIndexes, const srfPoly_t* surf )
+{
+	*numVertexes = surf->numVerts;
+	*numIndexes = (surf->numVerts - 2) * 3;
+}
+
+
+static void RB_SurfaceSizeMesh( int* numVertexes, int* numIndexes, const md3Surface_t* surf )
+{
+	*numVertexes = surf->numVerts;
+	*numIndexes = surf->numTriangles * 3;
+}
+
+
+static void RB_SurfaceSizeEntity( int* numVertexes, int* numIndexes, const void* )
+{
+	switch( backEnd.currentEntity->e.reType ) {
+		case RT_SPRITE:
+		case RT_LIGHTNING:
+			*numVertexes = 4;
+			*numIndexes = 6;
+			break;
+
+		default:
+			*numVertexes = 0;
+			*numIndexes = 0;
+			break;
+	}
+}
+
+
+static void (*rb_surfaceSizeTable[SF_NUM_SURFACE_TYPES])( int*, int*, const void* ) = {
+	(void(*)( int*, int*, const void* ))RB_SurfaceSizeEmpty,		// SF_BAD
+	(void(*)( int*, int*, const void* ))RB_SurfaceSizeEmpty,		// SF_SKIP
+	(void(*)( int*, int*, const void* ))RB_SurfaceSizeFace,			// SF_FACE
+	(void(*)( int*, int*, const void* ))RB_SurfaceSizeGrid,			// SF_GRID
+	(void(*)( int*, int*, const void* ))RB_SurfaceSizeTriangles,	// SF_TRIANGLES
+	(void(*)( int*, int*, const void* ))RB_SurfaceSizePolychain,	// SF_POLY
+	(void(*)( int*, int*, const void* ))RB_SurfaceSizeMesh,			// SF_MD3
+	(void(*)( int*, int*, const void* ))RB_SurfaceSizeEmpty,		// SF_FLARE
+	(void(*)( int*, int*, const void* ))RB_SurfaceSizeEntity,		// SF_ENTITY
+};
+
+
+void R_ComputeTessellatedSize( int* numVertexes, int* numIndexes, const surfaceType_t* surfType )
+{
+	rb_surfaceSizeTable[ *surfType ]( numVertexes, numIndexes, surfType );
+}

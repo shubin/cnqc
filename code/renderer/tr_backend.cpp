@@ -243,7 +243,7 @@ static void RB_RenderDrawSurfList( const drawSurf_t* drawSurfs, int numDrawSurfs
 			// fast path, same as previous sort
 			const int firstVertex = tess.numVertexes;
 			const int firstIndex = tess.numIndexes;
-			rb_surfaceTable[ *drawSurf->surface ]( drawSurf->surface );
+			R_TessellateSurface( drawSurf->surface );
 			if ( tess.deformsPreApplied ) {
 				// across multiple shaders though, so we need to compute all the results now
 				const int numVertexes = tess.numVertexes - firstVertex;
@@ -282,7 +282,7 @@ static void RB_RenderDrawSurfList( const drawSurf_t* drawSurfs, int numDrawSurfs
 			tess.deformsPreApplied = qtrue;
 			const int firstVertex = tess.numVertexes;
 			const int firstIndex = tess.numIndexes;
-			rb_surfaceTable[ *drawSurf->surface ]( drawSurf->surface );
+			R_TessellateSurface( drawSurf->surface );
 			const int numVertexes = tess.numVertexes - firstVertex;
 			const int numIndexes = tess.numIndexes - firstIndex;
 			RB_DeformTessGeometry( firstVertex, numVertexes, firstIndex, numIndexes );
@@ -361,7 +361,7 @@ static void RB_RenderDrawSurfList( const drawSurf_t* drawSurfs, int numDrawSurfs
 		}
 
 		// add the triangles for this surface
-		rb_surfaceTable[ *drawSurf->surface ]( drawSurf->surface );
+		R_TessellateSurface( drawSurf->surface );
 	}
 
 	backEnd.refdef.floatTime = originalTime;
@@ -406,7 +406,7 @@ static void RB_RenderLitSurfList( dlight_t* dl, qbool opaque )
 		++backEnd.pc[RB_LIT_SURFACES];
 		if ( litSurf->sort == sort ) {
 			// fast path, same as previous sort
-			rb_surfaceTable[ *litSurf->surface ]( litSurf->surface );
+			R_TessellateSurface( litSurf->surface );
 			continue;
 		}
 
@@ -492,7 +492,7 @@ static void RB_RenderLitSurfList( dlight_t* dl, qbool opaque )
 		}
 
 		// add the triangles for this surface
-		rb_surfaceTable[ *litSurf->surface ]( litSurf->surface );
+		R_TessellateSurface( litSurf->surface );
 	}
 
 	backEnd.refdef.floatTime = originalTime;

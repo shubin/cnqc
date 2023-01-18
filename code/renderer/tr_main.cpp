@@ -753,7 +753,7 @@ static qbool SurfIsOffscreen( const drawSurf_t* drawSurf )
 
 	R_DecomposeSort( drawSurf->sort, &entityNum, &shader, &fogNum );
 	RB_BeginSurface( shader, fogNum );
-	rb_surfaceTable[ *drawSurf->surface ]( drawSurf->surface );
+	R_TessellateSurface( drawSurf->surface );
 
 	assert( tess.numVertexes < 128 );
 

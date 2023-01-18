@@ -161,6 +161,15 @@ float4 main(VOut input) : SV_TARGET
 )grml";
 
 
+static bool HasStaticGeo(const drawSurf_t* drawSurf)
+{
+	return
+		drawSurf->msurface != NULL &&
+		drawSurf->msurface->numIndexes > 0 &&
+		drawSurf->msurface->numVertexes > 0;
+}
+
+
 void World::Init()
 {
 	{
@@ -379,13 +388,23 @@ void World::DrawPrePass()
 	boundIndexBuffer = BufferFamily::PrePass;
 }
 
-void World::DrawBatch()
+void World::BeginBatch(const shader_t* shader, bool hasStaticGeo)
+{
+	tess.numVertexes = 0;
+	tess.numIndexes = 0;
+	tess.shader = shader;
+	batchHasStaticGeo = hasStaticGeo;
+}
+
+void World::EndBatch()
 {
 	if(tess.numVertexes <= 0 ||
 		tess.numIndexes <= 0 ||
 		tess.shader->numStages == 0)
 	{
 		// @TODO: make sure we never get tess.shader->numStages 0 here in the first place
+		tess.numVertexes = 0;
+		tess.numIndexes = 0;
 		return;
 	}
 
@@ -397,13 +416,8 @@ void World::DrawBatch()
 		return;
 	}
 
-	db.vertexBuffers.BeginUpload();
 	db.vertexBuffers.Upload(0, 1);
-	db.vertexBuffers.EndUpload();
-
-	db.indexBuffer.BeginUpload();
 	db.indexBuffer.Upload();
-	db.indexBuffer.EndUpload();
 
 	DynamicVertexRC vertexRC;
 	R_MultMatrix(backEnd.orient.modelMatrix, backEnd.viewParms.projectionMatrix, vertexRC.mvp);
@@ -460,7 +474,7 @@ void World::ProcessWorld(world_t& world)
 				continue;
 			}
 
-			rb_surfaceTable[*surf->data](surf->data);
+			R_TessellateSurface(surf->data);
 			const int surfVertexCount = tess.numVertexes;
 			const int surfIndexCount = tess.numIndexes;
 			if(surfVertexCount <= 0 || surfIndexCount <= 0)
@@ -524,7 +538,7 @@ void World::ProcessWorld(world_t& world)
 
 		tess.numVertexes = 0;
 		tess.numIndexes = 0;
-		rb_surfaceTable[*surf->data](surf->data);
+		R_TessellateSurface(surf->data);
 		const int surfVertexCount = tess.numVertexes;
 		const int surfIndexCount = tess.numIndexes;
 		if(surfVertexCount <= 0 || surfIndexCount <= 0)
@@ -566,6 +580,11 @@ void World::ProcessWorld(world_t& world)
 
 void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 {
+	if(cmd.numDrawSurfs <= 0)
+	{
+		return;
+	}
+
 	backEnd.refdef = cmd.refdef;
 	backEnd.viewParms = cmd.viewParms;
 
@@ -586,11 +605,16 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 	const double originalTime = backEnd.refdef.floatTime;
 
 	const shader_t* shader = NULL;
-	unsigned int sort = (unsigned int)-1;
+	const shader_t* oldShader = NULL;
 	int oldEntityNum = -1;
+	bool oldHasStaticGeo = false;
 	backEnd.currentEntity = &tr.worldEntity;
 	qbool oldDepthRange = qfalse;
 	qbool depthRange = qfalse;
+
+	GeometryBuffers& db = dynBuffers[GetFrameIndex()];
+	db.vertexBuffers.BeginUpload();
+	db.indexBuffer.BeginUpload();
 
 	int i;
 	const drawSurf_t* drawSurf;
@@ -599,9 +623,15 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 		int fogNum;
 		int entityNum;
 		R_DecomposeSort(drawSurf->sort, &entityNum, &shader, &fogNum);
-		tess.shader = shader; // @TODO: should be the one of the current batch...
+		const bool hasStaticGeo = HasStaticGeo(drawSurf);
 
-		sort = drawSurf->sort;
+		if(hasStaticGeo != oldHasStaticGeo ||
+			shader != oldShader ||
+			entityNum != oldEntityNum)
+		{
+			EndBatch();
+			BeginBatch(shader, hasStaticGeo);
+		}
 
 		//
 		// change the modelview matrix if needed
@@ -661,10 +691,36 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			oldEntityNum = entityNum;
 		}
 
-		const bool staticGeo =
-			drawSurf->msurface != NULL &&
-			drawSurf->msurface->numIndexes > 0 &&
-			drawSurf->msurface->numVertexes > 0;
+		// treat everything as dynamic for now
+		{
+			// @TODO: this needs to be removed in the future and have R_TessellateSurface
+			// call into IRenderPipeline to end the current batch and start a new one
+			// through 2 function pointers
+			int estVertexCount, estIndexCount;
+			R_ComputeTessellatedSize(&estVertexCount, &estIndexCount, drawSurf->surface);
+			if(tess.numVertexes + estVertexCount > SHADER_MAX_VERTEXES ||
+				tess.dlNumIndexes + estIndexCount > SHADER_MAX_INDEXES)
+			{
+				EndBatch();
+				BeginBatch(shader, hasStaticGeo);
+			}
+
+			const int firstVertex = tess.numVertexes;
+			const int firstIndex = tess.numIndexes;
+			R_TessellateSurface(drawSurf->surface);
+			const int numVertexes = tess.numVertexes - firstVertex;
+			const int numIndexes = tess.numIndexes - firstIndex;
+			Q_assert(estVertexCount == numVertexes);
+			Q_assert(estIndexCount == estIndexCount);
+			RB_DeformTessGeometry(firstVertex, numVertexes, firstIndex, numIndexes);
+			for(int s = 0; s < shader->numStages; ++s)
+			{
+				R_ComputeColors(shader->stages[s], tess.svars[s], firstVertex, numVertexes);
+				R_ComputeTexCoords(shader->stages[s], tess.svars[s], firstVertex, numVertexes, qfalse);
+			}
+		}
+
+		/*
 		if(staticGeo)
 		{
 			DynamicVertexRC vertexRC;
@@ -699,11 +755,15 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			}
 			DrawBatch();
 		}
+		*/
 	}
 
 	backEnd.refdef.floatTime = originalTime;
 
-	DrawBatch();
+	EndBatch();
+
+	db.vertexBuffers.EndUpload();
+	db.indexBuffer.EndUpload();
 
 	// go back to the world model-view matrix
 	//gal.SetModelViewMatrix(backEnd.viewParms.world.modelMatrix);
