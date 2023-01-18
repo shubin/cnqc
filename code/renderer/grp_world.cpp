@@ -29,7 +29,8 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 
 struct ZPPVertexRC
 {
-	float mvp[16];
+	float modelViewMatrix[16];
+	float projectionMatrix[16];
 };
 
 struct DynamicVertexRC
@@ -50,12 +51,15 @@ struct DynamicPixelRC
 static const char* zpp_vs = R"grml(
 cbuffer RootConstants
 {
-	float4x4 mvp;
+	matrix modelViewMatrix;
+	matrix projectionMatrix;
 };
 
 float4 main(float4 position : POSITION) : SV_Position
 {
-	return mul(mvp, float4(position.xyz, 1.0));
+	float4 positionVS = mul(modelViewMatrix, float4(position.xyz, 1));
+
+	return mul(projectionMatrix, positionVS);
 }
 )grml";
 
@@ -419,8 +423,9 @@ void World::DrawPrePass()
 	CmdBindDescriptorTable(zppRootSignature, zppDescriptorTable);
 
 	ZPPVertexRC vertexRC;
-	R_MultMatrix(backEnd.viewParms.world.modelMatrix, backEnd.viewParms.projectionMatrix, vertexRC.mvp);
-	CmdSetRootConstants(zppRootSignature, ShaderStage::Vertex, vertexRC.mvp);
+	memcpy(vertexRC.modelViewMatrix, backEnd.viewParms.world.modelMatrix, sizeof(vertexRC.modelViewMatrix));
+	memcpy(vertexRC.projectionMatrix, backEnd.viewParms.projectionMatrix, sizeof(vertexRC.projectionMatrix));
+	CmdSetRootConstants(zppRootSignature, ShaderStage::Vertex, &vertexRC);
 	CmdBindPipeline(zppPipeline);
 	CmdBindIndexBuffer(zppIndexBuffer.buffer, indexType, 0);
 	const uint32_t vertexStride = 4 * sizeof(float);
