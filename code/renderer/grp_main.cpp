@@ -42,8 +42,8 @@ void GRP::Init()
 
 	if(firstInit)
 	{
-		samplers[0] = CreateSampler(SamplerDesc(TW_REPEAT, TextureFilter::Linear));
-		samplers[1] = CreateSampler(SamplerDesc(TW_CLAMP_TO_EDGE, TextureFilter::Linear));
+		samplers[0] = CreateSampler(SamplerDesc(TW_REPEAT, TextureFilter::Anisotropic));
+		samplers[1] = CreateSampler(SamplerDesc(TW_CLAMP_TO_EDGE, TextureFilter::Anisotropic));
 
 		RootSignatureDesc desc("main");
 		desc.usingVertexBuffers = qtrue;
