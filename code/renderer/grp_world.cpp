@@ -161,6 +161,9 @@ float4 main(VOut input) : SV_TARGET
 )grml";
 
 
+static bool drawPrePass = true;
+
+
 static bool HasStaticGeo(const drawSurf_t* drawSurf)
 {
 	return
@@ -397,7 +400,8 @@ void World::Begin()
 
 void World::DrawPrePass()
 {
-	if(tr.world == NULL ||
+	if(!drawPrePass ||
+		tr.world == NULL ||
 		zppIndexBuffer.batchCount == 0 ||
 		zppVertexBuffer.batchCount == 0)
 	{
@@ -489,6 +493,12 @@ void World::DrawGUI()
 	}
 	ImGui::End();
 #endif
+
+	if(ImGui::Begin("World"))
+	{
+		ImGui::Checkbox("Depth Pre-Pass", &drawPrePass);
+	}
+	ImGui::End();
 }
 
 void World::ProcessWorld(world_t& world)
