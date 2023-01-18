@@ -624,11 +624,15 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 		int entityNum;
 		R_DecomposeSort(drawSurf->sort, &entityNum, &shader, &fogNum);
 		const bool hasStaticGeo = HasStaticGeo(drawSurf);
+		const bool staticChanged = hasStaticGeo != oldHasStaticGeo;
+		const bool shaderChanged = shader != oldShader;
+		const bool entityChanged = entityNum != oldEntityNum;
 
-		if(hasStaticGeo != oldHasStaticGeo ||
-			shader != oldShader ||
-			entityNum != oldEntityNum)
+		if(staticChanged || shaderChanged || entityChanged)
 		{
+			oldShader = shader;
+			oldEntityNum = entityNum;
+			oldHasStaticGeo = hasStaticGeo;
 			EndBatch();
 			BeginBatch(shader, hasStaticGeo);
 		}
@@ -636,7 +640,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 		//
 		// change the modelview matrix if needed
 		//
-		if(entityNum != oldEntityNum)
+		if(entityChanged)
 		{
 			depthRange = qfalse;
 
@@ -687,8 +691,6 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 				}
 				oldDepthRange = depthRange;
 			}
-
-			oldEntityNum = entityNum;
 		}
 
 		// treat everything as dynamic for now
@@ -711,7 +713,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			const int numVertexes = tess.numVertexes - firstVertex;
 			const int numIndexes = tess.numIndexes - firstIndex;
 			Q_assert(estVertexCount == numVertexes);
-			Q_assert(estIndexCount == estIndexCount);
+			Q_assert(estIndexCount == numIndexes);
 			RB_DeformTessGeometry(firstVertex, numVertexes, firstIndex, numIndexes);
 			for(int s = 0; s < shader->numStages; ++s)
 			{
