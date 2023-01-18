@@ -627,7 +627,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 
 	Begin();
 
-	//DrawPrePass();
+	DrawPrePass();
 
 	CmdBindRootSignature(rootSignature);
 	CmdBindPipeline(pipeline);
@@ -692,7 +692,6 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			{
 				EndBatch();
 				BeginBatch(tess.shader, batchHasStaticGeo);
-				UpdateModelViewMatrix(entityNum, originalTime);
 			}
 			
 			const int firstVertex = tess.numVertexes;
@@ -708,12 +707,10 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 				R_ComputeColors(shader->stages[s], tess.svars[s], firstVertex, numVertexes);
 				R_ComputeTexCoords(shader->stages[s], tess.svars[s], firstVertex, numVertexes, qfalse);
 			}
-
-			//EndBatch(); // *sigh* still haven't figured what's happening on the bigger maps like cpm32_b1
 		}
 
-		/*
-		if(staticGeo)
+#if 0
+		if(hasStaticGeo)
 		{
 			DynamicVertexRC vertexRC;
 			R_MultMatrix(backEnd.orient.modelMatrix, backEnd.viewParms.projectionMatrix, vertexRC.mvp);
@@ -736,7 +733,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 		{
 			const int firstVertex = 0;
 			const int firstIndex = 0;
-			rb_surfaceTable[*drawSurf->surface](drawSurf->surface);
+			R_TessellateSurface(drawSurf->surface);
 			const int numVertexes = tess.numVertexes - firstVertex;
 			const int numIndexes = tess.numIndexes - firstIndex;
 			RB_DeformTessGeometry(firstVertex, numVertexes, firstIndex, numIndexes);
@@ -745,9 +742,10 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 				R_ComputeColors(shader->stages[s], tess.svars[s], firstVertex, numVertexes);
 				R_ComputeTexCoords(shader->stages[s], tess.svars[s], firstVertex, numVertexes, qfalse);
 			}
-			DrawBatch();
+			EndBatch();
+			BeginBatch(tess.shader, batchHasStaticGeo);
 		}
-		*/
+#endif
 	}
 
 	backEnd.refdef.floatTime = originalTime;
