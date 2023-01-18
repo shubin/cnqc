@@ -418,9 +418,9 @@ void World::DrawPrePass()
 	CmdBindPipeline(zppPipeline);
 	CmdBindDescriptorTable(zppRootSignature, zppDescriptorTable);
 
-	float mvp[16];
-	R_MultMatrix(backEnd.viewParms.world.modelMatrix, backEnd.viewParms.projectionMatrix, mvp);
-	CmdSetRootConstants(zppRootSignature, ShaderStage::Vertex, mvp);
+	ZPPVertexRC vertexRC;
+	R_MultMatrix(backEnd.viewParms.world.modelMatrix, backEnd.viewParms.projectionMatrix, vertexRC.mvp);
+	CmdSetRootConstants(zppRootSignature, ShaderStage::Vertex, vertexRC.mvp);
 	CmdBindPipeline(zppPipeline);
 	CmdBindIndexBuffer(zppIndexBuffer.buffer, indexType, 0);
 	const uint32_t vertexStride = 4 * sizeof(float);
