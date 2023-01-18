@@ -169,6 +169,38 @@ static bool HasStaticGeo(const drawSurf_t* drawSurf)
 		drawSurf->msurface->numVertexes > 0;
 }
 
+static void UpdateModelViewMatrix(int entityNum, double originalTime)
+{
+	if(entityNum != ENTITYNUM_WORLD)
+	{
+		backEnd.currentEntity = &backEnd.refdef.entities[entityNum];
+		if(backEnd.currentEntity->intShaderTime)
+			backEnd.refdef.floatTime = originalTime - (double)backEnd.currentEntity->e.shaderTime.iShaderTime / 1000.0;
+		else
+			backEnd.refdef.floatTime = originalTime - backEnd.currentEntity->e.shaderTime.fShaderTime;
+		// we have to reset the shaderTime as well otherwise image animations start
+		// from the wrong frame
+		tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
+
+		// set up the transformation matrix
+		R_RotateForEntity(backEnd.currentEntity, &backEnd.viewParms, &backEnd.orient);
+
+		// @TODO: depth range
+		/*if(backEnd.currentEntity->e.renderfx & RF_DEPTHHACK)
+		{
+		}*/
+	}
+	else
+	{
+		backEnd.currentEntity = &tr.worldEntity;
+		backEnd.refdef.floatTime = originalTime;
+		backEnd.orient = backEnd.viewParms.world;
+		// we have to reset the shaderTime as well otherwise image animations on
+		// the world (like water) continue with the wrong frame
+		tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
+	}
+}
+
 
 void World::Init()
 {
@@ -641,60 +673,9 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			BeginBatch(shader, hasStaticGeo);
 		}
 
-		//
-		// change the modelview matrix if needed
-		//
 		if(entityChanged)
 		{
-			depthRange = qfalse;
-
-			if(entityNum != ENTITYNUM_WORLD)
-			{
-				backEnd.currentEntity = &backEnd.refdef.entities[entityNum];
-				if(backEnd.currentEntity->intShaderTime)
-					backEnd.refdef.floatTime = originalTime - (double)backEnd.currentEntity->e.shaderTime.iShaderTime / 1000.0;
-				else
-					backEnd.refdef.floatTime = originalTime - backEnd.currentEntity->e.shaderTime.fShaderTime;
-				// we have to reset the shaderTime as well otherwise image animations start
-				// from the wrong frame
-				tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
-
-				// set up the transformation matrix
-				R_RotateForEntity(backEnd.currentEntity, &backEnd.viewParms, &backEnd.orient);
-
-				if(backEnd.currentEntity->e.renderfx & RF_DEPTHHACK)
-				{
-					// hack the depth range to prevent view model from poking into walls
-					depthRange = qtrue;
-				}
-			}
-			else
-			{
-				backEnd.currentEntity = &tr.worldEntity;
-				backEnd.refdef.floatTime = originalTime;
-				backEnd.orient = backEnd.viewParms.world;
-				// we have to reset the shaderTime as well otherwise image animations on
-				// the world (like water) continue with the wrong frame
-				tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
-			}
-
-			//gal.SetModelViewMatrix(backEnd.orient.modelMatrix);
-
-			//
-			// change depthrange if needed
-			//
-			if(oldDepthRange != depthRange)
-			{
-				if(depthRange)
-				{
-					//gal.SetDepthRange(0, 0.3);
-				}
-				else
-				{
-					//gal.SetDepthRange(0, 1);
-				}
-				oldDepthRange = depthRange;
-			}
+			UpdateModelViewMatrix(entityNum, originalTime);
 		}
 
 		// treat everything as dynamic for now
@@ -711,6 +692,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			{
 				EndBatch();
 				BeginBatch(shader, hasStaticGeo);
+				UpdateModelViewMatrix(entityNum, originalTime);
 			}
 
 			const int firstVertex = tess.numVertexes;
@@ -726,6 +708,8 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 				R_ComputeColors(shader->stages[s], tess.svars[s], firstVertex, numVertexes);
 				R_ComputeTexCoords(shader->stages[s], tess.svars[s], firstVertex, numVertexes, qfalse);
 			}
+
+			//EndBatch(); // *sigh* still haven't figured what's happening on the bigger maps like cpm32_b1
 		}
 
 		/*
