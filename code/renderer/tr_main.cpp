@@ -1288,12 +1288,12 @@ static int CompareDrawSurfGeneric(const void* aPtr, const void* bPtr)
 
 	// @TODO: PSO
 
-	// static/dynamic
+	// static first
 	const bool staticGeoA = HasStaticGeo(a);
 	const bool staticGeoB = HasStaticGeo(b);
 	if(staticGeoA != staticGeoB)
 	{
-		return (int)staticGeoA - (int)staticGeoB;
+		return (int)staticGeoB - (int)staticGeoA;
 	}
 
 	// shader
