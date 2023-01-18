@@ -459,6 +459,7 @@ void World::EndBatch()
 	DynamicPixelRC pixelRC;
 	pixelRC.textureIndex = tess.shader->stages[0]->bundle.image[0]->textureIndex;
 	pixelRC.samplerIndex = 0;
+	Q_assert(pixelRC.textureIndex > 0);
 	CmdSetRootConstants(rootSignature, ShaderStage::Pixel, &pixelRC);
 
 	BindVertexBuffers(false, 4);
@@ -645,8 +646,6 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 	int oldEntityNum = -1;
 	bool oldHasStaticGeo = false;
 	backEnd.currentEntity = &tr.worldEntity;
-	qbool oldDepthRange = qfalse;
-	qbool depthRange = qfalse;
 
 	GeometryBuffers& db = dynBuffers[GetFrameIndex()];
 	db.vertexBuffers.BeginUpload();
@@ -663,6 +662,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 		const bool staticChanged = hasStaticGeo != oldHasStaticGeo;
 		const bool shaderChanged = shader != oldShader;
 		const bool entityChanged = entityNum != oldEntityNum;
+		Q_assert(shader != NULL);
 
 		if(staticChanged || shaderChanged || entityChanged)
 		{
@@ -691,10 +691,10 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 				tess.numIndexes + estIndexCount >= SHADER_MAX_INDEXES)
 			{
 				EndBatch();
-				BeginBatch(shader, hasStaticGeo);
+				BeginBatch(tess.shader, batchHasStaticGeo);
 				UpdateModelViewMatrix(entityNum, originalTime);
 			}
-
+			
 			const int firstVertex = tess.numVertexes;
 			const int firstIndex = tess.numIndexes;
 			R_TessellateSurface(drawSurf->surface);
@@ -757,12 +757,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 	db.vertexBuffers.EndUpload();
 	db.indexBuffer.EndUpload();
 
-	// go back to the world model-view matrix
-	//gal.SetModelViewMatrix(backEnd.viewParms.world.modelMatrix);
-	if(depthRange)
-	{
-		//gal.SetDepthRange(0, 1);
-	}
+	// @TODO: go back to the world model-view matrix, restore depth range
 }
 
 void World::BindVertexBuffers(bool staticGeo, uint32_t count)
