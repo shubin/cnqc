@@ -721,11 +721,20 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			R_TessellateSurface(drawSurf->surface);
 			const int numIndexes = tess.numIndexes - firstCPUIndex;
 			//Q_assert(numIndexes == drawSurf->msurface->numIndexes); // will fail on occasion...
-			const int firstGPUVertex = drawSurf->msurface->firstVertex;
-			for(int i = firstCPUIndex; i < firstCPUIndex + numIndexes; ++i)
+			if(numIndexes == drawSurf->msurface->numIndexes)
 			{
-				tess.indexes[i] -= firstCPUVertex;
-				tess.indexes[i] += firstGPUVertex;
+				const int firstGPUVertex = drawSurf->msurface->firstVertex;
+				for(int i = firstCPUIndex; i < firstCPUIndex + numIndexes; ++i)
+				{
+					tess.indexes[i] -= firstCPUVertex;
+					tess.indexes[i] += firstGPUVertex;
+				}
+			}
+			else
+			{
+				// cancel this surface to not mess things up
+				tess.numVertexes = firstCPUVertex;
+				tess.numIndexes = firstCPUIndex;
 			}
 		}
 		else
