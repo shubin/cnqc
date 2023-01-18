@@ -34,7 +34,8 @@ struct ZPPVertexRC
 
 struct DynamicVertexRC
 {
-	float mvp[16];
+	float modelViewMatrix[16];
+	float projectionMatrix[16];
 	float clipPlane[4];
 };
 
@@ -67,8 +68,9 @@ void main()
 static const char* dyn_vs = R"grml(
 cbuffer RootConstants
 {
-	float4x4 mvp;
-	float4 clipPlane; // @TODO: set output clip distance
+	matrix modelViewMatrix;
+	matrix projectionMatrix;
+	float4 clipPlane;
 };
 
 #define STAGE_ATTRIBS(Index) \
@@ -101,6 +103,7 @@ struct VOut
 	STAGE_ATTRIBS(5)
 	STAGE_ATTRIBS(6)
 	STAGE_ATTRIBS(7)
+	float clipDist : SV_ClipDistance0;
 };
 
 #undef STAGE_ATTRIBS
@@ -110,8 +113,10 @@ struct VOut
 
 VOut main(VIn input)
 {
+	float4 positionVS = mul(modelViewMatrix, float4(input.position.xyz, 1));
+
 	VOut output;
-	output.position = mul(mvp, float4(input.position, 1.0));
+	output.position = mul(projectionMatrix, positionVS);
 	output.normal = input.normal;
 	STAGE_ATTRIBS(0)
 	STAGE_ATTRIBS(1)
@@ -121,6 +126,7 @@ VOut main(VIn input)
 	STAGE_ATTRIBS(5)
 	STAGE_ATTRIBS(6)
 	STAGE_ATTRIBS(7)
+	output.clipDist = dot(positionVS, clipPlane);
 
 	return output;
 }
@@ -459,7 +465,8 @@ void World::EndBatch()
 	db.indexBuffer.Upload();
 
 	DynamicVertexRC vertexRC;
-	R_MultMatrix(backEnd.orient.modelMatrix, backEnd.viewParms.projectionMatrix, vertexRC.mvp);
+	memcpy(vertexRC.modelViewMatrix, backEnd.orient.modelMatrix, sizeof(vertexRC.modelViewMatrix));
+	memcpy(vertexRC.projectionMatrix, backEnd.viewParms.projectionMatrix, sizeof(vertexRC.projectionMatrix));
 	memcpy(vertexRC.clipPlane, clipPlane, sizeof(vertexRC.clipPlane));
 	CmdSetRootConstants(rootSignature, ShaderStage::Vertex, &vertexRC);
 
