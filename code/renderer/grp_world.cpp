@@ -721,7 +721,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			}
 		}
 		else
-		{	
+		{
 			const int firstVertex = tess.numVertexes;
 			const int firstIndex = tess.numIndexes;
 			R_TessellateSurface(drawSurf->surface);
