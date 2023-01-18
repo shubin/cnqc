@@ -2459,7 +2459,7 @@ namespace RHI
 		desc.AddressW = addressMode;
 		desc.ComparisonFunc = D3D12_COMPARISON_FUNC_NONE;
 		desc.MaxAnisotropy = maxAnisotropy;
-		desc.MaxLOD = 0.0f;
+		desc.MaxLOD = 666.0f;
 		desc.Filter = filter;
 		const uint32_t index = rhi.descHeapSamplers.CreateSampler(desc);
 
