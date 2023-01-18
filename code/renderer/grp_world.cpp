@@ -448,7 +448,10 @@ void World::EndBatch()
 		return;
 	}
 
-	db.vertexBuffers.Upload(0, 1);
+	if(!batchHasStaticGeo)
+	{
+		db.vertexBuffers.Upload(0, 1);
+	}
 	db.indexBuffer.Upload();
 
 	DynamicVertexRC vertexRC;
@@ -462,12 +465,15 @@ void World::EndBatch()
 	Q_assert(pixelRC.textureIndex > 0);
 	CmdSetRootConstants(rootSignature, ShaderStage::Pixel, &pixelRC);
 
-	BindVertexBuffers(false, 4);
+	BindVertexBuffers(batchHasStaticGeo, 4);
 	BindIndexBuffer(false);
-	CmdDrawIndexed(tess.numIndexes, db.indexBuffer.batchFirst, db.vertexBuffers.batchFirst);
+	CmdDrawIndexed(tess.numIndexes, db.indexBuffer.batchFirst, batchHasStaticGeo ? 0 : db.vertexBuffers.batchFirst);
 
+	if(!batchHasStaticGeo)
+	{
+		db.vertexBuffers.EndBatch(tess.numVertexes);
+	}
 	db.indexBuffer.EndBatch(tess.numIndexes);
-	db.vertexBuffers.EndBatch(tess.numVertexes);
 	tess.numVertexes = 0;
 	tess.numIndexes = 0;
 }
@@ -651,9 +657,9 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 	db.vertexBuffers.BeginUpload();
 	db.indexBuffer.BeginUpload();
 
-	int i;
+	int ds;
 	const drawSurf_t* drawSurf;
-	for(i = 0, drawSurf = drawSurfs; i < opaqueCount; ++i, ++drawSurf)
+	for(ds = 0, drawSurf = drawSurfs; ds < opaqueCount; ++ds, ++drawSurf)
 	{
 		int fogNum;
 		int entityNum;
@@ -678,44 +684,31 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			UpdateModelViewMatrix(entityNum, originalTime);
 		}
 
-		if(hasStaticGeo)
+		int estVertexCount, estIndexCount;
+		R_ComputeTessellatedSize(&estVertexCount, &estIndexCount, drawSurf->surface);
+		// >= shouldn't be necessary but it's the overflow check currently used within
+		// R_TessellateSurface, so we have to be at least as aggressive as it is
+		if(tess.numVertexes + estVertexCount >= SHADER_MAX_VERTEXES ||
+			tess.numIndexes + estIndexCount >= SHADER_MAX_INDEXES)
 		{
 			EndBatch();
+			BeginBatch(tess.shader, batchHasStaticGeo);
+		}
 
-			DynamicVertexRC vertexRC;
-			R_MultMatrix(backEnd.orient.modelMatrix, backEnd.viewParms.projectionMatrix, vertexRC.mvp);
-			memcpy(vertexRC.clipPlane, clipPlane, sizeof(vertexRC.clipPlane));
-			CmdSetRootConstants(rootSignature, ShaderStage::Vertex, &vertexRC);
-
-			DynamicPixelRC pixelRC;
-			pixelRC.textureIndex = tess.shader->stages[0]->bundle.image[0]->textureIndex;
-			pixelRC.samplerIndex = 0;
-			CmdSetRootConstants(rootSignature, ShaderStage::Pixel, &pixelRC);
-
-			BindVertexBuffers(true, 4);
-			BindIndexBuffer(true);
-			CmdDrawIndexed(drawSurf->msurface->numIndexes, drawSurf->msurface->firstIndex, drawSurf->msurface->firstVertex);
-
-			tess.numVertexes = 0;
-			tess.numIndexes = 0;
-			BeginBatch(shader, hasStaticGeo);
+		if(hasStaticGeo)
+		{
+			// @TODO: grab a CPU-resident pre-computed index buffer instead of tessellating on demand...
+			const int firstCPUIndex = tess.numIndexes;
+			R_TessellateSurface(drawSurf->surface);
+			const int numIndexes = tess.numIndexes - firstCPUIndex;
+			const int firstGPUVertex = drawSurf->msurface->firstVertex;
+			for(int i = firstCPUIndex; i < firstCPUIndex + numIndexes; ++i)
+			{
+				tess.indexes[i] += firstGPUVertex;
+			}
 		}
 		else
-		{
-			// @TODO: this needs to be removed in the future and have R_TessellateSurface
-			// call into IRenderPipeline to end the current batch and start a new one
-			// through 2 function pointers
-			int estVertexCount, estIndexCount;
-			R_ComputeTessellatedSize(&estVertexCount, &estIndexCount, drawSurf->surface);
-			// >= shouldn't be necessary but it's the overflow check currently used within
-			// R_TessellateSurface, so we have to be at least as aggressive as it is
-			if(tess.numVertexes + estVertexCount >= SHADER_MAX_VERTEXES ||
-				tess.numIndexes + estIndexCount >= SHADER_MAX_INDEXES)
-			{
-				EndBatch();
-				BeginBatch(tess.shader, batchHasStaticGeo);
-			}
-			
+		{	
 			const int firstVertex = tess.numVertexes;
 			const int firstIndex = tess.numIndexes;
 			R_TessellateSurface(drawSurf->surface);
