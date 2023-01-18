@@ -699,7 +699,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			int estVertexCount, estIndexCount;
 			R_ComputeTessellatedSize(&estVertexCount, &estIndexCount, drawSurf->surface);
 			if(tess.numVertexes + estVertexCount > SHADER_MAX_VERTEXES ||
-				tess.dlNumIndexes + estIndexCount > SHADER_MAX_INDEXES)
+				tess.numIndexes + estIndexCount > SHADER_MAX_INDEXES)
 			{
 				EndBatch();
 				BeginBatch(shader, hasStaticGeo);
