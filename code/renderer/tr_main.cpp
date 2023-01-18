@@ -1281,6 +1281,14 @@ static int CompareDrawSurfGeneric(const void* aPtr, const void* bPtr)
 	const drawSurf_t* a = (const drawSurf_t*)aPtr;
 	const drawSurf_t* b = (const drawSurf_t*)bPtr;
 
+	// portals first
+	const int portalA = tr.shaders[a->shaderNum]->sort == SS_PORTAL;
+	const int portalB = tr.shaders[b->shaderNum]->sort == SS_PORTAL;
+	if(portalA != portalB)
+	{
+		return portalB - portalA;
+	}
+
 	// opaque first
 	const int opaqueA = tr.shaders[a->shaderNum]->sort <= SS_OPAQUE;
 	const int opaqueB = tr.shaders[b->shaderNum]->sort <= SS_OPAQUE;

@@ -664,7 +664,17 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 
 	CmdClearDepthTarget(depthTexture, 0.0f);
 
-	DrawPrePass();
+	// portals get the chance to write to depth and color before everyone else
+	{
+		const shader_t* shader = NULL;
+		int fogNum;
+		int entityNum;
+		R_DecomposeSort(cmd.drawSurfs->shaderSort, &entityNum, &shader, &fogNum);
+		if(shader->sort != SS_PORTAL)
+		{
+			DrawPrePass();
+		}
+	}
 
 	CmdBindRootSignature(rootSignature);
 	CmdBindPipeline(pipeline);
