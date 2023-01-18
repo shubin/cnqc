@@ -850,10 +850,13 @@ static qbool R_MirrorViewBySurface( drawSurf_t* drawSurf, int entityNum )
 		return qfalse;
 	}
 
+#if 0
+	// @TODO:
 	// trivially reject portal/mirror
 	if ( SurfIsOffscreen( drawSurf ) ) {
 		return qfalse;
 	}
+#endif
 
 	// save old viewParms so we can return to it after the mirror view
 	oldParms = tr.viewParms;
@@ -1330,12 +1333,12 @@ static void R_SortDrawSurfs( int firstDrawSurf, int firstLitSurf )
 		return;
 	}
 
-	// sort the drawsurfs by sort type, then shader, then entity, etc
-	//R_RadixSort( drawSurfs, numDrawSurfs );
-	qsort( drawSurfs, numDrawSurfs, sizeof(drawSurf_t), &CompareDrawSurfGeneric );
-
 	const shader_t* shader;
 	int fogNum, entityNum;
+
+#if 0
+	// sort the drawsurfs by sort type, then shader, then entity, etc
+	R_RadixSort( drawSurfs, numDrawSurfs );
 
 	// check for any pass through drawing,
 	// which may cause another view to be rendered first
@@ -1360,6 +1363,26 @@ static void R_SortDrawSurfs( int firstDrawSurf, int firstLitSurf )
 			break;		// only one mirror view at a time
 		}
 	}
+#else
+	qsort(drawSurfs, numDrawSurfs, sizeof(drawSurf_t), &CompareDrawSurfGeneric);
+
+	// check for any pass through drawing,
+	// which may cause another view to be rendered first
+	for(int i = 0; i < numDrawSurfs; i++)
+	{
+		R_DecomposeSort((drawSurfs + i)->sort, &entityNum, &shader, &fogNum);
+
+		// if the mirror was completely clipped away, we may need to check another surface
+		if(shader->sort == SS_PORTAL && R_MirrorViewBySurface((drawSurfs + i), entityNum))
+		{
+			// this is a debug option to see exactly what is being mirrored
+			if(r_portalOnly->integer)
+			{
+				return;
+			}
+		}
+	}
+#endif
 
 	// compute the average camera depth of all transparent surfaces
 	int numTranspSurfs = 0;
