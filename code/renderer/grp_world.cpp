@@ -678,7 +678,29 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			UpdateModelViewMatrix(entityNum, originalTime);
 		}
 
-		// treat everything as dynamic for now
+		if(hasStaticGeo)
+		{
+			EndBatch();
+
+			DynamicVertexRC vertexRC;
+			R_MultMatrix(backEnd.orient.modelMatrix, backEnd.viewParms.projectionMatrix, vertexRC.mvp);
+			memcpy(vertexRC.clipPlane, clipPlane, sizeof(vertexRC.clipPlane));
+			CmdSetRootConstants(rootSignature, ShaderStage::Vertex, &vertexRC);
+
+			DynamicPixelRC pixelRC;
+			pixelRC.textureIndex = tess.shader->stages[0]->bundle.image[0]->textureIndex;
+			pixelRC.samplerIndex = 0;
+			CmdSetRootConstants(rootSignature, ShaderStage::Pixel, &pixelRC);
+
+			BindVertexBuffers(true, 4);
+			BindIndexBuffer(true);
+			CmdDrawIndexed(drawSurf->msurface->numIndexes, drawSurf->msurface->firstIndex, drawSurf->msurface->firstVertex);
+
+			tess.numVertexes = 0;
+			tess.numIndexes = 0;
+			BeginBatch(shader, hasStaticGeo);
+		}
+		else
 		{
 			// @TODO: this needs to be removed in the future and have R_TessellateSurface
 			// call into IRenderPipeline to end the current batch and start a new one
