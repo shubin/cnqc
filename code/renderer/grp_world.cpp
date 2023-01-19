@@ -164,6 +164,9 @@ struct VOut
 Texture2D textures2D[2048] : register(t0);
 SamplerState samplers[2] : register(s0);
 
+// reminder: early-Z is early depth test AND early depth write
+// therefore, the attribute should be gone if opaque stage #1 does alpha testing (discard)
+[earlydepthstencil]
 float4 main(VOut input) : SV_TARGET
 {
 	return textures2D[textureIndex].Sample(samplers[samplerIndex], input.texCoords0) * input.color0;
