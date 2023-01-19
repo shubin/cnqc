@@ -173,6 +173,31 @@ bool FailsAlphaTest(uint alphaTest, float alpha)
 	return false;
 }
 
+float4 BlendSource(float4 src, float4 dst)
+{
+	#if(sBits == GLS_SRCBLEND_ZERO)
+		return float4(0.0, 0.0, 0.0, 0.0);
+	#elif(sBits == GLS_SRCBLEND_ONE)
+		return src;
+	#elif(sBits == GLS_SRCBLEND_DST_COLOR)
+		return dst;
+	#elif(sBits == GLS_SRCBLEND_ONE_MINUS_DST_COLOR)
+		return src * (float4(1.0, 1.0, 1.0, 1.0) - dst);
+	#elif(sBits == GLS_SRCBLEND_SRC_ALPHA)
+		return src * float4(src.a, src.a, src.a, 1.0);
+	#elif(sBits == GLS_SRCBLEND_ONE_MINUS_SRC_ALPHA)
+		return src * float4(1.0 - src.a, 1.0 - src.a, 1.0 - src.a, 1.0);
+	#elif(sBits == GLS_SRCBLEND_DST_ALPHA)
+		return src * float4(dst.a, dst.a, dst.a, 1.0);
+	#elif(sBits == GLS_SRCBLEND_ONE_MINUS_DST_ALPHA)
+		return src * float4(1.0 - dst.a, 1.0 - dst.a, 1.0 - dst.a, 1.0);
+	#elif(sBits == GLS_SRCBLEND_ALPHA_SATURATE)
+		return src * float4(src.a, src.a, src.a, 1.0); // ?????????
+	#else
+		BAD;
+	#endif
+}
+
 // reminder: early-Z is early depth test AND early depth write
 // therefore, the attribute should be gone if opaque stage #1 does alpha testing (discard)
 [earlydepthstencil]
