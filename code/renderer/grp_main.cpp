@@ -24,8 +24,13 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 #include "grp_local.h"
 
 
-// macros to define:
+// VS macros to define:
 // STAGE_COUNT 1-8
+//
+// PS macros to define:
+// STAGE_COUNT 1-8
+// STAGE#_BLEND_BITS
+// STAGE#_ALPHA_TEST 0-3
 static const char* opaqueShaderSource = R"grml(
 #define STAGE_ATTRIBS(Index) \
 	float2 texCoords##Index : TEXCOORD##Index; \
@@ -161,41 +166,101 @@ cbuffer RootConstants
 Texture2D textures2D[2048] : register(t0);
 SamplerState samplers[2] : register(s0);
 
-bool FailsAlphaTest(uint alphaTest, float alpha)
+bool FailsAlphaTest(float alpha)
 {
-	if( (alphaTest == 1 && alpha == 0.0) ||
-	    (alphaTest == 2 && alpha >= 0.5) ||
-	    (alphaTest == 3 && alpha <  0.5))
-	{
-		return true;
-	}
-
-	return false;
+	#if ALPHA_TEST == 1
+		return alpha == 0.0;
+	#elif ALPHA_TEST == 2
+		return alpha >= 0.5;
+	#elif ALPHA_TEST == 3
+		return alpha < 0.0;
+	#else
+		return false;
+	#endif
 }
 
+#define GLS_SRCBLEND_ZERO						0x00000001
+#define GLS_SRCBLEND_ONE						0x00000002
+#define GLS_SRCBLEND_DST_COLOR					0x00000003
+#define GLS_SRCBLEND_ONE_MINUS_DST_COLOR		0x00000004
+#define GLS_SRCBLEND_SRC_ALPHA					0x00000005
+#define GLS_SRCBLEND_ONE_MINUS_SRC_ALPHA		0x00000006
+#define GLS_SRCBLEND_DST_ALPHA					0x00000007
+#define GLS_SRCBLEND_ONE_MINUS_DST_ALPHA		0x00000008
+#define GLS_SRCBLEND_ALPHA_SATURATE				0x00000009
+#define		GLS_SRCBLEND_BITS					0x0000000f
+
+#define GLS_DSTBLEND_ZERO						0x00000010
+#define GLS_DSTBLEND_ONE						0x00000020
+#define GLS_DSTBLEND_SRC_COLOR					0x00000030
+#define GLS_DSTBLEND_ONE_MINUS_SRC_COLOR		0x00000040
+#define GLS_DSTBLEND_SRC_ALPHA					0x00000050
+#define GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA		0x00000060
+#define GLS_DSTBLEND_DST_ALPHA					0x00000070
+#define GLS_DSTBLEND_ONE_MINUS_DST_ALPHA		0x00000080
+#define		GLS_DSTBLEND_BITS					0x000000f0
+
+// input: SOURCE_BLEND
 float4 BlendSource(float4 src, float4 dst)
 {
-	#if(sBits == GLS_SRCBLEND_ZERO)
+	#if SOURCE_BLEND == GLS_SRCBLEND_ZERO
 		return float4(0.0, 0.0, 0.0, 0.0);
-	#elif(sBits == GLS_SRCBLEND_ONE)
+	#elif SOURCE_BLEND == GLS_SRCBLEND_ONE
 		return src;
-	#elif(sBits == GLS_SRCBLEND_DST_COLOR)
+	#elif SOURCE_BLEND == GLS_SRCBLEND_DST_COLOR
 		return dst;
-	#elif(sBits == GLS_SRCBLEND_ONE_MINUS_DST_COLOR)
+	#elif SOURCE_BLEND == GLS_SRCBLEND_ONE_MINUS_DST_COLOR
 		return src * (float4(1.0, 1.0, 1.0, 1.0) - dst);
-	#elif(sBits == GLS_SRCBLEND_SRC_ALPHA)
+	#elif SOURCE_BLEND == GLS_SRCBLEND_SRC_ALPHA
 		return src * float4(src.a, src.a, src.a, 1.0);
-	#elif(sBits == GLS_SRCBLEND_ONE_MINUS_SRC_ALPHA)
+	#elif SOURCE_BLEND == GLS_SRCBLEND_ONE_MINUS_SRC_ALPHA
 		return src * float4(1.0 - src.a, 1.0 - src.a, 1.0 - src.a, 1.0);
-	#elif(sBits == GLS_SRCBLEND_DST_ALPHA)
+	#elif SOURCE_BLEND == GLS_SRCBLEND_DST_ALPHA
 		return src * float4(dst.a, dst.a, dst.a, 1.0);
-	#elif(sBits == GLS_SRCBLEND_ONE_MINUS_DST_ALPHA)
+	#elif SOURCE_BLEND == GLS_SRCBLEND_ONE_MINUS_DST_ALPHA
 		return src * float4(1.0 - dst.a, 1.0 - dst.a, 1.0 - dst.a, 1.0);
-	#elif(sBits == GLS_SRCBLEND_ALPHA_SATURATE)
+	#elif SOURCE_BLEND == GLS_SRCBLEND_ALPHA_SATURATE
 		return src * float4(src.a, src.a, src.a, 1.0); // ?????????
 	#else
-		BAD;
+		return src;
 	#endif
+}
+
+// input: DEST_BLEND
+float4 BlendDest(float4 src, float4 dst)
+{
+	#if DEST_BLEND == GLS_DSTBLEND_ZERO
+		return vec4(0.0, 0.0, 0.0, 0.0);
+	#elif DEST_BLEND == GLS_DSTBLEND_ONE
+		return dst;
+	#elif DEST_BLEND == GLS_DSTBLEND_SRC_COLOR
+		return dst * src;
+	#elif DEST_BLEND == GLS_DSTBLEND_ONE_MINUS_SRC_COLOR
+		return dst * vec4(1.0 - src.r, 1.0 - src.g, 1.0 - src.b, 1.0 - src.a);
+	#elif DEST_BLEND == GLS_DSTBLEND_SRC_ALPHA
+		return dst * vec4(src.a, src.a, src.a, 1.0);
+	#elif DEST_BLEND == GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA
+		return dst * vec4(1.0 - src.a, 1.0 - src.a, 1.0 - src.a, 0.0);
+	#elif DEST_BLEND == GLS_DSTBLEND_DST_ALPHA
+		return dst * vec4(dst.a, dst.a, dst.a, 1.0);
+	#elif DEST_BLEND == GLS_DSTBLEND_ONE_MINUS_DST_ALPHA
+		return dst * vec4(1.0 - dst.a, 1.0 - dst.a, 1.0 - dst.a, 1.0);
+	#else
+		return dst;
+	#endif
+}
+
+// input: BLEND_BITS
+float4 Blend(float4 src, float4 dst)
+{
+	#define SOURCE_BLEND (BLEND_BITS & GLS_SRCBLEND_BITS)
+	#define DEST_BLEND (BLEND_BITS & GLS_DSTBLEND_BITS)
+	float4 srcOut = BlendSource(src, dst);
+	float4 dstOut = BlendDest(src, dst);
+	#undef SOURCE_BLEND
+	#undef DEST_BLEND
+
+	return srcOut + dstOut;
 }
 
 // reminder: early-Z is early depth test AND early depth write
