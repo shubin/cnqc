@@ -1179,8 +1179,8 @@ namespace RHI
 		switch(cullMode)
 		{
 			case CT_TWO_SIDED: return D3D12_CULL_MODE_NONE;
-			case CT_BACK_SIDED: return D3D12_CULL_MODE_FRONT;
-			case CT_FRONT_SIDED: return D3D12_CULL_MODE_BACK;
+			case CT_BACK_SIDED: return D3D12_CULL_MODE_BACK;
+			case CT_FRONT_SIDED: return D3D12_CULL_MODE_FRONT;
 			default: Q_assert(!"Unsupported cull mode"); return D3D12_CULL_MODE_NONE;
 		}
 	}
@@ -1238,6 +1238,7 @@ namespace RHI
 	{
 		switch(stateBits & GLS_SRCBLEND_BITS)
 		{
+			case 0: return D3D12_BLEND_ONE;
 			case GLS_SRCBLEND_ZERO: return D3D12_BLEND_ZERO;
 			case GLS_SRCBLEND_ONE: return D3D12_BLEND_ONE;
 			case GLS_SRCBLEND_DST_COLOR: return D3D12_BLEND_DEST_COLOR;
@@ -1255,6 +1256,7 @@ namespace RHI
 	{
 		switch(stateBits & GLS_DSTBLEND_BITS)
 		{
+			case 0: return D3D12_BLEND_ZERO;
 			case GLS_DSTBLEND_ZERO: return D3D12_BLEND_ZERO;
 			case GLS_DSTBLEND_ONE: return D3D12_BLEND_ONE;
 			case GLS_DSTBLEND_SRC_COLOR: return D3D12_BLEND_SRC_COLOR;

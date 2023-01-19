@@ -423,12 +423,15 @@ uint32_t GRP::CreatePSO(CachedPSO& cache)
 		desc.vertexLayout.AddAttribute(a++, ShaderSemantic::TexCoord, DataType::Float32, 2, 0);
 		desc.vertexLayout.AddAttribute(a++, ShaderSemantic::Color, DataType::UNorm8, 4, 0);
 	}
-	desc.depthStencil.depthComparison = ComparisonFunction::GreaterEqual;
 	desc.depthStencil.depthStencilFormat = TextureFormat::Depth32_Float;
-	desc.depthStencil.enableDepthTest = true;
-	desc.depthStencil.enableDepthWrites = true;
-	desc.rasterizer.cullMode = CT_FRONT_SIDED;
-	desc.AddRenderTarget(GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO, TextureFormat::RGBA32_UNorm);
+	desc.depthStencil.depthComparison =
+		(cache.desc.stateBits & GLS_DEPTHFUNC_EQUAL) != 0 ?
+		ComparisonFunction::Equal :
+		ComparisonFunction::GreaterEqual;
+	desc.depthStencil.enableDepthTest = (cache.desc.stateBits & GLS_DEPTHTEST_DISABLE) == 0;
+	desc.depthStencil.enableDepthWrites = (cache.desc.stateBits & GLS_DEPTHMASK_TRUE) != 0;
+	desc.rasterizer.cullMode = cache.desc.cullType;
+	desc.AddRenderTarget(cache.desc.stateBits & GLS_BLEND_BITS, TextureFormat::RGBA32_UNorm);
 	cache.pipeline = CreateGraphicsPipeline(desc);
 
 	const uint32_t index = psoCount++;

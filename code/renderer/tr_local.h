@@ -1151,6 +1151,8 @@ const image_t* R_UpdateAndGetBundleImage( const textureBundle_t* bundle, updateA
 #define GLS_DSTBLEND_ONE_MINUS_DST_ALPHA		0x00000080
 #define		GLS_DSTBLEND_BITS					0x000000f0
 
+#define		GLS_BLEND_BITS						0x000000ff
+
 #define GLS_DEPTHMASK_TRUE						0x00000100	// enable depth writes
 
 #define GLS_POLYMODE_LINE						0x00001000	// wireframe polygon filling, not line rendering
