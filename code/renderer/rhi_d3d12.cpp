@@ -3262,6 +3262,8 @@ namespace RHI
 
 #if defined(_DEBUG) || defined(CNQ3_DEV)
 
+	// @TODO: update to a CreateShader / DestroyShader interface,
+	// with the struct containing a void* to the blob
 	static ShaderByteCode CompileShader(const char* source, const char* target)
 	{
 		// yup, this leaks memory but we don't care as it's for quick and dirty testing
