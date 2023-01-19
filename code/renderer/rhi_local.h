@@ -270,6 +270,12 @@ namespace RHI
 		uint32_t byteCount = 0;
 	};
 
+	struct ShaderMacro
+	{
+		const char* name = NULL;
+		const char* value = NULL;
+	};
+
 	struct VertexAttribute
 	{
 		uint32_t vertexBufferIndex = 0; // also called "binding" or "input slot"
@@ -633,12 +639,11 @@ namespace RHI
 	void BeginTempCommandList();
 	void EndTempCommandList();
 
-#define CNQ3_DEV
-#if defined(_DEBUG) || defined(CNQ3_DEV)
-	ShaderByteCode CompileVertexShader(const char* source);
-	ShaderByteCode CompilePixelShader(const char* source);
-	ShaderByteCode CompileComputeShader(const char* source);
-#endif
+	ShaderByteCode CompileShader(ShaderStage::Id stage, const char* source, const char* entryPoint = "main", uint32_t macroCount = 0, const ShaderMacro* macros = NULL);
+
+	inline ShaderByteCode CompileVertexShader(const char* source) { return CompileShader(ShaderStage::Vertex, source); }
+	inline ShaderByteCode CompilePixelShader(const char* source) { return CompileShader(ShaderStage::Pixel, source); }
+	inline ShaderByteCode CompileComputeShader(const char* source) { return CompileShader(ShaderStage::Compute, source); }
 
 	const Handle HandleIndexBitCount = 16;
 	const Handle HandleIndexBitOffset = 0;

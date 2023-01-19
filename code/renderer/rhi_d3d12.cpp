@@ -3259,12 +3259,23 @@ namespace RHI
 		rhi.tempCommandListOpen = false;
 	}
 
-#if defined(_DEBUG) || defined(CNQ3_DEV)
-
 	// @TODO: update to a CreateShader / DestroyShader interface,
 	// with the struct containing a void* to the blob
-	static ShaderByteCode CompileShader(const char* source, const char* target)
+	ShaderByteCode CompileShader(ShaderStage::Id stage, const char* source, const char* entryPoint, uint32_t macroCount, const ShaderMacro* macros)
 	{
+		// extra entries: NULL terminator + VERTEX_SHADER + PIXEL_SHADER + COMPUTE_SHADER
+		D3D_SHADER_MACRO shaderMacros[16];
+		Q_assert(ARRAY_LEN(shaderMacros) >= macroCount + 4);
+
+		const char* target = "???";
+		switch(stage)
+		{
+			case ShaderStage::Vertex: target = "vs_5_1"; break;
+			case ShaderStage::Pixel: target = "ps_5_1"; break;
+			case ShaderStage::Compute: target = "cs_5_1"; break;
+			default: Q_assert(0); break;
+		}
+
 		// yup, this leaks memory but we don't care as it's for quick and dirty testing
 		// could write to a linear allocator instead...
 		ID3DBlob* blob;
@@ -3274,7 +3285,26 @@ namespace RHI
 #else
 		const UINT flags = D3DCOMPILE_OPTIMIZATION_LEVEL3;
 #endif
-		if(FAILED(D3DCompile(source, strlen(source), NULL, NULL, NULL, "main", target, flags, 0, &blob, &error)))
+		
+		uint32_t m = 0;
+		shaderMacros[m].Name = "VERTEX_SHADER";
+		shaderMacros[m].Definition = stage == ShaderStage::Vertex ? "1" : "0";
+		m++;
+		shaderMacros[m].Name = "PIXEL_SHADER";
+		shaderMacros[m].Definition = stage == ShaderStage::Pixel ? "1" : "0";
+		m++;
+		shaderMacros[m].Name = "COMPUTE_SHADER";
+		shaderMacros[m].Definition = stage == ShaderStage::Compute ? "1" : "0";
+		m++;
+		const uint32_t mEnd = m + macroCount;
+		for(; m < mEnd; ++m)
+		{
+			shaderMacros[m].Name = macros[m].name;
+			shaderMacros[m].Definition = macros[m].value;
+		}
+		shaderMacros[m].Name = NULL;
+		shaderMacros[m].Definition = NULL;
+		if(FAILED(D3DCompile(source, strlen(source), NULL, shaderMacros, NULL, entryPoint, target, flags, 0, &blob, &error)))
 		{
 			ri.Error(ERR_FATAL, "Shader (%s) compilation failed:\n%s\n", target, (const char*)error->GetBufferPointer());
 			return ShaderByteCode();
@@ -3286,23 +3316,6 @@ namespace RHI
 
 		return byteCode;
 	}
-
-	ShaderByteCode CompileVertexShader(const char* source)
-	{
-		return CompileShader(source, "vs_5_1");
-	}
-
-	ShaderByteCode CompilePixelShader(const char* source)
-	{
-		return CompileShader(source, "ps_5_1");
-	}
-
-	ShaderByteCode CompileComputeShader(const char* source)
-	{
-		return CompileShader(source, "cs_5_1");
-	}
-
-#endif
 }
 
 void R_GUI_RHI()

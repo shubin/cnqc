@@ -69,7 +69,81 @@ void main()
 }
 )grml";
 
-static const char* dyn_vs = R"grml(
+static const char* opaqueShaderSource = R"grml(
+// @TODO: to define outside the ubershader itself!
+#define STAGE_COUNT 1
+
+#define STAGE_ATTRIBS(Index) \
+	float2 texCoords##Index : TEXCOORD##Index; \
+	float4 color##Index : COLOR##Index;
+
+#if VERTEX_SHADER
+struct VIn
+{
+	float3 position : POSITION;
+	float3 normal : NORMAL;
+#if STAGE_COUNT >= 1
+	STAGE_ATTRIBS(0)
+#endif
+#if STAGE_COUNT >= 2
+	STAGE_ATTRIBS(1)
+#endif
+#if STAGE_COUNT >= 3
+	STAGE_ATTRIBS(2)
+#endif
+#if STAGE_COUNT >= 4
+	STAGE_ATTRIBS(3)
+#endif
+#if STAGE_COUNT >= 5
+	STAGE_ATTRIBS(4)
+#endif
+#if STAGE_COUNT >= 6
+	STAGE_ATTRIBS(5)
+#endif
+#if STAGE_COUNT >= 7
+	STAGE_ATTRIBS(6)
+#endif
+#if STAGE_COUNT >= 8
+	STAGE_ATTRIBS(7)
+#endif
+};
+#endif
+
+struct VOut
+{
+	float4 position : SV_Position;
+	float3 normal : NORMAL;
+#if STAGE_COUNT >= 1
+	STAGE_ATTRIBS(0)
+#endif
+#if STAGE_COUNT >= 2
+	STAGE_ATTRIBS(1)
+#endif
+#if STAGE_COUNT >= 3
+	STAGE_ATTRIBS(2)
+#endif
+#if STAGE_COUNT >= 4
+	STAGE_ATTRIBS(3)
+#endif
+#if STAGE_COUNT >= 5
+	STAGE_ATTRIBS(4)
+#endif
+#if STAGE_COUNT >= 6
+	STAGE_ATTRIBS(5)
+#endif
+#if STAGE_COUNT >= 7
+	STAGE_ATTRIBS(6)
+#endif
+#if STAGE_COUNT >= 8
+	STAGE_ATTRIBS(7)
+#endif
+	float clipDist : SV_ClipDistance0;
+};
+
+#undef STAGE_ATTRIBS
+
+#if VERTEX_SHADER
+
 cbuffer RootConstants
 {
 	matrix modelViewMatrix;
@@ -77,40 +151,6 @@ cbuffer RootConstants
 	float4 clipPlane;
 };
 
-#define STAGE_ATTRIBS(Index) \
-	float2 texCoords##Index : TEXCOORD##Index; \
-	float4 color##Index : COLOR##Index;
-
-struct VIn
-{
-	float3 position : POSITION;
-	float3 normal : NORMAL;
-	STAGE_ATTRIBS(0)
-	STAGE_ATTRIBS(1)
-	STAGE_ATTRIBS(2)
-	STAGE_ATTRIBS(3)
-	STAGE_ATTRIBS(4)
-	STAGE_ATTRIBS(5)
-	STAGE_ATTRIBS(6)
-	STAGE_ATTRIBS(7)
-};
-
-struct VOut
-{
-	float4 position : SV_Position;
-	float3 normal : NORMAL;
-	STAGE_ATTRIBS(0)
-	STAGE_ATTRIBS(1)
-	STAGE_ATTRIBS(2)
-	STAGE_ATTRIBS(3)
-	STAGE_ATTRIBS(4)
-	STAGE_ATTRIBS(5)
-	STAGE_ATTRIBS(6)
-	STAGE_ATTRIBS(7)
-	float clipDist : SV_ClipDistance0;
-};
-
-#undef STAGE_ATTRIBS
 #define STAGE_ATTRIBS(Index) \
 	output.texCoords##Index = input.texCoords##Index; \
 	output.color##Index = input.color##Index;
@@ -122,43 +162,43 @@ VOut main(VIn input)
 	VOut output;
 	output.position = mul(projectionMatrix, positionVS);
 	output.normal = input.normal;
+#if STAGE_COUNT >= 1
 	STAGE_ATTRIBS(0)
+#endif
+#if STAGE_COUNT >= 2
 	STAGE_ATTRIBS(1)
+#endif
+#if STAGE_COUNT >= 3
 	STAGE_ATTRIBS(2)
+#endif
+#if STAGE_COUNT >= 4
 	STAGE_ATTRIBS(3)
+#endif
+#if STAGE_COUNT >= 5
 	STAGE_ATTRIBS(4)
+#endif
+#if STAGE_COUNT >= 6
 	STAGE_ATTRIBS(5)
+#endif
+#if STAGE_COUNT >= 7
 	STAGE_ATTRIBS(6)
+#endif
+#if STAGE_COUNT >= 8
 	STAGE_ATTRIBS(7)
+#endif
 	output.clipDist = dot(positionVS, clipPlane);
 
 	return output;
 }
-)grml";
 
-static const char* dyn_ps = R"grml(
+#endif
+
+#if PIXEL_SHADER
+
 cbuffer RootConstants
 {
 	uint textureIndex;
 	uint samplerIndex;
-};
-
-#define STAGE_ATTRIBS(Index) \
-	float2 texCoords##Index : TEXCOORD##Index; \
-	float4 color##Index : COLOR##Index;
-
-struct VOut
-{
-	float4 position : SV_Position;
-	float3 normal : NORMAL;
-	STAGE_ATTRIBS(0)
-	STAGE_ATTRIBS(1)
-	STAGE_ATTRIBS(2)
-	STAGE_ATTRIBS(3)
-	STAGE_ATTRIBS(4)
-	STAGE_ATTRIBS(5)
-	STAGE_ATTRIBS(6)
-	STAGE_ATTRIBS(7)
 };
 
 Texture2D textures2D[2048] : register(t0);
@@ -171,6 +211,8 @@ float4 main(VOut input) : SV_TARGET
 {
 	return textures2D[textureIndex].Sample(samplers[samplerIndex], input.texCoords0) * input.color0;
 }
+
+#endif
 )grml";
 
 
@@ -294,8 +336,8 @@ void World::Init()
 	{
 		uint32_t a = 0;
 		GraphicsPipelineDesc desc("dynamic", rootSignature);
-		desc.vertexShader = CompileVertexShader(dyn_vs);
-		desc.pixelShader = CompilePixelShader(dyn_ps);
+		desc.vertexShader = CompileShader(ShaderStage::Vertex, opaqueShaderSource, "main");
+		desc.pixelShader = CompileShader(ShaderStage::Pixel, opaqueShaderSource, "main");
 		desc.vertexLayout.AddAttribute(a++, ShaderSemantic::Position, DataType::Float32, 3, 0);
 		desc.vertexLayout.AddAttribute(a++, ShaderSemantic::Normal, DataType::Float32, 2, 0);
 		for(int s = 0; s < MAX_SHADER_STAGES; ++s)
