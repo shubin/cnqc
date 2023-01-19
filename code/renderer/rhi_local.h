@@ -180,17 +180,6 @@ namespace RHI
 		};
 	};
 
-	struct CullMode
-	{
-		enum Id
-		{
-			None,
-			Front,
-			Back,
-			Count
-		};
-	};
-
 	struct DescriptorType
 	{
 		enum Id
@@ -332,7 +321,7 @@ namespace RHI
 		depthStencil;
 		struct Rasterizer
 		{
-			CullMode::Id cullMode = CullMode::Front;
+			cullType_t cullMode = CT_FRONT_SIDED;
 			// @TODO: depth bias options for polygonOffset
 		}
 		rasterizer;

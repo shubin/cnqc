@@ -425,7 +425,7 @@ uint32_t GRP::CreatePSO(CachedPSO& cache)
 	desc.depthStencil.depthStencilFormat = TextureFormat::Depth32_Float;
 	desc.depthStencil.enableDepthTest = true;
 	desc.depthStencil.enableDepthWrites = true;
-	desc.rasterizer.cullMode = CullMode::Back;
+	desc.rasterizer.cullMode = CT_FRONT_SIDED;
 	desc.AddRenderTarget(GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO, TextureFormat::RGBA32_UNorm);
 	cache.pipeline = CreateGraphicsPipeline(desc);
 

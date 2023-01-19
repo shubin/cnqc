@@ -109,7 +109,7 @@ void UI::Init()
 		desc.depthStencil.depthStencilFormat = TextureFormat::Depth32_Float;
 		desc.depthStencil.enableDepthTest = false;
 		desc.depthStencil.enableDepthWrites = false;
-		desc.rasterizer.cullMode = CullMode::None;
+		desc.rasterizer.cullMode = CT_TWO_SIDED;
 		desc.AddRenderTarget(GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, TextureFormat::RGBA32_UNorm);
 		pipeline = CreateGraphicsPipeline(desc);
 	}

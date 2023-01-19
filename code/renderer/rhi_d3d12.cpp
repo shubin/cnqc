@@ -1174,13 +1174,13 @@ namespace RHI
 		}
 	}
 
-	static D3D12_CULL_MODE GetD3DCullMode(CullMode::Id cullMode)
+	static D3D12_CULL_MODE GetD3DCullMode(cullType_t cullMode)
 	{
 		switch(cullMode)
 		{
-			case CullMode::None: return D3D12_CULL_MODE_NONE;
-			case CullMode::Front: return D3D12_CULL_MODE_FRONT;
-			case CullMode::Back: return D3D12_CULL_MODE_BACK;
+			case CT_TWO_SIDED: return D3D12_CULL_MODE_NONE;
+			case CT_BACK_SIDED: return D3D12_CULL_MODE_FRONT;
+			case CT_FRONT_SIDED: return D3D12_CULL_MODE_BACK;
 			default: Q_assert(!"Unsupported cull mode"); return D3D12_CULL_MODE_NONE;
 		}
 	}

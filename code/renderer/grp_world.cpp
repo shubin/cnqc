@@ -143,7 +143,7 @@ void World::Init()
 		desc.depthStencil.depthStencilFormat = TextureFormat::Depth32_Float;
 		desc.depthStencil.enableDepthTest = true;
 		desc.depthStencil.enableDepthWrites = true;
-		desc.rasterizer.cullMode = CullMode::Back;
+		desc.rasterizer.cullMode = CT_FRONT_SIDED; // need 1 PSO per cull mode...
 		zppPipeline = CreateGraphicsPipeline(desc);
 	}
 	{
