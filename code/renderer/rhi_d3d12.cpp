@@ -3288,24 +3288,24 @@ namespace RHI
 		const UINT flags = D3DCOMPILE_OPTIMIZATION_LEVEL3;
 #endif
 		
-		uint32_t m = 0;
-		shaderMacros[m].Name = "VERTEX_SHADER";
-		shaderMacros[m].Definition = stage == ShaderStage::Vertex ? "1" : "0";
-		m++;
-		shaderMacros[m].Name = "PIXEL_SHADER";
-		shaderMacros[m].Definition = stage == ShaderStage::Pixel ? "1" : "0";
-		m++;
-		shaderMacros[m].Name = "COMPUTE_SHADER";
-		shaderMacros[m].Definition = stage == ShaderStage::Compute ? "1" : "0";
-		m++;
-		const uint32_t mEnd = m + macroCount;
-		for(; m < mEnd; ++m)
+		uint32_t md = 0;
+		shaderMacros[md].Name = "VERTEX_SHADER";
+		shaderMacros[md].Definition = stage == ShaderStage::Vertex ? "1" : "0";
+		md++;
+		shaderMacros[md].Name = "PIXEL_SHADER";
+		shaderMacros[md].Definition = stage == ShaderStage::Pixel ? "1" : "0";
+		md++;
+		shaderMacros[md].Name = "COMPUTE_SHADER";
+		shaderMacros[md].Definition = stage == ShaderStage::Compute ? "1" : "0";
+		md++;
+		for(uint32_t ms = 0; ms < macroCount; ++ms)
 		{
-			shaderMacros[m].Name = macros[m].name;
-			shaderMacros[m].Definition = macros[m].value;
+			shaderMacros[md].Name = macros[ms].name;
+			shaderMacros[md].Definition = macros[ms].value;
+			md++;
 		}
-		shaderMacros[m].Name = NULL;
-		shaderMacros[m].Definition = NULL;
+		shaderMacros[md].Name = NULL;
+		shaderMacros[md].Definition = NULL;
 		if(FAILED(D3DCompile(source, strlen(source), NULL, shaderMacros, NULL, entryPoint, target, flags, 0, &blob, &error)))
 		{
 			ri.Error(ERR_FATAL, "Shader (%s) compilation failed:\n%s\n", target, (const char*)error->GetBufferPointer());

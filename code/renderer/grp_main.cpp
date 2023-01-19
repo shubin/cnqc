@@ -24,10 +24,9 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 #include "grp_local.h"
 
 
+// macros to define:
+// STAGE_COUNT 1-8
 static const char* opaqueShaderSource = R"grml(
-// @TODO: to define outside the ubershader itself!
-#define STAGE_COUNT 1
-
 #define STAGE_ATTRIBS(Index) \
 	float2 texCoords##Index : TEXCOORD##Index; \
 	float4 color##Index : COLOR##Index;
@@ -412,10 +411,20 @@ uint32_t GRP::CreatePSO(CachedPSO& cache)
 {
 	Q_assert(psoCount < ARRAY_LEN(psos));
 
+	uint32_t macroCount = 0;
+	ShaderMacro macros[16];
+	macros[macroCount].name = "STAGE_COUNT";
+	macros[macroCount].value = va("%d", cache.stageCount);
+	macroCount++;
+	ShaderByteCode vertexShader = CompileShader(ShaderStage::Vertex, opaqueShaderSource, "main", macroCount, macros);
+
+	// @TODO:
+	ShaderByteCode pixelShader = CompileShader(ShaderStage::Pixel, opaqueShaderSource, "main", macroCount, macros);
+
 	uint32_t a = 0;
 	GraphicsPipelineDesc desc("opaque", opaqueRootSignature);
-	desc.vertexShader = CompileShader(ShaderStage::Vertex, opaqueShaderSource, "main");
-	desc.pixelShader = CompileShader(ShaderStage::Pixel, opaqueShaderSource, "main");
+	desc.vertexShader = vertexShader;
+	desc.pixelShader = pixelShader;
 	desc.vertexLayout.AddAttribute(a++, ShaderSemantic::Position, DataType::Float32, 3, 0);
 	desc.vertexLayout.AddAttribute(a++, ShaderSemantic::Normal, DataType::Float32, 2, 0);
 	for(int s = 0; s < cache.stageCount; ++s)
