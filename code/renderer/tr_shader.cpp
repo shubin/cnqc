@@ -1529,6 +1529,199 @@ static int R_CompareShaders( const void* aPtr, const void* bPtr )
 }
 
 
+static qbool IsColorGenDynamic(colorGen_t cGen)
+{
+	switch(cGen)
+	{
+		case CGEN_BAD:
+		case CGEN_IDENTITY:
+		case CGEN_IDENTITY_LIGHTING:
+		case CGEN_LIGHTING_DIFFUSE:
+		case CGEN_CONST:
+		case CGEN_VERTEX:
+		case CGEN_EXACT_VERTEX:
+		case CGEN_ONE_MINUS_VERTEX:
+		case CGEN_FOG:
+			return qfalse;
+
+		case CGEN_WAVEFORM: // time-based
+		case CGEN_ENTITY: // mod can change it frame to frame
+		case CGEN_ONE_MINUS_ENTITY: // mod can change it frame to frame
+			return qtrue;
+
+		default:
+			Q_assert(!"Unsupported colorGen_t");
+			return qtrue;
+	}
+}
+
+
+static qbool IsAlphaGenDynamic(alphaGen_t aGen)
+{
+	switch(aGen)
+	{
+		case AGEN_SKIP:
+		case AGEN_IDENTITY:
+		case AGEN_CONST:
+		case AGEN_VERTEX:
+		case AGEN_ONE_MINUS_VERTEX:
+			return qfalse;
+
+		case AGEN_WAVEFORM: // time-based
+		case AGEN_LIGHTING_SPECULAR: // changes with camera position
+		case AGEN_ENTITY: // mod can change it frame to frame
+		case AGEN_ONE_MINUS_ENTITY: // mod can change it frame to frame
+		case AGEN_PORTAL: // changes with camera position
+			return qtrue;
+
+		default:
+			Q_assert(!"Unsupported alphaGen_t");
+			return qtrue;
+	}
+}
+
+
+static qbool IsTexCoordGenDynamic(texCoordGen_t tcGen)
+{
+	switch(tcGen)
+	{
+		case TCGEN_IDENTITY:
+		case TCGEN_BAD:
+		case TCGEN_TEXTURE:
+		case TCGEN_LIGHTMAP:
+		case TCGEN_VECTOR:
+		case TCGEN_FOG: // not relevant for us anyhow
+			return qfalse;
+
+		case TCGEN_ENVIRONMENT_MAPPED: // changes with camera position
+			return qtrue;
+
+		default:
+			Q_assert(!"Unsupported texCoordGen_t");
+			return qtrue;
+	}
+}
+
+
+static qbool IsTexModDynamic(texMod_t texMod)
+{
+	switch(texMod)
+	{
+		case TMOD_NONE:
+		case TMOD_SCALE:
+		case TMOD_TRANSFORM:
+			return qfalse;
+
+		case TMOD_TURBULENT: // time
+		case TMOD_ENTITY_TRANSLATE: // time
+		case TMOD_SCROLL: // time
+		case TMOD_STRETCH: // time
+		case TMOD_ROTATE: // time
+			return qtrue;
+
+		default:
+			Q_assert(!"Unsupported texMod_t");
+			return qtrue;
+	}
+}
+
+
+static qbool IsDeformDynamic(deform_t deform)
+{
+	switch(deform)
+	{
+		case DEFORM_NONE:
+		case DEFORM_PROJECTION_SHADOW: // unsupported
+		case DEFORM_TEXT0:
+		case DEFORM_TEXT1:
+		case DEFORM_TEXT2:
+		case DEFORM_TEXT3:
+		case DEFORM_TEXT4:
+		case DEFORM_TEXT5:
+		case DEFORM_TEXT6:
+		case DEFORM_TEXT7:
+			return qfalse;
+
+		case DEFORM_WAVE: // time
+		case DEFORM_NORMALS: // time
+		case DEFORM_BULGE: // time
+		case DEFORM_MOVE: // time
+		case DEFORM_AUTOSPRITE: // changes with camera orientation
+		case DEFORM_AUTOSPRITE2: // changes with camera orientation
+			return qtrue;
+
+		default:
+			Q_assert(!"Unsupported deform_t");
+			return qtrue;
+	}
+}
+
+
+static void ClassifyShaderOpacity(shader_t* sh)
+{
+	// @TODO: is this always correct?
+	const qbool isOpaque = sh->sort <= SS_OPAQUE;
+	qbool startsWithAlphaTest = qfalse;
+	if(sh->numStages > 0)
+	{
+		startsWithAlphaTest = (sh->stages[0]->stateBits & GLS_ATEST_BITS) != 0;
+	}
+
+	sh->isOpaque = isOpaque;
+	sh->isAlphaTestedOpaque = isOpaque && startsWithAlphaTest;
+}
+
+
+static void ClassifyShaderDynamism(shader_t* sh)
+{
+	sh->isDynamic = qtrue;
+	
+	for(int d = 0; d < sh->numDeforms; ++d)
+	{
+		if(IsDeformDynamic(sh->deforms[d].deformation))
+		{
+			return;
+		}
+	}
+
+	for(int s = 0; s < sh->numStages; ++s)
+	{
+		shaderStage_t* const stage = sh->stages[s];
+		for(int t = 0; t < stage->numTexMods; ++t)
+		{
+			if(IsTexModDynamic(stage->texMods[t].type))
+			{
+				return;
+			}
+		}
+
+		if(IsColorGenDynamic(stage->rgbGen))
+		{
+			return;
+		}
+
+		if(IsAlphaGenDynamic(stage->alphaGen))
+		{
+			return;
+		}
+
+		if(IsTexCoordGenDynamic(stage->tcGen))
+		{
+			return;
+		}
+	}
+
+	sh->isDynamic = qfalse;
+}
+
+
+static void ClassifyShader(shader_t* sh)
+{
+	ClassifyShaderOpacity(sh);
+	ClassifyShaderDynamism(sh);
+}
+
+
 /*
 Positions the most recently created shader in the tr.sortedShaders[] array
 such that the shader->sort key is sorted relative to the other shaders.
@@ -1623,6 +1816,8 @@ static shader_t* GeneratePermanentShader()
 		newShader->stages[i]->texMods = RI_New<texModInfo_t>( n );
 		Com_Memcpy( newShader->stages[i]->texMods, stages[i].texMods, n * sizeof( texModInfo_t ) );
 	}
+
+	ClassifyShader( newShader );
 
 	SortNewShader();
 

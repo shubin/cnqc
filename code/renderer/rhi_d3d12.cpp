@@ -24,7 +24,7 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 /*
 to do:
 
-- 3D/world rendering
+* 3D/world rendering
 - mip-map generation accounting for r_picmip
 - when creating the root signature, validate that neither of the tables have any gap
 - use root signature 1.1 to use the hints that help the drivers optimize out static resources
@@ -33,9 +33,8 @@ to do:
 - is it possible to force Resource Binding Tier 2 somehow? are we supposed to run on old HW to test? :(
 	see if WARP allows us to do that?
 - don't do persistent mapping to help out RenderDoc?
-- implicit barrier & profiling API: Begin/EndRenderPass
+* implicit barrier & profiling API outside the RHI: Begin/EndRenderPass
 * partial inits and shutdown
-- clean up the Win32 window creation/update mess
 - move as much GUI logic as possible out of the RHI (especially render pass timings)
 - leverage rhi.allocator->IsCacheCoherentUMA()
 	- buffers: create with CPU access, map the destination buffer directly

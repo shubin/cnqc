@@ -537,8 +537,8 @@ void World::ProcessWorld(world_t& world)
 			surf->firstVertex = 0;
 			surf->firstIndex = 0;
 
-			// @TODO: make sure it's static as well!
-			if(surf->shader->numStages == 0)
+			if(surf->shader->numStages == 0 ||
+				surf->shader->isDynamic)
 			{
 				continue;
 			}
@@ -605,8 +605,8 @@ void World::ProcessWorld(world_t& world)
 		surf->firstVertex = 0;
 		surf->firstIndex = 0;
 
-		// @TODO: make sure it's static as well!
-		if(surf->shader->numStages == 0)
+		if(surf->shader->numStages == 0 ||
+			surf->shader->isDynamic)
 		{
 			continue;
 		}

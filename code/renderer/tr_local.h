@@ -436,6 +436,10 @@ struct shader_t {
 	qbool vlWanted;					// just a request, can be denied
 	qbool vlApplied;				// qtrue if request accepted AND shader modified
 
+	qbool isOpaque;					// no alpha blending, alpha test is OK if opaque
+	qbool isAlphaTestedOpaque;		// no alpha blending, first stage is alpha tested
+	qbool isDynamic;				// at least one vertex attribute must generated on the fly
+
 	shader_t* next;
 };
 
