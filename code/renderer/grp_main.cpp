@@ -237,8 +237,8 @@ void GRP::Init()
 	// @TODO: remove
 	{
 		CachedPSO cache = {};
-		cache.mainDesc.cullType = CT_BACK_SIDED;
-		cache.stageDescs[0].stateBits = GLS_DEFAULT;
+		cache.desc.cullType = CT_BACK_SIDED;
+		cache.desc.stateBits = GLS_DEFAULT;
 		cache.stageCount = 1;
 		CreatePSO(cache);
 	}
@@ -341,18 +341,20 @@ void GRP::ProcessShader(shader_t& shader)
 		return;
 	}
 
-	CachedPSO cache = {};
-	cache.mainDesc.cullType = shader.cullType;
-	for(int s = 0; s < shader.numStages; ++s)
+	if(shader.numStages < 1)
 	{
-		cache.stageDescs[s].stateBits = shader.stages[s]->stateBits;
+		return;
 	}
+
+	CachedPSO cache = {};
+	cache.desc.cullType = shader.cullType;
+	cache.desc.stateBits = shader.stages[0]->stateBits;
 	cache.stageCount = shader.numStages;
 
 	for(uint32_t p = 1; p < psoCount; ++p)
 	{
-		if(memcmp(&cache.mainDesc, &psos[p].mainDesc, sizeof(cache.mainDesc)) == 0 &&
-			memcmp(&cache.stageDescs[0], &psos[p].stageDescs[0], cache.stageCount * sizeof(cache.stageDescs[0])) == 0)
+		if(cache.stageCount == psos[p].stageCount &&
+			memcmp(&cache.desc, &psos[p].desc, sizeof(cache.desc)) == 0)
 		{
 			shader.psoIndex = p;
 			return;

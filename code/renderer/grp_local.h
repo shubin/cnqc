@@ -429,23 +429,18 @@ struct RenderPassFrame
 
 #pragma pack(push, 1)
 
-struct PSOStageDesc
-{
-	unsigned int stateBits;
-};
-
 struct PSODesc
 {
 	cullType_t cullType;
 	// @TODO: qbool polygonOffset;
+	unsigned int stateBits; // collapsed from all stages
 };
 
 #pragma pack(pop)
 
 struct CachedPSO
 {
-	PSODesc mainDesc;
-	PSOStageDesc stageDescs[MAX_SHADER_STAGES];
+	PSODesc desc;
 	uint32_t stageCount;
 	HPipeline pipeline;
 };
