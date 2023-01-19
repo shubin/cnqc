@@ -42,8 +42,7 @@ struct DynamicVertexRC
 
 struct DynamicPixelRC
 {
-	uint32_t textureIndex;
-	uint32_t samplerIndex;
+	uint32_t stageIndices[4];
 };
 
 #pragma pack(pop)
@@ -197,19 +196,34 @@ VOut main(VIn input)
 
 cbuffer RootConstants
 {
-	uint textureIndex;
-	uint samplerIndex;
+	// 16 bits per stage: low 12 = texture, high 4 sampler
+	uint stageIndices[4];
 };
+
+#define TexIdx(StageIndex)  (stageIndices[0] & 2047)
+#define SampIdx(StageIndex) (stageIndices[0] >> 12)
 
 Texture2D textures2D[2048] : register(t0);
 SamplerState samplers[2] : register(s0);
+
+bool FailsAlphaTest(uint alphaTest, float alpha)
+{
+	if( (alphaTest == 1 && alpha == 0.0) ||
+	    (alphaTest == 2 && alpha >= 0.5) ||
+	    (alphaTest == 3 && alpha <  0.5))
+	{
+		return true;
+	}
+
+	return false;
+}
 
 // reminder: early-Z is early depth test AND early depth write
 // therefore, the attribute should be gone if opaque stage #1 does alpha testing (discard)
 [earlydepthstencil]
 float4 main(VOut input) : SV_TARGET
 {
-	return textures2D[textureIndex].Sample(samplers[samplerIndex], input.texCoords0) * input.color0;
+	return textures2D[TexIdx(0)].Sample(samplers[SampIdx(0)], input.texCoords0) * input.color0;
 }
 
 #endif
@@ -523,10 +537,10 @@ void World::EndBatch()
 	memcpy(vertexRC.clipPlane, clipPlane, sizeof(vertexRC.clipPlane));
 	CmdSetRootConstants(rootSignature, ShaderStage::Vertex, &vertexRC);
 
+	const uint32_t texIdx = tess.shader->stages[0]->bundle.image[0]->textureIndex;
+	Q_assert(texIdx > 0);
 	DynamicPixelRC pixelRC;
-	pixelRC.textureIndex = tess.shader->stages[0]->bundle.image[0]->textureIndex;
-	pixelRC.samplerIndex = 0;
-	Q_assert(pixelRC.textureIndex > 0);
+	pixelRC.stageIndices[0] = texIdx; // sampler index is 0
 	CmdSetRootConstants(rootSignature, ShaderStage::Pixel, &pixelRC);
 
 	BindVertexBuffers(batchHasStaticGeo, 4);
