@@ -144,6 +144,8 @@ void UI::Begin()
 		return;
 	}
 
+	grp.BeginRenderPass("UI");
+
 	const HTexture swapChain = GetSwapChainTexture();
 	CmdBindRenderTargets(1, &swapChain, NULL);
 

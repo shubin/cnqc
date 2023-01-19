@@ -79,6 +79,7 @@ void GRP::ShutDown(bool fullShutDown)
 void GRP::BeginFrame()
 {
 	RHI::BeginFrame();
+	renderPasses[GetFrameIndex()].count = 0;
 	ui.BeginFrame();
 	world.BeginFrame();
 
@@ -93,6 +94,11 @@ void GRP::BeginFrame()
 void GRP::EndFrame()
 {
 	ui.DrawBatch();
+	if(renderMode == RenderMode::UI)
+	{
+		grp.EndRenderPass();
+	}
+
 	imgui.Draw();
 	RHI::EndFrame();
 }
@@ -156,6 +162,39 @@ uint32_t GRP::RegisterTexture(HTexture htexture)
 	UpdateDescriptorTable(descriptorTable, update);
 
 	return index;
+}
+
+void GRP::BeginRenderPass(const char* name)
+{
+	RenderPassFrame& f = renderPasses[GetFrameIndex()];
+	if(f.count >= ARRAY_LEN(f.passes))
+	{
+		Q_assert(0);
+		return;
+	}
+
+	CmdBeginDebugLabel(name);
+
+	RenderPassQueries& q = f.passes[f.count++];
+	Q_strncpyz(q.name, name, sizeof(q.name));
+	q.cpuStartUS = Sys_Microseconds();
+	q.query = CmdBeginDurationQuery(name);
+}
+
+void GRP::EndRenderPass()
+{
+	RenderPassFrame& f = renderPasses[GetFrameIndex()];
+	if(f.count == 0)
+	{
+		Q_assert(0);
+		return;
+	}
+
+	CmdEndDebugLabel();
+
+	RenderPassQueries& q = f.passes[f.count - 1];
+	q.cpuDurationUS = (uint32_t)(Sys_Microseconds() - q.cpuStartUS);
+	CmdEndDurationQuery(q.query);
 }
 
 // @TODO: move out

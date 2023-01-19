@@ -398,6 +398,21 @@ struct RenderMode
 	};
 };
 
+struct RenderPassQueries
+{
+	char name[64];
+	uint32_t cpuDurationUS;
+	uint32_t gpuDurationUS;
+	int64_t cpuStartUS;
+	HDurationQuery query;
+};
+
+struct RenderPassFrame
+{
+	RenderPassQueries passes[16];
+	uint32_t count;
+};
+
 struct GRP : IRenderPipeline
 {
 	void Init() override;
@@ -419,6 +434,9 @@ struct GRP : IRenderPipeline
 
 	uint32_t RegisterTexture(HTexture htexture);
 
+	void BeginRenderPass(const char* name);
+	void EndRenderPass();
+
 	UI ui;
 	World world;
 	MipMapGenerator mipMapGen;
@@ -431,6 +449,8 @@ struct GRP : IRenderPipeline
 	HDescriptorTable descriptorTable;
 	uint32_t textureIndex;
 	HSampler samplers[2];
+
+	RenderPassFrame renderPasses[FrameCount];
 };
 
 extern GRP grp;

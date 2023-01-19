@@ -414,6 +414,8 @@ void World::DrawPrePass()
 		return;
 	}
 
+	grp.BeginRenderPass("Depth Pre-Pass");
+
 	// @TODO: evaluate later whether binding the color target here is OK?
 	CmdBindRenderTargets(0, NULL, &depthTexture);
 
@@ -432,6 +434,8 @@ void World::DrawPrePass()
 	CmdDrawIndexed(zppIndexBuffer.batchCount, 0, 0);
 	boundVertexBuffers = BufferFamily::PrePass;
 	boundIndexBuffer = BufferFamily::PrePass;
+
+	grp.EndRenderPass();
 }
 
 void World::BeginBatch(const shader_t* shader, bool hasStaticGeo)
@@ -676,6 +680,8 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 		}
 	}
 
+	grp.BeginRenderPass("3D Scene");
+
 	CmdBindRootSignature(rootSignature);
 	CmdBindPipeline(pipeline);
 	CmdBindDescriptorTable(rootSignature, grp.descriptorTable);
@@ -822,6 +828,8 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 
 	db.vertexBuffers.EndUpload();
 	db.indexBuffer.EndUpload();
+
+	grp.EndRenderPass();
 
 	// @TODO: go back to the world model-view matrix, restore depth range
 }

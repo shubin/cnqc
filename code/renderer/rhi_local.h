@@ -617,8 +617,11 @@ namespace RHI
 	HDurationQuery CmdBeginDurationQuery(const char* name);
 	void CmdEndDurationQuery(HDurationQuery query);
 	void CmdBarrier(uint32_t texCount, const TextureBarrier* textures, uint32_t buffCount = 0, const BufferBarrier* buffers = NULL);
-    void CmdClearColorTarget(HTexture texture, const vec4_t clearColor, const Rect* rect = NULL);
-    void CmdClearDepthTarget(HTexture texture, float clearDepth, const Rect* rect = NULL);
+	void CmdClearColorTarget(HTexture texture, const vec4_t clearColor, const Rect* rect = NULL);
+	void CmdClearDepthTarget(HTexture texture, float clearDepth, const Rect* rect = NULL);
+	void CmdInsertDebugLabel(const char* name, float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f);
+	void CmdBeginDebugLabel(const char* name, float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f);
+	void CmdEndDebugLabel();
 
 	uint8_t* BeginBufferUpload(HBuffer buffer);
 	void EndBufferUpload(HBuffer buffer);
@@ -629,17 +632,6 @@ namespace RHI
 	// the temporary command list is guaranteed to be done executing before the next BeginFrame call ends
 	void BeginTempCommandList();
 	void EndTempCommandList();
-
-#if 0
-	void CmdCopyBuffer(HBuffer dst, uint32_t dstOffset, HBuffer src, uint32_t srcOffset, uint32_t byteCount);
-	void CmdCopyBufferRegions(HBuffer dst, HBuffer src, uint32_t count, const BufferRegion* regions);
-
-	void CmdClearColorTexture(HTexture texture, const uint32_t* clearColor);
-
-	void CmdInsertDebugLabel(const char* name, float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f);
-	void CmdBeginDebugLabel(const char* name, float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f);
-	void CmdEndDebugLabel();
-#endif
 
 #define CNQ3_DEV
 #if defined(_DEBUG) || defined(CNQ3_DEV)

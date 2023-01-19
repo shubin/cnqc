@@ -204,6 +204,8 @@ void ImGUI::Draw()
 		return;
 	}
 
+	grp.BeginRenderPass("Dear ImGUI");
+
 	FrameResources* fr = &frameResources[GetFrameIndex()];
 
 	// Upload vertex/index data into a single contiguous GPU buffer
@@ -277,4 +279,6 @@ void ImGUI::Draw()
 		globalIdxOffset += cmdList->IdxBuffer.Size;
 		globalVtxOffset += cmdList->VtxBuffer.Size;
 	}
+
+	grp.EndRenderPass();
 }

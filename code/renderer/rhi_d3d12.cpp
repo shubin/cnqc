@@ -120,6 +120,7 @@ One mitigation for this restriction is the diligent use of Null descriptors.
 #include "../imgui/imgui.h"
 #include "../nvapi/nvapi.h"
 #pragma comment(lib, "nvapi64")
+//#include "../pix/pix3.h"
 
 
 #if defined(_DEBUG) || defined(CNQ3_DEV)
@@ -3146,45 +3147,70 @@ namespace RHI
 
 	void CmdClearColorTarget(HTexture texture, const vec4_t clearColor, const Rect* rect)
 	{
-	    Q_assert(CanWriteCommands());
+		Q_assert(CanWriteCommands());
 
 		D3D12_RECT* d3dRectPtr = NULL;
-	    D3D12_RECT d3dRect = {};
-	    UINT rectCount = 0;
-	    if (rect != NULL) {
-		    rectCount = 1;
-		    d3dRect.left = rect->x;
-		    d3dRect.top = rect->y;
-		    d3dRect.right = rect->x + rect->w;
-		    d3dRect.bottom = rect->y + rect->h;
-		    d3dRectPtr = &d3dRect;
-	    }
+		D3D12_RECT d3dRect = {};
+		UINT rectCount = 0;
+		if(rect != NULL) {
+			rectCount = 1;
+			d3dRect.left = rect->x;
+			d3dRect.top = rect->y;
+			d3dRect.right = rect->x + rect->w;
+			d3dRect.bottom = rect->y + rect->h;
+			d3dRectPtr = &d3dRect;
+		}
 
 		const Texture& renderTarget = rhi.textures.Get(texture);
-	    const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rhi.descHeapRTVs.GetCPUHandle(renderTarget.rtvIndex);
-	    rhi.commandList->ClearRenderTargetView(rtvHandle, clearColor, rectCount, d3dRectPtr);
+		const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rhi.descHeapRTVs.GetCPUHandle(renderTarget.rtvIndex);
+		rhi.commandList->ClearRenderTargetView(rtvHandle, clearColor, rectCount, d3dRectPtr);
 	}
 
 	void CmdClearDepthTarget(HTexture texture, float clearDepth, const Rect* rect)
 	{
-	    Q_assert(CanWriteCommands());
+		Q_assert(CanWriteCommands());
 
 		D3D12_RECT* d3dRectPtr = NULL;
-	    D3D12_RECT d3dRect = {};
-	    UINT rectCount = 0;
-	    if (rect != NULL) 
+		D3D12_RECT d3dRect = {};
+		UINT rectCount = 0;
+		if(rect != NULL)
 		{
 			rectCount = 1;
-		    d3dRect.left = rect->x;
-		    d3dRect.top = rect->y;
-		    d3dRect.right = rect->x + rect->w;
+			d3dRect.left = rect->x;
+			d3dRect.top = rect->y;
+			d3dRect.right = rect->x + rect->w;
 			d3dRect.bottom = rect->y + rect->h;
 			d3dRectPtr = &d3dRect;
 		}
 
 		const Texture& depthStencil = rhi.textures.Get(texture);
-	    const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = rhi.descHeapDSVs.GetCPUHandle(depthStencil.dsvIndex);
-	    rhi.commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, clearDepth, 0, rectCount, d3dRectPtr);
+		const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = rhi.descHeapDSVs.GetCPUHandle(depthStencil.dsvIndex);
+		rhi.commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, clearDepth, 0, rectCount, d3dRectPtr);
+	}
+
+	void CmdInsertDebugLabel(const char* name, float r, float g, float b, float a)
+	{
+		Q_assert(CanWriteCommands());
+		Q_assert(name);
+
+		//rhi.commandList->SetMarker(0, name, strlen(name) + 1);
+	}
+
+	void CmdBeginDebugLabel(const char* name, float r, float g, float b, float a)
+	{
+		Q_assert(CanWriteCommands());
+		Q_assert(name);
+
+		//PIXBeginEvent(rhi.commandList, PIX_COLOR(255, 0, 0), name);
+		rhi.commandList->BeginEvent(1, name, strlen(name) + 1);
+	}
+
+	void CmdEndDebugLabel()
+	{
+		Q_assert(CanWriteCommands());
+
+		//PIXEndEvent(rhi.commandList);
+		rhi.commandList->EndEvent();
 	}
 
 	uint8_t* BeginBufferUpload(HBuffer buffer)
