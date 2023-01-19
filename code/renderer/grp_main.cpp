@@ -24,6 +24,168 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 #include "grp_local.h"
 
 
+static const char* opaqueShaderSource = R"grml(
+// @TODO: to define outside the ubershader itself!
+#define STAGE_COUNT 1
+
+#define STAGE_ATTRIBS(Index) \
+	float2 texCoords##Index : TEXCOORD##Index; \
+	float4 color##Index : COLOR##Index;
+
+#if VERTEX_SHADER
+struct VIn
+{
+	float3 position : POSITION;
+	float3 normal : NORMAL;
+#if STAGE_COUNT >= 1
+	STAGE_ATTRIBS(0)
+#endif
+#if STAGE_COUNT >= 2
+	STAGE_ATTRIBS(1)
+#endif
+#if STAGE_COUNT >= 3
+	STAGE_ATTRIBS(2)
+#endif
+#if STAGE_COUNT >= 4
+	STAGE_ATTRIBS(3)
+#endif
+#if STAGE_COUNT >= 5
+	STAGE_ATTRIBS(4)
+#endif
+#if STAGE_COUNT >= 6
+	STAGE_ATTRIBS(5)
+#endif
+#if STAGE_COUNT >= 7
+	STAGE_ATTRIBS(6)
+#endif
+#if STAGE_COUNT >= 8
+	STAGE_ATTRIBS(7)
+#endif
+};
+#endif
+
+struct VOut
+{
+	float4 position : SV_Position;
+	float3 normal : NORMAL;
+#if STAGE_COUNT >= 1
+	STAGE_ATTRIBS(0)
+#endif
+#if STAGE_COUNT >= 2
+	STAGE_ATTRIBS(1)
+#endif
+#if STAGE_COUNT >= 3
+	STAGE_ATTRIBS(2)
+#endif
+#if STAGE_COUNT >= 4
+	STAGE_ATTRIBS(3)
+#endif
+#if STAGE_COUNT >= 5
+	STAGE_ATTRIBS(4)
+#endif
+#if STAGE_COUNT >= 6
+	STAGE_ATTRIBS(5)
+#endif
+#if STAGE_COUNT >= 7
+	STAGE_ATTRIBS(6)
+#endif
+#if STAGE_COUNT >= 8
+	STAGE_ATTRIBS(7)
+#endif
+	float clipDist : SV_ClipDistance0;
+};
+
+#undef STAGE_ATTRIBS
+
+#if VERTEX_SHADER
+
+cbuffer RootConstants
+{
+	matrix modelViewMatrix;
+	matrix projectionMatrix;
+	float4 clipPlane;
+};
+
+#define STAGE_ATTRIBS(Index) \
+	output.texCoords##Index = input.texCoords##Index; \
+	output.color##Index = input.color##Index;
+
+VOut main(VIn input)
+{
+	float4 positionVS = mul(modelViewMatrix, float4(input.position.xyz, 1));
+
+	VOut output;
+	output.position = mul(projectionMatrix, positionVS);
+	output.normal = input.normal;
+#if STAGE_COUNT >= 1
+	STAGE_ATTRIBS(0)
+#endif
+#if STAGE_COUNT >= 2
+	STAGE_ATTRIBS(1)
+#endif
+#if STAGE_COUNT >= 3
+	STAGE_ATTRIBS(2)
+#endif
+#if STAGE_COUNT >= 4
+	STAGE_ATTRIBS(3)
+#endif
+#if STAGE_COUNT >= 5
+	STAGE_ATTRIBS(4)
+#endif
+#if STAGE_COUNT >= 6
+	STAGE_ATTRIBS(5)
+#endif
+#if STAGE_COUNT >= 7
+	STAGE_ATTRIBS(6)
+#endif
+#if STAGE_COUNT >= 8
+	STAGE_ATTRIBS(7)
+#endif
+	output.clipDist = dot(positionVS, clipPlane);
+
+	return output;
+}
+
+#endif
+
+#if PIXEL_SHADER
+
+cbuffer RootConstants
+{
+	// 16 bits per stage: low 12 = texture, high 4 sampler
+	uint stageIndices[4];
+};
+
+#define TexIdx(StageIndex)  (stageIndices[0] & 2047)
+#define SampIdx(StageIndex) (stageIndices[0] >> 12)
+
+Texture2D textures2D[2048] : register(t0);
+SamplerState samplers[2] : register(s0);
+
+bool FailsAlphaTest(uint alphaTest, float alpha)
+{
+	if( (alphaTest == 1 && alpha == 0.0) ||
+	    (alphaTest == 2 && alpha >= 0.5) ||
+	    (alphaTest == 3 && alpha <  0.5))
+	{
+		return true;
+	}
+
+	return false;
+}
+
+// reminder: early-Z is early depth test AND early depth write
+// therefore, the attribute should be gone if opaque stage #1 does alpha testing (discard)
+[earlydepthstencil]
+float4 main(VOut input) : SV_TARGET
+{
+	return textures2D[TexIdx(0)].Sample(samplers[SampIdx(0)], input.texCoords0) * input.color0;
+}
+
+#endif
+)grml";
+
+
 GRP grp;
 
 
@@ -59,9 +221,27 @@ void GRP::Init()
 		DescriptorTableUpdate update;
 		update.SetSamplers(ARRAY_LEN(samplers), samplers);
 		UpdateDescriptorTable(descriptorTable, update);
+
+		desc.name = "opaque";
+		desc.usingVertexBuffers = true;
+		desc.constants[ShaderStage::Vertex].byteCount = sizeof(DynamicVertexRC);
+		desc.constants[ShaderStage::Pixel].byteCount = sizeof(DynamicPixelRC);
+		desc.samplerVisibility = ShaderStages::PixelBit;
+		desc.genericVisibility = ShaderStages::VertexBit | ShaderStages::PixelBit;
+		opaqueRootSignature = CreateRootSignature(desc);
 	}
 
 	textureIndex = 0;
+	psoCount = 1; // we treat index 0 as invalid
+	
+	// @TODO: remove
+	{
+		CachedPSO cache = {};
+		cache.mainDesc.cullType = CT_BACK_SIDED;
+		cache.stageDescs[0].stateBits = GLS_DEFAULT;
+		cache.stageCount = 1;
+		CreatePSO(cache);
+	}
 
 	ui.Init();
 	world.Init();
@@ -153,6 +333,35 @@ void GRP::ProcessModel(model_t& model)
 	// @TODO: !!!
 }
 
+void GRP::ProcessShader(shader_t& shader)
+{
+	shader.psoIndex = 0;
+	if(!shader.isOpaque)
+	{
+		return;
+	}
+
+	CachedPSO cache = {};
+	cache.mainDesc.cullType = shader.cullType;
+	for(int s = 0; s < shader.numStages; ++s)
+	{
+		cache.stageDescs[s].stateBits = shader.stages[s]->stateBits;
+	}
+	cache.stageCount = shader.numStages;
+
+	for(uint32_t p = 1; p < psoCount; ++p)
+	{
+		if(memcmp(&cache.mainDesc, &psos[p].mainDesc, sizeof(cache.mainDesc)) == 0 &&
+			memcmp(&cache.stageDescs[0], &psos[p].stageDescs[0], cache.stageCount * sizeof(cache.stageDescs[0])) == 0)
+		{
+			shader.psoIndex = p;
+			return;
+		}
+	}
+
+	shader.psoIndex = CreatePSO(cache);
+}
+
 uint32_t GRP::RegisterTexture(HTexture htexture)
 {
 	const uint32_t index = textureIndex++;
@@ -195,6 +404,35 @@ void GRP::EndRenderPass()
 	RenderPassQueries& q = f.passes[f.count - 1];
 	q.cpuDurationUS = (uint32_t)(Sys_Microseconds() - q.cpuStartUS);
 	CmdEndDurationQuery(q.query);
+}
+
+uint32_t GRP::CreatePSO(CachedPSO& cache)
+{
+	Q_assert(psoCount < ARRAY_LEN(psos));
+
+	uint32_t a = 0;
+	GraphicsPipelineDesc desc("opaque", opaqueRootSignature);
+	desc.vertexShader = CompileShader(ShaderStage::Vertex, opaqueShaderSource, "main");
+	desc.pixelShader = CompileShader(ShaderStage::Pixel, opaqueShaderSource, "main");
+	desc.vertexLayout.AddAttribute(a++, ShaderSemantic::Position, DataType::Float32, 3, 0);
+	desc.vertexLayout.AddAttribute(a++, ShaderSemantic::Normal, DataType::Float32, 2, 0);
+	for(int s = 0; s < cache.stageCount; ++s)
+	{
+		desc.vertexLayout.AddAttribute(a++, ShaderSemantic::TexCoord, DataType::Float32, 2, 0);
+		desc.vertexLayout.AddAttribute(a++, ShaderSemantic::Color, DataType::UNorm8, 4, 0);
+	}
+	desc.depthStencil.depthComparison = ComparisonFunction::GreaterEqual;
+	desc.depthStencil.depthStencilFormat = TextureFormat::Depth32_Float;
+	desc.depthStencil.enableDepthTest = true;
+	desc.depthStencil.enableDepthWrites = true;
+	desc.rasterizer.cullMode = CullMode::Back;
+	desc.AddRenderTarget(GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO, TextureFormat::RGBA32_UNorm);
+	cache.pipeline = CreateGraphicsPipeline(desc);
+
+	const uint32_t index = psoCount++;
+	psos[index] = cache;
+
+	return index;
 }
 
 // @TODO: move out

@@ -1821,6 +1821,8 @@ static shader_t* GeneratePermanentShader()
 
 	SortNewShader();
 
+	renderPipeline->ProcessShader( *newShader );
+
 	int hash = Q_FileHash(newShader->name, FILE_HASH_SIZE);
 	newShader->next = hashTable[hash];
 	hashTable[hash] = newShader;
@@ -2580,15 +2582,17 @@ static shader_t* FinishShader()
 	//
 	// look for multitexture potential
 	//
-	if ( stage > 1 && CollapseMultitexture() ) {
+	// @TODO: delete everything related
+	/*if(stage > 1 && CollapseMultitexture()) {
 		stage--;
-	}
+	}*/
 
 	shader.numStages = stage;
 
 	FindLightingStages();
 
-	CollapseStages();
+	// @TODO: delete everything related
+	//CollapseStages();
 
 	if ( r_fullbright->integer ) {
 		// we replace the lightmap texture with the white texture

@@ -31,6 +31,22 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 using namespace RHI;
 
 
+#pragma pack(push, 1)
+
+struct DynamicVertexRC
+{
+	float modelViewMatrix[16];
+	float projectionMatrix[16];
+	float clipPlane[4];
+};
+
+struct DynamicPixelRC
+{
+	uint32_t stageIndices[4];
+};
+
+#pragma pack(pop)
+
 struct BufferBase
 {
 	bool CanAdd(uint32_t count_)
@@ -281,8 +297,6 @@ struct World
 	GeometryBuffer zppVertexBuffer;
 
 	// shared
-	HRootSignature rootSignature;
-	HPipeline pipeline; // @TODO: 1 per cull type
 	BufferFamily::Id boundVertexBuffers;
 	BufferFamily::Id boundIndexBuffer;
 	uint32_t boundStaticVertexBuffersCount;
@@ -413,6 +427,29 @@ struct RenderPassFrame
 	uint32_t count;
 };
 
+#pragma pack(push, 1)
+
+struct PSOStageDesc
+{
+	unsigned int stateBits;
+};
+
+struct PSODesc
+{
+	cullType_t cullType;
+	// @TODO: qbool polygonOffset;
+};
+
+#pragma pack(pop)
+
+struct CachedPSO
+{
+	PSODesc mainDesc;
+	PSOStageDesc stageDescs[MAX_SHADER_STAGES];
+	uint32_t stageCount;
+	HPipeline pipeline;
+};
+
 struct GRP : IRenderPipeline
 {
 	void Init() override;
@@ -426,6 +463,7 @@ struct GRP : IRenderPipeline
 	void EndTextureUpload(image_t* image) override;
 	void ProcessWorld(world_t& world) override;
 	void ProcessModel(model_t& model) override;
+	void ProcessShader(shader_t& shader) override;
 
 	void UISetColor(const uiSetColorCommand_t& cmd) override { ui.UISetColor(cmd); }
 	void UIDrawQuad(const uiDrawQuadCommand_t& cmd) override { ui.UIDrawQuad(cmd); }
@@ -436,6 +474,8 @@ struct GRP : IRenderPipeline
 
 	void BeginRenderPass(const char* name);
 	void EndRenderPass();
+
+	uint32_t CreatePSO(CachedPSO& cache);
 
 	UI ui;
 	World world;
@@ -451,6 +491,10 @@ struct GRP : IRenderPipeline
 	HSampler samplers[2];
 
 	RenderPassFrame renderPasses[FrameCount];
+
+	CachedPSO psos[1024];
+	uint32_t psoCount;
+	HRootSignature opaqueRootSignature;
 };
 
 extern GRP grp;

@@ -440,6 +440,8 @@ struct shader_t {
 	qbool isAlphaTestedOpaque;		// no alpha blending, first stage is alpha tested
 	qbool isDynamic;				// at least one vertex attribute must generated on the fly
 
+	uint32_t psoIndex;
+
 	shader_t* next;
 };
 
@@ -1674,6 +1676,7 @@ struct IRenderPipeline
 	virtual void AddDrawSurface(const surfaceType_t* surface, const shader_t* shader) = 0;
 	virtual void ProcessWorld(world_t& world) = 0;
 	virtual void ProcessModel(model_t& model) = 0;
+	virtual void ProcessShader(shader_t& shader) = 0;
 
 	virtual void CreateTexture(image_t* image, int mipCount, int width, int height) = 0;
 	virtual void UpoadTextureAndGenerateMipMaps(image_t* image, const byte* data) = 0;

@@ -33,18 +33,6 @@ struct ZPPVertexRC
 	float projectionMatrix[16];
 };
 
-struct DynamicVertexRC
-{
-	float modelViewMatrix[16];
-	float projectionMatrix[16];
-	float clipPlane[4];
-};
-
-struct DynamicPixelRC
-{
-	uint32_t stageIndices[4];
-};
-
 #pragma pack(pop)
 
 static const char* zpp_vs = R"grml(
@@ -66,167 +54,6 @@ static const char* zpp_ps = R"grml(
 void main()
 {
 }
-)grml";
-
-static const char* opaqueShaderSource = R"grml(
-// @TODO: to define outside the ubershader itself!
-#define STAGE_COUNT 1
-
-#define STAGE_ATTRIBS(Index) \
-	float2 texCoords##Index : TEXCOORD##Index; \
-	float4 color##Index : COLOR##Index;
-
-#if VERTEX_SHADER
-struct VIn
-{
-	float3 position : POSITION;
-	float3 normal : NORMAL;
-#if STAGE_COUNT >= 1
-	STAGE_ATTRIBS(0)
-#endif
-#if STAGE_COUNT >= 2
-	STAGE_ATTRIBS(1)
-#endif
-#if STAGE_COUNT >= 3
-	STAGE_ATTRIBS(2)
-#endif
-#if STAGE_COUNT >= 4
-	STAGE_ATTRIBS(3)
-#endif
-#if STAGE_COUNT >= 5
-	STAGE_ATTRIBS(4)
-#endif
-#if STAGE_COUNT >= 6
-	STAGE_ATTRIBS(5)
-#endif
-#if STAGE_COUNT >= 7
-	STAGE_ATTRIBS(6)
-#endif
-#if STAGE_COUNT >= 8
-	STAGE_ATTRIBS(7)
-#endif
-};
-#endif
-
-struct VOut
-{
-	float4 position : SV_Position;
-	float3 normal : NORMAL;
-#if STAGE_COUNT >= 1
-	STAGE_ATTRIBS(0)
-#endif
-#if STAGE_COUNT >= 2
-	STAGE_ATTRIBS(1)
-#endif
-#if STAGE_COUNT >= 3
-	STAGE_ATTRIBS(2)
-#endif
-#if STAGE_COUNT >= 4
-	STAGE_ATTRIBS(3)
-#endif
-#if STAGE_COUNT >= 5
-	STAGE_ATTRIBS(4)
-#endif
-#if STAGE_COUNT >= 6
-	STAGE_ATTRIBS(5)
-#endif
-#if STAGE_COUNT >= 7
-	STAGE_ATTRIBS(6)
-#endif
-#if STAGE_COUNT >= 8
-	STAGE_ATTRIBS(7)
-#endif
-	float clipDist : SV_ClipDistance0;
-};
-
-#undef STAGE_ATTRIBS
-
-#if VERTEX_SHADER
-
-cbuffer RootConstants
-{
-	matrix modelViewMatrix;
-	matrix projectionMatrix;
-	float4 clipPlane;
-};
-
-#define STAGE_ATTRIBS(Index) \
-	output.texCoords##Index = input.texCoords##Index; \
-	output.color##Index = input.color##Index;
-
-VOut main(VIn input)
-{
-	float4 positionVS = mul(modelViewMatrix, float4(input.position.xyz, 1));
-
-	VOut output;
-	output.position = mul(projectionMatrix, positionVS);
-	output.normal = input.normal;
-#if STAGE_COUNT >= 1
-	STAGE_ATTRIBS(0)
-#endif
-#if STAGE_COUNT >= 2
-	STAGE_ATTRIBS(1)
-#endif
-#if STAGE_COUNT >= 3
-	STAGE_ATTRIBS(2)
-#endif
-#if STAGE_COUNT >= 4
-	STAGE_ATTRIBS(3)
-#endif
-#if STAGE_COUNT >= 5
-	STAGE_ATTRIBS(4)
-#endif
-#if STAGE_COUNT >= 6
-	STAGE_ATTRIBS(5)
-#endif
-#if STAGE_COUNT >= 7
-	STAGE_ATTRIBS(6)
-#endif
-#if STAGE_COUNT >= 8
-	STAGE_ATTRIBS(7)
-#endif
-	output.clipDist = dot(positionVS, clipPlane);
-
-	return output;
-}
-
-#endif
-
-#if PIXEL_SHADER
-
-cbuffer RootConstants
-{
-	// 16 bits per stage: low 12 = texture, high 4 sampler
-	uint stageIndices[4];
-};
-
-#define TexIdx(StageIndex)  (stageIndices[0] & 2047)
-#define SampIdx(StageIndex) (stageIndices[0] >> 12)
-
-Texture2D textures2D[2048] : register(t0);
-SamplerState samplers[2] : register(s0);
-
-bool FailsAlphaTest(uint alphaTest, float alpha)
-{
-	if( (alphaTest == 1 && alpha == 0.0) ||
-	    (alphaTest == 2 && alpha >= 0.5) ||
-	    (alphaTest == 3 && alpha <  0.5))
-	{
-		return true;
-	}
-
-	return false;
-}
-
-// reminder: early-Z is early depth test AND early depth write
-// therefore, the attribute should be gone if opaque stage #1 does alpha testing (discard)
-[earlydepthstencil]
-float4 main(VOut input) : SV_TARGET
-{
-	return textures2D[TexIdx(0)].Sample(samplers[SampIdx(0)], input.texCoords0) * input.color0;
-}
-
-#endif
 )grml";
 
 
@@ -337,36 +164,6 @@ void World::Init()
 	//
 	// dynamic (streamed) geometry
 	//
-	{
-		RootSignatureDesc desc = grp.rootSignatureDesc;
-		desc.name = "dynamic";
-		desc.usingVertexBuffers = true;
-		desc.constants[ShaderStage::Vertex].byteCount = sizeof(DynamicVertexRC);
-		desc.constants[ShaderStage::Pixel].byteCount = sizeof(DynamicPixelRC);
-		desc.samplerVisibility = ShaderStages::PixelBit;
-		desc.genericVisibility = ShaderStages::VertexBit | ShaderStages::PixelBit;
-		rootSignature = CreateRootSignature(desc);
-	}
-	{
-		uint32_t a = 0;
-		GraphicsPipelineDesc desc("dynamic", rootSignature);
-		desc.vertexShader = CompileShader(ShaderStage::Vertex, opaqueShaderSource, "main");
-		desc.pixelShader = CompileShader(ShaderStage::Pixel, opaqueShaderSource, "main");
-		desc.vertexLayout.AddAttribute(a++, ShaderSemantic::Position, DataType::Float32, 3, 0);
-		desc.vertexLayout.AddAttribute(a++, ShaderSemantic::Normal, DataType::Float32, 2, 0);
-		for(int s = 0; s < MAX_SHADER_STAGES; ++s)
-		{
-			desc.vertexLayout.AddAttribute(a++, ShaderSemantic::TexCoord, DataType::Float32, 2, 0);
-			desc.vertexLayout.AddAttribute(a++, ShaderSemantic::Color, DataType::UNorm8, 4, 0);
-		}
-		desc.depthStencil.depthComparison = ComparisonFunction::GreaterEqual;
-		desc.depthStencil.depthStencilFormat = TextureFormat::Depth32_Float;
-		desc.depthStencil.enableDepthTest = true;
-		desc.depthStencil.enableDepthWrites = true;
-		desc.rasterizer.cullMode = CullMode::Back;
-		desc.AddRenderTarget(GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO, TextureFormat::RGBA32_UNorm);
-		pipeline = CreateGraphicsPipeline(desc);
-	}
 	for(uint32_t f = 0; f < FrameCount; ++f)
 	{
 		const int MaxDynamicVertexCount = 256 << 10;
@@ -535,13 +332,13 @@ void World::EndBatch()
 	memcpy(vertexRC.modelViewMatrix, backEnd.orient.modelMatrix, sizeof(vertexRC.modelViewMatrix));
 	memcpy(vertexRC.projectionMatrix, backEnd.viewParms.projectionMatrix, sizeof(vertexRC.projectionMatrix));
 	memcpy(vertexRC.clipPlane, clipPlane, sizeof(vertexRC.clipPlane));
-	CmdSetRootConstants(rootSignature, ShaderStage::Vertex, &vertexRC);
+	CmdSetRootConstants(grp.opaqueRootSignature, ShaderStage::Vertex, &vertexRC);
 
 	const uint32_t texIdx = tess.shader->stages[0]->bundle.image[0]->textureIndex;
 	Q_assert(texIdx > 0);
 	DynamicPixelRC pixelRC;
 	pixelRC.stageIndices[0] = texIdx; // sampler index is 0
-	CmdSetRootConstants(rootSignature, ShaderStage::Pixel, &pixelRC);
+	CmdSetRootConstants(grp.opaqueRootSignature, ShaderStage::Pixel, &pixelRC);
 
 	BindVertexBuffers(batchHasStaticGeo, 4);
 	BindIndexBuffer(false);
@@ -741,9 +538,9 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 
 	grp.BeginRenderPass("3D Scene");
 
-	CmdBindRootSignature(rootSignature);
-	CmdBindPipeline(pipeline);
-	CmdBindDescriptorTable(rootSignature, grp.descriptorTable);
+	CmdBindRootSignature(grp.opaqueRootSignature);
+	CmdBindPipeline(grp.psos[1].pipeline);
+	CmdBindDescriptorTable(grp.opaqueRootSignature, grp.descriptorTable);
 
 	const HTexture swapChain = GetSwapChainTexture();
 	CmdBindRenderTargets(1, &swapChain, &depthTexture);
