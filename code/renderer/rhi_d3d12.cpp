@@ -370,6 +370,7 @@ namespace RHI
 		SetMarkerOnCommandListPtr SetMarkerOnCommandList;
 
 		HMODULE module;
+		bool canBeginAndEnd;
 	};
 
 	struct RHIPrivate
@@ -2012,6 +2013,7 @@ namespace RHI
 			rhi.pix.BeginEventOnCommandList = (Pix::BeginEventOnCommandListPtr)GetProcAddress(rhi.pix.module, "PIXBeginEventOnCommandList");
 			rhi.pix.EndEventOnCommandList = (Pix::EndEventOnCommandListPtr)GetProcAddress(rhi.pix.module, "PIXEndEventOnCommandList");
 			rhi.pix.SetMarkerOnCommandList = (Pix::SetMarkerOnCommandListPtr)GetProcAddress(rhi.pix.module, "PIXSetMarkerOnCommandList");
+			rhi.pix.canBeginAndEnd = rhi.pix.BeginEventOnCommandList != NULL && rhi.pix.EndEventOnCommandList != NULL;
 		}
 
 		glInfo.maxTextureSize = MAX_TEXTURE_SIZE;
@@ -3253,7 +3255,7 @@ namespace RHI
 		Q_assert(CanWriteCommands());
 		Q_assert(name);
 
-		if(rhi.pix.BeginEventOnCommandList != NULL)
+		if(rhi.pix.canBeginAndEnd)
 		{
 			rhi.pix.BeginEventOnCommandList(rhi.commandList, BGRAUIntFromFloat(r, g, b), name);
 		}
@@ -3267,7 +3269,7 @@ namespace RHI
 	{
 		Q_assert(CanWriteCommands());
 
-		if(rhi.pix.EndEventOnCommandList != NULL)
+		if(rhi.pix.canBeginAndEnd)
 		{
 			rhi.pix.EndEventOnCommandList(rhi.commandList);
 		}
