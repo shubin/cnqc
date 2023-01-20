@@ -42,7 +42,7 @@ struct DynamicVertexRC
 
 struct DynamicPixelRC
 {
-	uint32_t stageIndices[4];
+	uint32_t stageIndices[8];
 };
 
 #pragma pack(pop)
@@ -470,7 +470,7 @@ struct GRP : IRenderPipeline
 	void BeginRenderPass(const char* name);
 	void EndRenderPass();
 
-	uint32_t CreatePSO(CachedPSO& cache);
+	uint32_t CreatePSO(CachedPSO& cache, const shader_t& shader);
 
 	UI ui;
 	World world;

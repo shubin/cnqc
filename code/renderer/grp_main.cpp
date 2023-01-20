@@ -29,8 +29,7 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 //
 // PS macros to define:
 // STAGE_COUNT 1-8
-// STAGE#_BLEND_BITS
-// STAGE#_ALPHA_TEST 0-3
+// STAGE#_BITS
 static const char* opaqueShaderSource = R"grml(
 #define STAGE_ATTRIBS(Index) \
 	float2 texCoords##Index : TEXCOORD##Index; \
@@ -156,12 +155,11 @@ VOut main(VIn input)
 
 cbuffer RootConstants
 {
-	// 16 bits per stage: low 12 = texture, high 4 sampler
-	uint stageIndices[4];
+	// @TODO: 16 bits per stage: low 12 = texture, high 4 = sampler
+	//uint stageIndices[4];
+	// low 16 = texture, high 16 = sampler
+	uint stageIndices[8];
 };
-
-#define TexIdx(StageIndex)  (stageIndices[0] & 2047)
-#define SampIdx(StageIndex) (stageIndices[0] >> 12)
 
 Texture2D textures2D[2048] : register(t0);
 SamplerState samplers[2] : register(s0);
@@ -263,12 +261,34 @@ float4 Blend(float4 src, float4 dst)
 	return srcOut + dstOut;
 }
 
+float4 ProcessStage(float4 color, float2 texCoords, uint textureIndex, uint samplerIndex)
+{
+	return color * textures2D[textureIndex].Sample(samplers[samplerIndex], texCoords);
+}
+
+void ProcessFullStage(inout float4 dst, float4 color, float2 texCoords, uint textureIndex, uint samplerIndex)
+{
+	float4 src = color * textures2D[textureIndex].Sample(samplers[samplerIndex], texCoords);
+	// @TODO: alpha test fails -> don't write to dst
+	dst = Blend(src, dst);
+}
+
 // reminder: early-Z is early depth test AND early depth write
 // therefore, the attribute should be gone if opaque stage #1 does alpha testing (discard)
 [earlydepthstencil]
 float4 main(VOut input) : SV_TARGET
 {
-	return textures2D[TexIdx(0)].Sample(samplers[SampIdx(0)], input.texCoords0) * input.color0;
+	#define STAGE_BITS STAGE0_BITS
+	float4 dst = ProcessStage(input.color0, input.texCoords0, stageIndices[0] & 0xFFFF, stageIndices[0] >> 16);
+	// @TODO: alpha test fails -> discard
+	#undef STAGE_BITS
+#if STAGE_COUNT >= 2
+	#define STAGE_BITS STAGE1_BITS
+	ProcessFullStage(dst, input.color1, input.texCoords1, stageIndices[1] & 0xFFFF, stageIndices[1] >> 16);
+	#undef STAGE_BITS
+#endif
+
+	return dst;
 }
 
 #endif
@@ -325,11 +345,15 @@ void GRP::Init()
 	
 	// @TODO: remove
 	{
+		shaderStage_t stage = {};
+		shader_t shader = {};
+		shader.stages[0] = &stage;
+		shader.numStages = 1;
 		CachedPSO cache = {};
 		cache.desc.cullType = CT_BACK_SIDED;
 		cache.desc.stateBits = GLS_DEFAULT;
 		cache.stageCount = 1;
-		CreatePSO(cache);
+		CreatePSO(cache, shader);
 	}
 
 	ui.Init();
@@ -450,7 +474,7 @@ void GRP::ProcessShader(shader_t& shader)
 		}
 	}
 
-	shader.psoIndex = CreatePSO(cache);
+	shader.psoIndex = CreatePSO(cache, shader);
 }
 
 uint32_t GRP::RegisterTexture(HTexture htexture)
@@ -497,19 +521,28 @@ void GRP::EndRenderPass()
 	CmdEndDurationQuery(q.query);
 }
 
-uint32_t GRP::CreatePSO(CachedPSO& cache)
+uint32_t GRP::CreatePSO(CachedPSO& cache, const shader_t& shader)
 {
+	Q_assert(cache.stageCount == shader.numStages);
 	Q_assert(psoCount < ARRAY_LEN(psos));
 
 	uint32_t macroCount = 0;
-	ShaderMacro macros[16];
+	ShaderMacro macros[64];
+
 	macros[macroCount].name = "STAGE_COUNT";
 	macros[macroCount].value = va("%d", cache.stageCount);
 	macroCount++;
 	ShaderByteCode vertexShader = CompileShader(ShaderStage::Vertex, opaqueShaderSource, "main", macroCount, macros);
 
-	// @TODO:
+	for(int s = 0; s < shader.numStages; ++s)
+	{
+		macros[macroCount].name = va("STAGE%d_BITS", s);
+		macros[macroCount].value = va("%d", (int)shader.stages[s]->stateBits);
+		macroCount++;
+	}
 	ShaderByteCode pixelShader = CompileShader(ShaderStage::Pixel, opaqueShaderSource, "main", macroCount, macros);
+
+	Q_assert(macroCount <= ARRAY_LEN(macros));
 
 	uint32_t a = 0;
 	GraphicsPipelineDesc desc("opaque", opaqueRootSignature);
