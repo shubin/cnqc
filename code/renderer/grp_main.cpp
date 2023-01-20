@@ -564,6 +564,7 @@ uint32_t GRP::CreatePSO(CachedPSO& cache)
 
 	uint32_t a = 0;
 	GraphicsPipelineDesc desc("opaque", opaqueRootSignature);
+	desc.shortLifeTime = true; // the PSO cache is only valid for this map!
 	desc.vertexShader = vertexShader;
 	desc.pixelShader = pixelShader;
 	desc.vertexLayout.AddAttribute(a++, ShaderSemantic::Position, DataType::Float32, 3, 0);
