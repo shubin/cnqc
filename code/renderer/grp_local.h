@@ -433,7 +433,6 @@ struct PSODesc
 {
 	cullType_t cullType;
 	// @TODO: qbool polygonOffset;
-	uint32_t stateBits;
 };
 
 #pragma pack(pop)

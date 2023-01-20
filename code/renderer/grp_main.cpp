@@ -338,7 +338,6 @@ void GRP::Init()
 	{
 		CachedPSO cache = {};
 		cache.desc.cullType = CT_BACK_SIDED;
-		cache.desc.stateBits = GLS_DEFAULT;
 		cache.stageStateBits[0] = GLS_DEFAULT;
 		cache.stageCount = 1;
 		CreatePSO(cache);
@@ -447,14 +446,17 @@ void GRP::ProcessShader(shader_t& shader)
 		return;
 	}
 
+	// @TODO: fix up cache.stageStateBits[0] based on depth state from follow-up states
 	CachedPSO cache = {};
 	cache.desc.cullType = shader.cullType;
-	cache.desc.stateBits = shader.stages[0]->stateBits; // @TODO:
-	for(int s = 0; s < shader.numStages; ++s)
+	cache.stageStateBits[0] = shader.stages[0]->stateBits & (~GLS_POLYMODE_LINE);
+	for(int s = 1; s < shader.numStages; ++s)
 	{
-		cache.stageStateBits[s] = shader.stages[s]->stateBits;
+		cache.stageStateBits[s] = shader.stages[s]->stateBits & (GLS_BLEND_BITS | GLS_ATEST_BITS);
 	}
 	cache.stageCount = shader.numStages;
+	// @TODO:
+	cache.stageCount = min(cache.stageCount, (uint32_t)2);
 
 	for(uint32_t p = 1; p < psoCount; ++p)
 	{
@@ -549,13 +551,13 @@ uint32_t GRP::CreatePSO(CachedPSO& cache)
 	}
 	desc.depthStencil.depthStencilFormat = TextureFormat::Depth32_Float;
 	desc.depthStencil.depthComparison =
-		(cache.desc.stateBits & GLS_DEPTHFUNC_EQUAL) != 0 ?
+		(cache.stageStateBits[0] & GLS_DEPTHFUNC_EQUAL) != 0 ?
 		ComparisonFunction::Equal :
 		ComparisonFunction::GreaterEqual;
-	desc.depthStencil.enableDepthTest = (cache.desc.stateBits & GLS_DEPTHTEST_DISABLE) == 0;
-	desc.depthStencil.enableDepthWrites = (cache.desc.stateBits & GLS_DEPTHMASK_TRUE) != 0;
+	desc.depthStencil.enableDepthTest = (cache.stageStateBits[0] & GLS_DEPTHTEST_DISABLE) == 0;
+	desc.depthStencil.enableDepthWrites = (cache.stageStateBits[0] & GLS_DEPTHMASK_TRUE) != 0;
 	desc.rasterizer.cullMode = cache.desc.cullType;
-	desc.AddRenderTarget(cache.desc.stateBits & GLS_BLEND_BITS, TextureFormat::RGBA32_UNorm);
+	desc.AddRenderTarget(cache.stageStateBits[0] & GLS_BLEND_BITS, TextureFormat::RGBA32_UNorm);
 	cache.pipeline = CreateGraphicsPipeline(desc);
 
 	const uint32_t index = psoCount++;
