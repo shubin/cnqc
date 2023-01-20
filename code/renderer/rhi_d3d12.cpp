@@ -359,6 +359,19 @@ namespace RHI
 		uint32_t durationQueryCount;
 	};
 
+	struct Pix
+	{
+		typedef void(WINAPI* BeginEventOnCommandListPtr)(ID3D12GraphicsCommandList* commandList, UINT64 color, _In_ PCSTR formatString);
+		typedef void(WINAPI* EndEventOnCommandListPtr)(ID3D12GraphicsCommandList* commandList);
+		typedef void(WINAPI* SetMarkerOnCommandListPtr)(ID3D12GraphicsCommandList* commandList, UINT64 color, _In_ PCSTR formatString);
+
+		BeginEventOnCommandListPtr BeginEventOnCommandList;
+		EndEventOnCommandListPtr EndEventOnCommandList;
+		SetMarkerOnCommandListPtr SetMarkerOnCommandList;
+
+		HMODULE module;
+	};
+
 	struct RHIPrivate
 	{
 		ID3D12Debug* debug; // can be NULL
@@ -400,19 +413,6 @@ namespace RHI
 		DescriptorHeap descHeapRTVs;
 		DescriptorHeap descHeapDSVs;
 
-		struct Pix
-		{
-		    typedef void(WINAPI* BeginEventOnCommandListPtr)(ID3D12GraphicsCommandList* commandList, UINT64 color, _In_ PCSTR formatString);
-		    typedef void(WINAPI* EndEventOnCommandListPtr)(ID3D12GraphicsCommandList* commandList);
-		    typedef void(WINAPI* SetMarkerOnCommandListPtr)(ID3D12GraphicsCommandList* commandList, UINT64 color, _In_ PCSTR formatString);
-		    
-			BeginEventOnCommandListPtr BeginEventOnCommandList;
-		    EndEventOnCommandListPtr EndEventOnCommandList;
-		    SetMarkerOnCommandListPtr SetMarkerOnCommandList;
-
-			HMODULE module;
-		} pix;
-
 #define POOL(Type, Size) StaticPool<Type, H##Type, ResourceType::Type, Size>
 		POOL(Buffer, 128) buffers;
 		POOL(Texture, MAX_DRAWIMAGES * 2) textures;
@@ -443,6 +443,8 @@ namespace RHI
 		StaticUnorderedArray<HTexture, MAX_DRAWIMAGES> texturesToTransition;
 		FrameQueries frameQueries[FrameCount];
 		ResolvedQueries resolvedQueries;
+
+		Pix pix;
 	};
 
 	static RHIPrivate rhi;
@@ -1987,12 +1989,12 @@ namespace RHI
 			}
 		}
 
-	    rhi.pix.module = LoadLibraryA("D3D12/WinPixEventRuntime.dll");
-		if (rhi.pix.module != NULL) 
+		rhi.pix.module = LoadLibraryA("D3D12/WinPixEventRuntime.dll");
+		if(rhi.pix.module != NULL)
 		{
-		    rhi.pix.BeginEventOnCommandList = (RHIPrivate::Pix::BeginEventOnCommandListPtr)GetProcAddress(rhi.pix.module, "PIXBeginEventOnCommandList");
-		    rhi.pix.EndEventOnCommandList = (RHIPrivate::Pix::EndEventOnCommandListPtr)GetProcAddress(rhi.pix.module, "PIXEndEventOnCommandList");
-		    rhi.pix.SetMarkerOnCommandList = (RHIPrivate::Pix::SetMarkerOnCommandListPtr)GetProcAddress(rhi.pix.module, "PIXSetMarkerOnCommandList");
+			rhi.pix.BeginEventOnCommandList = (Pix::BeginEventOnCommandListPtr)GetProcAddress(rhi.pix.module, "PIXBeginEventOnCommandList");
+			rhi.pix.EndEventOnCommandList = (Pix::EndEventOnCommandListPtr)GetProcAddress(rhi.pix.module, "PIXEndEventOnCommandList");
+			rhi.pix.SetMarkerOnCommandList = (Pix::SetMarkerOnCommandListPtr)GetProcAddress(rhi.pix.module, "PIXSetMarkerOnCommandList");
 		}
 
 		glInfo.maxTextureSize = MAX_TEXTURE_SIZE;
@@ -2014,6 +2016,8 @@ namespace RHI
 
 			return;
 		}
+
+		FreeLibrary(rhi.pix.module);
 
 		WaitUntilDeviceIsIdle();
 
@@ -2132,7 +2136,7 @@ namespace RHI
 
 	HTexture GetSwapChainTexture()
 	{
-	    return rhi.renderTargets[rhi.frameIndex];
+		return rhi.renderTargets[rhi.frameIndex];
 	}
 
 	HBuffer CreateBuffer(const BufferDesc& rhiDesc)
