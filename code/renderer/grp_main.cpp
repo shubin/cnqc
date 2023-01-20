@@ -252,7 +252,7 @@ bool FailsAlphaTest(float alpha, uint stateBits)
 	else if(stateBits == GLS_ATEST_LT_80)
 		return alpha >= 0.5;
 	else if(stateBits == GLS_ATEST_GE_80)
-		return alpha < 0.0;
+		return alpha < 0.5;
 	else
 		return false;
 }
