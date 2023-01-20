@@ -433,7 +433,7 @@ struct PSODesc
 {
 	cullType_t cullType;
 	// @TODO: qbool polygonOffset;
-	unsigned int stateBits; // collapsed from all stages
+	uint32_t stateBits;
 };
 
 #pragma pack(pop)
@@ -441,6 +441,7 @@ struct PSODesc
 struct CachedPSO
 {
 	PSODesc desc;
+	uint32_t stageStateBits[MAX_SHADER_STAGES];
 	uint32_t stageCount;
 	HPipeline pipeline;
 };
@@ -470,7 +471,7 @@ struct GRP : IRenderPipeline
 	void BeginRenderPass(const char* name);
 	void EndRenderPass();
 
-	uint32_t CreatePSO(CachedPSO& cache, const shader_t& shader);
+	uint32_t CreatePSO(CachedPSO& cache);
 
 	UI ui;
 	World world;

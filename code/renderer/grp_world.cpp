@@ -368,6 +368,7 @@ void World::DrawGUI()
 	if(ImGui::Begin("World"))
 	{
 		ImGui::Checkbox("Depth Pre-Pass", &drawPrePass);
+		ImGui::Text("PSO count: %d", (int)grp.psoCount);
 	}
 	ImGui::End();
 }

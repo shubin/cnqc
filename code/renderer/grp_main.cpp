@@ -336,15 +336,12 @@ void GRP::Init()
 	
 	// @TODO: remove
 	{
-		shaderStage_t stage = {};
-		shader_t shader = {};
-		shader.stages[0] = &stage;
-		shader.numStages = 1;
 		CachedPSO cache = {};
 		cache.desc.cullType = CT_BACK_SIDED;
 		cache.desc.stateBits = GLS_DEFAULT;
+		cache.stageStateBits[0] = GLS_DEFAULT;
 		cache.stageCount = 1;
-		CreatePSO(cache, shader);
+		CreatePSO(cache);
 	}
 
 	ui.Init();
@@ -452,20 +449,25 @@ void GRP::ProcessShader(shader_t& shader)
 
 	CachedPSO cache = {};
 	cache.desc.cullType = shader.cullType;
-	cache.desc.stateBits = shader.stages[0]->stateBits;
+	cache.desc.stateBits = shader.stages[0]->stateBits; // @TODO:
+	for(int s = 0; s < shader.numStages; ++s)
+	{
+		cache.stageStateBits[s] = shader.stages[s]->stateBits;
+	}
 	cache.stageCount = shader.numStages;
 
 	for(uint32_t p = 1; p < psoCount; ++p)
 	{
 		if(cache.stageCount == psos[p].stageCount &&
-			memcmp(&cache.desc, &psos[p].desc, sizeof(cache.desc)) == 0)
+			memcmp(&cache.desc, &psos[p].desc, sizeof(cache.desc)) == 0 &&
+			memcmp(&cache.stageStateBits, &psos[p].stageStateBits, cache.stageCount * sizeof(cache.stageStateBits[0])) == 0)
 		{
 			shader.psoIndex = p;
 			return;
 		}
 	}
 
-	shader.psoIndex = CreatePSO(cache, shader);
+	shader.psoIndex = CreatePSO(cache);
 }
 
 uint32_t GRP::RegisterTexture(HTexture htexture)
@@ -512,9 +514,8 @@ void GRP::EndRenderPass()
 	CmdEndDurationQuery(q.query);
 }
 
-uint32_t GRP::CreatePSO(CachedPSO& cache, const shader_t& shader)
+uint32_t GRP::CreatePSO(CachedPSO& cache)
 {
-	Q_assert(cache.stageCount == shader.numStages);
 	Q_assert(psoCount < ARRAY_LEN(psos));
 
 	uint32_t macroCount = 0;
@@ -525,10 +526,10 @@ uint32_t GRP::CreatePSO(CachedPSO& cache, const shader_t& shader)
 	macroCount++;
 	ShaderByteCode vertexShader = CompileShader(ShaderStage::Vertex, opaqueShaderSource, "main", macroCount, macros);
 
-	for(int s = 0; s < shader.numStages; ++s)
+	for(int s = 0; s < cache.stageCount; ++s)
 	{
 		macros[macroCount].name = va("STAGE%d_BITS", s);
-		macros[macroCount].value = va("%d", (int)shader.stages[s]->stateBits);
+		macros[macroCount].value = va("%d", (int)cache.stageStateBits[s]);
 		macroCount++;
 	}
 	ShaderByteCode pixelShader = CompileShader(ShaderStage::Pixel, opaqueShaderSource, "main", macroCount, macros);
