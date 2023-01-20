@@ -341,7 +341,6 @@ void World::EndBatch()
 		Q_assert(texIdx > 0);
 		pixelRC.stageIndices[s] = texIdx; // sampler index is 0
 	}
-	pixelRC.stageIndices[1] = 73;
 	CmdSetRootConstants(grp.opaqueRootSignature, ShaderStage::Pixel, &pixelRC);
 
 	BindVertexBuffers(batchHasStaticGeo, VertexBuffers::BaseCount + VertexBuffers::StageCount * tess.shader->numStages);

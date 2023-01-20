@@ -198,7 +198,7 @@ float4 BlendSource(float4 src, float4 dst, uint stateBits)
 	else if(stateBits == GLS_SRCBLEND_ONE)
 		return src;
 	else if(stateBits == GLS_SRCBLEND_DST_COLOR)
-		return dst;
+		return src * dst;
 	else if(stateBits == GLS_SRCBLEND_ONE_MINUS_DST_COLOR)
 		return src * (float4(1.0, 1.0, 1.0, 1.0) - dst);
 	else if(stateBits == GLS_SRCBLEND_SRC_ALPHA)
