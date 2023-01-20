@@ -88,9 +88,9 @@ struct VertexBuffers : BufferBase
 
 	enum StageId
 	{
-		StageTexCoords = 0,
-		StageColors = 1,
-		StageCount = 2
+		StageTexCoords,
+		StageColors,
+		StageCount
 	};
 
 	void Create(const char* name, MemoryUsage::Id memoryUsage, uint32_t vertexCount)

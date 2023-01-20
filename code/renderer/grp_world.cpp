@@ -324,23 +324,27 @@ void World::EndBatch()
 
 	if(!batchHasStaticGeo)
 	{
-		db.vertexBuffers.Upload(0, 1);
+		db.vertexBuffers.Upload(0, tess.shader->numStages);
 	}
 	db.indexBuffer.Upload();
 
-	DynamicVertexRC vertexRC;
+	DynamicVertexRC vertexRC = {};
 	memcpy(vertexRC.modelViewMatrix, backEnd.orient.modelMatrix, sizeof(vertexRC.modelViewMatrix));
 	memcpy(vertexRC.projectionMatrix, backEnd.viewParms.projectionMatrix, sizeof(vertexRC.projectionMatrix));
 	memcpy(vertexRC.clipPlane, clipPlane, sizeof(vertexRC.clipPlane));
 	CmdSetRootConstants(grp.opaqueRootSignature, ShaderStage::Vertex, &vertexRC);
 
-	const uint32_t texIdx = tess.shader->stages[0]->bundle.image[0]->textureIndex;
-	Q_assert(texIdx > 0);
-	DynamicPixelRC pixelRC;
-	pixelRC.stageIndices[0] = texIdx; // sampler index is 0
+	DynamicPixelRC pixelRC = {};
+	for(int s = 0; s < tess.shader->numStages; ++s)
+	{
+		const uint32_t texIdx = tess.shader->stages[s]->bundle.image[0]->textureIndex;
+		Q_assert(texIdx > 0);
+		pixelRC.stageIndices[s] = texIdx; // sampler index is 0
+	}
+	pixelRC.stageIndices[1] = 73;
 	CmdSetRootConstants(grp.opaqueRootSignature, ShaderStage::Pixel, &pixelRC);
 
-	BindVertexBuffers(batchHasStaticGeo, 4);
+	BindVertexBuffers(batchHasStaticGeo, VertexBuffers::BaseCount + VertexBuffers::StageCount * tess.shader->numStages);
 	BindIndexBuffer(false);
 	CmdDrawIndexed(tess.numIndexes, db.indexBuffer.batchFirst, batchHasStaticGeo ? 0 : db.vertexBuffers.batchFirst);
 
@@ -540,11 +544,12 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 	grp.BeginRenderPass("3D Scene");
 
 	CmdBindRootSignature(grp.opaqueRootSignature);
-	CmdBindPipeline(grp.psos[1].pipeline);
 	CmdBindDescriptorTable(grp.opaqueRootSignature, grp.descriptorTable);
 
 	const HTexture swapChain = GetSwapChainTexture();
 	CmdBindRenderTargets(1, &swapChain, &depthTexture);
+
+	HPipeline pso = RHI_MAKE_NULL_HANDLE();
 
 	const drawSurf_t* drawSurfs = cmd.drawSurfs;
 	const int opaqueCount = cmd.numDrawSurfs - cmd.numTranspSurfs;
@@ -568,6 +573,11 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 		int fogNum;
 		int entityNum;
 		R_DecomposeSort(drawSurf->sort, &entityNum, &shader, &fogNum);
+		if(shader->psoIndex == 0)
+		{
+			continue;
+		}
+
 		const bool hasStaticGeo = HasStaticGeo(drawSurf);
 		const bool staticChanged = hasStaticGeo != oldHasStaticGeo;
 		const bool shaderChanged = shader != oldShader;
@@ -581,6 +591,11 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			oldHasStaticGeo = hasStaticGeo;
 			EndBatch();
 			BeginBatch(shader, hasStaticGeo);
+			if(pso != grp.psos[shader->psoIndex].pipeline)
+			{
+				pso = grp.psos[shader->psoIndex].pipeline;
+				CmdBindPipeline(pso);
+			}
 		}
 
 		if(entityChanged)

@@ -557,6 +557,7 @@ uint32_t GRP::CreatePSO(CachedPSO& cache)
 	desc.depthStencil.enableDepthTest = (cache.stageStateBits[0] & GLS_DEPTHTEST_DISABLE) == 0;
 	desc.depthStencil.enableDepthWrites = (cache.stageStateBits[0] & GLS_DEPTHMASK_TRUE) != 0;
 	desc.rasterizer.cullMode = cache.desc.cullType;
+	desc.rasterizer.cullMode = CT_TWO_SIDED; // @TODO: *sigh*
 	desc.AddRenderTarget(cache.stageStateBits[0] & GLS_BLEND_BITS, TextureFormat::RGBA32_UNorm);
 	cache.pipeline = CreateGraphicsPipeline(desc);
 
