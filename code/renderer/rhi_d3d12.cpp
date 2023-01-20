@@ -110,10 +110,8 @@ One mitigation for this restriction is the diligent use of Null descriptors.
 #include <d3d12.h>
 #include <dxgi1_6.h>
 #include <dxgidebug.h>
-#if defined(_DEBUG) || defined(CNQ3_DEV)
 #include <d3dcompiler.h>
 #pragma comment(lib, "d3dcompiler")
-#endif
 #define D3D12MA_D3D12_HEADERS_ALREADY_INCLUDED
 #include "D3D12MemAlloc.h"
 #include "../imgui/imgui.h"

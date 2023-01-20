@@ -1978,8 +1978,6 @@ have value is in a multi-add collapse where one layer is modulated by
 an rgbgen but the other needs to maintain identity colors
 */
 
-#define GLS_BLEND_BITS (GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS)
-
 static void CollapseStages()
 {
 	int i;
