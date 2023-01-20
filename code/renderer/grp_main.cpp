@@ -158,7 +158,8 @@ cbuffer RootConstants
 	// @TODO: 16 bits per stage: low 12 = texture, high 4 = sampler
 	//uint stageIndices[4];
 	// low 16 = texture, high 16 = sampler
-	uint stageIndices[8];
+	uint4 stageIndices0;
+	uint4 stageIndices1;
 };
 
 Texture2D textures2D[2048] : register(t0);
@@ -273,10 +274,11 @@ void ProcessFullStage(inout float4 dst, float4 color, float2 texCoords, uint tex
 [earlydepthstencil]
 float4 main(VOut input) : SV_TARGET
 {
-	float4 dst = ProcessStage(input.color0, input.texCoords0, stageIndices[0] & 0xFFFF, stageIndices[0] >> 16);
+	float4 dst = ProcessStage(input.color0, input.texCoords0, stageIndices0.x & 0xFFFF, stageIndices0.x >> 16);
 	// @TODO: alpha test fails -> discard
 #if STAGE_COUNT >= 2
-	ProcessFullStage(dst, input.color1, input.texCoords1, stageIndices[1] & 0xFFFF, stageIndices[1] >> 16, STAGE1_BITS);
+	ProcessFullStage(dst, input.color1, input.texCoords1, stageIndices0.y & 0xFFFF, stageIndices0.y >> 16, STAGE1_BITS);
+	//ProcessFullStage(dst, input.color1, input.texCoords1, stageIndices0.y & 0xFFFF, stageIndices0.y >> 16, 0x22);
 #endif
 
 	return dst;
