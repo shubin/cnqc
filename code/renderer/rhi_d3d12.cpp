@@ -1516,6 +1516,23 @@ namespace RHI
 		rhi.device->CopyDescriptorsSimple(1, dstHandle, srcHeap.GetCPUHandle(srcIndex), srcHeap.type);
 	}
 
+	static UINT BGRAUIntFromFloat(float r, float g, float b)
+	{
+		union Color
+		{
+			UINT color;
+			byte channels[4];
+		};
+
+		Color c;
+		c.channels[0] = (byte)Com_Clamp(0.0f, 1.0f, b) * 255.0f;
+		c.channels[1] = (byte)Com_Clamp(0.0f, 1.0f, g) * 255.0f;
+		c.channels[2] = (byte)Com_Clamp(0.0f, 1.0f, r) * 255.0f;
+		c.channels[3] = 255;
+
+		return c.color;
+	}
+
 	static bool BeginTable(const char* name, int count)
 	{
 		ImGui::Text(name);
@@ -2107,10 +2124,14 @@ namespace RHI
 		}
 		CmdBarrier(rhi.texturesToTransition.count, barriers);
 		rhi.texturesToTransition.Clear();
+
+		CmdInsertDebugLabel("RHI::BeginFrame", 1.0f, 1.0f, 0.0f);
 	}
 
 	void EndFrame()
 	{
+		CmdInsertDebugLabel("RHI::EndFrame", 0.0f, 1.0f, 1.0f);
+
 		const TextureBarrier barrier(rhi.renderTargets[rhi.frameIndex], ResourceStates::PresentBit);
 		CmdBarrier(1, &barrier);
 
@@ -3212,31 +3233,33 @@ namespace RHI
 		rhi.commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, clearDepth, 0, rectCount, d3dRectPtr);
 	}
 
-	void CmdInsertDebugLabel(const char* name, float r, float g, float b, float a)
+	void CmdInsertDebugLabel(const char* name, float r, float g, float b)
 	{
 		Q_assert(CanWriteCommands());
 		Q_assert(name);
 
-		//rhi.commandList->SetMarker(0, name, strlen(name) + 1);
+		if(rhi.pix.SetMarkerOnCommandList != NULL)
+		{
+			rhi.pix.SetMarkerOnCommandList(rhi.commandList, BGRAUIntFromFloat(r, g, b), name);
+		}
+		else
+		{
+			rhi.commandList->SetMarker(1, name, strlen(name) + 1);
+		}
 	}
 
-	void CmdBeginDebugLabel(const char* name, float r, float g, float b, float a)
+	void CmdBeginDebugLabel(const char* name, float r, float g, float b)
 	{
 		Q_assert(CanWriteCommands());
 		Q_assert(name);
 
-	    if (rhi.pix.BeginEventOnCommandList != NULL) 
+		if(rhi.pix.BeginEventOnCommandList != NULL)
 		{
-		    color4ub_t color;
-		    color[0] = r * 255;
-		    color[1] = g * 255;
-		    color[2] = b * 255;
-		    color[3] = a * 255;
-
-		    rhi.pix.BeginEventOnCommandList(rhi.commandList, *(UINT64*)&color, name);
-		} else 
+			rhi.pix.BeginEventOnCommandList(rhi.commandList, BGRAUIntFromFloat(r, g, b), name);
+		}
+		else
 		{
-		    rhi.commandList->BeginEvent(1, name, strlen(name) + 1);
+			rhi.commandList->BeginEvent(1, name, strlen(name) + 1);
 		}
 	}
 
@@ -3244,11 +3267,14 @@ namespace RHI
 	{
 		Q_assert(CanWriteCommands());
 
-		if (rhi.pix.EndEventOnCommandList != NULL) {
-		    rhi.pix.EndEventOnCommandList(rhi.commandList);
-	    } else {
-		    rhi.commandList->EndEvent();
-	    }
+		if(rhi.pix.EndEventOnCommandList != NULL)
+		{
+			rhi.pix.EndEventOnCommandList(rhi.commandList);
+		}
+		else
+		{
+			rhi.commandList->EndEvent();
+		}
 	}
 
 	uint8_t* BeginBufferUpload(HBuffer buffer)
