@@ -265,20 +265,44 @@ float4 ProcessStage(float4 color, float2 texCoords, uint textureIndex, uint samp
 void ProcessFullStage(inout float4 dst, float4 color, float2 texCoords, uint textureIndex, uint samplerIndex, uint stateBits)
 {
 	float4 src = ProcessStage(color, texCoords, textureIndex, samplerIndex);
-	// @TODO: alpha test fails -> don't write to dst
-	dst = Blend(src, dst, stateBits);
+	if(!FailsAlphaTest(src.a, stateBits & GLS_ATEST_BITS))
+	{
+		dst = Blend(src, dst, stateBits);
+	}
 }
 
 // reminder: early-Z is early depth test AND early depth write
 // therefore, the attribute should be gone if opaque stage #1 does alpha testing (discard)
+#if (STAGE0_BITS & GLS_ATEST_BITS) == 0
 [earlydepthstencil]
+#endif
 float4 main(VOut input) : SV_TARGET
 {
 	float4 dst = ProcessStage(input.color0, input.texCoords0, stageIndices0.x & 0xFFFF, stageIndices0.x >> 16);
-	// @TODO: alpha test fails -> discard
+	if(FailsAlphaTest(dst.a, STAGE0_BITS & GLS_ATEST_BITS))
+	{
+		discard;
+	}
 #if STAGE_COUNT >= 2
 	ProcessFullStage(dst, input.color1, input.texCoords1, stageIndices0.y & 0xFFFF, stageIndices0.y >> 16, STAGE1_BITS);
-	//ProcessFullStage(dst, input.color1, input.texCoords1, stageIndices0.y & 0xFFFF, stageIndices0.y >> 16, 0x22);
+#endif
+#if STAGE_COUNT >= 3
+	ProcessFullStage(dst, input.color2, input.texCoords2, stageIndices0.z & 0xFFFF, stageIndices0.z >> 16, STAGE2_BITS);
+#endif
+#if STAGE_COUNT >= 4
+	ProcessFullStage(dst, input.color3, input.texCoords3, stageIndices0.w & 0xFFFF, stageIndices0.w >> 16, STAGE3_BITS);
+#endif
+#if STAGE_COUNT >= 5
+	ProcessFullStage(dst, input.color4, input.texCoords4, stageIndices1.x & 0xFFFF, stageIndices1.x >> 16, STAGE4_BITS);
+#endif
+#if STAGE_COUNT >= 6
+	ProcessFullStage(dst, input.color5, input.texCoords5, stageIndices1.y & 0xFFFF, stageIndices1.y >> 16, STAGE5_BITS);
+#endif
+#if STAGE_COUNT >= 7
+	ProcessFullStage(dst, input.color6, input.texCoords6, stageIndices1.z & 0xFFFF, stageIndices1.z >> 16, STAGE6_BITS);
+#endif
+#if STAGE_COUNT >= 8
+	ProcessFullStage(dst, input.color7, input.texCoords7, stageIndices1.w & 0xFFFF, stageIndices1.w >> 16, STAGE7_BITS);
 #endif
 
 	return dst;
@@ -457,8 +481,6 @@ void GRP::ProcessShader(shader_t& shader)
 		cache.stageStateBits[s] = shader.stages[s]->stateBits & (GLS_BLEND_BITS | GLS_ATEST_BITS);
 	}
 	cache.stageCount = shader.numStages;
-	// @TODO:
-	cache.stageCount = min(cache.stageCount, (uint32_t)2);
 
 	for(uint32_t p = 1; p < psoCount; ++p)
 	{
