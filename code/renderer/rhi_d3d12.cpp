@@ -117,7 +117,7 @@ One mitigation for this restriction is the diligent use of Null descriptors.
 #include "../imgui/imgui.h"
 #include "../nvapi/nvapi.h"
 #pragma comment(lib, "nvapi64")
-//#include "../pix/pix3.h"
+#include "../pix/pix3.h"
 
 
 #if defined(_DEBUG) || defined(CNQ3_DEV)
@@ -399,6 +399,19 @@ namespace RHI
 		DescriptorHeap descHeapSamplers;
 		DescriptorHeap descHeapRTVs;
 		DescriptorHeap descHeapDSVs;
+
+		struct Pix
+		{
+		    typedef void(WINAPI* BeginEventOnCommandListPtr)(ID3D12GraphicsCommandList* commandList, UINT64 color, _In_ PCSTR formatString);
+		    typedef void(WINAPI* EndEventOnCommandListPtr)(ID3D12GraphicsCommandList* commandList);
+		    typedef void(WINAPI* SetMarkerOnCommandListPtr)(ID3D12GraphicsCommandList* commandList, UINT64 color, _In_ PCSTR formatString);
+		    
+			BeginEventOnCommandListPtr BeginEventOnCommandList;
+		    EndEventOnCommandListPtr EndEventOnCommandList;
+		    SetMarkerOnCommandListPtr SetMarkerOnCommandList;
+
+			HMODULE module;
+		} pix;
 
 #define POOL(Type, Size) StaticPool<Type, H##Type, ResourceType::Type, Size>
 		POOL(Buffer, 128) buffers;
@@ -1974,6 +1987,14 @@ namespace RHI
 			}
 		}
 
+	    rhi.pix.module = LoadLibraryA("D3D12/WinPixEventRuntime.dll");
+		if (rhi.pix.module != NULL) 
+		{
+		    rhi.pix.BeginEventOnCommandList = (RHIPrivate::Pix::BeginEventOnCommandListPtr)GetProcAddress(rhi.pix.module, "PIXBeginEventOnCommandList");
+		    rhi.pix.EndEventOnCommandList = (RHIPrivate::Pix::EndEventOnCommandListPtr)GetProcAddress(rhi.pix.module, "PIXEndEventOnCommandList");
+		    rhi.pix.SetMarkerOnCommandList = (RHIPrivate::Pix::SetMarkerOnCommandListPtr)GetProcAddress(rhi.pix.module, "PIXSetMarkerOnCommandList");
+		}
+
 		glInfo.maxTextureSize = MAX_TEXTURE_SIZE;
 		glInfo.maxAnisotropy = 16;
 		glInfo.depthFadeSupport = qfalse;
@@ -3200,16 +3221,30 @@ namespace RHI
 		Q_assert(CanWriteCommands());
 		Q_assert(name);
 
-		//PIXBeginEvent(rhi.commandList, PIX_COLOR(255, 0, 0), name);
-		rhi.commandList->BeginEvent(1, name, strlen(name) + 1);
+	    if (rhi.pix.BeginEventOnCommandList != NULL) 
+		{
+		    color4ub_t color;
+		    color[0] = r * 255;
+		    color[1] = g * 255;
+		    color[2] = b * 255;
+		    color[3] = a * 255;
+
+		    rhi.pix.BeginEventOnCommandList(rhi.commandList, *(UINT64*)&color, name);
+		} else 
+		{
+		    rhi.commandList->BeginEvent(1, name, strlen(name) + 1);
+		}
 	}
 
 	void CmdEndDebugLabel()
 	{
 		Q_assert(CanWriteCommands());
 
-		//PIXEndEvent(rhi.commandList);
-		rhi.commandList->EndEvent();
+		if (rhi.pix.EndEventOnCommandList != NULL) {
+		    rhi.pix.EndEventOnCommandList(rhi.commandList);
+	    } else {
+		    rhi.commandList->EndEvent();
+	    }
 	}
 
 	uint8_t* BeginBufferUpload(HBuffer buffer)

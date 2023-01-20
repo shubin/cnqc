@@ -1412,7 +1412,7 @@ static void R_SortDrawSurfs( int firstDrawSurf, int firstLitSurf )
 	const sortFunc_t transpSort = r_ignoreShaderSortKey->integer ? &R_CompareDrawSurfNoKey : &R_CompareDrawSurf;
 	qsort( drawSurfs + numDrawSurfs - numTranspSurfs, numTranspSurfs, sizeof(drawSurf_t), transpSort );
 
-#if defined(_DEBUG)
+#if 0
 	if ( r_ignoreShaderSortKey->integer == 0 ) {
 		float prevSort = -1.0f;
 		for ( int i = 0; i < numDrawSurfs; ++i ) {
