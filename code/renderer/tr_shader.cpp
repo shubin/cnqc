@@ -2373,6 +2373,93 @@ static void ProcessGreyscale()
 }
 
 
+static alphaGen_t GetActualAlphaTest(const shaderStage_t* stage)
+{
+	if(stage->alphaGen != AGEN_SKIP)
+	{
+		return stage->alphaGen;
+	}
+
+	switch(stage->rgbGen)
+	{
+		case CGEN_IDENTITY: return AGEN_IDENTITY;
+		case CGEN_IDENTITY_LIGHTING: return (alphaGen_t)__LINE__; // alpha = tr.identityLightByte
+		case CGEN_LIGHTING_DIFFUSE: return AGEN_IDENTITY;
+		case CGEN_CONST: return AGEN_CONST;
+		case CGEN_VERTEX: return AGEN_VERTEX;
+		case CGEN_EXACT_VERTEX: return AGEN_VERTEX;
+		case CGEN_ONE_MINUS_VERTEX: return (alphaGen_t)__LINE__; // doesn't write to alpha currently...
+		case CGEN_FOG: return (alphaGen_t)__LINE__;
+		case CGEN_WAVEFORM: return AGEN_IDENTITY;
+		case CGEN_ENTITY: return AGEN_ENTITY;
+		case CGEN_ONE_MINUS_ENTITY: return AGEN_ONE_MINUS_ENTITY;
+		case CGEN_DEBUG_ALPHA: return AGEN_IDENTITY;
+		default: return (alphaGen_t)__LINE__;
+	}
+}
+
+
+static void FixRedundantAlphaTesting()
+{
+	if(shader.numStages < 2 ||
+		!stages[0].active ||
+		!stages[1].active)
+	{
+		return;
+	}
+
+	const unsigned int bits0 = stages[0].stateBits;
+	const unsigned int bits1 = stages[1].stateBits;
+
+	// both stages must be opaque
+	const unsigned int blendReplace = GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO;
+	const unsigned int blendNone = 0;
+	if((bits0 & GLS_BLEND_BITS) != blendReplace && (bits0 & GLS_BLEND_BITS) != blendNone)
+	{
+		return;
+	}
+	if((bits1 & GLS_BLEND_BITS) != blendReplace && (bits1 & GLS_BLEND_BITS) != blendNone)
+	{
+		return;
+	}
+
+	// both stages must have complementary alpha tests,
+	// meaning all fragment are written by the end of stage #2
+	// (provided texture, alphaGen and depth states match)
+	const unsigned int bitsOr = bits0 | bits1;
+	const unsigned int maskAT = GLS_ATEST_BITS;
+	const unsigned int expectAT = GLS_ATEST_GE_80 | GLS_ATEST_LT_80;
+	if((bitsOr & maskAT) != expectAT)
+	{
+		return;
+	}
+
+	// same texture
+	if(stages[0].bundle.image[0] != stages[1].bundle.image[0])
+	{
+		return;
+	}
+
+	// same depth states and polygon fill
+	const unsigned int maskRest = GLS_DEPTHMASK_TRUE | GLS_POLYMODE_LINE | GLS_DEPTHTEST_DISABLE | GLS_DEPTHFUNC_EQUAL;
+	const unsigned int expectRest = GLS_DEPTHMASK_TRUE;
+	if((bits0 & maskRest) != expectRest || (bits1 & maskRest) != expectRest)
+	{
+		return;
+	}
+
+	// same alphaGen
+	const alphaGen_t ag0 = GetActualAlphaTest(&stages[0]);
+	const alphaGen_t ag1 = GetActualAlphaTest(&stages[1]);
+	if(ag0 != ag1)
+	{
+		return;
+	}
+
+	stages[0].stateBits &= ~GLS_ATEST_BITS;
+}
+
+
 static qbool UsesInternalLightmap( const shaderStage_t* stage )
 {
 	return
@@ -2669,6 +2756,8 @@ static shader_t* FinishShader()
 	ProcessDepthFade();
 
 	ProcessGreyscale();
+
+	FixRedundantAlphaTesting();
 
 	shader_t* const newShader = GeneratePermanentShader();
 
