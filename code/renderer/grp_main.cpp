@@ -164,19 +164,6 @@ cbuffer RootConstants
 Texture2D textures2D[2048] : register(t0);
 SamplerState samplers[2] : register(s0);
 
-bool FailsAlphaTest(float alpha)
-{
-	#if ALPHA_TEST == 1
-		return alpha == 0.0;
-	#elif ALPHA_TEST == 2
-		return alpha >= 0.5;
-	#elif ALPHA_TEST == 3
-		return alpha < 0.0;
-	#else
-		return false;
-	#endif
-}
-
 #define GLS_SRCBLEND_ZERO						0x00000001
 #define GLS_SRCBLEND_ONE						0x00000002
 #define GLS_SRCBLEND_DST_COLOR					0x00000003
@@ -198,67 +185,75 @@ bool FailsAlphaTest(float alpha)
 #define GLS_DSTBLEND_ONE_MINUS_DST_ALPHA		0x00000080
 #define		GLS_DSTBLEND_BITS					0x000000f0
 
-// input: SOURCE_BLEND
-float4 BlendSource(float4 src, float4 dst)
+#define GLS_ATEST_GT_0							0x10000000
+#define GLS_ATEST_LT_80							0x20000000
+#define GLS_ATEST_GE_80							0x40000000
+#define		GLS_ATEST_BITS						0x70000000
+
+float4 BlendSource(float4 src, float4 dst, uint stateBits)
 {
-	#if SOURCE_BLEND == GLS_SRCBLEND_ZERO
+	if(stateBits == GLS_SRCBLEND_ZERO)
 		return float4(0.0, 0.0, 0.0, 0.0);
-	#elif SOURCE_BLEND == GLS_SRCBLEND_ONE
+	else if(stateBits == GLS_SRCBLEND_ONE)
 		return src;
-	#elif SOURCE_BLEND == GLS_SRCBLEND_DST_COLOR
+	else if(stateBits == GLS_SRCBLEND_DST_COLOR)
 		return dst;
-	#elif SOURCE_BLEND == GLS_SRCBLEND_ONE_MINUS_DST_COLOR
+	else if(stateBits == GLS_SRCBLEND_ONE_MINUS_DST_COLOR)
 		return src * (float4(1.0, 1.0, 1.0, 1.0) - dst);
-	#elif SOURCE_BLEND == GLS_SRCBLEND_SRC_ALPHA
+	else if(stateBits == GLS_SRCBLEND_SRC_ALPHA)
 		return src * float4(src.a, src.a, src.a, 1.0);
-	#elif SOURCE_BLEND == GLS_SRCBLEND_ONE_MINUS_SRC_ALPHA
+	else if(stateBits == GLS_SRCBLEND_ONE_MINUS_SRC_ALPHA)
 		return src * float4(1.0 - src.a, 1.0 - src.a, 1.0 - src.a, 1.0);
-	#elif SOURCE_BLEND == GLS_SRCBLEND_DST_ALPHA
+	else if(stateBits == GLS_SRCBLEND_DST_ALPHA)
 		return src * float4(dst.a, dst.a, dst.a, 1.0);
-	#elif SOURCE_BLEND == GLS_SRCBLEND_ONE_MINUS_DST_ALPHA
+	else if(stateBits == GLS_SRCBLEND_ONE_MINUS_DST_ALPHA)
 		return src * float4(1.0 - dst.a, 1.0 - dst.a, 1.0 - dst.a, 1.0);
-	#elif SOURCE_BLEND == GLS_SRCBLEND_ALPHA_SATURATE
+	else if(stateBits == GLS_SRCBLEND_ALPHA_SATURATE)
 		return src * float4(src.a, src.a, src.a, 1.0); // ?????????
-	#else
+	else
 		return src;
-	#endif
 }
 
-// input: DEST_BLEND
-float4 BlendDest(float4 src, float4 dst)
+float4 BlendDest(float4 src, float4 dst, uint stateBits)
 {
-	#if DEST_BLEND == GLS_DSTBLEND_ZERO
-		return vec4(0.0, 0.0, 0.0, 0.0);
-	#elif DEST_BLEND == GLS_DSTBLEND_ONE
+	if(stateBits == GLS_DSTBLEND_ZERO)
+		return float4(0.0, 0.0, 0.0, 0.0);
+	else if(stateBits == GLS_DSTBLEND_ONE)
 		return dst;
-	#elif DEST_BLEND == GLS_DSTBLEND_SRC_COLOR
+	else if(stateBits == GLS_DSTBLEND_SRC_COLOR)
 		return dst * src;
-	#elif DEST_BLEND == GLS_DSTBLEND_ONE_MINUS_SRC_COLOR
-		return dst * vec4(1.0 - src.r, 1.0 - src.g, 1.0 - src.b, 1.0 - src.a);
-	#elif DEST_BLEND == GLS_DSTBLEND_SRC_ALPHA
-		return dst * vec4(src.a, src.a, src.a, 1.0);
-	#elif DEST_BLEND == GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA
-		return dst * vec4(1.0 - src.a, 1.0 - src.a, 1.0 - src.a, 0.0);
-	#elif DEST_BLEND == GLS_DSTBLEND_DST_ALPHA
-		return dst * vec4(dst.a, dst.a, dst.a, 1.0);
-	#elif DEST_BLEND == GLS_DSTBLEND_ONE_MINUS_DST_ALPHA
-		return dst * vec4(1.0 - dst.a, 1.0 - dst.a, 1.0 - dst.a, 1.0);
-	#else
+	else if(stateBits == GLS_DSTBLEND_ONE_MINUS_SRC_COLOR)
+		return dst * float4(1.0 - src.r, 1.0 - src.g, 1.0 - src.b, 1.0 - src.a);
+	else if(stateBits == GLS_DSTBLEND_SRC_ALPHA)
+		return dst * float4(src.a, src.a, src.a, 1.0);
+	else if(stateBits == GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA)
+		return dst * float4(1.0 - src.a, 1.0 - src.a, 1.0 - src.a, 0.0);
+	else if(stateBits == GLS_DSTBLEND_DST_ALPHA)
+		return dst * float4(dst.a, dst.a, dst.a, 1.0);
+	else if(stateBits == GLS_DSTBLEND_ONE_MINUS_DST_ALPHA)
+		return dst * float4(1.0 - dst.a, 1.0 - dst.a, 1.0 - dst.a, 1.0);
+	else
 		return dst;
-	#endif
 }
 
-// input: BLEND_BITS
-float4 Blend(float4 src, float4 dst)
+float4 Blend(float4 src, float4 dst, uint stateBits)
 {
-	#define SOURCE_BLEND (BLEND_BITS & GLS_SRCBLEND_BITS)
-	#define DEST_BLEND (BLEND_BITS & GLS_DSTBLEND_BITS)
-	float4 srcOut = BlendSource(src, dst);
-	float4 dstOut = BlendDest(src, dst);
-	#undef SOURCE_BLEND
-	#undef DEST_BLEND
+	float4 srcOut = BlendSource(src, dst, stateBits & GLS_SRCBLEND_BITS);
+	float4 dstOut = BlendDest(src, dst, stateBits & GLS_DSTBLEND_BITS);
 
 	return srcOut + dstOut;
+}
+
+bool FailsAlphaTest(float alpha, uint stateBits)
+{
+	if(stateBits == GLS_ATEST_GT_0)
+		return alpha == 0.0;
+	else if(stateBits == GLS_ATEST_LT_80)
+		return alpha >= 0.5;
+	else if(stateBits == GLS_ATEST_GE_80)
+		return alpha < 0.0;
+	else
+		return false;
 }
 
 float4 ProcessStage(float4 color, float2 texCoords, uint textureIndex, uint samplerIndex)
@@ -266,11 +261,11 @@ float4 ProcessStage(float4 color, float2 texCoords, uint textureIndex, uint samp
 	return color * textures2D[textureIndex].Sample(samplers[samplerIndex], texCoords);
 }
 
-void ProcessFullStage(inout float4 dst, float4 color, float2 texCoords, uint textureIndex, uint samplerIndex)
+void ProcessFullStage(inout float4 dst, float4 color, float2 texCoords, uint textureIndex, uint samplerIndex, uint stateBits)
 {
-	float4 src = color * textures2D[textureIndex].Sample(samplers[samplerIndex], texCoords);
+	float4 src = ProcessStage(color, texCoords, textureIndex, samplerIndex);
 	// @TODO: alpha test fails -> don't write to dst
-	dst = Blend(src, dst);
+	dst = Blend(src, dst, stateBits);
 }
 
 // reminder: early-Z is early depth test AND early depth write
@@ -278,14 +273,10 @@ void ProcessFullStage(inout float4 dst, float4 color, float2 texCoords, uint tex
 [earlydepthstencil]
 float4 main(VOut input) : SV_TARGET
 {
-	#define STAGE_BITS STAGE0_BITS
 	float4 dst = ProcessStage(input.color0, input.texCoords0, stageIndices[0] & 0xFFFF, stageIndices[0] >> 16);
 	// @TODO: alpha test fails -> discard
-	#undef STAGE_BITS
 #if STAGE_COUNT >= 2
-	#define STAGE_BITS STAGE1_BITS
-	ProcessFullStage(dst, input.color1, input.texCoords1, stageIndices[1] & 0xFFFF, stageIndices[1] >> 16);
-	#undef STAGE_BITS
+	ProcessFullStage(dst, input.color1, input.texCoords1, stageIndices[1] & 0xFFFF, stageIndices[1] >> 16, STAGE1_BITS);
 #endif
 
 	return dst;
