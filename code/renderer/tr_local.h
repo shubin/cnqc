@@ -690,12 +690,7 @@ struct msurface_t {
 	int lightCount;	// if == tr.lightCount, already added to the litsurf list for the current light
 	const shader_t* shader;
 	int fogIndex;
-
-	// only set when the associated shader is truly opaque
-	int numVertexes;
-	int numIndexes;
-	int firstVertex;
-	int firstIndex;
+	int staticGeoChunk;
 
 	const surfaceType_t* data; // any of srf*_t
 };

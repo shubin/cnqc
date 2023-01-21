@@ -62,10 +62,7 @@ static bool drawPrePass = true;
 
 static bool HasStaticGeo(const drawSurf_t* drawSurf)
 {
-	return
-		drawSurf->msurface != NULL &&
-		drawSurf->msurface->numIndexes > 0 &&
-		drawSurf->msurface->numVertexes > 0;
+	return drawSurf->msurface != NULL && drawSurf->msurface->staticGeoChunk > 0;
 }
 
 static void UpdateModelViewMatrix(int entityNum, double originalTime)
@@ -369,11 +366,6 @@ void World::ProcessWorld(world_t& world)
 		for(int s = 0; s < world.numsurfaces; ++s)
 		{
 			msurface_t* const surf = &world.surfaces[s];
-			surf->numVertexes = 0;
-			surf->numIndexes = 0;
-			surf->firstVertex = 0;
-			surf->firstIndex = 0;
-
 			if(surf->shader->numStages == 0 ||
 				surf->shader->isDynamic)
 			{
@@ -409,10 +401,6 @@ void World::ProcessWorld(world_t& world)
 				*idx++ = tess.indexes[i] + firstVertex;
 			}
 
-			surf->numVertexes = tess.numVertexes;
-			surf->numIndexes = tess.numIndexes;
-			surf->firstVertex = firstVertex;
-			surf->firstIndex = firstIndex;
 			firstVertex += surfVertexCount;
 			firstIndex += surfIndexCount;
 			tess.numVertexes = 0;
@@ -428,6 +416,8 @@ void World::ProcessWorld(world_t& world)
 		zppIndexBuffer.batchFirst = 0;
 	}
 
+	statChunkCount = 1; // index 0 is invalid
+
 	statBuffers.vertexBuffers.Rewind();
 	statBuffers.indexBuffer.Rewind();
 
@@ -436,11 +426,14 @@ void World::ProcessWorld(world_t& world)
 
 	for(int s = 0; s < world.numsurfaces; ++s)
 	{
+		if(statChunkCount >= ARRAY_LEN(statChunks))
+		{
+			Q_assert(0);
+			break;
+		}
+
 		msurface_t* const surf = &world.surfaces[s];
-		surf->numVertexes = 0;
-		surf->numIndexes = 0;
-		surf->firstVertex = 0;
-		surf->firstIndex = 0;
+		surf->staticGeoChunk = 0;
 
 		if(surf->shader->numStages == 0 ||
 			surf->shader->isDynamic)
@@ -475,10 +468,11 @@ void World::ProcessWorld(world_t& world)
 		statBuffers.vertexBuffers.Upload(0, surf->shader->numStages);
 		statBuffers.indexBuffer.Upload();
 
-		surf->numVertexes = surfVertexCount;
-		surf->numIndexes = surfIndexCount;
-		surf->firstVertex = statBuffers.vertexBuffers.batchFirst;
-		surf->firstIndex = statBuffers.indexBuffer.batchFirst;
+		StaticGeometryChunk& chunk = statChunks[statChunkCount++];
+		chunk.vertexCount = surfVertexCount;
+		chunk.indexCount = surfIndexCount;
+		chunk.firstGPUVertex = statBuffers.vertexBuffers.batchFirst;
+		chunk.firstGPUIndex = statBuffers.indexBuffer.batchFirst;
 
 		statBuffers.vertexBuffers.EndBatch(surfVertexCount);
 		statBuffers.indexBuffer.EndBatch(surfIndexCount);
@@ -608,9 +602,10 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			R_TessellateSurface(drawSurf->surface);
 			const int numIndexes = tess.numIndexes - firstCPUIndex;
 			//Q_assert(numIndexes == drawSurf->msurface->numIndexes); // will fail on occasion...
-			if(numIndexes == drawSurf->msurface->numIndexes)
+			StaticGeometryChunk& chunk = statChunks[drawSurf->msurface->staticGeoChunk];
+			if(numIndexes == chunk.indexCount)
 			{
-				const int firstGPUVertex = drawSurf->msurface->firstVertex;
+				const int firstGPUVertex = chunk.firstGPUVertex;
 				for(int i = firstCPUIndex; i < firstCPUIndex + numIndexes; ++i)
 				{
 					tess.indexes[i] -= firstCPUVertex;

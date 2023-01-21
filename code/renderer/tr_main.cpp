@@ -1269,10 +1269,7 @@ static int R_CompareDrawSurfNoKey( const void* aPtr, const void* bPtr )
 
 static bool HasStaticGeo(const drawSurf_t* drawSurf)
 {
-	return
-		drawSurf->msurface != NULL &&
-		drawSurf->msurface->numIndexes > 0 &&
-		drawSurf->msurface->numVertexes > 0;
+	return drawSurf->msurface != NULL && drawSurf->msurface->staticGeoChunk > 0;
 }
 
 

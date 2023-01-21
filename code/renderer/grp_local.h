@@ -252,6 +252,14 @@ struct GeometryBuffers
 	IndexBuffer indexBuffer;
 };
 
+struct StaticGeometryChunk
+{
+	uint32_t vertexCount;
+	uint32_t indexCount;
+	uint32_t firstGPUVertex;
+	uint32_t firstGPUIndex;
+};
+
 struct World
 {
 	void Init();
@@ -307,6 +315,8 @@ struct World
 
 	// static
 	GeometryBuffers statBuffers;
+	StaticGeometryChunk statChunks[16384];
+	uint32_t statChunkCount;
 };
 
 struct UI
