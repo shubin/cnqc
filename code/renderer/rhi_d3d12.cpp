@@ -25,7 +25,6 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 to do:
 
 - set the default dll path to "cnq3" for both d3d sdk & pix
-- multi-view is broken without the depth pre-pass enabled
 * 3D/world rendering
 	- fog
 	- transparency

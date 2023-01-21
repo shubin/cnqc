@@ -512,6 +512,9 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 
 	CmdClearDepthTarget(depthTexture, 0.0f);
 
+	boundVertexBuffers = BufferFamily::Invalid;
+	boundIndexBuffer = BufferFamily::Invalid;
+
 	// portals get the chance to write to depth and color before everyone else
 	{
 		const shader_t* shader = NULL;
@@ -637,44 +640,6 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 				R_ComputeTexCoords(shader->stages[s], tess.svars[s], firstVertex, numVertexes, qfalse);
 			}
 		}
-
-#if 0
-		if(hasStaticGeo)
-		{
-			DynamicVertexRC vertexRC;
-			R_MultMatrix(backEnd.orient.modelMatrix, backEnd.viewParms.projectionMatrix, vertexRC.mvp);
-			memcpy(vertexRC.clipPlane, clipPlane, sizeof(vertexRC.clipPlane));
-			CmdSetRootConstants(rootSignature, ShaderStage::Vertex, &vertexRC);
-
-			DynamicPixelRC pixelRC;
-			pixelRC.textureIndex = tess.shader->stages[0]->bundle.image[0]->textureIndex;
-			pixelRC.samplerIndex = 0;
-			CmdSetRootConstants(rootSignature, ShaderStage::Pixel, &pixelRC);
-
-			BindVertexBuffers(true, 4);
-			BindIndexBuffer(true);
-			CmdDrawIndexed(drawSurf->msurface->numIndexes, drawSurf->msurface->firstIndex, drawSurf->msurface->firstVertex);
-
-			tess.numVertexes = 0;
-			tess.numIndexes = 0;
-		}
-		else
-		{
-			const int firstVertex = 0;
-			const int firstIndex = 0;
-			R_TessellateSurface(drawSurf->surface);
-			const int numVertexes = tess.numVertexes - firstVertex;
-			const int numIndexes = tess.numIndexes - firstIndex;
-			RB_DeformTessGeometry(firstVertex, numVertexes, firstIndex, numIndexes);
-			for(int s = 0; s < shader->numStages; ++s)
-			{
-				R_ComputeColors(shader->stages[s], tess.svars[s], firstVertex, numVertexes);
-				R_ComputeTexCoords(shader->stages[s], tess.svars[s], firstVertex, numVertexes, qfalse);
-			}
-			EndBatch();
-			BeginBatch(tess.shader, batchHasStaticGeo);
-		}
-#endif
 	}
 
 	backEnd.refdef.floatTime = originalTime;
