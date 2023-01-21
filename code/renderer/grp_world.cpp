@@ -58,6 +58,7 @@ void main()
 
 
 static bool drawPrePass = false;
+static bool drawDynamic = true;
 
 
 static bool HasStaticGeo(const drawSurf_t* drawSurf)
@@ -346,6 +347,7 @@ void World::DrawGUI()
 	if(ImGui::Begin("World"))
 	{
 		ImGui::Checkbox("Depth Pre-Pass", &drawPrePass);
+		ImGui::Checkbox("Draw Dynamic", &drawDynamic);
 		ImGui::Text("PSO count: %d", (int)grp.psoCount);
 	}
 	ImGui::End();
@@ -580,6 +582,10 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 		const bool shaderChanged = shader != oldShader;
 		const bool entityChanged = entityNum != oldEntityNum;
 		Q_assert(shader != NULL);
+		if(!hasStaticGeo && !drawDynamic)
+		{
+			continue;
+		}
 
 		if(staticChanged || shaderChanged || entityChanged)
 		{

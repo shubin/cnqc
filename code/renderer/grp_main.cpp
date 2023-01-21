@@ -459,6 +459,7 @@ void GRP::ProcessWorld(world_t& world_)
 void GRP::ProcessModel(model_t& model)
 {
 	// @TODO: !!!
+	//__debugbreak();
 }
 
 void GRP::ProcessShader(shader_t& shader)
@@ -512,7 +513,9 @@ uint32_t GRP::RegisterTexture(HTexture htexture)
 
 void GRP::BeginRenderPass(const char* name, float r, float g, float b)
 {
-	RenderPassFrame& f = renderPasses[GetFrameIndex()];
+	CmdBeginDebugLabel(name, r, g, b);
+
+	/*RenderPassFrame& f = renderPasses[GetFrameIndex()];
 	if(f.count >= ARRAY_LEN(f.passes))
 	{
 		Q_assert(0);
@@ -524,12 +527,14 @@ void GRP::BeginRenderPass(const char* name, float r, float g, float b)
 	RenderPassQueries& q = f.passes[f.count++];
 	Q_strncpyz(q.name, name, sizeof(q.name));
 	q.cpuStartUS = Sys_Microseconds();
-	q.query = CmdBeginDurationQuery(name);
+	q.query = CmdBeginDurationQuery(name);*/
 }
 
 void GRP::EndRenderPass()
 {
-	RenderPassFrame& f = renderPasses[GetFrameIndex()];
+	CmdEndDebugLabel();
+
+	/*RenderPassFrame& f = renderPasses[GetFrameIndex()];
 	if(f.count == 0)
 	{
 		Q_assert(0);
@@ -540,7 +545,7 @@ void GRP::EndRenderPass()
 
 	RenderPassQueries& q = f.passes[f.count - 1];
 	q.cpuDurationUS = (uint32_t)(Sys_Microseconds() - q.cpuStartUS);
-	CmdEndDurationQuery(q.query);
+	CmdEndDurationQuery(q.query);*/
 }
 
 void GRP::EndUI()
