@@ -65,7 +65,7 @@ VOut main(uint id : SV_VertexID)
 
 struct PostPixelRC
 {
-	float gamma;
+	float invGamma;
 	float brightness;
 	float greyscale;
 };
@@ -78,7 +78,7 @@ static const char* post_ps = R"grml(
 
 cbuffer RootConstants
 {
-	float gamma;
+	float invGamma;
 	float brightness;
 	float greyscale;
 };
@@ -103,7 +103,7 @@ float4 MakeGreyscale(float4 input, float amount)
 float4 main(VOut input) : SV_TARGET
 {
 	float3 base = texture0.Sample(sampler0, input.texCoords).rgb;
-	float3 gc = pow(base, gamma) * brightness;
+	float3 gc = pow(base, invGamma) * brightness;
 
 	return MakeGreyscale(float4(gc.rgb, 1.0), greyscale);
 }
@@ -164,7 +164,7 @@ void PostProcess::Draw()
 	vertexRC.scaleY = 1.0f;
 
 	PostPixelRC pixelRC = {};
-	pixelRC.gamma = r_gamma->value;
+	pixelRC.invGamma = 1.0f / r_gamma->value;
 	pixelRC.brightness = r_brightness->value;
 	pixelRC.greyscale = r_greyscale->value;
 

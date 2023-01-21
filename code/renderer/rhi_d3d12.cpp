@@ -29,7 +29,6 @@ to do:
 	- transparency
 	- dynamic lights
 	- SMAA integration
-- gamma/brightness/greyscale post-process
 - higher bit-depth render targets
 - dithering
 - mip-map generation accounting for r_picmip
