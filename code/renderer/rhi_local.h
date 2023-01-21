@@ -322,7 +322,7 @@ namespace RHI
 		struct Rasterizer
 		{
 			cullType_t cullMode = CT_FRONT_SIDED;
-			// @TODO: depth bias options for polygonOffset
+			bool polygonOffset = false;
 		}
 		rasterizer;
 		struct RenderTarget

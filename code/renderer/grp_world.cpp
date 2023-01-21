@@ -630,6 +630,8 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			R_TessellateSurface(drawSurf->surface);
 			const int numVertexes = tess.numVertexes - firstVertex;
 			const int numIndexes = tess.numIndexes - firstIndex;
+			Q_assert(numVertexes >= 0);
+			Q_assert(numIndexes >= 0);
 			Q_assert(estVertexCount == numVertexes);
 			Q_assert(estIndexCount == numIndexes);
 			RB_DeformTessGeometry(firstVertex, numVertexes, firstIndex, numIndexes);

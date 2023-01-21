@@ -445,7 +445,7 @@ struct RenderPassFrame
 struct PSODesc
 {
 	cullType_t cullType;
-	// @TODO: qbool polygonOffset;
+	qbool polygonOffset;
 };
 
 #pragma pack(pop)
