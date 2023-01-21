@@ -24,10 +24,18 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 /*
 to do:
 
+- set the default dll path to "cnq3" for both d3d sdk & pix
 * 3D/world rendering
+	- fog
+	- transparency
+	- dynamic lights
+	- SMAA integration
+- gamma/brightness/greyscale post-process
+- higher bit-depth render targets
+- dithering
 - mip-map generation accounting for r_picmip
-- speed up map load by calling BeginGraphicsPipelineCreation() / WaitForAllPipelineCreations()
-	on non-UI shaders and run PSO creation on worker threads
+- speed up map loads with BeginGraphicsPipelineCreation() / WaitForAllPipelineCreations()
+	use for non-UI shaders and run PSO creation on worker threads
 - when creating the root signature, validate that neither of the tables have any gap
 - use root signature 1.1 to use the hints that help the drivers optimize out static resources
 - remove srvIndex or textureIndex from image_t
@@ -35,7 +43,7 @@ to do:
 - is it possible to force Resource Binding Tier 2 somehow? are we supposed to run on old HW to test? :(
 	see if WARP allows us to do that?
 - don't do persistent mapping to help out RenderDoc?
-* implicit barrier & profiling API outside the RHI: Begin/EndRenderPass
+* implicit barrier & profiling API outside the RHI: Begin/EndRenderPass (specify inputs and outputs too?)
 * partial inits and shutdown
 - move as much GUI logic as possible out of the RHI (especially render pass timings)
 - leverage rhi.allocator->IsCacheCoherentUMA()
@@ -44,17 +52,17 @@ to do:
 - defragment on partial inits with D3D12MA?
 - compiler switch for GPU validation
 - use ID3D12Device4::CreateCommandList1 to create closed command lists
-- if a feature level below 12.0 is good enough,
-	use ID3D12Device::CheckFeatureSupport with D3D12_FEATURE_D3D12_OPTIONS / D3D12_FEATURE_DATA_D3D12_OPTIONS
-	to ensure Resource Binding Tier 2 is available
 - IDXGISwapChain::SetFullScreenState(TRUE) with the borderless window taking up the entire screen
 	and ALLOW_TEARING set on both the flip mode swap chain and Present() flags
 	will enable true immediate independent flip mode and give us the lowest latency possible
-X NvAPI_D3D_GetLatency to get (simulated) input to display latency
-	-> nope, it doesn't say when the frame gets displayed or even queued for display
-X NvAPI_D3D_IsGSyncCapable / NvAPI_D3D_IsGSyncActive for diagnostics -> nope, that's for D3D9-11
 - CVar for setting the gpuPreference_t
 - resources that should be committed: depth buffer, render targets, static geometry - optional: large textures
+
+rejected:
+- NvAPI_D3D_GetLatency to get (simulated) input to display latency
+	-> nope, it doesn't say when the frame gets displayed or even queued for display
+- NvAPI_D3D_IsGSyncCapable / NvAPI_D3D_IsGSyncActive for diagnostics
+	-> nope, that's for D3D9-11
 */
 
 /*
