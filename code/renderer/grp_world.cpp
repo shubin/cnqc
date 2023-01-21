@@ -509,7 +509,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 	{
 		const viewParms_t& vp = cmd.viewParms;
 		const Rect rect(vp.viewportX, vp.viewportY, vp.viewportWidth, vp.viewportHeight);
-		CmdClearColorTarget(GetSwapChainTexture(), cmd.clearColor, &rect);
+		CmdClearColorTarget(grp.renderTarget, cmd.clearColor, &rect);
 	}
 
 	if(cmd.numDrawSurfs <= 0)
@@ -544,8 +544,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 	CmdBindRootSignature(grp.opaqueRootSignature);
 	CmdBindDescriptorTable(grp.opaqueRootSignature, grp.descriptorTable);
 
-	const HTexture swapChain = GetSwapChainTexture();
-	CmdBindRenderTargets(1, &swapChain, &depthTexture);
+	CmdBindRenderTargets(1, &grp.renderTarget, &depthTexture);
 
 	HPipeline pso = RHI_MAKE_NULL_HANDLE();
 

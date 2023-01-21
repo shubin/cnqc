@@ -359,20 +359,24 @@ void GRP::Init()
 
 	textureIndex = 0;
 	psoCount = 1; // we treat index 0 as invalid
-	
-	// @TODO: remove
+
 	{
-		CachedPSO cache = {};
-		cache.desc.cullType = CT_BACK_SIDED;
-		cache.stageStateBits[0] = GLS_DEFAULT;
-		cache.stageCount = 1;
-		CreatePSO(cache);
+		TextureDesc desc("render target", glConfig.vidWidth, glConfig.vidHeight);
+		desc.initialState = ResourceStates::RenderTargetBit;
+		desc.allowedState = ResourceStates::RenderTargetBit | ResourceStates::PixelShaderAccessBit;
+		Vector4Set(desc.clearColor, 0.0f, 0.0f, 0.0f, 1.0f);
+		desc.usePreferredClearValue = true;
+		desc.committedResource = true;
+		desc.format = TextureFormat::RGBA32_UNorm;
+		desc.shortLifeTime = true;
+		renderTarget = RHI::CreateTexture(desc);
 	}
 
 	ui.Init();
 	world.Init();
 	mipMapGen.Init();
 	imgui.Init();
+	post.Init();
 
 	firstInit = false;
 }
@@ -384,14 +388,16 @@ void GRP::ShutDown(bool fullShutDown)
 
 void GRP::BeginFrame()
 {
-	RHI::BeginFrame();
 	renderPasses[GetFrameIndex()].count = 0;
+
+	RHI::BeginFrame();
 	ui.BeginFrame();
 	world.BeginFrame();
 
-	HTexture swapChain = GetSwapChainTexture();
-	CmdBindRenderTargets(1, &swapChain, NULL);
-	CmdClearColorTarget(swapChain, colorPink);
+	const TextureBarrier barrier(renderTarget, ResourceStates::RenderTargetBit);
+	CmdBarrier(1, &barrier);
+	CmdBindRenderTargets(1, &renderTarget, NULL);
+	CmdClearColorTarget(renderTarget, colorPink);
 
 	// nothing is bound to the command list yet!
 	renderMode = RenderMode::None;
@@ -401,6 +407,7 @@ void GRP::EndFrame()
 {
 	EndUI();
 	imgui.Draw();
+	post.Draw();
 	RHI::EndFrame();
 }
 

@@ -313,6 +313,12 @@ namespace RHI
 		vertexLayout;
 		struct DepthStencil
 		{
+			void DisableDepth()
+			{
+				enableDepthTest = false;
+				enableDepthWrites = false;
+			}
+
 			bool enableDepthTest = true;
 			bool enableDepthWrites = true;
 			ComparisonFunction::Id depthComparison = ComparisonFunction::GreaterEqual;

@@ -146,8 +146,7 @@ void UI::Begin()
 
 	grp.BeginRenderPass("UI", 0.0f, 0.85f, 1.0f);
 
-	const HTexture swapChain = GetSwapChainTexture();
-	CmdBindRenderTargets(1, &swapChain, NULL);
+	CmdBindRenderTargets(1, &grp.renderTarget, NULL);
 
 	// UI always uses the entire render surface
 	CmdSetViewportAndScissor(0, 0, glConfig.vidWidth, glConfig.vidHeight);

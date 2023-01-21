@@ -458,6 +458,16 @@ struct CachedPSO
 	HPipeline pipeline;
 };
 
+struct PostProcess
+{
+	void Init();
+	void Draw();
+
+	HPipeline pipeline;
+	HRootSignature rootSignature;
+	HDescriptorTable descriptorTable;
+};
+
 struct GRP : IRenderPipeline
 {
 	void Init() override;
@@ -491,9 +501,11 @@ struct GRP : IRenderPipeline
 	World world;
 	MipMapGenerator mipMapGen;
 	ImGUI imgui;
+	PostProcess post;
 	bool firstInit = true;
 	RenderMode::Id renderMode;
 
+	HTexture renderTarget;
 	RootSignatureDesc rootSignatureDesc;
 	HRootSignature rootSignature;
 	HDescriptorTable descriptorTable;

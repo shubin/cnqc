@@ -44,5 +44,6 @@
     <ClCompile Include="..\..\code\renderer\grp_world.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_renderdoc.cpp" />
     <ClCompile Include="..\..\code\renderer\grp_imgui.cpp" />
+    <ClCompile Include="..\..\code\renderer\grp_post.cpp" />
   </ItemGroup>
 </Project>

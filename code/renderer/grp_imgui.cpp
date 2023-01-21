@@ -238,8 +238,7 @@ void ImGUI::Draw()
 	const uint32_t vertexStride = sizeof(ImDrawVert);
 	static_assert(sizeof(ImDrawIdx) == 4, "uint32 indices expected!");
 
-	const HTexture swapChain = GetSwapChainTexture();
-	CmdBindRenderTargets(1, &swapChain, NULL);
+	CmdBindRenderTargets(1, &grp.renderTarget, NULL);
 	CmdBindRootSignature(rootSignature);
 	CmdBindPipeline(pipeline);
 	CmdBindDescriptorTable(rootSignature, grp.descriptorTable);

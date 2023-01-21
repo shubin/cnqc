@@ -231,6 +231,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\code\renderer\D3D12MemAlloc.cpp" />
+    <ClCompile Include="..\..\code\renderer\grp_post.cpp" />
     <ClCompile Include="..\..\code\renderer\grp_imgui.cpp" />
     <ClCompile Include="..\..\code\renderer\grp_main.cpp" />
     <ClCompile Include="..\..\code\renderer\grp_mip_gen.cpp" />
