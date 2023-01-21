@@ -526,12 +526,12 @@ struct drawSurf_t {
 	unsigned				sort;		// bit combination for fast compares
 	float					depth;		// transparent surface's midpoint's depth
 	const surfaceType_t*	surface;	// any of surface*_t
-	const msurface_t*		msurface;	// map surface, can be NULL
 	qhandle_t				model;		// MD3 model handle, can be 0
 	int						index;		// transparent surface's registration order
 	float					shaderSort;	// transparent surface's shader sort
 	int						shaderNum;	// unsorted shader index, for when we need to do fix-ups
 	float					greyscale;  // how monochrome to draw all the stages
+	int						staticGeoChunk;
 };
 
 void R_TessellateSurface( const surfaceType_t* surfType );
@@ -1105,7 +1105,7 @@ void R_AddMD3Surfaces( trRefEntity_t *e );
 
 void R_AddPolygonSurfaces();
 
-void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int fogIndex, const msurface_t* msurface = NULL );
+void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int fogIndex, int staticGeoChunk = 0 );
 void R_AddLitSurf( const surfaceType_t* surface, const shader_t* shader, int fogIndex );
 unsigned int R_ComposeSort( int entityNum, const shader_t *shader, int fogNum );
 void R_DecomposeSort( unsigned sort, int *entityNum, const shader_t **shader, int *fogNum );

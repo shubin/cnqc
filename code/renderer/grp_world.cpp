@@ -62,7 +62,7 @@ static bool drawPrePass = false;
 
 static bool HasStaticGeo(const drawSurf_t* drawSurf)
 {
-	return drawSurf->msurface != NULL && drawSurf->msurface->staticGeoChunk > 0;
+	return drawSurf->staticGeoChunk > 0 && drawSurf->staticGeoChunk < ARRAY_LEN(grp.world.statChunks);
 }
 
 static void UpdateModelViewMatrix(int entityNum, double originalTime)
@@ -603,7 +603,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 		int estVertexCount, estIndexCount;
 		if(hasStaticGeo)
 		{
-			const StaticGeometryChunk& chunk = statChunks[drawSurf->msurface->staticGeoChunk];
+			const StaticGeometryChunk& chunk = statChunks[drawSurf->staticGeoChunk];
 			estVertexCount = chunk.vertexCount;
 			estIndexCount = chunk.indexCount;
 		}
@@ -623,7 +623,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 
 		if(hasStaticGeo)
 		{
-			const StaticGeometryChunk& chunk = statChunks[drawSurf->msurface->staticGeoChunk];
+			const StaticGeometryChunk& chunk = statChunks[drawSurf->staticGeoChunk];
 			memcpy(tess.indexes + tess.numIndexes, statIndices + chunk.firstCPUIndex, chunk.indexCount * sizeof(uint32_t));
 			tess.numIndexes += chunk.indexCount;
 		}

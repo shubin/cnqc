@@ -1077,7 +1077,7 @@ static float SurfGreyscaleAmount( const shader_t* shader )
 }
 
 
-void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int fogIndex, const msurface_t* msurface )
+void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int fogIndex, int staticGeoChunk )
 {
 	if (tr.refdef.numDrawSurfs >= MAX_DRAWSURFS)
 		return;
@@ -1085,10 +1085,10 @@ void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int fo
 	drawSurf_t* const drawSurf = &tr.refdef.drawSurfs[tr.refdef.numDrawSurfs++];
 	drawSurf->sort = R_ComposeSort( tr.currentEntityNum, shader, fogIndex );
 	drawSurf->surface = surface;
-	drawSurf->msurface = msurface;
 	drawSurf->model = tr.currentModel != NULL ? tr.currentModel->index : 0;
 	drawSurf->shaderNum = shader->index;
 	drawSurf->greyscale = SurfGreyscaleAmount( shader );
+	drawSurf->staticGeoChunk = staticGeoChunk;
 
 	renderPipeline->AddDrawSurface(surface, shader);
 }
@@ -1269,7 +1269,7 @@ static int R_CompareDrawSurfNoKey( const void* aPtr, const void* bPtr )
 
 static bool HasStaticGeo(const drawSurf_t* drawSurf)
 {
-	return drawSurf->msurface != NULL && drawSurf->msurface->staticGeoChunk > 0;
+	return drawSurf->staticGeoChunk > 0;
 }
 
 
