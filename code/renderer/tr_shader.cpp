@@ -2435,6 +2435,7 @@ static void FixRedundantAlphaTesting()
 	}
 
 	// same texture
+	// @TODO: animMap support
 	if(stages[0].bundle.image[0] != stages[1].bundle.image[0])
 	{
 		return;
