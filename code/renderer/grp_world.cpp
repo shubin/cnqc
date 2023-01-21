@@ -270,7 +270,7 @@ void World::DrawPrePass()
 		return;
 	}
 
-	grp.BeginRenderPass("Depth Pre-Pass");
+	grp.BeginRenderPass("Depth Pre-Pass", 0.75f, 0.75f, 0.375f);
 
 	// @TODO: evaluate later whether binding the color target here is OK?
 	CmdBindRenderTargets(0, NULL, &depthTexture);
@@ -540,7 +540,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 		}
 	}
 
-	grp.BeginRenderPass("3D Scene");
+	grp.BeginRenderPass("3D Scene View", 1.0f, 0.5f, 0.5f);
 
 	CmdBindRootSignature(grp.opaqueRootSignature);
 	CmdBindDescriptorTable(grp.opaqueRootSignature, grp.descriptorTable);

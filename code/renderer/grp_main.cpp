@@ -399,12 +399,7 @@ void GRP::BeginFrame()
 
 void GRP::EndFrame()
 {
-	ui.DrawBatch();
-	if(renderMode == RenderMode::UI)
-	{
-		grp.EndRenderPass();
-	}
-
+	EndUI();
 	imgui.Draw();
 	RHI::EndFrame();
 }
@@ -507,7 +502,7 @@ uint32_t GRP::RegisterTexture(HTexture htexture)
 	return index;
 }
 
-void GRP::BeginRenderPass(const char* name)
+void GRP::BeginRenderPass(const char* name, float r, float g, float b)
 {
 	RenderPassFrame& f = renderPasses[GetFrameIndex()];
 	if(f.count >= ARRAY_LEN(f.passes))
@@ -516,7 +511,7 @@ void GRP::BeginRenderPass(const char* name)
 		return;
 	}
 
-	CmdBeginDebugLabel(name);
+	CmdBeginDebugLabel(name, r, g, b);
 
 	RenderPassQueries& q = f.passes[f.count++];
 	Q_strncpyz(q.name, name, sizeof(q.name));
@@ -538,6 +533,15 @@ void GRP::EndRenderPass()
 	RenderPassQueries& q = f.passes[f.count - 1];
 	q.cpuDurationUS = (uint32_t)(Sys_Microseconds() - q.cpuStartUS);
 	CmdEndDurationQuery(q.query);
+}
+
+void GRP::EndUI()
+{
+	ui.DrawBatch();
+	if(renderMode == RenderMode::UI)
+	{
+		grp.EndRenderPass();
+	}
 }
 
 uint32_t GRP::CreatePSO(CachedPSO& cache)

@@ -1519,19 +1519,11 @@ namespace RHI
 
 	static UINT BGRAUIntFromFloat(float r, float g, float b)
 	{
-		union Color
-		{
-			UINT color;
-			byte channels[4];
-		};
+		const BYTE br = (BYTE)(Com_Clamp(0.0f, 1.0f, r) * 255.0f);
+		const BYTE bg = (BYTE)(Com_Clamp(0.0f, 1.0f, g) * 255.0f);
+		const BYTE bb = (BYTE)(Com_Clamp(0.0f, 1.0f, b) * 255.0f);
 
-		Color c;
-		c.channels[0] = (byte)Com_Clamp(0.0f, 1.0f, b) * 255.0f;
-		c.channels[1] = (byte)Com_Clamp(0.0f, 1.0f, g) * 255.0f;
-		c.channels[2] = (byte)Com_Clamp(0.0f, 1.0f, r) * 255.0f;
-		c.channels[3] = 255;
-
-		return c.color;
+		return PIX_COLOR(br, bg, bb);
 	}
 
 	static bool BeginTable(const char* name, int count)
@@ -2127,12 +2119,12 @@ namespace RHI
 		CmdBarrier(rhi.texturesToTransition.count, barriers);
 		rhi.texturesToTransition.Clear();
 
-		CmdInsertDebugLabel("RHI::BeginFrame", 1.0f, 1.0f, 0.0f);
+		CmdInsertDebugLabel("RHI::BeginFrame", 0.8f, 0.8f, 0.8f);
 	}
 
 	void EndFrame()
 	{
-		CmdInsertDebugLabel("RHI::EndFrame", 0.0f, 1.0f, 1.0f);
+		CmdInsertDebugLabel("RHI::EndFrame", 0.8f, 0.8f, 0.8f);
 
 		const TextureBarrier barrier(rhi.renderTargets[rhi.frameIndex], ResourceStates::PresentBit);
 		CmdBarrier(1, &barrier);

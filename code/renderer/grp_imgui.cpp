@@ -204,7 +204,7 @@ void ImGUI::Draw()
 		return;
 	}
 
-	grp.BeginRenderPass("Dear ImGUI");
+	grp.BeginRenderPass("Dear ImGUI", 0.5f, 0.5f, 1.0f);
 
 	FrameResources* fr = &frameResources[GetFrameIndex()];
 

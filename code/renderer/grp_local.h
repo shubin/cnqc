@@ -463,12 +463,14 @@ struct GRP : IRenderPipeline
 	void UISetColor(const uiSetColorCommand_t& cmd) override { ui.UISetColor(cmd); }
 	void UIDrawQuad(const uiDrawQuadCommand_t& cmd) override { ui.UIDrawQuad(cmd); }
 	void UIDrawTriangle(const uiDrawTriangleCommand_t& cmd) override { ui.UIDrawTriangle(cmd); }
-	void DrawSceneView(const drawSceneViewCommand_t& cmd) override { ui.DrawBatch(); world.DrawSceneView(cmd); }
+	void DrawSceneView(const drawSceneViewCommand_t& cmd) override { EndUI(); world.DrawSceneView(cmd); }
 
 	uint32_t RegisterTexture(HTexture htexture);
 
-	void BeginRenderPass(const char* name);
+	void BeginRenderPass(const char* name, float r, float g, float b);
 	void EndRenderPass();
+
+	void EndUI();
 
 	uint32_t CreatePSO(CachedPSO& cache);
 
