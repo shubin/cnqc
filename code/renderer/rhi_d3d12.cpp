@@ -24,7 +24,6 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 /*
 to do:
 
-- set the default dll path to "cnq3" for both d3d sdk & pix
 * 3D/world rendering
 	- fog
 	- transparency
@@ -133,7 +132,7 @@ One mitigation for this restriction is the diligent use of Null descriptors.
 
 #if defined(_DEBUG) || defined(CNQ3_DEV)
 extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = D3D12_SDK_VERSION; }
-extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8".\\D3D12\\"; }
+extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8".\\cnq3\\"; }
 #endif
 
 
@@ -2010,7 +2009,7 @@ namespace RHI
 			}
 		}
 
-		rhi.pix.module = LoadLibraryA("D3D12/WinPixEventRuntime.dll");
+		rhi.pix.module = LoadLibraryA("cnq3/WinPixEventRuntime.dll");
 		if(rhi.pix.module != NULL)
 		{
 			rhi.pix.BeginEventOnCommandList = (Pix::BeginEventOnCommandListPtr)GetProcAddress(rhi.pix.module, "PIXBeginEventOnCommandList");
