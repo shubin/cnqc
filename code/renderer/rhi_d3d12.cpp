@@ -26,6 +26,8 @@ to do:
 
 * 3D/world rendering
 - mip-map generation accounting for r_picmip
+- speed up map load by calling BeginGraphicsPipelineCreation() / WaitForAllPipelineCreations()
+	on non-UI shaders and run PSO creation on worker threads
 - when creating the root signature, validate that neither of the tables have any gap
 - use root signature 1.1 to use the hints that help the drivers optimize out static resources
 - remove srvIndex or textureIndex from image_t
