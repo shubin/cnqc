@@ -468,10 +468,17 @@ void World::ProcessWorld(world_t& world)
 			R_ComputeTexCoords(stage, tess.svars[i], 0, tess.numVertexes, qfalse);
 		}
 
+		// update GPU buffers
 		statBuffers.vertexBuffers.Upload(0, surf->shader->numStages);
 		statBuffers.indexBuffer.Upload();
 
-		memcpy(statIndices + statIndexCount, &tess.indexes[0], surfIndexCount * sizeof(uint32_t));
+		// update CPU buffer
+		const uint32_t firstGPUVertex = statBuffers.vertexBuffers.batchFirst;
+		uint32_t* cpuIndices = statIndices + statIndexCount;
+		for(int i = 0; i < surfIndexCount; ++i)
+		{
+			cpuIndices[i] = tess.indexes[i] + firstGPUVertex;
+		}
 		statIndexCount += surfIndexCount;
 
 		StaticGeometryChunk& chunk = statChunks[statChunkCount++];
@@ -613,11 +620,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 		if(hasStaticGeo)
 		{
 			const StaticGeometryChunk& chunk = statChunks[drawSurf->msurface->staticGeoChunk];
-			const int firstGPUVertex = chunk.firstGPUVertex;
-			for(int i = 0; i < chunk.indexCount; ++i)
-			{
-				tess.indexes[tess.numIndexes++] = statIndices[chunk.firstCPUIndex + i] + firstGPUVertex;
-			}
+			memcpy(tess.indexes + tess.numIndexes, statIndices + chunk.firstCPUIndex, chunk.indexCount * sizeof(uint32_t));
 			tess.numIndexes += chunk.indexCount;
 		}
 		else
