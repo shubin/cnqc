@@ -140,12 +140,26 @@ void *R_GetCommandBuffer( int bytes, qbool endFrame ) {
 
 void R_AddDrawSurfCmd( drawSurf_t* drawSurfs, int numDrawSurfs, int numTranspSurfs )
 {
+	qbool shouldClearColor = qfalse;
+	vec4_t clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
+	if ( tr.refdef.rdflags & RDF_HYPERSPACE ) {
+		const float c = RB_HyperspaceColor();
+		clearColor[0] = c;
+		clearColor[1] = c;
+		clearColor[2] = c;
+		shouldClearColor = qtrue;
+	} else if ( r_fastsky->integer && !(tr.refdef.rdflags & RDF_NOWORLDMODEL) ) {
+		shouldClearColor = qtrue;
+	}
+
 	drawSceneViewCommand_t cmd;
 	cmd.drawSurfs = drawSurfs;
 	cmd.numDrawSurfs = numDrawSurfs;
 	cmd.numTranspSurfs = numTranspSurfs;
 	cmd.refdef = tr.refdef;
 	cmd.viewParms = tr.viewParms;
+	cmd.shouldClearColor = shouldClearColor;
+	Vector4Copy( clearColor, cmd.clearColor );
 	renderPipeline->DrawSceneView( cmd );
 }
 

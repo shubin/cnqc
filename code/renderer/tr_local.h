@@ -1516,6 +1516,8 @@ typedef struct {
 	int numDrawSurfs;
 	int numTranspSurfs;
 	drawSurf_t* drawSurfs;
+	qbool shouldClearColor;
+	vec4_t clearColor;
 } drawSceneViewCommand_t;
 
 typedef struct {

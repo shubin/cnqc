@@ -195,28 +195,6 @@ void World::BeginFrame()
 
 void World::Begin()
 {
-	// @TODO: this should be moved out of the RP since none of the decision-making is RP-specific
-#if 0
-	bool shouldClearColor = qfalse;
-	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-	if(backEnd.rdflags & RDF_HYPERSPACE) // @TODO: who sets that up again?
-	{
-		const float c = RB_HyperspaceColor();
-		clearColor[0] = c;
-		clearColor[1] = c;
-		clearColor[2] = c;
-		shouldClearColor = qtrue;
-	}
-	else if(r_fastsky->integer && !(backEnd.rdflags & RDF_NOWORLDMODEL))
-	{
-		shouldClearColor = qtrue;
-	}
-	if(shouldClearColor)
-	{
-		CmdClearColorTarget();
-	}
-#endif
-
 	if(backEnd.viewParms.isPortal)
 	{
 		float plane[4];
@@ -251,7 +229,6 @@ void World::Begin()
 		return;
 	}
 
-	// copy backEnd.viewParms.projectionMatrix
 	CmdSetViewportAndScissor(backEnd.viewParms);
 
 	TextureBarrier tb(depthTexture, ResourceStates::DepthWriteBit);
@@ -516,6 +493,13 @@ void World::ProcessWorld(world_t& world)
 
 void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 {
+	if(cmd.shouldClearColor)
+	{
+		const viewParms_t& vp = cmd.viewParms;
+		const Rect rect(vp.viewportX, vp.viewportY, vp.viewportWidth, vp.viewportHeight);
+		CmdClearColorTarget(GetSwapChainTexture(), cmd.clearColor, &rect);
+	}
+
 	if(cmd.numDrawSurfs <= 0)
 	{
 		return;
