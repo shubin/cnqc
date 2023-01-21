@@ -475,7 +475,8 @@ void World::ProcessWorld(world_t& world)
 
 		// update CPU buffer
 		const uint32_t firstGPUVertex = statBuffers.vertexBuffers.batchFirst;
-		uint32_t* cpuIndices = statIndices + statIndexCount;
+		const uint32_t firstCPUIndex = statIndexCount;
+		uint32_t* cpuIndices = statIndices + firstCPUIndex;
 		for(int i = 0; i < surfIndexCount; ++i)
 		{
 			cpuIndices[i] = tess.indexes[i] + firstGPUVertex;
@@ -488,6 +489,7 @@ void World::ProcessWorld(world_t& world)
 		chunk.indexCount = surfIndexCount;
 		chunk.firstGPUVertex = statBuffers.vertexBuffers.batchFirst;
 		chunk.firstGPUIndex = statBuffers.indexBuffer.batchFirst;
+		chunk.firstCPUIndex = firstCPUIndex;
 		surf->staticGeoChunk = chunkIndex;
 
 		statBuffers.vertexBuffers.EndBatch(surfVertexCount);
