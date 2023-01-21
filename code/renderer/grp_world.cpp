@@ -278,7 +278,8 @@ void World::BeginBatch(const shader_t* shader, bool hasStaticGeo)
 
 void World::EndBatch()
 {
-	if(tess.numVertexes <= 0 ||
+	
+	if((!batchHasStaticGeo && tess.numVertexes <= 0) ||
 		tess.numIndexes <= 0 ||
 		tess.shader->numStages == 0)
 	{
@@ -481,11 +482,13 @@ void World::ProcessWorld(world_t& world)
 		}
 		statIndexCount += surfIndexCount;
 
-		StaticGeometryChunk& chunk = statChunks[statChunkCount++];
+		const uint32_t chunkIndex = statChunkCount++;
+		StaticGeometryChunk& chunk = statChunks[chunkIndex];
 		chunk.vertexCount = surfVertexCount;
 		chunk.indexCount = surfIndexCount;
 		chunk.firstGPUVertex = statBuffers.vertexBuffers.batchFirst;
 		chunk.firstGPUIndex = statBuffers.indexBuffer.batchFirst;
+		surf->staticGeoChunk = chunkIndex;
 
 		statBuffers.vertexBuffers.EndBatch(surfVertexCount);
 		statBuffers.indexBuffer.EndBatch(surfIndexCount);
