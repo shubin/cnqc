@@ -417,6 +417,7 @@ void World::ProcessWorld(world_t& world)
 	}
 
 	statChunkCount = 1; // index 0 is invalid
+	statIndexCount = 0;
 
 	statBuffers.vertexBuffers.Rewind();
 	statBuffers.indexBuffer.Rewind();
@@ -453,8 +454,10 @@ void World::ProcessWorld(world_t& world)
 		}
 		
 		if(!statBuffers.vertexBuffers.CanAdd(surfVertexCount) ||
-			!statBuffers.indexBuffer.CanAdd(surfIndexCount))
+			!statBuffers.indexBuffer.CanAdd(surfIndexCount) ||
+			statIndexCount + surfIndexCount > ARRAY_LEN(statIndices))
 		{
+			Q_assert(0);
 			break;
 		}
 
@@ -467,6 +470,9 @@ void World::ProcessWorld(world_t& world)
 
 		statBuffers.vertexBuffers.Upload(0, surf->shader->numStages);
 		statBuffers.indexBuffer.Upload();
+
+		memcpy(statIndices + statIndexCount, &tess.indexes[0], surfIndexCount * sizeof(uint32_t));
+		statIndexCount += surfIndexCount;
 
 		StaticGeometryChunk& chunk = statChunks[statChunkCount++];
 		chunk.vertexCount = surfVertexCount;
@@ -584,7 +590,17 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 		}
 
 		int estVertexCount, estIndexCount;
-		R_ComputeTessellatedSize(&estVertexCount, &estIndexCount, drawSurf->surface);
+		if(hasStaticGeo)
+		{
+			const StaticGeometryChunk& chunk = statChunks[drawSurf->msurface->staticGeoChunk];
+			estVertexCount = chunk.vertexCount;
+			estIndexCount = chunk.indexCount;
+		}
+		else
+		{
+			R_ComputeTessellatedSize(&estVertexCount, &estIndexCount, drawSurf->surface);
+		}
+
 		// >= shouldn't be necessary but it's the overflow check currently used within
 		// R_TessellateSurface, so we have to be at least as aggressive as it is
 		if(tess.numVertexes + estVertexCount >= SHADER_MAX_VERTEXES ||
@@ -596,28 +612,13 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 
 		if(hasStaticGeo)
 		{
-			// @TODO: grab a CPU-resident pre-computed index buffer instead of tessellating on demand...
-			const int firstCPUVertex = tess.numVertexes;
-			const int firstCPUIndex = tess.numIndexes;
-			R_TessellateSurface(drawSurf->surface);
-			const int numIndexes = tess.numIndexes - firstCPUIndex;
-			//Q_assert(numIndexes == drawSurf->msurface->numIndexes); // will fail on occasion...
-			StaticGeometryChunk& chunk = statChunks[drawSurf->msurface->staticGeoChunk];
-			if(numIndexes == chunk.indexCount)
+			const StaticGeometryChunk& chunk = statChunks[drawSurf->msurface->staticGeoChunk];
+			const int firstGPUVertex = chunk.firstGPUVertex;
+			for(int i = 0; i < chunk.indexCount; ++i)
 			{
-				const int firstGPUVertex = chunk.firstGPUVertex;
-				for(int i = firstCPUIndex; i < firstCPUIndex + numIndexes; ++i)
-				{
-					tess.indexes[i] -= firstCPUVertex;
-					tess.indexes[i] += firstGPUVertex;
-				}
+				tess.indexes[tess.numIndexes++] = statIndices[chunk.firstCPUIndex + i] + firstGPUVertex;
 			}
-			else
-			{
-				// cancel this surface to not mess things up
-				tess.numVertexes = firstCPUVertex;
-				tess.numIndexes = firstCPUIndex;
-			}
+			tess.numIndexes += chunk.indexCount;
 		}
 		else
 		{

@@ -258,6 +258,7 @@ struct StaticGeometryChunk
 	uint32_t indexCount;
 	uint32_t firstGPUVertex;
 	uint32_t firstGPUIndex;
+	uint32_t firstCPUIndex;
 };
 
 struct World
@@ -317,6 +318,8 @@ struct World
 	GeometryBuffers statBuffers;
 	StaticGeometryChunk statChunks[16384];
 	uint32_t statChunkCount;
+	uint32_t statIndices[1 << 20];
+	uint32_t statIndexCount;
 };
 
 struct UI
