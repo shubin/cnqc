@@ -57,7 +57,7 @@ void main()
 )grml";
 
 
-static bool drawPrePass = true;
+static bool drawPrePass = false;
 
 
 static bool HasStaticGeo(const drawSurf_t* drawSurf)
