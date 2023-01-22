@@ -112,6 +112,11 @@ float4 main(VOut input) : SV_TARGET
 
 void PostProcess::Init()
 {
+	if(!grp.firstInit)
+	{
+		return;
+	}
+
 	{
 		RootSignatureDesc desc("Post Process");
 		desc.usingVertexBuffers = false;
