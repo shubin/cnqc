@@ -144,8 +144,8 @@ namespace RHI
 	// - 2048 samplers
 	static const D3D_FEATURE_LEVEL FeatureLevel = D3D_FEATURE_LEVEL_12_0;
 	static const uint32_t MaxCPUGenericDescriptors = RHI_MAX_TEXTURES_2D * 4;
-	static const uint32_t MaxCPUSamplerDescriptors = RHI_MAX_SAMPLERS * 4;
-	static const uint32_t MaxCPURTVDescriptors = 256;
+	static const uint32_t MaxCPUSamplerDescriptors = RHI_MAX_SAMPLERS;
+	static const uint32_t MaxCPURTVDescriptors = 64;
 	static const uint32_t MaxCPUDSVDescriptors = 64;
 	static const uint32_t MaxCPUDescriptors =
 		MaxCPUGenericDescriptors +
@@ -428,7 +428,7 @@ namespace RHI
 		POOL(Texture, MAX_DRAWIMAGES * 2) textures;
 		POOL(RootSignature, 64) rootSignatures;
 		POOL(DescriptorTable, 64) descriptorTables;
-		POOL(Pipeline, 64) pipelines;
+		POOL(Pipeline, 256) pipelines;
 #undef POOL
 
 #define DESTROY_POOL_LIST(POOL) \
@@ -1595,11 +1595,11 @@ namespace RHI
 
 	static void DrawResourceUsage()
 	{
-		if(BeginTable("Handles", 2))
+		if(BeginTable("Handles", 3))
 		{
-			TableHeader(2, "Type", "Count");
+			TableHeader(3, "Type", "Count", "Max");
 
-#define ITEM(Name, Variable) TableRow(2, Name, va("%d", (int)Variable.CountUsedSlots()))
+#define ITEM(Name, Variable) TableRow(3, Name, va("%d", (int)Variable.CountUsedSlots()), va("%d", (int)Variable.size))
 			ITEM("Buffers", rhi.buffers);
 			ITEM("Textures", rhi.textures);
 			ITEM("Root Signatures", rhi.rootSignatures);
@@ -1610,11 +1610,11 @@ namespace RHI
 			ImGui::EndTable();
 		}
 
-		if(BeginTable("Descriptors", 2))
+		if(BeginTable("Descriptors", 3))
 		{
-			TableHeader(2, "Type", "Count");
+			TableHeader(3, "Type", "Count", "Max");
 
-#define ITEM(Name, Variable) TableRow(2, Name, va("%d", (int)Variable.allocatedItemCount))
+#define ITEM(Name, Variable) TableRow(3, Name, va("%d", (int)Variable.allocatedItemCount), va("%d", (int)Variable.size))
 			ITEM("CBV/SRV/UAV", rhi.descHeapGeneric.freeList);
 			ITEM("Samplers", rhi.descHeapSamplers.freeList);
 			ITEM("RTV", rhi.descHeapRTVs.freeList);

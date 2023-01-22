@@ -820,6 +820,9 @@ namespace RHI
 
 		byte items[N * sizeof(Item)];
 		uint16_t freeList;
+
+	public:
+		const int size = N;
 	};
 
 	template<typename T, uint32_t N>
