@@ -133,7 +133,7 @@ void PostProcess::Init()
 		descriptorTable = CreateDescriptorTable(desc);
 
 		DescriptorTableUpdate update;
-		update.SetSamplers(1, &grp.samplers[0]);
+		update.SetSamplers(1, &grp.samplers[GetSamplerIndex(TW_CLAMP_TO_EDGE, TextureFilter::Linear)]);
 		UpdateDescriptorTable(descriptorTable, update);
 	}
 	{

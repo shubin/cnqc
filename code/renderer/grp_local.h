@@ -533,4 +533,5 @@ inline void CmdSetViewportAndScissor(const viewParms_t& vp)
 }
 
 const image_t* GetBundleImage(const textureBundle_t& bundle);
+uint32_t GetSamplerIndex(textureWrap_t wrap, TextureFilter::Id filter);
 uint32_t GetSamplerIndex(const image_t* image);

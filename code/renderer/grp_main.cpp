@@ -345,7 +345,7 @@ const image_t* GetBundleImage(const textureBundle_t& bundle)
 	return R_UpdateAndGetBundleImage(&bundle, &UpdateAnimatedImage);
 }
 
-static uint32_t GetSamplerIndex(textureWrap_t wrap, TextureFilter::Id filter)
+uint32_t GetSamplerIndex(textureWrap_t wrap, TextureFilter::Id filter)
 {
 	Q_assert((uint32_t)wrap < TW_COUNT);
 	Q_assert((uint32_t)filter < TextureFilter::Count);
