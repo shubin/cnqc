@@ -572,7 +572,10 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 		int fogNum;
 		int entityNum;
 		R_DecomposeSort(drawSurf->sort, &entityNum, &shader, &fogNum);
-		if(shader->psoIndex == 0)
+		// @TODO:
+		if(shader->numPipelines == 0 ||
+			shader->pipelines[0].pipeline <= 0 ||
+			shader->pipelines[0].numStages <= 0)
 		{
 			continue;
 		}
@@ -594,9 +597,10 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			oldHasStaticGeo = hasStaticGeo;
 			EndBatch();
 			BeginBatch(shader, hasStaticGeo);
-			if(pso != grp.psos[shader->psoIndex].pipeline)
+			const int psoIndex = shader->pipelines[0].pipeline;
+			if(pso != grp.psos[psoIndex].pipeline)
 			{
-				pso = grp.psos[shader->psoIndex].pipeline;
+				pso = grp.psos[psoIndex].pipeline;
 				CmdBindPipeline(pso);
 			}
 		}

@@ -372,6 +372,12 @@ typedef enum {
 extern const float r_depthFadeScale[DFT_COUNT][4];
 extern const float r_depthFadeBias [DFT_COUNT][4];
 
+struct pipeline_t {
+	int firstStage;
+	int numStages;
+	int pipeline;
+};
+
 
 struct shader_t {
 	char		name[MAX_QPATH];		// game path, including extension
@@ -440,7 +446,8 @@ struct shader_t {
 	qbool isAlphaTestedOpaque;		// no alpha blending, first stage is alpha tested
 	qbool isDynamic;				// at least one vertex attribute must generated on the fly
 
-	uint32_t psoIndex;
+	pipeline_t pipelines[MAX_SHADER_STAGES];
+	int numPipelines;
 
 	shader_t* next;
 };

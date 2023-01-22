@@ -464,7 +464,7 @@ void GRP::ProcessModel(model_t& model)
 
 void GRP::ProcessShader(shader_t& shader)
 {
-	shader.psoIndex = 0;
+	shader.numPipelines = 0;
 	if(!shader.isOpaque)
 	{
 		return;
@@ -492,12 +492,18 @@ void GRP::ProcessShader(shader_t& shader)
 			memcmp(&cache.desc, &psos[p].desc, sizeof(cache.desc)) == 0 &&
 			memcmp(&cache.stageStateBits, &psos[p].stageStateBits, cache.stageCount * sizeof(cache.stageStateBits[0])) == 0)
 		{
-			shader.psoIndex = p;
+			shader.pipelines[0].pipeline = p;
+			shader.pipelines[0].firstStage = 0;
+			shader.pipelines[0].numStages = shader.numStages;
+			shader.numPipelines = 1;
 			return;
 		}
 	}
 
-	shader.psoIndex = CreatePSO(cache);
+	shader.pipelines[0].pipeline = CreatePSO(cache);
+	shader.pipelines[0].firstStage = 0;
+	shader.pipelines[0].numStages = shader.numStages;
+	shader.numPipelines = 1;
 }
 
 uint32_t GRP::RegisterTexture(HTexture htexture)
