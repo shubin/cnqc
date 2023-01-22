@@ -66,7 +66,7 @@ static bool HasStaticGeo(const drawSurf_t* drawSurf)
 	return drawSurf->staticGeoChunk > 0 && drawSurf->staticGeoChunk < ARRAY_LEN(grp.world.statChunks);
 }
 
-static void UpdateModelViewMatrix(int entityNum, double originalTime)
+static void UpdateEntityData(int entityNum, double originalTime)
 {
 	if(entityNum != ENTITYNUM_WORLD)
 	{
@@ -273,7 +273,16 @@ void World::BeginBatch(const shader_t* shader, bool hasStaticGeo)
 {
 	tess.numVertexes = 0;
 	tess.numIndexes = 0;
+	tess.fogNum = 0;
+	tess.depthFade = DFT_NONE;
+	tess.deformsPreApplied = qfalse;
+	tess.xstages = (const shaderStage_t**)shader->stages;
 	tess.shader = shader;
+	tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
+	if(tess.shader->clampTime > 0.0 && tess.shaderTime >= tess.shader->clampTime)
+	{
+		tess.shaderTime = tess.shader->clampTime;
+	}
 	batchHasStaticGeo = hasStaticGeo;
 }
 
@@ -613,7 +622,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 
 		if(entityChanged)
 		{
-			UpdateModelViewMatrix(entityNum, originalTime);
+			UpdateEntityData(entityNum, originalTime);
 		}
 
 		int estVertexCount, estIndexCount;
