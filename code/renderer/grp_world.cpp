@@ -277,7 +277,7 @@ void World::BeginBatch(const shader_t* shader, bool hasStaticGeo)
 	batchHasStaticGeo = hasStaticGeo;
 }
 
-void World::EndBatch()
+void World::EndBatch(HPipeline& pso)
 {
 	
 	if((!batchHasStaticGeo && tess.numVertexes <= 0) ||
@@ -304,24 +304,35 @@ void World::EndBatch()
 	}
 	db.indexBuffer.Upload();
 
-	DynamicVertexRC vertexRC = {};
-	memcpy(vertexRC.modelViewMatrix, backEnd.orient.modelMatrix, sizeof(vertexRC.modelViewMatrix));
-	memcpy(vertexRC.projectionMatrix, backEnd.viewParms.projectionMatrix, sizeof(vertexRC.projectionMatrix));
-	memcpy(vertexRC.clipPlane, clipPlane, sizeof(vertexRC.clipPlane));
-	CmdSetRootConstants(grp.opaqueRootSignature, ShaderStage::Vertex, &vertexRC);
-
-	DynamicPixelRC pixelRC = {};
-	for(int s = 0; s < tess.shader->numStages; ++s)
+	for(int p = 0; p < tess.shader->numPipelines; ++p)
 	{
-		const uint32_t texIdx = tess.shader->stages[s]->bundle.image[0]->textureIndex;
-		Q_assert(texIdx > 0);
-		pixelRC.stageIndices[s] = texIdx; // sampler index is 0
-	}
-	CmdSetRootConstants(grp.opaqueRootSignature, ShaderStage::Pixel, &pixelRC);
+		const pipeline_t& pipeline = tess.shader->pipelines[p];
+		const int psoIndex = pipeline.pipeline;
+		if(pso != grp.psos[psoIndex].pipeline)
+		{
+			pso = grp.psos[psoIndex].pipeline;
+			CmdBindPipeline(pso);
+		}
 
-	BindVertexBuffers(batchHasStaticGeo, VertexBuffers::BaseCount + VertexBuffers::StageCount * tess.shader->numStages);
-	BindIndexBuffer(false);
-	CmdDrawIndexed(tess.numIndexes, db.indexBuffer.batchFirst, batchHasStaticGeo ? 0 : db.vertexBuffers.batchFirst);
+		DynamicVertexRC vertexRC = {};
+		memcpy(vertexRC.modelViewMatrix, backEnd.orient.modelMatrix, sizeof(vertexRC.modelViewMatrix));
+		memcpy(vertexRC.projectionMatrix, backEnd.viewParms.projectionMatrix, sizeof(vertexRC.projectionMatrix));
+		memcpy(vertexRC.clipPlane, clipPlane, sizeof(vertexRC.clipPlane));
+		CmdSetRootConstants(grp.opaqueRootSignature, ShaderStage::Vertex, &vertexRC);
+
+		DynamicPixelRC pixelRC = {};
+		for(int s = 0; s < pipeline.numStages; ++s)
+		{
+			const uint32_t texIdx = tess.shader->stages[pipeline.firstStage + s]->bundle.image[0]->textureIndex;
+			Q_assert(texIdx > 0);
+			pixelRC.stageIndices[s] = texIdx; // sampler index is 0
+		}
+		CmdSetRootConstants(grp.opaqueRootSignature, ShaderStage::Pixel, &pixelRC);
+
+		BindVertexBuffers(batchHasStaticGeo, VertexBuffers::BaseCount + VertexBuffers::StageCount * pipeline.numStages);
+		BindIndexBuffer(false);
+		CmdDrawIndexed(tess.numIndexes, db.indexBuffer.batchFirst, batchHasStaticGeo ? 0 : db.vertexBuffers.batchFirst);
+	}
 
 	if(!batchHasStaticGeo)
 	{
@@ -551,7 +562,8 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 	HPipeline pso = RHI_MAKE_NULL_HANDLE();
 
 	const drawSurf_t* drawSurfs = cmd.drawSurfs;
-	const int opaqueCount = cmd.numDrawSurfs - cmd.numTranspSurfs;
+	const int surfCount = cmd.numDrawSurfs;
+	//const int opaqueCount = cmd.numDrawSurfs - cmd.numTranspSurfs;
 	//const int transpCount = cmd.numTranspSurfs;
 	const double originalTime = backEnd.refdef.floatTime;
 
@@ -567,7 +579,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 
 	int ds;
 	const drawSurf_t* drawSurf;
-	for(ds = 0, drawSurf = drawSurfs; ds < opaqueCount; ++ds, ++drawSurf)
+	for(ds = 0, drawSurf = drawSurfs; ds < surfCount; ++ds, ++drawSurf)
 	{
 		int fogNum;
 		int entityNum;
@@ -595,14 +607,8 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			oldShader = shader;
 			oldEntityNum = entityNum;
 			oldHasStaticGeo = hasStaticGeo;
-			EndBatch();
+			EndBatch(pso);
 			BeginBatch(shader, hasStaticGeo);
-			const int psoIndex = shader->pipelines[0].pipeline;
-			if(pso != grp.psos[psoIndex].pipeline)
-			{
-				pso = grp.psos[psoIndex].pipeline;
-				CmdBindPipeline(pso);
-			}
 		}
 
 		if(entityChanged)
@@ -627,7 +633,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 		if(tess.numVertexes + estVertexCount >= SHADER_MAX_VERTEXES ||
 			tess.numIndexes + estIndexCount >= SHADER_MAX_INDEXES)
 		{
-			EndBatch();
+			EndBatch(pso);
 			BeginBatch(tess.shader, batchHasStaticGeo);
 		}
 
@@ -659,7 +665,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 
 	backEnd.refdef.floatTime = originalTime;
 
-	EndBatch();
+	EndBatch(pso);
 
 	db.vertexBuffers.EndUpload();
 	db.indexBuffer.EndUpload();

@@ -465,45 +465,48 @@ void GRP::ProcessModel(model_t& model)
 void GRP::ProcessShader(shader_t& shader)
 {
 	shader.numPipelines = 0;
-	if(!shader.isOpaque)
-	{
-		return;
-	}
-
 	if(shader.numStages < 1)
 	{
 		return;
 	}
 
-	// @TODO: fix up cache.stageStateBits[0] based on depth state from follow-up states
-	CachedPSO cache = {};
-	cache.desc.cullType = shader.cullType;
-	cache.desc.polygonOffset = shader.polygonOffset;
-	cache.stageStateBits[0] = shader.stages[0]->stateBits & (~GLS_POLYMODE_LINE);
-	for(int s = 1; s < shader.numStages; ++s)
-	{
-		cache.stageStateBits[s] = shader.stages[s]->stateBits & (GLS_BLEND_BITS | GLS_ATEST_BITS);
-	}
-	cache.stageCount = shader.numStages;
+	// @TODO: GLS_POLYMODE_LINE
 
-	for(uint32_t p = 1; p < psoCount; ++p)
+	if(shader.isOpaque)
 	{
-		if(cache.stageCount == psos[p].stageCount &&
-			memcmp(&cache.desc, &psos[p].desc, sizeof(cache.desc)) == 0 &&
-			memcmp(&cache.stageStateBits, &psos[p].stageStateBits, cache.stageCount * sizeof(cache.stageStateBits[0])) == 0)
+		// @TODO: fix up cache.stageStateBits[0] based on depth state from follow-up states
+		CachedPSO cache = {};
+		cache.desc.cullType = shader.cullType;
+		cache.desc.polygonOffset = shader.polygonOffset;
+		cache.stageStateBits[0] = shader.stages[0]->stateBits & (~GLS_POLYMODE_LINE);
+		for(int s = 1; s < shader.numStages; ++s)
 		{
-			shader.pipelines[0].pipeline = p;
-			shader.pipelines[0].firstStage = 0;
-			shader.pipelines[0].numStages = shader.numStages;
-			shader.numPipelines = 1;
-			return;
+			cache.stageStateBits[s] = shader.stages[s]->stateBits & (GLS_BLEND_BITS | GLS_ATEST_BITS);
 		}
-	}
+		cache.stageCount = shader.numStages;
 
-	shader.pipelines[0].pipeline = CreatePSO(cache);
-	shader.pipelines[0].firstStage = 0;
-	shader.pipelines[0].numStages = shader.numStages;
-	shader.numPipelines = 1;
+		shader.pipelines[0].pipeline = CreatePSO(cache);
+		shader.pipelines[0].firstStage = 0;
+		shader.pipelines[0].numStages = shader.numStages;
+		shader.numPipelines = 1;
+	}
+	else
+	{
+		// @TODO: collapse consecutive stages with the same commutative blend state
+		CachedPSO cache = {};
+		cache.desc.cullType = shader.cullType;
+		cache.desc.polygonOffset = shader.polygonOffset;
+		cache.stageCount = 1;
+		for(int s = 0; s < shader.numStages; ++s)
+		{
+			cache.stageStateBits[0] = shader.stages[s]->stateBits & (~(GLS_POLYMODE_LINE | GLS_ATEST_BITS));
+
+			shader.pipelines[s].pipeline = CreatePSO(cache);
+			shader.pipelines[s].firstStage = s;
+			shader.pipelines[s].numStages = 1;
+		}
+		shader.numPipelines = shader.numStages;
+	}
 }
 
 uint32_t GRP::RegisterTexture(HTexture htexture)
@@ -565,6 +568,16 @@ void GRP::EndUI()
 
 uint32_t GRP::CreatePSO(CachedPSO& cache)
 {
+	for(uint32_t p = 1; p < psoCount; ++p)
+	{
+		if(cache.stageCount == psos[p].stageCount &&
+			memcmp(&cache.desc, &psos[p].desc, sizeof(cache.desc)) == 0 &&
+			memcmp(&cache.stageStateBits, &psos[p].stageStateBits, cache.stageCount * sizeof(cache.stageStateBits[0])) == 0)
+		{
+			return p;
+		}
+	}
+
 	Q_assert(psoCount < ARRAY_LEN(psos));
 
 	uint32_t macroCount = 0;

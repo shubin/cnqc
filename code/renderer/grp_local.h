@@ -268,7 +268,7 @@ struct World
 	void Begin();
 	void DrawPrePass();
 	void BeginBatch(const shader_t* shader, bool hasStaticGeo);
-	void EndBatch();
+	void EndBatch(HPipeline& pso);
 	void DrawGUI();
 	void ProcessWorld(world_t& world);
 	void DrawSceneView(const drawSceneViewCommand_t& cmd);
