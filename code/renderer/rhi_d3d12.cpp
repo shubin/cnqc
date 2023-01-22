@@ -2855,7 +2855,7 @@ namespace RHI
 		desc.RasterizerState.AntialiasedLineEnable = FALSE;
 		desc.RasterizerState.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
 		desc.RasterizerState.CullMode = GetD3DCullMode(rhiDesc.rasterizer.cullMode);
-		desc.RasterizerState.FrontCounterClockwise = FALSE;
+		desc.RasterizerState.FrontCounterClockwise = TRUE;
 		desc.RasterizerState.DepthBias = rhiDesc.rasterizer.polygonOffset ? 1 : 0;
 		desc.RasterizerState.DepthBiasClamp = 0.0f;
 		desc.RasterizerState.SlopeScaledDepthBias = rhiDesc.rasterizer.polygonOffset ? 1.0f : 0.0f;

@@ -580,7 +580,7 @@ uint32_t GRP::CreatePSO(CachedPSO& cache)
 	Q_assert(macroCount <= ARRAY_LEN(macros));
 
 	uint32_t a = 0;
-	GraphicsPipelineDesc desc("opaque", opaqueRootSignature);
+	GraphicsPipelineDesc desc("uber", opaqueRootSignature);
 	desc.shortLifeTime = true; // the PSO cache is only valid for this map!
 	desc.vertexShader = vertexShader;
 	desc.pixelShader = pixelShader;
@@ -599,7 +599,6 @@ uint32_t GRP::CreatePSO(CachedPSO& cache)
 	desc.depthStencil.enableDepthTest = (cache.stageStateBits[0] & GLS_DEPTHTEST_DISABLE) == 0;
 	desc.depthStencil.enableDepthWrites = (cache.stageStateBits[0] & GLS_DEPTHMASK_TRUE) != 0;
 	desc.rasterizer.cullMode = cache.desc.cullType;
-	desc.rasterizer.cullMode = CT_TWO_SIDED; // @TODO: *sigh*
 	desc.rasterizer.polygonOffset = cache.desc.polygonOffset;
 	desc.AddRenderTarget(cache.stageStateBits[0] & GLS_BLEND_BITS, TextureFormat::RGBA32_UNorm);
 	cache.pipeline = CreateGraphicsPipeline(desc);
