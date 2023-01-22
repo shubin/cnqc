@@ -24,6 +24,19 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 #include "grp_local.h"
 
 
+#pragma pack(push, 4)
+struct VertexRC
+{
+	float scale[2];
+};
+
+struct PixelRC
+{
+	uint32_t texture;
+	uint32_t sampler;
+};
+#pragma pack(pop)
+
 static const char* vs = R"grml(
 cbuffer RootConstants
 {
@@ -63,8 +76,8 @@ cbuffer RootConstants
 	uint samplerIndex;
 };
 
-Texture2D textures2D[2048] : register(t0);
-SamplerState samplers[2] : register(s0);
+Texture2D textures2D[4096] : register(t0);
+SamplerState samplers[6] : register(s0);
 
 struct VOut
 {
@@ -157,8 +170,11 @@ void UI::Begin()
 	const uint32_t stride = sizeof(UI::Vertex);
 	CmdBindVertexBuffers(1, &vertexBuffer, &stride, NULL);
 	CmdBindIndexBuffer(indexBuffer, indexType, 0);
-	const float scale[2] = { 2.0f / glConfig.vidWidth, 2.0f / glConfig.vidHeight };
-	CmdSetRootConstants(rootSignature, ShaderStage::Vertex, scale);
+
+	VertexRC vertexRC = {};
+	vertexRC.scale[0] = 2.0f / glConfig.vidWidth;
+	vertexRC.scale[1] = 2.0f / glConfig.vidHeight;
+	CmdSetRootConstants(rootSignature, ShaderStage::Vertex, &vertexRC);
 
 	grp.renderMode = RenderMode::UI;
 }
@@ -173,9 +189,11 @@ void UI::DrawBatch()
 	Begin();
 
 	// @TODO: support for custom shaders?
-	const uint32_t textureIndex = GetBundleImage(shader->stages[0]->bundle)->textureIndex;
-	const uint32_t pixelConstants[2] = { textureIndex, 0 }; // second one is the sampler index
-	CmdSetRootConstants(rootSignature, ShaderStage::Pixel, pixelConstants);
+	PixelRC pixelRC = {};
+	pixelRC.texture = GetBundleImage(shader->stages[0]->bundle)->textureIndex;
+	pixelRC.sampler = GetSamplerIndex(TW_CLAMP_TO_EDGE, TextureFilter::Linear);
+	CmdSetRootConstants(rootSignature, ShaderStage::Pixel, &pixelRC);
+
 	CmdDrawIndexed(indexCount, firstIndex, 0);
 	firstIndex += indexCount;
 	firstVertex += vertexCount;
