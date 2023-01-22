@@ -420,7 +420,8 @@ void GRP::Init()
 		TextureDesc desc("render target", glConfig.vidWidth, glConfig.vidHeight);
 		desc.initialState = ResourceStates::RenderTargetBit;
 		desc.allowedState = ResourceStates::RenderTargetBit | ResourceStates::PixelShaderAccessBit;
-		Vector4Set(desc.clearColor, 0.0f, 0.0f, 0.0f, 1.0f);
+		//Vector4Set(desc.clearColor, 0.0f, 0.0f, 0.0f, 1.0f);
+		Vector4Copy(colorPink, desc.clearColor);
 		desc.usePreferredClearValue = true;
 		desc.committedResource = true;
 		desc.format = TextureFormat::RGBA32_UNorm;
