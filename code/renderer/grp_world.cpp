@@ -189,6 +189,7 @@ void World::BeginFrame()
 
 	boundVertexBuffers = BufferFamily::Invalid;
 	boundIndexBuffer = BufferFamily::Invalid;
+	boundStaticVertexBuffersFirst = 0;
 	boundStaticVertexBuffersCount = UINT32_MAX;
 }
 
@@ -314,6 +315,8 @@ void World::EndBatch(HPipeline& pso)
 	}
 	db.indexBuffer.Upload();
 
+	BindIndexBuffer(false);
+
 	for(int p = 0; p < tess.shader->numPipelines; ++p)
 	{
 		const pipeline_t& pipeline = tess.shader->pipelines[p];
@@ -341,8 +344,8 @@ void World::EndBatch(HPipeline& pso)
 		}
 		CmdSetRootConstants(grp.opaqueRootSignature, ShaderStage::Pixel, &pixelRC);
 
-		BindVertexBuffers(batchHasStaticGeo, VertexBuffers::BaseCount + VertexBuffers::StageCount * pipeline.numStages);
-		BindIndexBuffer(false);
+		BindVertexBuffers(batchHasStaticGeo, pipeline.firstStage, pipeline.numStages);
+		
 		CmdDrawIndexed(tess.numIndexes, db.indexBuffer.batchFirst, batchHasStaticGeo ? 0 : db.vertexBuffers.batchFirst);
 	}
 
@@ -618,12 +621,6 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			continue;
 		}
 
-		// @TODO:
-		/*if(Q_stristr(shader->name, "RocketExplosion"))
-		{
-			__debugbreak();
-		}*/
-
 		if(staticChanged || shaderChanged || entityChanged)
 		{
 			oldShader = shader;
@@ -637,12 +634,6 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 		{
 			UpdateEntityData(entityNum, originalTime);
 		}
-
-		// @TODO:
-		/*if(Q_stristr(shader->name, "RocketExplosion"))
-		{
-			Sys_DebugPrintf("%f\n", (float)tess.shaderTime);
-		}*/
 
 		int estVertexCount, estIndexCount;
 		if(hasStaticGeo)
@@ -703,18 +694,28 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 	// @TODO: go back to the world model-view matrix, restore depth range
 }
 
-void World::BindVertexBuffers(bool staticGeo, uint32_t count)
+void World::BindVertexBuffers(bool staticGeo, uint32_t firstStage, uint32_t stageCount)
 {
 	const BufferFamily::Id type = staticGeo ? BufferFamily::Static : BufferFamily::Dynamic;
-	if(type == boundVertexBuffers && count == boundStaticVertexBuffersCount)
+	if(type == boundVertexBuffers &&
+		firstStage == boundStaticVertexBuffersFirst &&
+		stageCount == boundStaticVertexBuffersCount)
 	{
 		return;
 	}
 
 	VertexBuffers& vb = staticGeo ? statBuffers.vertexBuffers : dynBuffers[GetFrameIndex()].vertexBuffers;
-	CmdBindVertexBuffers(count, vb.buffers, vb.strides, NULL);
+	const uint32_t count = VertexBuffers::BaseCount + VertexBuffers::StageCount * stageCount;
+	HBuffer buffers[VertexBuffers::BufferCount];
+	memcpy(buffers, vb.buffers, VertexBuffers::BaseCount * sizeof(HBuffer));
+	memcpy(
+		buffers + VertexBuffers::BaseCount,
+		vb.buffers + VertexBuffers::BaseCount + VertexBuffers::StageCount * firstStage,
+		VertexBuffers::StageCount * stageCount * sizeof(HBuffer));
+	CmdBindVertexBuffers(count, buffers, vb.strides, NULL);
 	boundVertexBuffers = type;
-	boundStaticVertexBuffersCount = count;
+	boundStaticVertexBuffersFirst = firstStage;
+	boundStaticVertexBuffersCount = stageCount;
 }
 
 void World::BindIndexBuffer(bool staticGeo)

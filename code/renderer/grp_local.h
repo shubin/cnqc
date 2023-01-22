@@ -272,7 +272,7 @@ struct World
 	void DrawGUI();
 	void ProcessWorld(world_t& world);
 	void DrawSceneView(const drawSceneViewCommand_t& cmd);
-	void BindVertexBuffers(bool staticGeo, uint32_t count);
+	void BindVertexBuffers(bool staticGeo, uint32_t firstStage, uint32_t stageCount);
 	void BindIndexBuffer(bool staticGeo);
 
 	typedef uint32_t Index;
@@ -308,6 +308,7 @@ struct World
 	// shared
 	BufferFamily::Id boundVertexBuffers;
 	BufferFamily::Id boundIndexBuffer;
+	uint32_t boundStaticVertexBuffersFirst;
 	uint32_t boundStaticVertexBuffersCount;
 	bool batchHasStaticGeo;
 
