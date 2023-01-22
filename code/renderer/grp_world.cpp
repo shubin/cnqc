@@ -618,6 +618,12 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			continue;
 		}
 
+		// @TODO:
+		/*if(Q_stristr(shader->name, "RocketExplosion"))
+		{
+			__debugbreak();
+		}*/
+
 		if(staticChanged || shaderChanged || entityChanged)
 		{
 			oldShader = shader;
@@ -631,6 +637,12 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 		{
 			UpdateEntityData(entityNum, originalTime);
 		}
+
+		// @TODO:
+		/*if(Q_stristr(shader->name, "RocketExplosion"))
+		{
+			Sys_DebugPrintf("%f\n", (float)tess.shaderTime);
+		}*/
 
 		int estVertexCount, estIndexCount;
 		if(hasStaticGeo)
