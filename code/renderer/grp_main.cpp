@@ -323,6 +323,28 @@ static const void* SkipCommand(const void* data)
 	return (const void*)(cmd + 1);
 }
 
+static void UpdateAnimatedImage(image_t* image, int w, int h, const byte* data, qbool dirty)
+{
+	if(w != image->width || h != image->height)
+	{
+		// @TODO: ?
+		/*image->width = w;
+		image->height = h;
+		CreateTexture(&d3d.textures[image->texnum], image, 1, w, h);
+		GAL_UpdateTexture(image, 0, 0, 0, w, h, data);*/
+	}
+	else if(dirty)
+	{
+		// @TODO: ?
+		//GAL_UpdateTexture(image, 0, 0, 0, w, h, data);
+	}
+}
+
+const image_t* GetBundleImage(const textureBundle_t& bundle)
+{
+	return R_UpdateAndGetBundleImage(&bundle, &UpdateAnimatedImage);
+}
+
 
 void GRP::Init()
 {

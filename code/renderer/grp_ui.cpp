@@ -172,7 +172,8 @@ void UI::DrawBatch()
 
 	Begin();
 
-	const uint32_t textureIndex = shader->stages[0]->bundle.image[0]->textureIndex;
+	// @TODO: support for custom shaders?
+	const uint32_t textureIndex = GetBundleImage(shader->stages[0]->bundle)->textureIndex;
 	const uint32_t pixelConstants[2] = { textureIndex, 0 }; // second one is the sampler index
 	CmdSetRootConstants(rootSignature, ShaderStage::Pixel, pixelConstants);
 	CmdDrawIndexed(indexCount, firstIndex, 0);

@@ -531,3 +531,5 @@ inline void CmdSetViewportAndScissor(const viewParms_t& vp)
 {
 	CmdSetViewportAndScissor(vp.viewportX, vp.viewportY, vp.viewportWidth, vp.viewportHeight);
 }
+
+const image_t* GetBundleImage(const textureBundle_t& bundle);

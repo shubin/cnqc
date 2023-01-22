@@ -323,7 +323,7 @@ void World::EndBatch(HPipeline& pso)
 		DynamicPixelRC pixelRC = {};
 		for(int s = 0; s < pipeline.numStages; ++s)
 		{
-			const uint32_t texIdx = tess.shader->stages[pipeline.firstStage + s]->bundle.image[0]->textureIndex;
+			const uint32_t texIdx = GetBundleImage(tess.shader->stages[pipeline.firstStage + s]->bundle)->textureIndex;
 			Q_assert(texIdx > 0);
 			pixelRC.stageIndices[s] = texIdx; // sampler index is 0
 		}
