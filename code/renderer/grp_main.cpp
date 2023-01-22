@@ -162,8 +162,8 @@ cbuffer RootConstants
 	uint4 stageIndices1;
 };
 
-Texture2D textures2D[2048] : register(t0);
-SamplerState samplers[2] : register(s0);
+Texture2D textures2D[4096] : register(t0);
+SamplerState samplers[6] : register(s0);
 
 #define GLS_SRCBLEND_ZERO						0x00000001
 #define GLS_SRCBLEND_ONE						0x00000002
