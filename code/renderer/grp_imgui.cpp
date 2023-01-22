@@ -38,13 +38,14 @@ struct VertexRC
 struct PixelRC
 {
 	uint32_t texture;
+	uint32_t sampler;
 };
 #pragma pack(pop)
 
 static const char* vs = R"grml(
 cbuffer vertexBuffer : register(b0)
 {
-	float4x4 ProjectionMatrix;
+	float4x4 projectionMatrix;
 };
 
 struct VS_INPUT
@@ -64,7 +65,7 @@ struct PS_INPUT
 PS_INPUT main(VS_INPUT input)
 {
 	PS_INPUT output;
-	output.pos = mul(ProjectionMatrix, float4(input.pos.xy, 0.0, 1.0));
+	output.pos = mul(projectionMatrix, float4(input.pos.xy, 0.0, 1.0));
 	output.col = input.col;
 	output.uv  = input.uv;
 	return output;
@@ -74,7 +75,8 @@ PS_INPUT main(VS_INPUT input)
 static const char* ps = R"grml(
 cbuffer vertexBuffer : register(b0)
 {
-	uint TextureIndex;
+	uint textureIndex;
+	uint samplerIndex;
 };
 
 struct PS_INPUT
@@ -84,12 +86,12 @@ struct PS_INPUT
 	float2 uv  : TEXCOORD0;
 };
 
-SamplerState sampler0 : register(s0);
+SamplerState samplers[6] : register(s0);
 Texture2D textures[4096] : register(t0);
 
 float4 main(PS_INPUT input) : SV_Target
 {
-	float4 out_col = input.col * textures[TextureIndex].Sample(sampler0, input.uv);
+	float4 out_col = input.col * textures[textureIndex].Sample(samplers[samplerIndex], input.uv);
 	return out_col;
 }
 )grml";
@@ -267,7 +269,9 @@ void ImGUI::Draw()
 				continue;
 			}
 
-			const PixelRC pixelRC = { (uint32_t)cmd->TextureId };
+			PixelRC pixelRC = {};
+			pixelRC.texture = (uint32_t)cmd->TextureId;
+			pixelRC.sampler = GetSamplerIndex(TW_CLAMP_TO_EDGE, TextureFilter::Linear);
 			CmdSetRootConstants(rootSignature, ShaderStage::Pixel, &pixelRC);
 
 			// Apply Scissor/clipping rectangle, Draw
