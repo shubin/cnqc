@@ -865,9 +865,6 @@ typedef struct {
 
 
 #define FOG_TABLE_SIZE		256
-#define FUNCTABLE_SIZE		1024
-#define FUNCTABLE_SHIFT		10
-#define FUNCTABLE_MASK		(FUNCTABLE_SIZE-1)
 
 
 /*

@@ -1581,11 +1581,8 @@ const image_t* R_UpdateAndGetBundleImage( const textureBundle_t* bundle, updateA
 	if ( bundle->numImageAnimations <= 1 )
 		return bundle->image[0];
 
-	// it is necessary to do this messy calc to make sure animations line up
-	// exactly with waveforms of the same frequency
-	double v = tess.shaderTime * bundle->imageAnimationSpeed * FUNCTABLE_SIZE;
-	long long int index = v;
-	index >>= FUNCTABLE_SHIFT;
+	const double v = tess.shaderTime * bundle->imageAnimationSpeed;
+	const int index = (int)v;
 	if ( index < 0 ) // may happen with shader time offsets
 		return bundle->image[0];
 
