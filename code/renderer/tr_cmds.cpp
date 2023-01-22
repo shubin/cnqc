@@ -270,11 +270,13 @@ void RE_EndFrame( int* pcFE, int* pc2D, int* pc3D, qbool render )
 		}
 	}
 
+	const swapBuffersCommand_t cmd = { RC_SWAP_BUFFERS };
+	backEnd.renderFrame = render;
+	RB_SwapBuffers( &cmd );
+
 	if ( render ) {
-		const swapBuffersCommand_t cmd = { RC_SWAP_BUFFERS };
-		RB_SwapBuffers( &cmd );
 		// @TODO:
-		/*if(delayScreenshot) {
+		/*if ( delayScreenshot ) {
 			R_CMD_END( screenshotCommand_t, RC_SCREENSHOT );
 			*cmd = r_delayedScreenshot;
 		}*/

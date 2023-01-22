@@ -1477,6 +1477,14 @@ namespace RHI
 		fq.durationQueryCount = 0;
 	}
 
+	static void ClearDurationQueries()
+	{
+		for(uint32_t f = 0; f < FrameCount; ++f)
+		{
+			rhi.frameQueries[f].durationQueryCount = 0;
+		}
+	}
+
 	static void GrabSwapChainTextures()
 	{
 		for(uint32_t f = 0; f < FrameCount; ++f)
@@ -2143,14 +2151,24 @@ namespace RHI
 		// stop recording
 		D3D(rhi.commandList->Close());
 
-		ID3D12CommandList* commandListArray[] = { rhi.commandList };
-		rhi.mainCommandQueue->ExecuteCommandLists(ARRAY_LEN(commandListArray), commandListArray);
+		if(backEnd.renderFrame)
+		{
+			ID3D12CommandList* commandListArray[] = { rhi.commandList };
+			rhi.mainCommandQueue->ExecuteCommandLists(ARRAY_LEN(commandListArray), commandListArray);
 
-		Present();
+			Present();
+		}
 
 		MoveToNextFrame();
 
-		ResolveDurationQueries();
+		if(backEnd.renderFrame)
+		{
+			ResolveDurationQueries();
+		}
+		else
+		{
+			ClearDurationQueries();
+		}
 	}
 
 	uint32_t GetFrameIndex()
@@ -3113,7 +3131,10 @@ namespace RHI
 		rhi.commandList->EndQuery(rhi.timeStampHeap, D3D12_QUERY_TYPE_TIMESTAMP, beginIndex);
 
 		DurationQuery& query = fq.durationQueries[fq.durationQueryCount];
-		Q_assert(query.state == QueryState::Free);
+		if(backEnd.renderFrame)
+		{
+			Q_assert(query.state == QueryState::Free);
+		}
 		Handle type, index, generation;
 		DecomposeHandle(&type, &index, &generation, query.handle);
 		query.handle = CreateHandle(ResourceType::DurationQuery, fq.durationQueryCount, generation);

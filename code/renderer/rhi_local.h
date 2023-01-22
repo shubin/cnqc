@@ -554,22 +554,22 @@ namespace RHI
 		}
 	};
 
-	struct Rect 
+	struct Rect
 	{
-	    Rect() = default;
+		Rect() = default;
 
 		Rect(uint32_t x_, uint32_t y_, uint32_t w_, uint32_t h_)
-	    {
-		    x = x_;
-		    y = y_;
-		    w = w_;
-		    h = h_;
+		{
+			x = x_;
+			y = y_;
+			w = w_;
+			h = h_;
 		}
 
-	    uint32_t x = 0;
-	    uint32_t y = 0;
-	    uint32_t w = 0;
-	    uint32_t h = 0;
+		uint32_t x = 0;
+		uint32_t y = 0;
+		uint32_t w = 0;
+		uint32_t h = 0;
 	};
 
 	void Init();

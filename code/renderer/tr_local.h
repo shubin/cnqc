@@ -856,6 +856,8 @@ typedef struct {
 	// - when that happens and we multiply the color by the the alpha (DL uses additive blending),
 	//   we get "light holes" in opaque surfaces, which is not what we want
 
+	qbool			renderFrame;
+
 	int* pc; // current stats set, depending on projection2D
 	int pc2D[RB_STATS_MAX];
 	int pc3D[RB_STATS_MAX];

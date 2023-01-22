@@ -623,7 +623,9 @@ const void* RB_SwapBuffers( const void* data )
 
 	const swapBuffersCommand_t* cmd = (const swapBuffersCommand_t*)data;
 	renderPipeline->EndFrame();
-	Sys_V_EndFrame();
+	if ( backEnd.renderFrame ) {
+		Sys_V_EndFrame();
+	}
 	const int64_t swapTime = ri.Microseconds();
 	backEnd.pc3D[RB_USEC_END] = (int)( swapTime - endTime );
 	backEnd.projection2D = qfalse;
