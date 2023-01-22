@@ -59,6 +59,7 @@ void main()
 
 static bool drawPrePass = false;
 static bool drawDynamic = true;
+static bool drawTransparents = true;
 
 
 static bool HasStaticGeo(const drawSurf_t* drawSurf)
@@ -279,7 +280,7 @@ void World::BeginBatch(const shader_t* shader, bool hasStaticGeo)
 	tess.xstages = (const shaderStage_t**)shader->stages;
 	tess.shader = shader;
 	tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
-	if(tess.shader->clampTime > 0.0 && tess.shaderTime >= tess.shader->clampTime)
+	if(tess.shader->clampTime && tess.shaderTime >= tess.shader->clampTime)
 	{
 		tess.shaderTime = tess.shader->clampTime;
 	}
@@ -370,6 +371,7 @@ void World::DrawGUI()
 	{
 		ImGui::Checkbox("Depth Pre-Pass", &drawPrePass);
 		ImGui::Checkbox("Draw Dynamic", &drawDynamic);
+		ImGui::Checkbox("Draw Transparents", &drawTransparents);
 		ImGui::Text("PSO count: %d", (int)grp.psoCount);
 	}
 	ImGui::End();
@@ -574,8 +576,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 
 	const drawSurf_t* drawSurfs = cmd.drawSurfs;
 	const int surfCount = cmd.numDrawSurfs;
-	//const int opaqueCount = cmd.numDrawSurfs - cmd.numTranspSurfs;
-	//const int transpCount = cmd.numTranspSurfs;
+	const int opaqueCount = cmd.numDrawSurfs - cmd.numTranspSurfs;
 	const double originalTime = backEnd.refdef.floatTime;
 
 	const shader_t* shader = NULL;
@@ -609,6 +610,10 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 		const bool entityChanged = entityNum != oldEntityNum;
 		Q_assert(shader != NULL);
 		if(!hasStaticGeo && !drawDynamic)
+		{
+			continue;
+		}
+		if(ds >= opaqueCount && !drawTransparents)
 		{
 			continue;
 		}
