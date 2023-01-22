@@ -25,13 +25,14 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 to do:
 
 * 3D/world rendering
+	- sky and clouds
 	- fog
-	- transparency
 	- dynamic lights
 	- SMAA integration
-- higher bit-depth render targets
-- dithering
-- mip-map generation accounting for r_picmip
+- r_picmip support through the mip-map generator or via sampler LOD bias?
+- entityMergeable support
+- higher bit-depth render targets (r_rtColorFormat)
+- dithering (r_dither / r_ditherStrength)
 - speed up map loads with BeginGraphicsPipelineCreation() / WaitForAllPipelineCreations()
 	use for non-UI shaders and run PSO creation on worker threads
 - when creating the root signature, validate that neither of the tables have any gap
@@ -44,6 +45,7 @@ to do:
 * implicit barrier & profiling API outside the RHI: Begin/EndRenderPass (specify inputs and outputs too?)
 * partial inits and shutdown
 - move as much GUI logic as possible out of the RHI (especially render pass timings)
+- evaluate the benefit of static samplers
 - leverage rhi.allocator->IsCacheCoherentUMA()
 	- buffers: create with CPU access, map the destination buffer directly
 	- textures: create with undefined layout and CPU access, upload data in 1 step with WriteToSubresource
