@@ -279,10 +279,10 @@ void World::BeginBatch(const shader_t* shader, bool hasStaticGeo)
 
 void World::EndBatch(HPipeline& pso)
 {
-	
 	if((!batchHasStaticGeo && tess.numVertexes <= 0) ||
 		tess.numIndexes <= 0 ||
-		tess.shader->numStages == 0)
+		tess.shader->numStages == 0 ||
+		tess.shader->numPipelines <= 0)
 	{
 		// @TODO: make sure we never get tess.shader->numStages 0 here in the first place
 		tess.numVertexes = 0;
