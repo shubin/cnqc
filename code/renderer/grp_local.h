@@ -510,7 +510,7 @@ struct GRP : IRenderPipeline
 	HRootSignature rootSignature;
 	HDescriptorTable descriptorTable;
 	uint32_t textureIndex;
-	HSampler samplers[2];
+	HSampler samplers[TW_COUNT * TextureFilter::Count];
 
 	RenderPassFrame renderPasses[FrameCount];
 
@@ -533,3 +533,4 @@ inline void CmdSetViewportAndScissor(const viewParms_t& vp)
 }
 
 const image_t* GetBundleImage(const textureBundle_t& bundle);
+uint32_t GetSamplerIndex(const image_t* image);

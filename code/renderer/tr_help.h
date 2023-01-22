@@ -53,12 +53,6 @@ S_COLOR_HELP "   >" S_COLOR_VAL "1 " S_COLOR_HELP "= Brighter"
 "disables rendering of portals\n" \
 "Portal example: the bottom teleporter on q3dm7."
 
-#define help_r_textureMode \
-"texture filtering mode\n" \
-S_COLOR_VAL "    GL_NEAREST    " S_COLOR_HELP "= LEGO(R) mode\n" \
-            "    anything else "              "= Normal  mode\n" \
-"For anisotropic filtering, refer to " S_COLOR_CVAR "r_ext_max_anisotropy" S_COLOR_HELP "."
-
 #define help_r_swapInterval \
 "Screen refresh periods to wait for before swapping buffers\n" \
 S_COLOR_VAL "    N = 0 " S_COLOR_HELP "= No V-Sync\n" \

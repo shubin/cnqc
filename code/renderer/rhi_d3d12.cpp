@@ -1222,7 +1222,7 @@ namespace RHI
 	{
 		switch(filter)
 		{
-			case TextureFilter::Point: return D3D12_FILTER_MIN_MAG_MIP_POINT;
+			case TextureFilter::Point: return D3D12_FILTER_MIN_MAG_POINT_MIP_LINEAR;
 			case TextureFilter::Linear: return D3D12_FILTER_MIN_MAG_MIP_LINEAR;
 			case TextureFilter::Anisotropic: return D3D12_FILTER_ANISOTROPIC;
 			default: Q_assert(!"Unsupported texture filter mode"); return D3D12_FILTER_MIN_MAG_MIP_LINEAR;

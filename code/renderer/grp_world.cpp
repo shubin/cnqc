@@ -332,9 +332,11 @@ void World::EndBatch(HPipeline& pso)
 		DynamicPixelRC pixelRC = {};
 		for(int s = 0; s < pipeline.numStages; ++s)
 		{
-			const uint32_t texIdx = GetBundleImage(tess.shader->stages[pipeline.firstStage + s]->bundle)->textureIndex;
+			const image_t* image = GetBundleImage(tess.shader->stages[pipeline.firstStage + s]->bundle);
+			const uint32_t texIdx = image->textureIndex;
+			const uint32_t sampIdx = GetSamplerIndex(image);
 			Q_assert(texIdx > 0);
-			pixelRC.stageIndices[s] = texIdx; // sampler index is 0
+			pixelRC.stageIndices[s] = (sampIdx << 16) | (texIdx);
 		}
 		CmdSetRootConstants(grp.opaqueRootSignature, ShaderStage::Pixel, &pixelRC);
 

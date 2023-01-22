@@ -345,6 +345,32 @@ const image_t* GetBundleImage(const textureBundle_t& bundle)
 	return R_UpdateAndGetBundleImage(&bundle, &UpdateAnimatedImage);
 }
 
+static uint32_t GetSamplerIndex(textureWrap_t wrap, TextureFilter::Id filter)
+{
+	Q_assert((uint32_t)wrap < TW_COUNT);
+	Q_assert((uint32_t)filter < TextureFilter::Count);
+
+	return (uint32_t)filter + (uint32_t)TextureFilter::Count * (uint32_t)wrap;
+}
+
+uint32_t GetSamplerIndex(const image_t* image)
+{
+	TextureFilter::Id filter = TextureFilter::Anisotropic;
+	if(r_lego->integer &&
+		grp.renderMode == RenderMode::World &&
+		(image->flags & (IMG_LMATLAS | IMG_EXTLMATLAS | IMG_NOPICMIP)) == 0)
+	{
+		filter = TextureFilter::Point;
+	}
+	else if((image->flags & IMG_NOAF) != 0 ||
+		grp.renderMode != RenderMode::World)
+	{
+		filter = TextureFilter::Linear;
+	}
+
+	return GetSamplerIndex(image->wrapClampMode, filter);
+}
+
 
 void GRP::Init()
 {
@@ -352,8 +378,16 @@ void GRP::Init()
 
 	if(firstInit)
 	{
-		samplers[0] = CreateSampler(SamplerDesc(TW_REPEAT, TextureFilter::Anisotropic));
-		samplers[1] = CreateSampler(SamplerDesc(TW_CLAMP_TO_EDGE, TextureFilter::Anisotropic));
+		for(uint32_t w = 0; w < TW_COUNT; ++w)
+		{
+			for(uint32_t f = 0; f < TextureFilter::Count; ++f)
+			{
+				const textureWrap_t wrap = (textureWrap_t)w;
+				const TextureFilter::Id filter = (TextureFilter::Id)f;
+				const uint32_t s = GetSamplerIndex(wrap, filter);
+				samplers[s] = CreateSampler(SamplerDesc(wrap, filter));
+			}
+		}
 
 		RootSignatureDesc desc("main");
 		desc.usingVertexBuffers = qtrue;

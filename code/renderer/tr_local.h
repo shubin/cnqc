@@ -1069,7 +1069,7 @@ extern	cvar_t	*r_picmip;				// controls picmip values
 extern	cvar_t	*r_finish;
 
 extern	cvar_t	*r_swapInterval;
-extern	cvar_t	*r_textureMode;
+extern	cvar_t	*r_lego;
 
 extern	cvar_t	*r_vertexLight;			// vertex lighting mode for better performance
 extern	cvar_t	*r_uiFullScreen;		// ui is running fullscreen
