@@ -371,6 +371,28 @@ uint32_t GetSamplerIndex(const image_t* image)
 	return GetSamplerIndex(image->wrapClampMode, filter);
 }
 
+static bool IsCommutativeBlendState(unsigned int stateBits)
+{
+	const unsigned int blendStates[] =
+	{
+		GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE, // additive
+		GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO, // modulate
+		GLS_SRCBLEND_ZERO | GLS_DSTBLEND_SRC_COLOR, // modulate
+		GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE // pre-multiplied alpha blend
+	};
+
+	const unsigned int blendBits = stateBits & GLS_BLEND_BITS;
+	for(int b = 0; b < ARRAY_LEN(blendStates); ++b)
+	{
+		if(blendBits == blendStates[b])
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 
 void GRP::Init()
 {
@@ -549,20 +571,48 @@ void GRP::ProcessShader(shader_t& shader)
 	}
 	else
 	{
-		// @TODO: collapse consecutive stages with the same commutative blend state
 		CachedPSO cache = {};
 		cache.desc.cullType = shader.cullType;
 		cache.desc.polygonOffset = shader.polygonOffset;
-		cache.stageCount = 1;
+		cache.stageCount = 0;
+
+		unsigned int prevStateBits = 0xFFFFFFFF;
+		int firstStage = 0;
 		for(int s = 0; s < shader.numStages; ++s)
 		{
-			cache.stageStateBits[0] = shader.stages[s]->stateBits & (~(GLS_POLYMODE_LINE | GLS_ATEST_BITS));
-
-			shader.pipelines[s].pipeline = CreatePSO(cache);
-			shader.pipelines[s].firstStage = s;
-			shader.pipelines[s].numStages = 1;
+			const unsigned int currStateBits = shader.stages[s]->stateBits & (~(GLS_POLYMODE_LINE | GLS_ATEST_BITS));
+			if(cache.stageCount > 0)
+			{
+				if(currStateBits == prevStateBits && IsCommutativeBlendState(currStateBits))
+				{
+					cache.stageStateBits[cache.stageCount++] = currStateBits;
+				}
+				else
+				{
+					pipeline_t& p = shader.pipelines[shader.numPipelines++];
+					p.pipeline = CreatePSO(cache);
+					p.firstStage = firstStage;
+					p.numStages = cache.stageCount;
+					cache.stageStateBits[0] = currStateBits;
+					cache.stageCount = 1;
+					firstStage = s;
+				}
+			}
+			else
+			{
+				cache.stageStateBits[0] = currStateBits;
+				cache.stageCount = 1;
+			}
+			prevStateBits = currStateBits;
 		}
-		shader.numPipelines = shader.numStages;
+
+		if(cache.stageCount > 0)
+		{
+			pipeline_t& p = shader.pipelines[shader.numPipelines++];
+			p.pipeline = CreatePSO(cache);
+			p.firstStage = firstStage;
+			p.numStages = cache.stageCount;
+		}
 	}
 }
 
