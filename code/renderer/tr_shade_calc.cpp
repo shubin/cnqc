@@ -993,7 +993,6 @@ static void RB_CalcDiffuseColor( unsigned char *colors, int firstVertex, int num
 
 	float* v = tess.xyz[firstVertex];
 	float* normal = tess.normal[firstVertex];
-	colors += firstVertex * 4;
 
 	const float t = r_mapGreyscale->value;
 	const float ti = 1.0f - t;
