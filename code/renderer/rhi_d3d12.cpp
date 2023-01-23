@@ -25,19 +25,18 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 to do:
 
 * 3D/world rendering
-	- sky and clouds
 	- fog
+	- sky and clouds
+	- CMAA 2 / SMAA integration
 	- dynamic lights
-	- SMAA integration
-- entityMergeable support
+- entityMergeable support ("entityMergable" in the code)
 - higher bit-depth render targets (r_rtColorFormat)
 - dithering (r_dither / r_ditherStrength)
 - speed up map loads with BeginGraphicsPipelineCreation() / WaitForAllPipelineCreations()
 	use for non-UI shaders and run PSO creation on worker threads
+- r_blitMode support
 - when creating the root signature, validate that neither of the tables have any gap
 - use root signature 1.1 to use the hints that help the drivers optimize out static resources
-- remove srvIndex or textureIndex from image_t
-	can't remove either for now
 - is it possible to force Resource Binding Tier 2 somehow? are we supposed to run on old HW to test? :(
 	see if WARP allows us to do that?
 - don't do persistent mapping to help out RenderDoc?
