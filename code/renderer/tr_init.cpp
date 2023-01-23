@@ -67,6 +67,7 @@ cvar_t	*r_alphaToCoverage;
 cvar_t	*r_dither;
 cvar_t	*r_rtColorFormat;
 cvar_t	*r_depthClamp;
+cvar_t	*r_gpuPreference;
 
 cvar_t	*r_mipGenFilter;
 cvar_t	*r_mipGenGamma;
@@ -375,6 +376,7 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_dither, "r_dither", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_dither },
 	{ &r_rtColorFormat, "r_rtColorFormat", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", XSTRING(RTCF_MAX), help_r_rtColorFormat },
 	{ &r_depthClamp, "r_depthClamp", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_depthClamp },
+	{ &r_gpuPreference, "r_gpuPreference", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", XSTRING(GPUPREF_MAX), help_r_gpuPreference},
 
 	//
 	// latched variables that can only change over a restart

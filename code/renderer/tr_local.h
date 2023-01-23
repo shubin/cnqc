@@ -980,25 +980,6 @@ extern trGlobals_t	tr;
 #define RTCF_R16G16B16A16	2
 #define RTCF_MAX			2
 
-// r_gl3_geoStream
-#define GL3MAP_AUTO			0
-#define GL3MAP_SUBDATA		1
-#define GL3MAP_MAPUNSYNC	2
-#define GL3MAP_MAPPERS		3
-#define GL3MAP_AMDPIN		4
-#define GL3MAP_MAX			4
-
-// r_d3d11_syncOffsets
-#define D3D11SO_SPLITOFFSETS	0
-#define D3D11SO_SYNCEDOFFSETS	1
-#define D3D11SO_AUTO			2
-#define D3D11SO_MAX				2
-
-// r_d3d11_presentMode
-#define DXGIPM_BLITDISCARD		0
-#define DXGIPM_FLIPDISCARD		1
-#define DXGIPM_MAX				1
-
 // r_showtris + r_shownormals
 #define SHOWTRIS_ENABLE_BIT			1
 #define SHOWTRIS_OCCLUDE_BIT		2
@@ -1007,13 +988,11 @@ extern trGlobals_t	tr;
 #define SHOWTRIS_VERTEX_ALPHA_BIT	16
 #define SHOWTRIS_MAX				31
 
-// @TODO: r_gpuPreference
-enum gpuPreference_t {
-	GPU_PREFERENCE_HIGH_PERFORMANCE,
-	GPU_PREFERENCE_LOW_POWER,
-	GPU_PREFERENCE_NONE,
-	CPU_PREFERENCE_COUNT
-};
+// r_gpuPreference
+#define GPUPREF_HIGHPERF		0
+#define GPUPREF_LOWPOWER		1
+#define GPUPREF_NONE			2
+#define GPUPREF_MAX				2
 
 
 extern cvar_t	*r_verbose;				// used for verbose debug spew
@@ -1055,6 +1034,7 @@ extern cvar_t	*r_alphaToCoverage;		// enables A2C on alpha-tested surfaces
 extern cvar_t	*r_dither;				// enables dithering
 extern cvar_t	*r_rtColorFormat;		// color render target format, see RTCF_*
 extern cvar_t	*r_depthClamp;			// disables clipping vertices against the near and far clip planes
+extern cvar_t	*r_gpuPreference;		// shall we use high-performance or low-power devices?
 
 extern cvar_t	*r_mipGenFilter;			// if the string is invalid, Lanczos 4 is used
 extern cvar_t	*r_mipGenGamma;				// what gamma-space do we consider the textures to be in

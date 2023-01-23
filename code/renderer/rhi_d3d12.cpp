@@ -53,7 +53,6 @@ to do:
 - IDXGISwapChain::SetFullScreenState(TRUE) with the borderless window taking up the entire screen
 	and ALLOW_TEARING set on both the flip mode swap chain and Present() flags
 	will enable true immediate independent flip mode and give us the lowest latency possible
-- CVar for setting the gpuPreference_t
 - resources that should be committed: depth buffer, render targets, static geometry - optional: large textures
 
 rejected:
@@ -910,12 +909,12 @@ namespace RHI
 		}
 	}
 
-	static DXGI_GPU_PREFERENCE GetGPUPreference(gpuPreference_t preference)
+	static DXGI_GPU_PREFERENCE GetGPUPreference(int preference)
 	{
 		switch(preference)
 		{
-			case GPU_PREFERENCE_HIGH_PERFORMANCE: return DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE;
-			case GPU_PREFERENCE_LOW_POWER: return DXGI_GPU_PREFERENCE_MINIMUM_POWER;
+			case GPUPREF_HIGHPERF: return DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE;
+			case GPUPREF_LOWPOWER: return DXGI_GPU_PREFERENCE_MINIMUM_POWER;
 			default: return DXGI_GPU_PREFERENCE_UNSPECIFIED;
 		}
 	}
@@ -941,7 +940,7 @@ namespace RHI
 		return true;
 	}
 
-	static IDXGIAdapter1* FindMostSuitableAdapter(IDXGIFactory1* factory, gpuPreference_t enginePreference)
+	static IDXGIAdapter1* FindMostSuitableAdapter(IDXGIFactory1* factory, int enginePreference)
 	{
 		IDXGIAdapter1* adapter = NULL;
 		IDXGIFactory6* factory6 = NULL;
@@ -1846,7 +1845,7 @@ namespace RHI
 		D3D(CreateDXGIFactory1(IID_PPV_ARGS(&rhi.factory)));
 #endif
 
-		rhi.adapter = FindMostSuitableAdapter(rhi.factory, GPU_PREFERENCE_HIGH_PERFORMANCE);
+		rhi.adapter = FindMostSuitableAdapter(rhi.factory, r_gpuPreference->integer);
 
 		D3D(D3D12CreateDevice(rhi.adapter, FeatureLevel, IID_PPV_ARGS(&rhi.device)));
 
