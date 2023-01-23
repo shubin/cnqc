@@ -496,7 +496,7 @@ struct GRP : IRenderPipeline
 
 	void EndUI();
 
-	uint32_t CreatePSO(CachedPSO& cache);
+	uint32_t CreatePSO(CachedPSO& cache, const char* name);
 
 	UI ui;
 	World world;

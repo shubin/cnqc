@@ -579,7 +579,7 @@ void GRP::ProcessShader(shader_t& shader)
 		}
 		cache.stageCount = shader.numStages;
 
-		shader.pipelines[0].pipeline = CreatePSO(cache);
+		shader.pipelines[0].pipeline = CreatePSO(cache, shader.name);
 		shader.pipelines[0].firstStage = 0;
 		shader.pipelines[0].numStages = shader.numStages;
 		shader.numPipelines = 1;
@@ -605,7 +605,7 @@ void GRP::ProcessShader(shader_t& shader)
 				else
 				{
 					pipeline_t& p = shader.pipelines[shader.numPipelines++];
-					p.pipeline = CreatePSO(cache);
+					p.pipeline = CreatePSO(cache, va("%s #%d", shader.name, shader.numPipelines));
 					p.firstStage = firstStage;
 					p.numStages = cache.stageCount;
 					cache.stageStateBits[0] = currStateBits;
@@ -624,7 +624,7 @@ void GRP::ProcessShader(shader_t& shader)
 		if(cache.stageCount > 0)
 		{
 			pipeline_t& p = shader.pipelines[shader.numPipelines++];
-			p.pipeline = CreatePSO(cache);
+			p.pipeline = CreatePSO(cache, va("%s #%d", shader.name, shader.numPipelines));
 			p.firstStage = firstStage;
 			p.numStages = cache.stageCount;
 		}
@@ -688,7 +688,7 @@ void GRP::EndUI()
 	}
 }
 
-uint32_t GRP::CreatePSO(CachedPSO& cache)
+uint32_t GRP::CreatePSO(CachedPSO& cache, const char* name)
 {
 	for(uint32_t p = 1; p < psoCount; ++p)
 	{
@@ -721,7 +721,7 @@ uint32_t GRP::CreatePSO(CachedPSO& cache)
 	Q_assert(macroCount <= ARRAY_LEN(macros));
 
 	uint32_t a = 0;
-	GraphicsPipelineDesc desc("uber", opaqueRootSignature);
+	GraphicsPipelineDesc desc(name, opaqueRootSignature);
 	desc.shortLifeTime = true; // the PSO cache is only valid for this map!
 	desc.vertexShader = vertexShader;
 	desc.pixelShader = pixelShader;
