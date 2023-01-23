@@ -60,7 +60,6 @@ void main()
 
 struct FogVertexRC
 {
-	//float projectionMatrix[16];
 	float mvp[16];
 	float boxMin[4];
 	float boxMax[4];
@@ -71,7 +70,6 @@ struct FogVertexRC
 static const char* fog_vs = R"grml(
 cbuffer RootConstants
 {
-	//matrix projectionMatrix;
 	matrix mvp;
 	float4 boxMin;
 	float4 boxMax;
@@ -81,7 +79,6 @@ float4 main(float3 position : POSITION) : SV_Position
 {
 	position = boxMin + position * (boxMax - boxMin);
 
-	//return mul(projectionMatrix, position);
 	return mul(mvp, position);
 }
 )grml";
@@ -824,7 +821,6 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			const fog_t& fog = tr.world->fogs[f];
 
 			FogVertexRC vertexRC = {};
-			//memcpy(vertexRC.projectionMatrix, backEnd.viewParms.projectionMatrix, sizeof(vertexRC.projectionMatrix));
 			R_MultMatrix(backEnd.viewParms.world.modelMatrix, backEnd.viewParms.projectionMatrix, vertexRC.mvp);
 			VectorCopy(fog.bounds[0], vertexRC.boxMin);
 			VectorCopy(fog.bounds[1], vertexRC.boxMax);
