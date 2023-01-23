@@ -528,6 +528,8 @@ typedef enum {
 } extErrorLevel_t;
 
 const char* QDECL va( PRINTF_FORMAT_STRING const char* format, ... );
+const char* v3tos( const vec3_t v );
+const char* v4tos( const vec4_t v );
 
 void QDECL Com_Error( int level, PRINTF_FORMAT_STRING const char* error, ... );
 void QDECL Com_ErrorExt( int level, int module, qbool realError, PRINTF_FORMAT_STRING const char* error, ... );
