@@ -511,7 +511,7 @@ struct GRP : IRenderPipeline
 	HRootSignature rootSignature;
 	HDescriptorTable descriptorTable;
 	uint32_t textureIndex;
-	HSampler samplers[TW_COUNT * TextureFilter::Count];
+	HSampler samplers[TW_COUNT * TextureFilter::Count * 2];
 
 	RenderPassFrame renderPasses[FrameCount];
 

@@ -77,7 +77,7 @@ cbuffer RootConstants
 };
 
 Texture2D textures2D[4096] : register(t0);
-SamplerState samplers[6] : register(s0);
+SamplerState samplers[12] : register(s0);
 
 struct VOut
 {

@@ -86,7 +86,7 @@ struct PS_INPUT
 	float2 uv  : TEXCOORD0;
 };
 
-SamplerState samplers[6] : register(s0);
+SamplerState samplers[12] : register(s0);
 Texture2D textures[4096] : register(t0);
 
 float4 main(PS_INPUT input) : SV_Target
