@@ -29,7 +29,6 @@ to do:
 	- fog
 	- dynamic lights
 	- SMAA integration
-- r_picmip support through the mip-map generator or via sampler LOD bias?
 - entityMergeable support
 - higher bit-depth render targets (r_rtColorFormat)
 - dithering (r_dither / r_ditherStrength)

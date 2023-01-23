@@ -277,16 +277,9 @@ static void Upload32( image_t* image, unsigned int* data )
 	const int h = image->height;
 	int mipCount = R_ComputeMipCount( w, h );
 	if ( image->format != TF_RGBA8 )
-		mipCount = 1;
+		image->flags |= IMG_NOMIPMAP;
 	if ( image->flags & IMG_NOMIPMAP )
 		mipCount = 1;
-	// @TODO: use mipOffset to implement r_picmip
-	/*int mipOffset = 0;
-	while ( image->width > scaled_width || image->height > scaled_height ) {
-		image->width = max( image->width >> 1, 1 );
-		image->height = max( image->height >> 1, 1 );
-		mipOffset++;
-	}*/
 	renderPipeline->CreateTexture( image, mipCount, w, h );
 	renderPipeline->UpoadTextureAndGenerateMipMaps( image, (const byte*)data );
 }

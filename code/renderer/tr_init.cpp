@@ -350,7 +350,7 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_mipGenGamma, "r_mipGenGamma", "1.8", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "1.0", "3.0", help_r_mipGenGamma },
 	{ &r_ext_max_anisotropy, "r_ext_max_anisotropy", "16", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "16", help_r_ext_max_anisotropy },
 	{ &r_msaa, "r_msaa", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "32", "anti-aliasing sample count, " S_COLOR_VAL "0" S_COLOR_HELP "=off" },
-	{ &r_picmip, "r_picmip", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "16", help_r_picmip },
+	{ &r_picmip, "r_picmip", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "16", help_r_picmip },
 	{ &r_roundImagesDown, "r_roundImagesDown", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_roundImagesDown },
 	{ &r_colorMipLevels, "r_colorMipLevels", "0", CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_colorMipLevels },
 	{ &r_detailTextures, "r_detailtextures", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, "enables detail textures shader stages" },

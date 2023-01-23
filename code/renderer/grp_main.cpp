@@ -345,7 +345,7 @@ const image_t* GetBundleImage(const textureBundle_t& bundle)
 	return R_UpdateAndGetBundleImage(&bundle, &UpdateAnimatedImage);
 }
 
-uint32_t GetSamplerIndex(textureWrap_t wrap, TextureFilter::Id filter, bool picmipped)
+uint32_t GetSamplerIndex(textureWrap_t wrap, TextureFilter::Id filter, uint32_t minLOD)
 {
 	Q_assert((uint32_t)wrap < TW_COUNT);
 	Q_assert((uint32_t)filter < TextureFilter::Count);
@@ -353,7 +353,7 @@ uint32_t GetSamplerIndex(textureWrap_t wrap, TextureFilter::Id filter, bool picm
 	const uint32_t index =
 		(uint32_t)filter +
 		(uint32_t)TextureFilter::Count * (uint32_t)wrap +
-		(uint32_t)TextureFilter::Count * (uint32_t)TW_COUNT * (uint32_t)(picmipped ? 1 : 0);
+		(uint32_t)TextureFilter::Count * (uint32_t)TW_COUNT * minLOD;
 
 	return index;
 }
@@ -372,11 +372,15 @@ uint32_t GetSamplerIndex(const image_t* image)
 	{
 		filter = TextureFilter::Linear;
 	}
-	const bool picmip =
-		grp.renderMode == RenderMode::World &&
-		(image->flags & (IMG_NOPICMIP)) == 0;
 
-	return GetSamplerIndex(image->wrapClampMode, filter, picmip);
+	int minLOD = 0;
+	if(grp.renderMode == RenderMode::World &&
+		(image->flags & IMG_NOPICMIP) == 0)
+	{
+		minLOD = Com_ClampInt(0, MaxTextureMips - 1, r_picmip->integer);
+	}
+
+	return GetSamplerIndex(image->wrapClampMode, filter, (uint32_t)minLOD);
 }
 
 static bool IsCommutativeBlendState(unsigned int stateBits)
@@ -412,13 +416,12 @@ void GRP::Init()
 		{
 			for(uint32_t f = 0; f < TextureFilter::Count; ++f)
 			{
-				for(int p = 0; p < 2; ++p)
+				for(uint32_t m = 0; m < MaxTextureMips; ++m)
 				{
 					const textureWrap_t wrap = (textureWrap_t)w;
 					const TextureFilter::Id filter = (TextureFilter::Id)f;
-					const float minLOD = p ? (float)r_picmip->integer : 0.0f;
-					const uint32_t s = GetSamplerIndex(wrap, filter, !!p);
-					samplers[s] = CreateSampler(SamplerDesc(wrap, filter, minLOD));
+					const uint32_t s = GetSamplerIndex(wrap, filter, m);
+					samplers[s] = CreateSampler(SamplerDesc(wrap, filter, (float)m));
 				}
 			}
 		}
@@ -528,7 +531,7 @@ void GRP::UpoadTextureAndGenerateMipMaps(image_t* image, const byte* data)
 		memcpy(texture.mappedData + r * texture.dstRowByteCount, data + r * texture.srcRowByteCount, texture.srcRowByteCount);
 	}
 	RHI::EndTextureUpload(image->texture);
-		
+
 	mipMapGen.GenerateMipMaps(image->texture);
 }
 

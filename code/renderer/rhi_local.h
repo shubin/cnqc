@@ -32,7 +32,7 @@ namespace RHI
 	// @TODO: turn into uint32_t constants too
 #define RHI_MAX_TEXTURES_2D 4096 // real max: unlimited
 #define RHI_MAX_RW_TEXTURES_2D 64 // real max: 64
-#define RHI_MAX_SAMPLERS 64 // real max: 2048
+#define RHI_MAX_SAMPLERS 128 // real max: 2048
 
 	// this has 2 meanings:
 	// 1. maximum number of frames queued
