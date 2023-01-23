@@ -56,6 +56,59 @@ void main()
 }
 )grml";
 
+#pragma pack(push, 1)
+
+struct FogVertexRC
+{
+	//float projectionMatrix[16];
+	float mvp[16];
+	float boxMin[4];
+	float boxMax[4];
+};
+
+#pragma pack(pop)
+
+static const char* fog_vs = R"grml(
+cbuffer RootConstants
+{
+	//matrix projectionMatrix;
+	matrix mvp;
+	float4 boxMin;
+	float4 boxMax;
+};
+
+float4 main(float3 position : POSITION) : SV_Position
+{
+	position = boxMin + position * (boxMax - boxMin);
+
+	//return mul(projectionMatrix, position);
+	return mul(mvp, position);
+}
+)grml";
+
+#pragma pack(push, 1)
+
+struct FogPixelRC
+{
+	float colorDepth[4];
+};
+
+#pragma pack(pop)
+
+static const char* fog_ps = R"grml(
+// @TODO: read the depth buffer...
+
+cbuffer RootConstants
+{
+	float4 colorDepth;
+};
+
+float4 main(float4 position : SV_Position) : SV_Target
+{
+	return float4(colorDepth.rgb, 1);
+}
+)grml";
+
 
 static bool drawPrePass = false;
 static bool drawDynamic = true;
@@ -183,8 +236,29 @@ void World::Init()
 	}
 
 	//
-	// fog geometry
+	// fog
 	//
+	{
+		RootSignatureDesc desc("fog");
+		desc.usingVertexBuffers = true;
+		desc.constants[ShaderStage::Vertex].byteCount = sizeof(FogVertexRC);
+		desc.constants[ShaderStage::Pixel].byteCount = sizeof(FogPixelRC);
+		fogRootSignature = CreateRootSignature(desc);
+	}
+	{
+		GraphicsPipelineDesc desc("fog", fogRootSignature);
+		desc.vertexShader = CompileVertexShader(fog_vs);
+		desc.pixelShader = CompilePixelShader(fog_ps);
+		desc.depthStencil.depthComparison = ComparisonFunction::GreaterEqual;
+		desc.depthStencil.depthStencilFormat = TextureFormat::Depth32_Float;
+		desc.depthStencil.enableDepthTest = true;
+		desc.depthStencil.enableDepthWrites = false;
+		desc.rasterizer.cullMode = CT_FRONT_SIDED;
+		desc.rasterizer.polygonOffset = false;
+		desc.AddRenderTarget(0, TextureFormat::RGBA32_UNorm);
+		desc.vertexLayout.AddAttribute(0, ShaderSemantic::Position, DataType::Float32, 3, 0);
+		fogPipeline = CreateGraphicsPipeline(desc);
+	}
 	{
 		const uint32_t indices[] =
 		{
@@ -734,6 +808,36 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 	grp.EndRenderPass();
 
 	// @TODO: go back to the world model-view matrix, restore depth range
+
+	// fog 0 is invalid
+	if(tr.world != NULL && tr.world->numfogs > 1)
+	{
+		CmdBindPipeline(fogPipeline);
+		CmdBindRootSignature(fogRootSignature);
+
+		const uint32_t stride = sizeof(vec3_t);
+		CmdBindVertexBuffers(1, &boxVertexBuffer, &stride, NULL);
+		CmdBindIndexBuffer(boxIndexBuffer, IndexType::UInt32, 0);
+
+		for(int f = 1; f < tr.world->numfogs; ++f)
+		{
+			const fog_t& fog = tr.world->fogs[f];
+
+			FogVertexRC vertexRC = {};
+			//memcpy(vertexRC.projectionMatrix, backEnd.viewParms.projectionMatrix, sizeof(vertexRC.projectionMatrix));
+			R_MultMatrix(backEnd.viewParms.world.modelMatrix, backEnd.viewParms.projectionMatrix, vertexRC.mvp);
+			VectorCopy(fog.bounds[0], vertexRC.boxMin);
+			VectorCopy(fog.bounds[1], vertexRC.boxMax);
+			CmdSetRootConstants(fogRootSignature, ShaderStage::Vertex, &vertexRC);
+
+			FogPixelRC pixelRC = {};
+			VectorCopy(fog.parms.color, pixelRC.colorDepth);
+			pixelRC.colorDepth[3] = fog.parms.depthForOpaque;
+			CmdSetRootConstants(fogRootSignature, ShaderStage::Pixel, &pixelRC);
+
+			CmdDrawIndexed(36, 0, 0);
+		}
+	}
 }
 
 void World::BindVertexBuffers(bool staticGeo, uint32_t firstStage, uint32_t stageCount)

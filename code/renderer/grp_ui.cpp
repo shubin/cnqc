@@ -86,7 +86,7 @@ struct VOut
 	float4 color : COLOR0;
 };
 
-float4 main(VOut input) : SV_TARGET
+float4 main(VOut input) : SV_Target
 {
 	return textures2D[textureIndex].Sample(samplers[samplerIndex], input.texCoords) * input.color;
 }

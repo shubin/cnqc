@@ -323,6 +323,9 @@ struct World
 	uint32_t statIndexCount;
 
 	// fog
+	HRootSignature fogRootSignature;
+	//HDescriptorTable fogDescriptorTable;
+	HPipeline fogPipeline;
 	HBuffer boxVertexBuffer;
 	HBuffer boxIndexBuffer;
 };

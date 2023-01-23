@@ -100,7 +100,7 @@ float4 MakeGreyscale(float4 input, float amount)
 	return result;
 }
 
-float4 main(VOut input) : SV_TARGET
+float4 main(VOut input) : SV_Target
 {
 	float3 base = texture0.Sample(sampler0, input.texCoords).rgb;
 	float3 gc = pow(base, invGamma) * brightness;

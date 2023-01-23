@@ -276,7 +276,7 @@ void ProcessFullStage(inout float4 dst, float4 color, float2 texCoords, uint tex
 #if (STAGE0_BITS & GLS_ATEST_BITS) == 0
 [earlydepthstencil]
 #endif
-float4 main(VOut input) : SV_TARGET
+float4 main(VOut input) : SV_Target
 {
 	float4 dst = ProcessStage(input.color0, input.texCoords0, stageIndices0.x & 0xFFFF, stageIndices0.x >> 16);
 	if(FailsAlphaTest(dst.a, STAGE0_BITS & GLS_ATEST_BITS))
