@@ -435,16 +435,20 @@ namespace RHI
 	struct SamplerDesc
 	{
 		SamplerDesc() = default;
-		SamplerDesc(textureWrap_t wrapMode_, TextureFilter::Id filterMode_)
+		SamplerDesc(textureWrap_t wrapMode_, TextureFilter::Id filterMode_, float minLOD_ = 0.0f, float mipLODBias_ = 0.0f)
 		{
 			wrapMode = wrapMode_;
 			filterMode = filterMode_;
+			minLOD = minLOD_;
+			mipLODBias = mipLODBias_;
 		}
 
 		// @TODO:
 		//textureWrap_t wrapMode = TW_REPEAT;
 		textureWrap_t wrapMode = (textureWrap_t)0;
 		TextureFilter::Id filterMode = TextureFilter::Linear;
+		float minLOD = 0.0f;
+		float mipLODBias = 0.0f;
 	};
 
 	struct DescriptorTableDesc
@@ -557,7 +561,6 @@ namespace RHI
 	struct Rect
 	{
 		Rect() = default;
-
 		Rect(uint32_t x_, uint32_t y_, uint32_t w_, uint32_t h_)
 		{
 			x = x_;

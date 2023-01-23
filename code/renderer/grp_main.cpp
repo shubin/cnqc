@@ -345,12 +345,17 @@ const image_t* GetBundleImage(const textureBundle_t& bundle)
 	return R_UpdateAndGetBundleImage(&bundle, &UpdateAnimatedImage);
 }
 
-uint32_t GetSamplerIndex(textureWrap_t wrap, TextureFilter::Id filter)
+uint32_t GetSamplerIndex(textureWrap_t wrap, TextureFilter::Id filter, bool picmipped)
 {
 	Q_assert((uint32_t)wrap < TW_COUNT);
 	Q_assert((uint32_t)filter < TextureFilter::Count);
 
-	return (uint32_t)filter + (uint32_t)TextureFilter::Count * (uint32_t)wrap;
+	const uint32_t index =
+		(uint32_t)filter +
+		(uint32_t)TextureFilter::Count * (uint32_t)wrap +
+		(uint32_t)TextureFilter::Count * (uint32_t)TW_COUNT * (uint32_t)picmipped;
+
+	return index;
 }
 
 uint32_t GetSamplerIndex(const image_t* image)
@@ -368,7 +373,7 @@ uint32_t GetSamplerIndex(const image_t* image)
 		filter = TextureFilter::Linear;
 	}
 
-	return GetSamplerIndex(image->wrapClampMode, filter);
+	return GetSamplerIndex(image->wrapClampMode, filter, grp.renderMode == RenderMode::World);
 }
 
 static bool IsCommutativeBlendState(unsigned int stateBits)
@@ -404,10 +409,15 @@ void GRP::Init()
 		{
 			for(uint32_t f = 0; f < TextureFilter::Count; ++f)
 			{
-				const textureWrap_t wrap = (textureWrap_t)w;
-				const TextureFilter::Id filter = (TextureFilter::Id)f;
-				const uint32_t s = GetSamplerIndex(wrap, filter);
-				samplers[s] = CreateSampler(SamplerDesc(wrap, filter));
+				for(int p = 2; p < 2; ++p)
+				{
+					const textureWrap_t wrap = (textureWrap_t)w;
+					const TextureFilter::Id filter = (TextureFilter::Id)f;
+					const float minLOD = p ? (float)r_picmip->integer : 0.0f;
+					const uint32_t s = GetSamplerIndex(wrap, filter, !!p);
+					samplers[s] = CreateSampler(SamplerDesc(wrap, filter, minLOD));
+				}
+				
 			}
 		}
 
