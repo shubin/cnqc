@@ -321,6 +321,10 @@ struct World
 	uint32_t statChunkCount;
 	uint32_t statIndices[1 << 20];
 	uint32_t statIndexCount;
+
+	// fog
+	HBuffer boxVertexBuffer;
+	HBuffer boxIndexBuffer;
 };
 
 struct UI

@@ -181,6 +181,48 @@ void World::Init()
 		statBuffers.vertexBuffers.Create("static", MemoryUsage::GPU, MaxVertexCount);
 		statBuffers.indexBuffer.Create("static", MemoryUsage::GPU, MaxIndexCount);
 	}
+
+	//
+	// fog geometry
+	//
+	{
+		const uint32_t indices[] =
+		{
+			0, 1, 2, 2, 1, 3,
+			4, 0, 6, 6, 0, 2,
+			7, 5, 6, 6, 5, 4,
+			3, 1, 7, 7, 1, 5,
+			4, 5, 0, 0, 5, 1,
+			3, 7, 2, 2, 7, 6
+		};
+
+		BufferDesc desc("box index", sizeof(indices), ResourceStates::IndexBufferBit);
+		boxIndexBuffer = CreateBuffer(desc);
+
+		uint8_t* mapped = BeginBufferUpload(boxIndexBuffer);
+		memcpy(mapped, indices, sizeof(indices));
+		EndBufferUpload(boxIndexBuffer);
+	}
+	{
+		const float vertices[] =
+		{
+			0.0f, 1.0f, 0.0f,
+			1.0f, 1.0f, 0.0f,
+			0.0f, 0.0f, 0.0f,
+			1.0f, 0.0f, 0.0f,
+			0.0f, 1.0f, 1.0f,
+			1.0f, 1.0f, 1.0f,
+			0.0f, 0.0f, 1.0f,
+			1.0f, 0.0f, 1.0f
+		};
+
+		BufferDesc desc("box vertex", sizeof(vertices), ResourceStates::VertexBufferBit);
+		boxVertexBuffer = CreateBuffer(desc);
+
+		uint8_t* mapped = BeginBufferUpload(boxVertexBuffer);
+		memcpy(mapped, vertices, sizeof(vertices));
+		EndBufferUpload(boxVertexBuffer);
+	}
 }
 
 void World::BeginFrame()
