@@ -274,6 +274,7 @@ struct World
 	void DrawSceneView(const drawSceneViewCommand_t& cmd);
 	void BindVertexBuffers(bool staticGeo, uint32_t firstStage, uint32_t stageCount);
 	void BindIndexBuffer(bool staticGeo);
+	void DrawFog();
 
 	typedef uint32_t Index;
 	const IndexType::Id indexType = IndexType::UInt32;
@@ -324,7 +325,7 @@ struct World
 
 	// fog
 	HRootSignature fogRootSignature;
-	//HDescriptorTable fogDescriptorTable;
+	HDescriptorTable fogDescriptorTable;
 	HPipeline fogPipeline;
 	HBuffer boxVertexBuffer;
 	HBuffer boxIndexBuffer;

@@ -60,7 +60,8 @@ void main()
 
 struct FogVertexRC
 {
-	float mvp[16];
+	float modelViewMatrix[16];
+	float projectionMatrix[16];
 	float boxMin[4];
 	float boxMax[4];
 };
@@ -70,16 +71,30 @@ struct FogVertexRC
 static const char* fog_vs = R"grml(
 cbuffer RootConstants
 {
-	matrix mvp;
+	matrix modelViewMatrix;
+	matrix projectionMatrix;
 	float4 boxMin;
 	float4 boxMax;
 };
 
-float4 main(float3 position : POSITION) : SV_Position
+struct VOut
 {
-	position = boxMin + position * (boxMax - boxMin);
+	float4 position : SV_Position;
+	float2 proj2232 : TEXCOORD0;
+	float depthVS : DEPTHVS;
+};
 
-	return mul(mvp, position);
+VOut main(float3 positionOS : POSITION)
+{
+	float3 positionWS = boxMin + positionOS * (boxMax - boxMin);
+	float4 positionVS = mul(modelViewMatrix, float4(positionWS, 1));
+
+	VOut output;
+	output.position = mul(projectionMatrix, positionVS);
+	output.proj2232 = float2(-projectionMatrix[2][2], projectionMatrix[2][3]);
+	output.depthVS = -positionVS.z;
+
+	return output;
 }
 )grml";
 
@@ -93,16 +108,53 @@ struct FogPixelRC
 #pragma pack(pop)
 
 static const char* fog_ps = R"grml(
-// @TODO: read the depth buffer...
-
 cbuffer RootConstants
 {
 	float4 colorDepth;
 };
 
-float4 main(float4 position : SV_Position) : SV_Target
+struct VOut
 {
-	return float4(colorDepth.rgb, 1);
+	float4 position : SV_Position;
+	float2 proj2232 : TEXCOORD0;
+	float depthVS : DEPTHVS;
+};
+
+Texture2D depthTexture : register(t0);
+
+/*
+f   = far  clip plane distance
+n   = near clip plane distance
+exp = exponential depth value (as stored in the Z-buffer)
+
+                     2 * f * n             B
+linear(exp) = ----------------------- = -------
+              (f + n) - exp * (f - n)   exp - A
+
+            f + n               -2 * f * n
+with    A = -----    and    B = ----------
+            f - n                  f - n
+*/
+float LinearDepth(float zwDepth, float proj22, float proj32)
+{
+	return proj32 / (zwDepth - proj22);
+}
+
+float4 main(VOut input) : SV_Target
+{
+	float zwDepth = depthTexture.Load(int3(input.position.xy, 0)).x;
+	float depthBuff = LinearDepth(zwDepth, input.proj2232.x, input.proj2232.y);
+	float depthFrag = input.depthVS;
+	// depth test debugging
+	//return depthFrag <= depthBuff ? float4(0, 1, 0, 1) : float4(1, 0, 0, 1);
+	if(depthFrag > depthBuff)
+	{
+		discard;
+	}
+
+	float fogOpacity = saturate((depthBuff - depthFrag) / colorDepth.w);
+
+	return float4(colorDepth.rgb, fogOpacity);
 }
 )grml";
 
@@ -110,6 +162,7 @@ float4 main(float4 position : SV_Position) : SV_Target
 static bool drawPrePass = false;
 static bool drawDynamic = true;
 static bool drawTransparents = true;
+static bool drawFog = true;
 
 
 static bool HasStaticGeo(const drawSurf_t* drawSurf)
@@ -238,21 +291,29 @@ void World::Init()
 	{
 		RootSignatureDesc desc("fog");
 		desc.usingVertexBuffers = true;
+		desc.AddRange(DescriptorType::Texture, 0, 1);
+		desc.genericVisibility = ShaderStages::PixelBit;
 		desc.constants[ShaderStage::Vertex].byteCount = sizeof(FogVertexRC);
 		desc.constants[ShaderStage::Pixel].byteCount = sizeof(FogPixelRC);
 		fogRootSignature = CreateRootSignature(desc);
 	}
 	{
+		DescriptorTableDesc desc("fog", fogRootSignature);
+		fogDescriptorTable = CreateDescriptorTable(desc);
+
+		// @TODO: handle re-init!!! the depth texture won't be the same
+		DescriptorTableUpdate update;
+		update.SetTextures(1, &depthTexture);
+		UpdateDescriptorTable(fogDescriptorTable, update);
+	}
+	{
 		GraphicsPipelineDesc desc("fog", fogRootSignature);
 		desc.vertexShader = CompileVertexShader(fog_vs);
 		desc.pixelShader = CompilePixelShader(fog_ps);
-		desc.depthStencil.depthComparison = ComparisonFunction::GreaterEqual;
-		desc.depthStencil.depthStencilFormat = TextureFormat::Depth32_Float;
-		desc.depthStencil.enableDepthTest = true;
-		desc.depthStencil.enableDepthWrites = false;
-		desc.rasterizer.cullMode = CT_FRONT_SIDED;
+		desc.depthStencil.DisableDepth();
+		desc.rasterizer.cullMode = CT_BACK_SIDED;
 		desc.rasterizer.polygonOffset = false;
-		desc.AddRenderTarget(0, TextureFormat::RGBA32_UNorm);
+		desc.AddRenderTarget(GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, TextureFormat::RGBA32_UNorm);
 		desc.vertexLayout.AddAttribute(0, ShaderSemantic::Position, DataType::Float32, 3, 0);
 		fogPipeline = CreateGraphicsPipeline(desc);
 	}
@@ -488,6 +549,7 @@ void World::DrawGUI()
 		ImGui::Checkbox("Depth Pre-Pass", &drawPrePass);
 		ImGui::Checkbox("Draw Dynamic", &drawDynamic);
 		ImGui::Checkbox("Draw Transparents", &drawTransparents);
+		ImGui::Checkbox("Draw Fog", &drawFog);
 		ImGui::Text("PSO count: %d", (int)grp.psoCount);
 	}
 	ImGui::End();
@@ -685,14 +747,13 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 
 	CmdBindRootSignature(grp.opaqueRootSignature);
 	CmdBindDescriptorTable(grp.opaqueRootSignature, grp.descriptorTable);
-
 	CmdBindRenderTargets(1, &grp.renderTarget, &depthTexture);
-
 	HPipeline pso = RHI_MAKE_NULL_HANDLE();
 
 	const drawSurf_t* drawSurfs = cmd.drawSurfs;
 	const int surfCount = cmd.numDrawSurfs;
 	const int opaqueCount = cmd.numDrawSurfs - cmd.numTranspSurfs;
+	const int transpCount = cmd.numTranspSurfs;
 	const double originalTime = backEnd.refdef.floatTime;
 
 	const shader_t* shader = NULL;
@@ -709,6 +770,26 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 	const drawSurf_t* drawSurf;
 	for(ds = 0, drawSurf = drawSurfs; ds < surfCount; ++ds, ++drawSurf)
 	{
+		if(ds == opaqueCount)
+		{
+			EndBatch(pso);
+
+			DrawFog();
+
+			if(transpCount > 0)
+			{
+				CmdBindRootSignature(grp.opaqueRootSignature);
+				CmdBindDescriptorTable(grp.opaqueRootSignature, grp.descriptorTable);
+				CmdBindRenderTargets(1, &grp.renderTarget, &depthTexture);
+				pso = RHI_MAKE_NULL_HANDLE();
+				boundVertexBuffers = BufferFamily::Invalid;
+				boundIndexBuffer = BufferFamily::Invalid;
+
+				const TextureBarrier depthWriteBarrier(depthTexture, ResourceStates::DepthWriteBit);
+				CmdBarrier(1, &depthWriteBarrier);
+			}
+		}
+
 		int fogNum;
 		int entityNum;
 		R_DecomposeSort(drawSurf->sort, &entityNum, &shader, &fogNum);
@@ -805,35 +886,6 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 	grp.EndRenderPass();
 
 	// @TODO: go back to the world model-view matrix, restore depth range
-
-	// fog 0 is invalid
-	if(tr.world != NULL && tr.world->numfogs > 1)
-	{
-		CmdBindPipeline(fogPipeline);
-		CmdBindRootSignature(fogRootSignature);
-
-		const uint32_t stride = sizeof(vec3_t);
-		CmdBindVertexBuffers(1, &boxVertexBuffer, &stride, NULL);
-		CmdBindIndexBuffer(boxIndexBuffer, IndexType::UInt32, 0);
-
-		for(int f = 1; f < tr.world->numfogs; ++f)
-		{
-			const fog_t& fog = tr.world->fogs[f];
-
-			FogVertexRC vertexRC = {};
-			R_MultMatrix(backEnd.viewParms.world.modelMatrix, backEnd.viewParms.projectionMatrix, vertexRC.mvp);
-			VectorCopy(fog.bounds[0], vertexRC.boxMin);
-			VectorCopy(fog.bounds[1], vertexRC.boxMax);
-			CmdSetRootConstants(fogRootSignature, ShaderStage::Vertex, &vertexRC);
-
-			FogPixelRC pixelRC = {};
-			VectorCopy(fog.parms.color, pixelRC.colorDepth);
-			pixelRC.colorDepth[3] = fog.parms.depthForOpaque;
-			CmdSetRootConstants(fogRootSignature, ShaderStage::Pixel, &pixelRC);
-
-			CmdDrawIndexed(36, 0, 0);
-		}
-	}
 }
 
 void World::BindVertexBuffers(bool staticGeo, uint32_t firstStage, uint32_t stageCount)
@@ -871,4 +923,50 @@ void World::BindIndexBuffer(bool staticGeo)
 	IndexBuffer& ib = staticGeo ? statBuffers.indexBuffer : dynBuffers[GetFrameIndex()].indexBuffer;
 	CmdBindIndexBuffer(ib.buffer, indexType, 0);
 	boundIndexBuffer = type;
+}
+
+void World::DrawFog()
+{
+	// fog 0 is invalid
+	if(!drawFog ||
+		tr.world == NULL ||
+		tr.world->numfogs <= 1)
+	{
+		return;
+	}
+
+	grp.BeginRenderPass("Fog", 0.25f, 0.125f, 0.0f);
+
+	CmdBindPipeline(fogPipeline);
+	CmdBindRootSignature(fogRootSignature);
+	CmdBindDescriptorTable(fogRootSignature, fogDescriptorTable);
+
+	const uint32_t stride = sizeof(vec3_t);
+	CmdBindVertexBuffers(1, &boxVertexBuffer, &stride, NULL);
+	CmdBindIndexBuffer(boxIndexBuffer, IndexType::UInt32, 0);
+
+	CmdBindRenderTargets(1, &grp.renderTarget, NULL);
+	const TextureBarrier depthReadBarrier(depthTexture, ResourceStates::PixelShaderAccessBit);
+	CmdBarrier(1, &depthReadBarrier);
+
+	for(int f = 1; f < tr.world->numfogs; ++f)
+	{
+		const fog_t& fog = tr.world->fogs[f];
+
+		FogVertexRC vertexRC = {};
+		memcpy(vertexRC.modelViewMatrix, backEnd.viewParms.world.modelMatrix, sizeof(vertexRC.modelViewMatrix));
+		memcpy(vertexRC.projectionMatrix, backEnd.viewParms.projectionMatrix, sizeof(vertexRC.projectionMatrix));
+		VectorCopy(fog.bounds[0], vertexRC.boxMin);
+		VectorCopy(fog.bounds[1], vertexRC.boxMax);
+		CmdSetRootConstants(fogRootSignature, ShaderStage::Vertex, &vertexRC);
+
+		FogPixelRC pixelRC = {};
+		VectorCopy(fog.parms.color, pixelRC.colorDepth);
+		pixelRC.colorDepth[3] = fog.parms.depthForOpaque;
+		CmdSetRootConstants(fogRootSignature, ShaderStage::Pixel, &pixelRC);
+
+		CmdDrawIndexed(36, 0, 0);
+	}
+
+	grp.EndRenderPass();
 }
