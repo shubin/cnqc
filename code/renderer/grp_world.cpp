@@ -25,6 +25,10 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 #include "../imgui/imgui.h"
 
 
+//
+// depth pre-pass
+//
+
 #pragma pack(push, 1)
 
 struct ZPPVertexRC
@@ -56,9 +60,13 @@ void main()
 }
 )grml";
 
+//
+// fog - from outside
+//
+
 #pragma pack(push, 1)
 
-struct FogVertexRC
+struct FogOutsideVertexRC
 {
 	float modelViewMatrix[16];
 	float projectionMatrix[16];
@@ -68,7 +76,7 @@ struct FogVertexRC
 
 #pragma pack(pop)
 
-static const char* fog_vs = R"grml(
+static const char* fogOutside_vs = R"grml(
 cbuffer RootConstants
 {
 	matrix modelViewMatrix;
@@ -100,14 +108,14 @@ VOut main(float3 positionOS : POSITION)
 
 #pragma pack(push, 1)
 
-struct FogPixelRC
+struct FogOutsidePixelRC
 {
 	float colorDepth[4];
 };
 
 #pragma pack(pop)
 
-static const char* fog_ps = R"grml(
+static const char* fogOutside_ps = R"grml(
 cbuffer RootConstants
 {
 	float4 colorDepth;
@@ -153,6 +161,72 @@ float4 main(VOut input) : SV_Target
 	}
 
 	float fogOpacity = saturate((depthBuff - depthFrag) / colorDepth.w);
+
+	return float4(colorDepth.rgb, fogOpacity);
+}
+)grml";
+
+//
+// fog - from inside
+//
+
+static const char* fogInside_vs = R"grml(
+float4 main(uint id : SV_VertexID) : SV_Position
+{
+	float4 position;
+	position.x = (float)(id / 2) * 4.0 - 1.0;
+	position.y = (float)(id % 2) * 4.0 - 1.0;
+	position.z = 0.0;
+	position.w = 1.0;
+
+	return position;
+}
+)grml";
+
+#pragma pack(push, 1)
+
+struct FogInsidePixelRC
+{
+	float colorDepth[4];
+	float proj2232[2];
+};
+
+#pragma pack(pop)
+
+static const char* fogInside_ps = R"grml(
+cbuffer RootConstants
+{
+	float4 colorDepth;
+	float2 proj2232;
+};
+
+Texture2D depthTexture : register(t0);
+
+/*
+f   = far  clip plane distance
+n   = near clip plane distance
+exp = exponential depth value (as stored in the Z-buffer)
+
+                     2 * f * n             B
+linear(exp) = ----------------------- = -------
+              (f + n) - exp * (f - n)   exp - A
+
+            f + n               -2 * f * n
+with    A = -----    and    B = ----------
+            f - n                  f - n
+*/
+float LinearDepth(float zwDepth, float proj22, float proj32)
+{
+	return proj32 / (zwDepth - proj22);
+}
+
+float4 main(float4 position : SV_Position) : SV_Target
+{
+	// @TODO: pick lowest depth value between
+	// the depth buffer and the fog's plane equation
+	float zwDepth = depthTexture.Load(int3(position.xy, 0)).x;
+	float depth = LinearDepth(zwDepth, proj2232.x, proj2232.y);
+	float fogOpacity = saturate(depth / colorDepth.w);
 
 	return float4(colorDepth.rgb, fogOpacity);
 }
@@ -289,16 +363,25 @@ void World::Init()
 	// fog
 	//
 	{
-		RootSignatureDesc desc("fog");
+		RootSignatureDesc desc("fog outside");
 		desc.usingVertexBuffers = true;
 		desc.AddRange(DescriptorType::Texture, 0, 1);
 		desc.genericVisibility = ShaderStages::PixelBit;
-		desc.constants[ShaderStage::Vertex].byteCount = sizeof(FogVertexRC);
-		desc.constants[ShaderStage::Pixel].byteCount = sizeof(FogPixelRC);
-		fogRootSignature = CreateRootSignature(desc);
+		desc.constants[ShaderStage::Vertex].byteCount = sizeof(FogOutsideVertexRC);
+		desc.constants[ShaderStage::Pixel].byteCount = sizeof(FogOutsidePixelRC);
+		fogOutsideRootSignature = CreateRootSignature(desc);
 	}
 	{
-		DescriptorTableDesc desc("fog", fogRootSignature);
+		RootSignatureDesc desc("fog inside");
+		desc.usingVertexBuffers = false;
+		desc.AddRange(DescriptorType::Texture, 0, 1);
+		desc.genericVisibility = ShaderStages::PixelBit;
+		desc.constants[ShaderStage::Vertex].byteCount = 0;
+		desc.constants[ShaderStage::Pixel].byteCount = sizeof(FogInsidePixelRC);
+		fogInsideRootSignature = CreateRootSignature(desc);
+	}
+	{
+		DescriptorTableDesc desc("fog", fogOutsideRootSignature);
 		fogDescriptorTable = CreateDescriptorTable(desc);
 
 		// @TODO: handle re-init!!! the depth texture won't be the same
@@ -307,15 +390,25 @@ void World::Init()
 		UpdateDescriptorTable(fogDescriptorTable, update);
 	}
 	{
-		GraphicsPipelineDesc desc("fog", fogRootSignature);
-		desc.vertexShader = CompileVertexShader(fog_vs);
-		desc.pixelShader = CompilePixelShader(fog_ps);
+		GraphicsPipelineDesc desc("fog outside", fogOutsideRootSignature);
+		desc.vertexShader = CompileVertexShader(fogOutside_vs);
+		desc.pixelShader = CompilePixelShader(fogOutside_ps);
 		desc.depthStencil.DisableDepth();
 		desc.rasterizer.cullMode = CT_BACK_SIDED;
 		desc.rasterizer.polygonOffset = false;
 		desc.AddRenderTarget(GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, TextureFormat::RGBA32_UNorm);
 		desc.vertexLayout.AddAttribute(0, ShaderSemantic::Position, DataType::Float32, 3, 0);
-		fogPipeline = CreateGraphicsPipeline(desc);
+		fogOutsidePipeline = CreateGraphicsPipeline(desc);
+	}
+	{
+		GraphicsPipelineDesc desc("fog inside", fogInsideRootSignature);
+		desc.vertexShader = CompileVertexShader(fogInside_vs);
+		desc.pixelShader = CompilePixelShader(fogInside_ps);
+		desc.depthStencil.DisableDepth();
+		desc.rasterizer.cullMode = CT_TWO_SIDED;
+		desc.rasterizer.polygonOffset = false;
+		desc.AddRenderTarget(GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, TextureFormat::RGBA32_UNorm);
+		fogInsidePipeline = CreateGraphicsPipeline(desc);
 	}
 	{
 		const uint32_t indices[] =
@@ -937,9 +1030,9 @@ void World::DrawFog()
 
 	grp.BeginRenderPass("Fog", 0.25f, 0.125f, 0.0f);
 
-	CmdBindPipeline(fogPipeline);
-	CmdBindRootSignature(fogRootSignature);
-	CmdBindDescriptorTable(fogRootSignature, fogDescriptorTable);
+	CmdBindPipeline(fogOutsidePipeline);
+	CmdBindRootSignature(fogOutsideRootSignature);
+	CmdBindDescriptorTable(fogOutsideRootSignature, fogDescriptorTable);
 
 	const uint32_t stride = sizeof(vec3_t);
 	CmdBindVertexBuffers(1, &boxVertexBuffer, &stride, NULL);
@@ -949,23 +1042,69 @@ void World::DrawFog()
 	const TextureBarrier depthReadBarrier(depthTexture, ResourceStates::PixelShaderAccessBit);
 	CmdBarrier(1, &depthReadBarrier);
 
+	int insideIndex = -1;
 	for(int f = 1; f < tr.world->numfogs; ++f)
 	{
 		const fog_t& fog = tr.world->fogs[f];
 
-		FogVertexRC vertexRC = {};
+		bool inside = true;
+		for(int a = 0; a < 3; ++a)
+		{
+			if(backEnd.viewParms.orient.origin[a] <= fog.bounds[0][a] ||
+				backEnd.viewParms.orient.origin[a] >= fog.bounds[1][a])
+			{
+				inside = false;
+				break;
+			}
+		}
+
+		if(inside)
+		{
+			insideIndex = f;
+			break;
+		}
+	}
+
+	for(int f = 1; f < tr.world->numfogs; ++f)
+	{
+		if(f == insideIndex)
+		{
+			continue;
+		}
+
+		const fog_t& fog = tr.world->fogs[f];
+
+		FogOutsideVertexRC vertexRC = {};
 		memcpy(vertexRC.modelViewMatrix, backEnd.viewParms.world.modelMatrix, sizeof(vertexRC.modelViewMatrix));
 		memcpy(vertexRC.projectionMatrix, backEnd.viewParms.projectionMatrix, sizeof(vertexRC.projectionMatrix));
 		VectorCopy(fog.bounds[0], vertexRC.boxMin);
 		VectorCopy(fog.bounds[1], vertexRC.boxMax);
-		CmdSetRootConstants(fogRootSignature, ShaderStage::Vertex, &vertexRC);
+		CmdSetRootConstants(fogOutsideRootSignature, ShaderStage::Vertex, &vertexRC);
 
-		FogPixelRC pixelRC = {};
+		FogOutsidePixelRC pixelRC = {};
 		VectorCopy(fog.parms.color, pixelRC.colorDepth);
 		pixelRC.colorDepth[3] = fog.parms.depthForOpaque;
-		CmdSetRootConstants(fogRootSignature, ShaderStage::Pixel, &pixelRC);
+		CmdSetRootConstants(fogOutsideRootSignature, ShaderStage::Pixel, &pixelRC);
 
 		CmdDrawIndexed(36, 0, 0);
+	}
+
+	if(insideIndex > 0)
+	{
+		CmdBindPipeline(fogInsidePipeline);
+		CmdBindRootSignature(fogInsideRootSignature);
+		CmdBindDescriptorTable(fogInsideRootSignature, fogDescriptorTable);
+
+		const fog_t& fog = tr.world->fogs[insideIndex];
+
+		FogInsidePixelRC pixelRC = {};
+		VectorCopy(fog.parms.color, pixelRC.colorDepth);
+		pixelRC.colorDepth[3] = fog.parms.depthForOpaque;
+		pixelRC.proj2232[0] = -backEnd.viewParms.projectionMatrix[2 * 4 + 2];
+		pixelRC.proj2232[1] = backEnd.viewParms.projectionMatrix[3 * 4 + 2];
+		CmdSetRootConstants(fogInsideRootSignature, ShaderStage::Pixel, &pixelRC);
+
+		CmdDraw(3, 0);
 	}
 
 	grp.EndRenderPass();
