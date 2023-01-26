@@ -153,8 +153,6 @@ float4 main(VOut input) : SV_Target
 	float zwDepth = depthTexture.Load(int3(input.position.xy, 0)).x;
 	float depthBuff = LinearDepth(zwDepth, input.proj2232.x, input.proj2232.y);
 	float depthFrag = input.depthVS;
-	// depth test debugging
-	//return depthFrag <= depthBuff ? float4(0, 1, 0, 1) : float4(1, 0, 0, 1);
 	if(depthFrag > depthBuff)
 	{
 		discard;
@@ -163,6 +161,12 @@ float4 main(VOut input) : SV_Target
 	float fogOpacity = saturate((depthBuff - depthFrag) / colorDepth.w);
 
 	return float4(colorDepth.rgb, fogOpacity);
+
+	// depth test debugging
+	//return depthFrag <= depthBuff ? float4(0, 1, 0, 1) : float4(1, 0, 0, 1);
+
+	// depth linearization debugging
+	//return float4(0, abs(depthBuff - depthFrag) < 1 ? 1 : 0, 0, 1);
 }
 )grml";
 
@@ -171,15 +175,23 @@ float4 main(VOut input) : SV_Target
 //
 
 static const char* fogInside_vs = R"grml(
-float4 main(uint id : SV_VertexID) : SV_Position
+struct VOut
 {
-	float4 position;
-	position.x = (float)(id / 2) * 4.0 - 1.0;
-	position.y = (float)(id % 2) * 4.0 - 1.0;
-	position.z = 0.0;
-	position.w = 1.0;
+	float4 position : SV_Position;
+	float2 texCoords : TEXCOORD0;
+};
 
-	return position;
+VOut main(uint id : SV_VertexID)
+{
+	VOut output;
+	output.position.x = (float)(id / 2) * 4.0 - 1.0;
+	output.position.y = (float)(id % 2) * 4.0 - 1.0;
+	output.position.z = 0.0;
+	output.position.w = 1.0;
+	output.texCoords.x = (float)(id / 2) * 2.0;
+	output.texCoords.y = 1.0 - (float)(id % 2) * 2.0;
+
+	return output;
 }
 )grml";
 
@@ -187,6 +199,11 @@ float4 main(uint id : SV_VertexID) : SV_Position
 
 struct FogInsidePixelRC
 {
+	float cameraX[4];
+	float cameraY[4];
+	float cameraZ[4];
+	float cameraPosition[4];
+	float plane[4];
 	float colorDepth[4];
 	float proj2232[2];
 };
@@ -196,8 +213,19 @@ struct FogInsidePixelRC
 static const char* fogInside_ps = R"grml(
 cbuffer RootConstants
 {
+	float4 cameraX;
+	float4 cameraY;
+	float4 cameraZ;
+	float4 cameraPosition;
+	float4 plane;
 	float4 colorDepth;
 	float2 proj2232;
+};
+
+struct VOut
+{
+	float4 position : SV_Position;
+	float2 texCoords : TEXCOORD0;
 };
 
 Texture2D depthTexture : register(t0);
@@ -220,15 +248,24 @@ float LinearDepth(float zwDepth, float proj22, float proj32)
 	return proj32 / (zwDepth - proj22);
 }
 
-float4 main(float4 position : SV_Position) : SV_Target
+float4 main(VOut input) : SV_Target
 {
-	// @TODO: pick lowest depth value between
-	// the depth buffer and the fog's plane equation
-	float zwDepth = depthTexture.Load(int3(position.xy, 0)).x;
+	float2 ndc = input.texCoords * 2.0 - 1.0;
+	float3 rayDir = normalize(ndc.x * cameraX.xyz + ndc.y * cameraY.xyz + cameraZ.xyz);
+	float planeDist = dot(plane, cameraPosition) / dot(plane.xyz, rayDir);
+
+	float zwDepth = depthTexture.Load(int3(input.position.xy, 0)).x;
 	float depth = LinearDepth(zwDepth, proj2232.x, proj2232.y);
+	if(planeDist > 0.0 && planeDist < depth)
+	{
+		depth = planeDist;
+	}
 	float fogOpacity = saturate(depth / colorDepth.w);
 
 	return float4(colorDepth.rgb, fogOpacity);
+
+	// debugging: green pixels are where the clip plane is closest
+	//return planeDist >= 0.0 && planeDist <= depth ? float4(0, 1, 0, 1) : float4(1, 0, 0, 0);
 }
 )grml";
 
@@ -237,6 +274,9 @@ static bool drawPrePass = false;
 static bool drawDynamic = true;
 static bool drawTransparents = true;
 static bool drawFog = true;
+static float axisScaleX = 1.0f;
+static float axisScaleY = 1.0f;
+static float axisScaleZ = 1.0f;
 
 
 static bool HasStaticGeo(const drawSurf_t* drawSurf)
@@ -276,6 +316,52 @@ static void UpdateEntityData(int entityNum, double originalTime)
 	}
 }
 
+static void ExtractCameraPosition(vec3_t cameraPos, const float* modelView)
+{
+	float modelViewT[16];
+	R_TransposeMatrix(modelView, modelViewT);
+
+	// plane normals 
+	vec3_t n1, n2, n3;
+	VectorCopy(modelViewT + 0 * 4, n1);
+	VectorCopy(modelViewT + 1 * 4, n2);
+	VectorCopy(modelViewT + 2 * 4, n3);
+
+	// plane distances
+	const float d1 = modelViewT[0 * 4 + 3];
+	const float d2 = modelViewT[1 * 4 + 3];
+	const float d3 = modelViewT[2 * 4 + 3];
+
+	// intersection of the 3 planes
+	vec3_t n2n3, n3n1, n1n2;
+	CrossProduct(n2, n3, n2n3);
+	CrossProduct(n3, n1, n3n1);
+	CrossProduct(n1, n2, n1n2);
+
+	// top = (n2n3 * d1) + (n3n1 * d2) + (n1n2 * d3)
+	vec3_t top;
+	VectorMA(vec3_origin, d1, n2n3, top);
+	VectorMA(top, d2, n3n1, top);
+	VectorMA(top, d3, n1n2, top);
+	const float denom = DotProduct(n1, n2n3);
+	VectorScale(top, -1.0f / denom, cameraPos);
+}
+
+static void ExtractCameraAxisVectors(vec3_t axisX, vec3_t axisY, vec3_t axisZ, const float* modelView)
+{
+	axisX[0] = modelView[0];
+	axisX[1] = modelView[4];
+	axisX[2] = modelView[8];
+
+	axisY[0] = modelView[1];
+	axisY[1] = modelView[5];
+	axisY[2] = modelView[9];
+
+	axisZ[0] = modelView[ 2];
+	axisZ[1] = modelView[ 6];
+	axisZ[2] = modelView[10];
+}
+
 
 void World::Init()
 {
@@ -288,6 +374,13 @@ void World::Init()
 		desc.SetClearDepthStencil(0.0f, 0);
 		depthTexture = CreateTexture(desc);
 		depthTextureIndex = grp.RegisterTexture(depthTexture);
+
+		if(!IsNullHandle(fogDescriptorTable))
+		{
+			DescriptorTableUpdate update;
+			update.SetTextures(1, &depthTexture);
+			UpdateDescriptorTable(fogDescriptorTable, update);
+		}
 	}
 
 	if(!grp.firstInit)
@@ -384,7 +477,6 @@ void World::Init()
 		DescriptorTableDesc desc("fog", fogOutsideRootSignature);
 		fogDescriptorTable = CreateDescriptorTable(desc);
 
-		// @TODO: handle re-init!!! the depth texture won't be the same
 		DescriptorTableUpdate update;
 		update.SetTextures(1, &depthTexture);
 		UpdateDescriptorTable(fogDescriptorTable, update);
@@ -576,6 +668,20 @@ void World::EndBatch(HPipeline& pso)
 		return;
 	}
 
+	// darken the hell fog in the BS bit on cpm21 for debugging
+#if 0
+	if(Q_stristr(tess.shader->name, "hellfog"))
+	{
+		for(int v = 0; v < tess.numVertexes; ++v)
+		{
+			tess.svars[0].colors[v][0] = 127;
+			tess.svars[0].colors[v][1] = 127;
+			tess.svars[0].colors[v][2] = 127;
+			tess.svars[0].colors[v][3] = 255;
+		}
+	}
+#endif
+
 	if(!batchHasStaticGeo)
 	{
 		db.vertexBuffers.Upload(0, tess.shader->numStages);
@@ -627,6 +733,11 @@ void World::EndBatch(HPipeline& pso)
 
 void World::DrawGUI()
 {
+	if(tr.world == NULL)
+	{
+		return;
+	}
+
 #if 0
 	TextureBarrier tb(depthTexture, ResourceStates::DepthReadBit);
 	CmdBarrier(1, &tb);
@@ -644,6 +755,27 @@ void World::DrawGUI()
 		ImGui::Checkbox("Draw Transparents", &drawTransparents);
 		ImGui::Checkbox("Draw Fog", &drawFog);
 		ImGui::Text("PSO count: %d", (int)grp.psoCount);
+
+		ImGui::SliderFloat("Axis Scale X", &axisScaleX, -10.0f, 10.0f);
+		ImGui::SliderFloat("Axis Scale Y", &axisScaleY, -10.0f, 10.0f);
+		ImGui::SliderFloat("Axis Scale Z", &axisScaleZ, -10.0f, 10.0f);
+
+		vec3_t axis[3];
+		ExtractCameraAxisVectors(axis[0], axis[1], axis[2], backEnd.viewParms.world.modelMatrix);
+		const char* axisNames[] = { "X", "Y", "Z", };
+		for(int a = 0; a < 3; ++a)
+		{
+			ImGui::Text("%s: %s", axisNames[a], v3tos(axis[a]));
+		}
+
+		vec3_t cameraPos;
+		ExtractCameraPosition(cameraPos, backEnd.viewParms.world.modelMatrix);
+		ImGui::Text("Camera Position: %s", v3tos(cameraPos));
+
+		for(int f = 1; f < tr.world->numfogs; ++f)
+		{
+			ImGui::Text("Fog: %s", v4tos(tr.world->fogs[f].surface));
+		}
 	}
 	ImGui::End();
 }
@@ -1095,6 +1227,11 @@ void World::DrawFog()
 		CmdBindRootSignature(fogInsideRootSignature);
 		CmdBindDescriptorTable(fogInsideRootSignature, fogDescriptorTable);
 
+		/*vec3_t axis[3];
+		ExtractCameraAxisVectors(axis, backEnd.viewParms.world.modelMatrix);
+		vec3_t cameraPos;
+		ExtractCameraPosition(cameraPos, backEnd.viewParms.world.modelMatrix);*/
+
 		const fog_t& fog = tr.world->fogs[insideIndex];
 
 		FogInsidePixelRC pixelRC = {};
@@ -1102,6 +1239,32 @@ void World::DrawFog()
 		pixelRC.colorDepth[3] = fog.parms.depthForOpaque;
 		pixelRC.proj2232[0] = -backEnd.viewParms.projectionMatrix[2 * 4 + 2];
 		pixelRC.proj2232[1] = backEnd.viewParms.projectionMatrix[3 * 4 + 2];
+		//VectorCopy(backEnd.viewParms.orient.origin, pixelRC.cameraPosition);
+		//VectorCopy(backEnd.refdef.vieworg, pixelRC.cameraPosition);
+		//VectorCopy(cameraPos, pixelRC.cameraPosition);
+		pixelRC.plane[0] = fog.surface[0];
+		pixelRC.plane[1] = fog.surface[1];
+		pixelRC.plane[2] = fog.surface[2];
+		pixelRC.plane[3] = -fog.surface[3];
+		//VectorNegate(backEnd.refdef.viewaxis[0], pixelRC.cameraZ);
+		//VectorNegate(backEnd.refdef.viewaxis[1], pixelRC.cameraX);
+		//VectorCopy(backEnd.refdef.viewaxis[2], pixelRC.cameraY);
+		ExtractCameraAxisVectors(pixelRC.cameraX, pixelRC.cameraY, pixelRC.cameraZ, backEnd.viewParms.world.modelMatrix);
+		ExtractCameraPosition(pixelRC.cameraPosition, backEnd.viewParms.world.modelMatrix);
+		pixelRC.cameraPosition[3] = 1.0f;
+		pixelRC.cameraX[3] = 0.0f;
+		pixelRC.cameraY[3] = 0.0f;
+		pixelRC.cameraZ[3] = 0.0f;
+		VectorNormalize(pixelRC.cameraX);
+		VectorNormalize(pixelRC.cameraY);
+		VectorNormalize(pixelRC.cameraZ);
+		//const float aspectRatio = (float)glConfig.vidWidth / (float)glConfig.vidHeight;
+		//const float tanHalfFovY = tanf(backEnd.viewParms.fovY * (M_PI / 360.0f));
+		//VectorScale(pixelRC.cameraX, axisScaleX * tanHalfFovY * aspectRatio, pixelRC.cameraX);
+		//VectorScale(pixelRC.cameraY, axisScaleY * tanHalfFovY              , pixelRC.cameraY);
+		VectorScale(pixelRC.cameraX, axisScaleX, pixelRC.cameraX);
+		VectorScale(pixelRC.cameraY, axisScaleY, pixelRC.cameraY);
+		VectorScale(pixelRC.cameraZ, axisScaleZ, pixelRC.cameraZ);
 		CmdSetRootConstants(fogInsideRootSignature, ShaderStage::Pixel, &pixelRC);
 
 		CmdDraw(3, 0);

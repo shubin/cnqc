@@ -2932,22 +2932,22 @@ namespace RHI
 		Q_assert(colorCount > 0 || colorTargets == NULL);
 
 		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[MaxRenderTargetCount] = {};
-	    for (uint32_t t = 0; t < colorCount; ++t) 
+		for(uint32_t t = 0; t < colorCount; ++t)
 		{
-		    const uint32_t rtvIndex = rhi.textures.Get(colorTargets[t]).rtvIndex;
-		    rtvHandles[t] = rhi.descHeapRTVs.GetCPUHandle(rtvIndex);
+			const uint32_t rtvIndex = rhi.textures.Get(colorTargets[t]).rtvIndex;
+			rtvHandles[t] = rhi.descHeapRTVs.GetCPUHandle(rtvIndex);
 		}
 
 		D3D12_CPU_DESCRIPTOR_HANDLE* dsvHandlePtr = NULL;
 		D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle;
-		if (depthStencilTarget != NULL) 
+		if(depthStencilTarget != NULL)
 		{
-		    const Texture& depthStencil = rhi.textures.Get(*depthStencilTarget);
-		    dsvHandle = rhi.descHeapDSVs.GetCPUHandle(depthStencil.dsvIndex);
-		    dsvHandlePtr = &dsvHandle;
-	    }
-		
-	    rhi.commandList->OMSetRenderTargets(colorCount, rtvHandles, FALSE, dsvHandlePtr);
+			const Texture& depthStencil = rhi.textures.Get(*depthStencilTarget);
+			dsvHandle = rhi.descHeapDSVs.GetCPUHandle(depthStencil.dsvIndex);
+			dsvHandlePtr = &dsvHandle;
+		}
+
+		rhi.commandList->OMSetRenderTargets(colorCount, rtvHandles, FALSE, dsvHandlePtr);
 	}
 
 	void CmdBindRootSignature(HRootSignature rootSignature)

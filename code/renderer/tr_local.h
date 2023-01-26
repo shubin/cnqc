@@ -1597,6 +1597,8 @@ void RE_TakeVideoFrame( int width, int height,
 		byte *captureBuffer, byte *encodeBuffer, qbool motionJpeg );
 
 void R_MultMatrix( const float *a, const float *b, float *out );
+void R_InvMatrix( const float* in, float* out );
+void R_TransposeMatrix( const float* in, float* out );
 void R_MakeIdentityMatrix( float* m );
 void R_MakeOrthoProjectionMatrix( float* m, float w, float h );
 

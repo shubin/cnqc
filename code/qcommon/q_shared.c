@@ -687,13 +687,13 @@ const char* QDECL va( PRINTF_FORMAT_STRING const char* format, ... )
 
 const char* v3tos( const vec3_t v )
 {
-	return va( "%.0f, %.0f, %.0f", v[0], v[1], v[2] );
+	return va( "%g, %g, %g", v[0], v[1], v[2] );
 }
 
 
 const char* v4tos( const vec4_t v )
 {
-	return va( "%.0f, %.0f, %.0f, %.0f", v[0], v[1], v[2], v[3] );
+	return va( "%g, %g, %g, %g", v[0], v[1], v[2], v[3] );
 }
 
 
