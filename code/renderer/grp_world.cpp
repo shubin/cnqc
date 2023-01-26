@@ -1053,6 +1053,11 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 
 	EndBatch(pso);
 
+	if(transpCount <= 0)
+	{
+		DrawFog();
+	}
+
 	db.vertexBuffers.EndUpload();
 	db.indexBuffer.EndUpload();
 

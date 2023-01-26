@@ -25,7 +25,6 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 to do:
 
 * 3D/world rendering
-	- fog
 	- sky and clouds
 	- CMAA 2 / SMAA integration
 	- dynamic lights
@@ -54,6 +53,9 @@ to do:
 	and ALLOW_TEARING set on both the flip mode swap chain and Present() flags
 	will enable true immediate independent flip mode and give us the lowest latency possible
 - resources that should be committed: depth buffer, render targets, static geometry - optional: large textures
+- sort out whether we want to force depth clamping or not
+	note: fog boxes must be drawn with depth clipping disabled
+	otherwise you can pierce through when at a box edge
 
 rejected:
 - NvAPI_D3D_GetLatency to get (simulated) input to display latency
@@ -2881,6 +2883,7 @@ namespace RHI
 		desc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
 		desc.RasterizerState.ForcedSampleCount = 0;
 		desc.RasterizerState.MultisampleEnable = FALSE;
+		desc.RasterizerState.DepthClipEnable = FALSE; // @TODO:
 
 		ID3D12PipelineState* pso;
 		D3D(rhi.device->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&pso)));
