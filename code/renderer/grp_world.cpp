@@ -66,7 +66,7 @@ void main()
 
 #pragma pack(push, 1)
 
-struct FogOutsideVertexRC
+struct FogVertexRC
 {
 	float modelViewMatrix[16];
 	float projectionMatrix[16];
@@ -76,7 +76,7 @@ struct FogOutsideVertexRC
 
 #pragma pack(pop)
 
-static const char* fogOutside_vs = R"grml(
+static const char* fog_vs = R"grml(
 cbuffer RootConstants
 {
 	matrix modelViewMatrix;
@@ -108,7 +108,7 @@ VOut main(float3 positionOS : POSITION)
 
 #pragma pack(push, 1)
 
-struct FogOutsidePixelRC
+struct FogPixelRC
 {
 	float colorDepth[4];
 };
@@ -174,58 +174,17 @@ float4 main(VOut input) : SV_Target
 // fog - from inside
 //
 
-static const char* fogInside_vs = R"grml(
-struct VOut
-{
-	float4 position : SV_Position;
-	float2 texCoords : TEXCOORD0;
-};
-
-VOut main(uint id : SV_VertexID)
-{
-	VOut output;
-	output.position.x = (float)(id / 2) * 4.0 - 1.0;
-	output.position.y = (float)(id % 2) * 4.0 - 1.0;
-	output.position.z = 0.0;
-	output.position.w = 1.0;
-	output.texCoords.x = (float)(id / 2) * 2.0;
-	output.texCoords.y = 1.0 - (float)(id % 2) * 2.0;
-
-	return output;
-}
-)grml";
-
-#pragma pack(push, 1)
-
-struct FogInsidePixelRC
-{
-	float cameraX[4];
-	float cameraY[4];
-	float cameraZ[4];
-	float cameraPosition[4];
-	float plane[4];
-	float colorDepth[4];
-	float proj2232[2];
-};
-
-#pragma pack(pop)
-
 static const char* fogInside_ps = R"grml(
 cbuffer RootConstants
 {
-	float4 cameraX;
-	float4 cameraY;
-	float4 cameraZ;
-	float4 cameraPosition;
-	float4 plane;
 	float4 colorDepth;
-	float2 proj2232;
 };
 
 struct VOut
 {
 	float4 position : SV_Position;
-	float2 texCoords : TEXCOORD0;
+	float2 proj2232 : TEXCOORD0;
+	float depthVS : DEPTHVS;
 };
 
 Texture2D depthTexture : register(t0);
@@ -250,22 +209,19 @@ float LinearDepth(float zwDepth, float proj22, float proj32)
 
 float4 main(VOut input) : SV_Target
 {
-	float2 ndc = input.texCoords * 2.0 - 1.0;
-	float3 rayDir = normalize(ndc.x * cameraX.xyz + ndc.y * cameraY.xyz + cameraZ.xyz);
-	float planeDist = dot(plane, cameraPosition) / dot(plane.xyz, rayDir);
-
 	float zwDepth = depthTexture.Load(int3(input.position.xy, 0)).x;
-	float depth = LinearDepth(zwDepth, proj2232.x, proj2232.y);
-	if(planeDist > 0.0 && planeDist < depth)
-	{
-		depth = planeDist;
-	}
+	float depthBuff = LinearDepth(zwDepth, input.proj2232.x, input.proj2232.y);
+	float depthFrag = input.depthVS;
+	float depth = min(depthBuff, depthFrag);
 	float fogOpacity = saturate(depth / colorDepth.w);
 
 	return float4(colorDepth.rgb, fogOpacity);
 
-	// debugging: green pixels are where the clip plane is closest
-	//return planeDist >= 0.0 && planeDist <= depth ? float4(0, 1, 0, 1) : float4(1, 0, 0, 0);
+	// depth test debugging
+	//return depthFrag <= depthBuff ? float4(0, 1, 0, 1) : float4(1, 0, 0, 1);
+
+	// depth linearization debugging
+	//return float4(0, abs(depthBuff - depthFrag) < 1 ? 1 : 0, 0, 1);
 }
 )grml";
 
@@ -456,25 +412,16 @@ void World::Init()
 	// fog
 	//
 	{
-		RootSignatureDesc desc("fog outside");
+		RootSignatureDesc desc("fog");
 		desc.usingVertexBuffers = true;
 		desc.AddRange(DescriptorType::Texture, 0, 1);
 		desc.genericVisibility = ShaderStages::PixelBit;
-		desc.constants[ShaderStage::Vertex].byteCount = sizeof(FogOutsideVertexRC);
-		desc.constants[ShaderStage::Pixel].byteCount = sizeof(FogOutsidePixelRC);
-		fogOutsideRootSignature = CreateRootSignature(desc);
+		desc.constants[ShaderStage::Vertex].byteCount = sizeof(FogVertexRC);
+		desc.constants[ShaderStage::Pixel].byteCount = sizeof(FogPixelRC);
+		fogRootSignature = CreateRootSignature(desc);
 	}
 	{
-		RootSignatureDesc desc("fog inside");
-		desc.usingVertexBuffers = false;
-		desc.AddRange(DescriptorType::Texture, 0, 1);
-		desc.genericVisibility = ShaderStages::PixelBit;
-		desc.constants[ShaderStage::Vertex].byteCount = 0;
-		desc.constants[ShaderStage::Pixel].byteCount = sizeof(FogInsidePixelRC);
-		fogInsideRootSignature = CreateRootSignature(desc);
-	}
-	{
-		DescriptorTableDesc desc("fog", fogOutsideRootSignature);
+		DescriptorTableDesc desc("fog", fogRootSignature);
 		fogDescriptorTable = CreateDescriptorTable(desc);
 
 		DescriptorTableUpdate update;
@@ -482,8 +429,8 @@ void World::Init()
 		UpdateDescriptorTable(fogDescriptorTable, update);
 	}
 	{
-		GraphicsPipelineDesc desc("fog outside", fogOutsideRootSignature);
-		desc.vertexShader = CompileVertexShader(fogOutside_vs);
+		GraphicsPipelineDesc desc("fog outside", fogRootSignature);
+		desc.vertexShader = CompileVertexShader(fog_vs);
 		desc.pixelShader = CompilePixelShader(fogOutside_ps);
 		desc.depthStencil.DisableDepth();
 		desc.rasterizer.cullMode = CT_BACK_SIDED;
@@ -493,13 +440,14 @@ void World::Init()
 		fogOutsidePipeline = CreateGraphicsPipeline(desc);
 	}
 	{
-		GraphicsPipelineDesc desc("fog inside", fogInsideRootSignature);
-		desc.vertexShader = CompileVertexShader(fogInside_vs);
+		GraphicsPipelineDesc desc("fog inside", fogRootSignature);
+		desc.vertexShader = CompileVertexShader(fog_vs);
 		desc.pixelShader = CompilePixelShader(fogInside_ps);
 		desc.depthStencil.DisableDepth();
-		desc.rasterizer.cullMode = CT_TWO_SIDED;
+		desc.rasterizer.cullMode = CT_FRONT_SIDED;
 		desc.rasterizer.polygonOffset = false;
 		desc.AddRenderTarget(GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, TextureFormat::RGBA32_UNorm);
+		desc.vertexLayout.AddAttribute(0, ShaderSemantic::Position, DataType::Float32, 3, 0);
 		fogInsidePipeline = CreateGraphicsPipeline(desc);
 	}
 	{
@@ -668,7 +616,7 @@ void World::EndBatch(HPipeline& pso)
 		return;
 	}
 
-	// darken the hell fog in the BS bit on cpm21 for debugging
+	// darken the hell fog in the BS pit on cpm21 for debugging
 #if 0
 	if(Q_stristr(tess.shader->name, "hellfog"))
 	{
@@ -1163,8 +1111,8 @@ void World::DrawFog()
 	grp.BeginRenderPass("Fog", 0.25f, 0.125f, 0.0f);
 
 	CmdBindPipeline(fogOutsidePipeline);
-	CmdBindRootSignature(fogOutsideRootSignature);
-	CmdBindDescriptorTable(fogOutsideRootSignature, fogDescriptorTable);
+	CmdBindRootSignature(fogRootSignature);
+	CmdBindDescriptorTable(fogRootSignature, fogDescriptorTable);
 
 	const uint32_t stride = sizeof(vec3_t);
 	CmdBindVertexBuffers(1, &boxVertexBuffer, &stride, NULL);
@@ -1206,17 +1154,17 @@ void World::DrawFog()
 
 		const fog_t& fog = tr.world->fogs[f];
 
-		FogOutsideVertexRC vertexRC = {};
+		FogVertexRC vertexRC = {};
 		memcpy(vertexRC.modelViewMatrix, backEnd.viewParms.world.modelMatrix, sizeof(vertexRC.modelViewMatrix));
 		memcpy(vertexRC.projectionMatrix, backEnd.viewParms.projectionMatrix, sizeof(vertexRC.projectionMatrix));
 		VectorCopy(fog.bounds[0], vertexRC.boxMin);
 		VectorCopy(fog.bounds[1], vertexRC.boxMax);
-		CmdSetRootConstants(fogOutsideRootSignature, ShaderStage::Vertex, &vertexRC);
+		CmdSetRootConstants(fogRootSignature, ShaderStage::Vertex, &vertexRC);
 
-		FogOutsidePixelRC pixelRC = {};
+		FogPixelRC pixelRC = {};
 		VectorCopy(fog.parms.color, pixelRC.colorDepth);
 		pixelRC.colorDepth[3] = fog.parms.depthForOpaque;
-		CmdSetRootConstants(fogOutsideRootSignature, ShaderStage::Pixel, &pixelRC);
+		CmdSetRootConstants(fogRootSignature, ShaderStage::Pixel, &pixelRC);
 
 		CmdDrawIndexed(36, 0, 0);
 	}
@@ -1224,50 +1172,24 @@ void World::DrawFog()
 	if(insideIndex > 0)
 	{
 		CmdBindPipeline(fogInsidePipeline);
-		CmdBindRootSignature(fogInsideRootSignature);
-		CmdBindDescriptorTable(fogInsideRootSignature, fogDescriptorTable);
-
-		/*vec3_t axis[3];
-		ExtractCameraAxisVectors(axis, backEnd.viewParms.world.modelMatrix);
-		vec3_t cameraPos;
-		ExtractCameraPosition(cameraPos, backEnd.viewParms.world.modelMatrix);*/
+		CmdBindRootSignature(fogRootSignature);
+		CmdBindDescriptorTable(fogRootSignature, fogDescriptorTable);
 
 		const fog_t& fog = tr.world->fogs[insideIndex];
 
-		FogInsidePixelRC pixelRC = {};
+		FogVertexRC vertexRC = {};
+		memcpy(vertexRC.modelViewMatrix, backEnd.viewParms.world.modelMatrix, sizeof(vertexRC.modelViewMatrix));
+		memcpy(vertexRC.projectionMatrix, backEnd.viewParms.projectionMatrix, sizeof(vertexRC.projectionMatrix));
+		VectorCopy(fog.bounds[0], vertexRC.boxMin);
+		VectorCopy(fog.bounds[1], vertexRC.boxMax);
+		CmdSetRootConstants(fogRootSignature, ShaderStage::Vertex, &vertexRC);
+
+		FogPixelRC pixelRC = {};
 		VectorCopy(fog.parms.color, pixelRC.colorDepth);
 		pixelRC.colorDepth[3] = fog.parms.depthForOpaque;
-		pixelRC.proj2232[0] = -backEnd.viewParms.projectionMatrix[2 * 4 + 2];
-		pixelRC.proj2232[1] = backEnd.viewParms.projectionMatrix[3 * 4 + 2];
-		//VectorCopy(backEnd.viewParms.orient.origin, pixelRC.cameraPosition);
-		//VectorCopy(backEnd.refdef.vieworg, pixelRC.cameraPosition);
-		//VectorCopy(cameraPos, pixelRC.cameraPosition);
-		pixelRC.plane[0] = fog.surface[0];
-		pixelRC.plane[1] = fog.surface[1];
-		pixelRC.plane[2] = fog.surface[2];
-		pixelRC.plane[3] = -fog.surface[3];
-		//VectorNegate(backEnd.refdef.viewaxis[0], pixelRC.cameraZ);
-		//VectorNegate(backEnd.refdef.viewaxis[1], pixelRC.cameraX);
-		//VectorCopy(backEnd.refdef.viewaxis[2], pixelRC.cameraY);
-		ExtractCameraAxisVectors(pixelRC.cameraX, pixelRC.cameraY, pixelRC.cameraZ, backEnd.viewParms.world.modelMatrix);
-		ExtractCameraPosition(pixelRC.cameraPosition, backEnd.viewParms.world.modelMatrix);
-		pixelRC.cameraPosition[3] = 1.0f;
-		pixelRC.cameraX[3] = 0.0f;
-		pixelRC.cameraY[3] = 0.0f;
-		pixelRC.cameraZ[3] = 0.0f;
-		VectorNormalize(pixelRC.cameraX);
-		VectorNormalize(pixelRC.cameraY);
-		VectorNormalize(pixelRC.cameraZ);
-		//const float aspectRatio = (float)glConfig.vidWidth / (float)glConfig.vidHeight;
-		//const float tanHalfFovY = tanf(backEnd.viewParms.fovY * (M_PI / 360.0f));
-		//VectorScale(pixelRC.cameraX, axisScaleX * tanHalfFovY * aspectRatio, pixelRC.cameraX);
-		//VectorScale(pixelRC.cameraY, axisScaleY * tanHalfFovY              , pixelRC.cameraY);
-		VectorScale(pixelRC.cameraX, axisScaleX, pixelRC.cameraX);
-		VectorScale(pixelRC.cameraY, axisScaleY, pixelRC.cameraY);
-		VectorScale(pixelRC.cameraZ, axisScaleZ, pixelRC.cameraZ);
-		CmdSetRootConstants(fogInsideRootSignature, ShaderStage::Pixel, &pixelRC);
+		CmdSetRootConstants(fogRootSignature, ShaderStage::Pixel, &pixelRC);
 
-		CmdDraw(3, 0);
+		CmdDrawIndexed(36, 0, 0);
 	}
 
 	grp.EndRenderPass();
