@@ -1032,7 +1032,7 @@ static qbool R_MirrorViewBySurface( drawSurf_t* drawSurf, int entityNum )
 	// OPTIMIZE: restrict the viewport on the mirrored view
 
 	// render the mirror view
-	R_RenderView( &newParms );
+	R_RenderScene( &newParms );
 
 	tr.viewParms = oldParms;
 
@@ -1682,9 +1682,10 @@ static void R_GenerateDrawSurfs()
 int re_cameraMatrixTime;
 
 
-// a view may be either the actual camera view, or a mirror / remote location
-
-void R_RenderView( const viewParms_t* parms )
+// this function renders 1 scene, which has either 1 view or 2 views
+// a view may be either the actual camera view (last view drawn, always present)
+// or a mirror / remote location (first view drawn, only when a mirror/portal is present)
+void R_RenderScene( const viewParms_t* parms )
 {
 	if ( parms->viewportWidth <= 0 || parms->viewportHeight <= 0 )
 		return;
@@ -1707,6 +1708,8 @@ void R_RenderView( const viewParms_t* parms )
 	R_GenerateDrawSurfs();
 
 	R_SortDrawSurfs( firstDrawSurf, firstLitSurf );
+
+	renderPipeline->EndScene( *parms );
 }
 
 

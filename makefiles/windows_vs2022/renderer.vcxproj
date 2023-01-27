@@ -235,6 +235,7 @@
     <ClCompile Include="..\..\code\renderer\grp_imgui.cpp" />
     <ClCompile Include="..\..\code\renderer\grp_main.cpp" />
     <ClCompile Include="..\..\code\renderer\grp_mip_gen.cpp" />
+    <ClCompile Include="..\..\code\renderer\grp_smaa.cpp" />
     <ClCompile Include="..\..\code\renderer\grp_ui.cpp" />
     <ClCompile Include="..\..\code\renderer\grp_world.cpp" />
     <ClCompile Include="..\..\code\renderer\rhi_d3d12.cpp" />

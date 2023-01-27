@@ -1085,7 +1085,7 @@ double R_NoiseGet4f( double x, double y, double z, double t );
 
 void R_SwapBuffers( int );
 
-void R_RenderView( const viewParms_t* parms );
+void R_RenderScene( const viewParms_t* parms );
 
 void R_AddMD3Surfaces( trRefEntity_t *e );
 
@@ -1674,6 +1674,7 @@ struct IRenderPipeline
 	virtual void UIDrawQuad(const uiDrawQuadCommand_t& cmd) = 0;
 	virtual void UIDrawTriangle(const uiDrawTriangleCommand_t& cmd) = 0;
 	virtual void DrawSceneView(const drawSceneViewCommand_t& cmd) = 0;
+	virtual void EndScene(const viewParms_t& parms) = 0;
 };
 
 extern IRenderPipeline* renderPipeline;

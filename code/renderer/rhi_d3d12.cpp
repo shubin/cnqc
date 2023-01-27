@@ -552,6 +552,26 @@ namespace RHI
 		return (value + mask) & (~mask);
 	}
 
+	static uint32_t GetBytesPerPixel(TextureFormat::Id format)
+	{
+		switch(format)
+		{
+			case TextureFormat::RGBA64_Float:
+				return 8;
+			case TextureFormat::RGBA32_UNorm:
+			case TextureFormat::Depth32_Float:
+			case TextureFormat::Depth24_Stencil8:
+				return 4;
+			case TextureFormat::RG16_UNorm:
+				return 2;
+			case TextureFormat::R8_UNorm:
+				return 1;
+			default:
+				Q_assert(!"Unsupported texture format");
+				return 4;
+		}
+	}
+
 	static ID3D12DescriptorHeap* CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type, UINT size, bool shaderVisible, const char* name)
 	{
 		if(size == 0)
@@ -709,7 +729,6 @@ namespace RHI
 	{
 		Texture& texture = rhi.textures.Get(htexture);
 		Q_assert(!texture.uploading);
-		Q_assert(texture.desc.format == TextureFormat::RGBA32_UNorm); // otherwise the pitch is computed wrong!
 		
 		const D3D12_RESOURCE_DESC textureDesc = texture.texture->GetDesc();
 		D3D12_PLACED_SUBRESOURCE_FOOTPRINT layout;
@@ -717,9 +736,10 @@ namespace RHI
 		rhi.device->GetCopyableFootprints(&textureDesc, 0, 1, 0, &layout, NULL, NULL, &uploadByteCount);
 		WaitToStartUploading(uploadByteCount);
 
+		const UINT sourcePitch = (UINT)(texture.desc.width * GetBytesPerPixel(texture.desc.format));
 		mappedTexture.mappedData = mappedBuffer + bufferByteOffset;
 		mappedTexture.rowCount = texture.desc.height;
-		mappedTexture.srcRowByteCount = texture.desc.width * 4;
+		mappedTexture.srcRowByteCount = sourcePitch;
 		mappedTexture.dstRowByteCount = AlignUp(layout.Footprint.RowPitch, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
 
 		texture.uploadByteOffset = bufferByteOffset;
@@ -1194,6 +1214,9 @@ namespace RHI
 			case TextureFormat::RGBA32_UNorm: return DXGI_FORMAT_R8G8B8A8_UNORM;
 			case TextureFormat::RGBA64_Float: return DXGI_FORMAT_R16G16B16A16_FLOAT;
 			case TextureFormat::Depth32_Float: return DXGI_FORMAT_D32_FLOAT;
+			case TextureFormat::Depth24_Stencil8: return DXGI_FORMAT_D24_UNORM_S8_UINT;
+			case TextureFormat::RG16_UNorm: return DXGI_FORMAT_R8G8_UNORM;
+			case TextureFormat::R8_UNorm: return DXGI_FORMAT_R8_UNORM;
 			default: Q_assert(!"Unsupported texture format"); return DXGI_FORMAT_R8G8B8A8_UNORM;
 		}
 	}
@@ -2389,6 +2412,11 @@ namespace RHI
 			}
 		}
 
+		if(rhiDesc.format == TextureFormat::Depth24_Stencil8)
+		{
+			desc.Format = DXGI_FORMAT_R24G8_TYPELESS; // @TODO:
+		}
+
 		// @TODO: initial state -> D3D12_RESOURCE_STATE
 		D3D12MA::Allocation* allocation = NULL;
 		ID3D12Resource* resource;
@@ -2414,6 +2442,10 @@ namespace RHI
 			srv.Texture2D.MostDetailedMip = 0;
 			srv.Texture2D.PlaneSlice = 0;
 			srv.Texture2D.ResourceMinLODClamp = 0.0f;
+			if(rhiDesc.format == TextureFormat::Depth24_Stencil8)
+			{
+				srv.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS; // @TODO:
+			}
 			srvIndex = rhi.descHeapGeneric.CreateSRV(resource, srv);
 		}
 
@@ -2437,6 +2469,10 @@ namespace RHI
 			dsv.Format = desc.Format;
 			dsv.Flags = D3D12_DSV_FLAG_NONE; // @TODO:
 			dsv.Texture2D.MipSlice = 0;
+			if(rhiDesc.format == TextureFormat::Depth24_Stencil8)
+			{
+				dsv.Format = DXGI_FORMAT_D24_UNORM_S8_UINT; // @TODO:
+			}
 			dsvIndex = rhi.descHeapDSVs.CreateDSV(resource, dsv);
 			requestTransition = true;
 		}

@@ -304,7 +304,7 @@ void RE_RenderScene( const refdef_t* fd, int us )
 
 	VectorCopy( fd->vieworg, parms.pvsOrigin );
 
-	R_RenderView( &parms );
+	R_RenderScene( &parms );
 
 	// the next scene rendered in this frame will tack on after this one
 	r_firstSceneDrawSurf = tr.refdef.numDrawSurfs;

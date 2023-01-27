@@ -478,6 +478,25 @@ struct PostProcess
 	HDescriptorTable descriptorTable;
 };
 
+struct SMAA
+{
+	void Init();
+	void Draw(const viewParms_t& parms);
+
+	HTexture edgeTexture;
+	HTexture blendTexture;
+	HTexture areaTexture;
+	HTexture searchTexture;
+	HTexture stencilTexture;
+	HTexture destTexture;
+
+	HRootSignature rootSignature;
+	HPipeline firstPassPipeline;
+	HPipeline secondPassPipeline;
+	HPipeline thirdPassPipeline;
+	HDescriptorTable descriptorTable;
+};
+
 struct GRP : IRenderPipeline
 {
 	void Init() override;
@@ -497,6 +516,7 @@ struct GRP : IRenderPipeline
 	void UIDrawQuad(const uiDrawQuadCommand_t& cmd) override { ui.UIDrawQuad(cmd); }
 	void UIDrawTriangle(const uiDrawTriangleCommand_t& cmd) override { ui.UIDrawTriangle(cmd); }
 	void DrawSceneView(const drawSceneViewCommand_t& cmd) override { EndUI(); world.DrawSceneView(cmd); }
+	void EndScene(const viewParms_t& parms) override { smaa.Draw(parms); }
 
 	uint32_t RegisterTexture(HTexture htexture);
 
@@ -512,6 +532,7 @@ struct GRP : IRenderPipeline
 	MipMapGenerator mipMapGen;
 	ImGUI imgui;
 	PostProcess post;
+	SMAA smaa;
 	bool firstInit = true;
 	RenderMode::Id renderMode;
 

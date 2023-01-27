@@ -471,6 +471,7 @@ void GRP::Init()
 	mipMapGen.Init();
 	imgui.Init();
 	post.Init();
+	smaa.Init();
 
 	firstInit = false;
 }

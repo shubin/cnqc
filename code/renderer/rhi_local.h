@@ -160,6 +160,9 @@ namespace RHI
 			RGBA32_UNorm,
 			RGBA64_Float,
 			Depth32_Float,
+			RG16_UNorm,
+			R8_UNorm,
+			Depth24_Stencil8,
 			Count
 		};
 	};
@@ -261,6 +264,13 @@ namespace RHI
 
 	struct ShaderMacro
 	{
+		ShaderMacro() = default;
+		ShaderMacro(const char* name_, const char* value_)
+		{
+			name = name_;
+			value = value_;
+		}
+
 		const char* name = NULL;
 		const char* value = NULL;
 	};
