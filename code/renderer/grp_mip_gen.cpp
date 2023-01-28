@@ -21,6 +21,10 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 // Gameplay Rendering Pipeline - texture mip-map generation
 
 
+// @TODO: test for OOB accesses in the shaders and return
+// (also, is it needed with feature level 12.0 and HLSL 5.1/6.0 ?)
+
+
 #include "grp_local.h"
 namespace start
 {
@@ -174,6 +178,28 @@ void MipMapGenerator::GenerateMipMaps(HTexture texture)
 		CmdBindPipeline(stage.pipeline);
 		CmdBindDescriptorTable(stage.rootSignature, stage.descriptorTable);
 		CmdSetRootConstants(stage.rootSignature, ShaderStage::Compute, &rc);
+		CmdDispatch((w + GroupMask) / GroupSize, (h + GroupMask) / GroupSize, 1);
+	}
+
+	// overwrite mip 0 to apply r_intensity if needed
+	if((image->flags & IMG_NOIMANIP) == 0 &&
+		r_intensity->value != 1.0f)
+	{
+		Stage& stage = stages[Stage::End];
+		const int destMip = 0;
+
+		EndConstants rc = {};
+		rc.intensity = r_intensity->value;
+		rc.invGamma = 1.0f / r_mipGenGamma->value;
+		Vector4Clear(rc.blendColor);
+		rc.srcMip = MipSlice::Float16_0;
+		rc.dstMip = MipSlice::Count + destMip;
+
+		CmdBindRootSignature(stage.rootSignature);
+		CmdBindPipeline(stage.pipeline);
+		CmdBindDescriptorTable(stage.rootSignature, stage.descriptorTable);
+		CmdSetRootConstants(stage.rootSignature, ShaderStage::Compute, &rc);
+		CmdBarrier(ARRAY_LEN(barriers), barriers);
 		CmdDispatch((w + GroupMask) / GroupSize, (h + GroupMask) / GroupSize, 1);
 	}
 
