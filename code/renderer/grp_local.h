@@ -31,7 +31,7 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 using namespace RHI;
 
 
-#pragma pack(push, 1)
+#pragma pack(push, 4)
 
 struct DynamicVertexRC
 {

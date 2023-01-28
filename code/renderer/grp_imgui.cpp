@@ -23,6 +23,8 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 
 #include "grp_local.h"
 #include "../imgui/imgui.h"
+#include "hlsl/imgui_vs.h"
+#include "hlsl/imgui_ps.h"
 
 
 #define MAX_VERTEX_COUNT (64 << 10)
@@ -41,60 +43,6 @@ struct PixelRC
 	uint32_t sampler;
 };
 #pragma pack(pop)
-
-static const char* vs = R"grml(
-cbuffer vertexBuffer : register(b0)
-{
-	float4x4 projectionMatrix;
-};
-
-struct VS_INPUT
-{
-	float2 pos : POSITION;
-	float4 col : COLOR0;
-	float2 uv  : TEXCOORD0;
-};
-
-struct PS_INPUT
-{
-	float4 pos : SV_POSITION;
-	float4 col : COLOR0;
-	float2 uv  : TEXCOORD0;
-};
-
-PS_INPUT main(VS_INPUT input)
-{
-	PS_INPUT output;
-	output.pos = mul(projectionMatrix, float4(input.pos.xy, 0.0, 1.0));
-	output.col = input.col;
-	output.uv  = input.uv;
-	return output;
-}
-)grml";
-
-static const char* ps = R"grml(
-cbuffer vertexBuffer : register(b0)
-{
-	uint textureIndex;
-	uint samplerIndex;
-};
-
-struct PS_INPUT
-{
-	float4 pos : SV_POSITION;
-	float4 col : COLOR0;
-	float2 uv  : TEXCOORD0;
-};
-
-SamplerState samplers[12] : register(s0);
-Texture2D textures[4096] : register(t0);
-
-float4 main(PS_INPUT input) : SV_Target
-{
-	float4 out_col = input.col * textures[textureIndex].Sample(samplers[samplerIndex], input.uv);
-	return out_col;
-}
-)grml";
 
 
 void ImGUI::Init()
@@ -133,8 +81,8 @@ void ImGUI::Init()
 
 	{
 		GraphicsPipelineDesc desc("Dear ImGUI", rootSignature);
-		desc.vertexShader = CompileVertexShader(vs);
-		desc.pixelShader = CompilePixelShader(ps);
+		desc.vertexShader = ShaderByteCode(g_vs);
+		desc.pixelShader = ShaderByteCode(g_ps);
 		desc.vertexLayout.bindingStrides[0] = sizeof(ImDrawVert);
 		desc.vertexLayout.AddAttribute(0, ShaderSemantic::Position,
 			DataType::Float32, 2, offsetof(ImDrawVert, pos));

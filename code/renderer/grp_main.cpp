@@ -709,7 +709,7 @@ uint32_t GRP::CreatePSO(CachedPSO& cache, const char* name)
 	macros[macroCount].name = "STAGE_COUNT";
 	macros[macroCount].value = va("%d", cache.stageCount);
 	macroCount++;
-	ShaderByteCode vertexShader = CompileShader(ShaderStage::Vertex, opaqueShaderSource, "main", macroCount, macros);
+	const HShader vertexShader = CreateShader(ShaderDesc(ShaderStage::Vertex, strlen(opaqueShaderSource), opaqueShaderSource, "main", macroCount, macros));
 
 	for(int s = 0; s < cache.stageCount; ++s)
 	{
@@ -717,15 +717,15 @@ uint32_t GRP::CreatePSO(CachedPSO& cache, const char* name)
 		macros[macroCount].value = va("%d", (int)cache.stageStateBits[s]);
 		macroCount++;
 	}
-	ShaderByteCode pixelShader = CompileShader(ShaderStage::Pixel, opaqueShaderSource, "main", macroCount, macros);
+	const HShader pixelShader = CreateShader(ShaderDesc(ShaderStage::Pixel, strlen(opaqueShaderSource), opaqueShaderSource, "main", macroCount, macros));
 
 	Q_assert(macroCount <= ARRAY_LEN(macros));
 
 	uint32_t a = 0;
 	GraphicsPipelineDesc desc(name, opaqueRootSignature);
 	desc.shortLifeTime = true; // the PSO cache is only valid for this map!
-	desc.vertexShader = vertexShader;
-	desc.pixelShader = pixelShader;
+	desc.vertexShader = GetShaderByteCode(vertexShader);
+	desc.pixelShader = GetShaderByteCode(pixelShader);
 	desc.vertexLayout.AddAttribute(a++, ShaderSemantic::Position, DataType::Float32, 3, 0);
 	desc.vertexLayout.AddAttribute(a++, ShaderSemantic::Normal, DataType::Float32, 2, 0);
 	for(int s = 0; s < cache.stageCount; ++s)
@@ -744,6 +744,9 @@ uint32_t GRP::CreatePSO(CachedPSO& cache, const char* name)
 	desc.rasterizer.polygonOffset = cache.desc.polygonOffset;
 	desc.AddRenderTarget(cache.stageStateBits[0] & GLS_BLEND_BITS, TextureFormat::RGBA32_UNorm);
 	cache.pipeline = CreateGraphicsPipeline(desc);
+
+	DestroyShader(vertexShader);
+	DestroyShader(pixelShader);
 
 	const uint32_t index = psoCount++;
 	psos[index] = cache;

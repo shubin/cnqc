@@ -47,4 +47,51 @@
     <ClCompile Include="..\..\code\renderer\grp_post.cpp" />
     <ClCompile Include="..\..\code\renderer\grp_smaa.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\code\renderer\hlsl\smaa.hlsli">
+      <Filter>hlsl</Filter>
+    </None>
+    <None Include="..\..\code\renderer\hlsl\shared.hlsli">
+      <Filter>hlsl</Filter>
+    </None>
+    <None Include="..\..\code\renderer\hlsl\fog.hlsli">
+      <Filter>hlsl</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="..\..\code\renderer\hlsl\smaa_1.hlsl">
+      <Filter>hlsl</Filter>
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\smaa_2.hlsl">
+      <Filter>hlsl</Filter>
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\smaa_3.hlsl">
+      <Filter>hlsl</Filter>
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\imgui.hlsl">
+      <Filter>hlsl</Filter>
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\post_gamma.hlsl" />
+    <FxCompile Include="..\..\code\renderer\hlsl\depth_pre_pass.hlsl">
+      <Filter>hlsl</Filter>
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\fog_inside.hlsl">
+      <Filter>hlsl</Filter>
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\fog_outside.hlsl">
+      <Filter>hlsl</Filter>
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\mip_1.hlsl">
+      <Filter>hlsl</Filter>
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\mip_2.hlsl">
+      <Filter>hlsl</Filter>
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\mip_3.hlsl">
+      <Filter>hlsl</Filter>
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\ui.hlsl">
+      <Filter>hlsl</Filter>
+    </FxCompile>
+  </ItemGroup>
 </Project>

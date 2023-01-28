@@ -23,48 +23,32 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 
 #include "grp_local.h"
 #include "../imgui/imgui.h"
+namespace zpp
+{
+#include "hlsl/depth_pre_pass_vs.h"
+#include "hlsl/depth_pre_pass_ps.h"
+}
+namespace fog
+{
+#include "hlsl/fog_vs.h"
+}
+namespace fog_inside
+{
+#include "hlsl/fog_inside_ps.h"
+}
+namespace fog_outside
+{
+#include "hlsl/fog_outside_ps.h"
+}
 
 
-//
-// depth pre-pass
-//
-
-#pragma pack(push, 1)
+#pragma pack(push, 4)
 
 struct ZPPVertexRC
 {
 	float modelViewMatrix[16];
 	float projectionMatrix[16];
 };
-
-#pragma pack(pop)
-
-static const char* zpp_vs = R"grml(
-cbuffer RootConstants
-{
-	matrix modelViewMatrix;
-	matrix projectionMatrix;
-};
-
-float4 main(float4 position : POSITION) : SV_Position
-{
-	float4 positionVS = mul(modelViewMatrix, float4(position.xyz, 1));
-
-	return mul(projectionMatrix, positionVS);
-}
-)grml";
-
-static const char* zpp_ps = R"grml(
-void main()
-{
-}
-)grml";
-
-//
-// fog - from outside
-//
-
-#pragma pack(push, 1)
 
 struct FogVertexRC
 {
@@ -74,40 +58,6 @@ struct FogVertexRC
 	float boxMax[4];
 };
 
-#pragma pack(pop)
-
-static const char* fog_vs = R"grml(
-cbuffer RootConstants
-{
-	matrix modelViewMatrix;
-	matrix projectionMatrix;
-	float4 boxMin;
-	float4 boxMax;
-};
-
-struct VOut
-{
-	float4 position : SV_Position;
-	float2 proj2232 : TEXCOORD0;
-	float depthVS : DEPTHVS;
-};
-
-VOut main(float3 positionOS : POSITION)
-{
-	float3 positionWS = boxMin + positionOS * (boxMax - boxMin);
-	float4 positionVS = mul(modelViewMatrix, float4(positionWS, 1));
-
-	VOut output;
-	output.position = mul(projectionMatrix, positionVS);
-	output.proj2232 = float2(-projectionMatrix[2][2], projectionMatrix[2][3]);
-	output.depthVS = -positionVS.z;
-
-	return output;
-}
-)grml";
-
-#pragma pack(push, 1)
-
 struct FogPixelRC
 {
 	float colorDepth[4];
@@ -115,124 +65,11 @@ struct FogPixelRC
 
 #pragma pack(pop)
 
-static const char* fogOutside_ps = R"grml(
-cbuffer RootConstants
-{
-	float4 colorDepth;
-};
-
-struct VOut
-{
-	float4 position : SV_Position;
-	float2 proj2232 : TEXCOORD0;
-	float depthVS : DEPTHVS;
-};
-
-Texture2D depthTexture : register(t0);
-
-/*
-f   = far  clip plane distance
-n   = near clip plane distance
-exp = exponential depth value (as stored in the Z-buffer)
-
-                     2 * f * n             B
-linear(exp) = ----------------------- = -------
-              (f + n) - exp * (f - n)   exp - A
-
-            f + n               -2 * f * n
-with    A = -----    and    B = ----------
-            f - n                  f - n
-*/
-float LinearDepth(float zwDepth, float proj22, float proj32)
-{
-	return proj32 / (zwDepth - proj22);
-}
-
-float4 main(VOut input) : SV_Target
-{
-	float zwDepth = depthTexture.Load(int3(input.position.xy, 0)).x;
-	float depthBuff = LinearDepth(zwDepth, input.proj2232.x, input.proj2232.y);
-	float depthFrag = input.depthVS;
-	if(depthFrag > depthBuff)
-	{
-		discard;
-	}
-
-	float fogOpacity = saturate((depthBuff - depthFrag) / colorDepth.w);
-
-	return float4(colorDepth.rgb, fogOpacity);
-
-	// depth test debugging
-	//return depthFrag <= depthBuff ? float4(0, 1, 0, 1) : float4(1, 0, 0, 1);
-
-	// depth linearization debugging
-	//return float4(0, abs(depthBuff - depthFrag) < 1 ? 1 : 0, 0, 1);
-}
-)grml";
-
-//
-// fog - from inside
-//
-
-static const char* fogInside_ps = R"grml(
-cbuffer RootConstants
-{
-	float4 colorDepth;
-};
-
-struct VOut
-{
-	float4 position : SV_Position;
-	float2 proj2232 : TEXCOORD0;
-	float depthVS : DEPTHVS;
-};
-
-Texture2D depthTexture : register(t0);
-
-/*
-f   = far  clip plane distance
-n   = near clip plane distance
-exp = exponential depth value (as stored in the Z-buffer)
-
-                     2 * f * n             B
-linear(exp) = ----------------------- = -------
-              (f + n) - exp * (f - n)   exp - A
-
-            f + n               -2 * f * n
-with    A = -----    and    B = ----------
-            f - n                  f - n
-*/
-float LinearDepth(float zwDepth, float proj22, float proj32)
-{
-	return proj32 / (zwDepth - proj22);
-}
-
-float4 main(VOut input) : SV_Target
-{
-	float zwDepth = depthTexture.Load(int3(input.position.xy, 0)).x;
-	float depthBuff = LinearDepth(zwDepth, input.proj2232.x, input.proj2232.y);
-	float depthFrag = input.depthVS;
-	float depth = min(depthBuff, depthFrag);
-	float fogOpacity = saturate(depth / colorDepth.w);
-
-	return float4(colorDepth.rgb, fogOpacity);
-
-	// depth test debugging
-	//return depthFrag <= depthBuff ? float4(0, 1, 0, 1) : float4(1, 0, 0, 1);
-
-	// depth linearization debugging
-	//return float4(0, abs(depthBuff - depthFrag) < 1 ? 1 : 0, 0, 1);
-}
-)grml";
-
 
 static bool drawPrePass = false;
 static bool drawDynamic = true;
 static bool drawTransparents = true;
 static bool drawFog = true;
-static float axisScaleX = 1.0f;
-static float axisScaleY = 1.0f;
-static float axisScaleZ = 1.0f;
 
 
 static bool HasStaticGeo(const drawSurf_t* drawSurf)
@@ -361,8 +198,8 @@ void World::Init()
 	}
 	{
 		GraphicsPipelineDesc desc("Z pre-pass", zppRootSignature);
-		desc.vertexShader = CompileVertexShader(zpp_vs);
-		desc.pixelShader = CompilePixelShader(zpp_ps);
+		desc.vertexShader = ShaderByteCode(zpp::g_vs);
+		desc.pixelShader = ShaderByteCode(zpp::g_ps);
 		desc.vertexLayout.AddAttribute(0, ShaderSemantic::Position, DataType::Float32, 4, 0);
 		desc.depthStencil.depthComparison = ComparisonFunction::GreaterEqual;
 		desc.depthStencil.depthStencilFormat = TextureFormat::Depth32_Float;
@@ -430,8 +267,8 @@ void World::Init()
 	}
 	{
 		GraphicsPipelineDesc desc("fog outside", fogRootSignature);
-		desc.vertexShader = CompileVertexShader(fog_vs);
-		desc.pixelShader = CompilePixelShader(fogOutside_ps);
+		desc.vertexShader = ShaderByteCode(fog::g_vs);
+		desc.pixelShader = ShaderByteCode(fog_outside::g_ps);
 		desc.depthStencil.DisableDepth();
 		desc.rasterizer.cullMode = CT_BACK_SIDED;
 		desc.rasterizer.polygonOffset = false;
@@ -441,8 +278,8 @@ void World::Init()
 	}
 	{
 		GraphicsPipelineDesc desc("fog inside", fogRootSignature);
-		desc.vertexShader = CompileVertexShader(fog_vs);
-		desc.pixelShader = CompilePixelShader(fogInside_ps);
+		desc.vertexShader = ShaderByteCode(fog::g_vs);
+		desc.pixelShader = ShaderByteCode(fog_inside::g_ps);
 		desc.depthStencil.DisableDepth();
 		desc.rasterizer.cullMode = CT_FRONT_SIDED;
 		desc.rasterizer.polygonOffset = false;
@@ -703,10 +540,6 @@ void World::DrawGUI()
 		ImGui::Checkbox("Draw Transparents", &drawTransparents);
 		ImGui::Checkbox("Draw Fog", &drawFog);
 		ImGui::Text("PSO count: %d", (int)grp.psoCount);
-
-		ImGui::SliderFloat("Axis Scale X", &axisScaleX, -10.0f, 10.0f);
-		ImGui::SliderFloat("Axis Scale Y", &axisScaleY, -10.0f, 10.0f);
-		ImGui::SliderFloat("Axis Scale Z", &axisScaleZ, -10.0f, 10.0f);
 
 		vec3_t axis[3];
 		ExtractCameraAxisVectors(axis[0], axis[1], axis[2], backEnd.viewParms.world.modelMatrix);

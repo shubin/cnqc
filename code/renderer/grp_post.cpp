@@ -22,46 +22,17 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 
 
 #include "grp_local.h"
+#include "hlsl/gamma_vs.h"
+#include "hlsl/gamma_ps.h"
 
 
-#pragma pack(push, 1)
+#pragma pack(push, 4)
 
 struct PostVertexRC
 {
 	float scaleX;
 	float scaleY;
 };
-
-#pragma pack(pop)
-
-static const char* post_vs = R"grml(
-cbuffer RootConstants
-{
-	float scaleX;
-	float scaleY;
-};
-
-struct VOut
-{
-	float4 position : SV_Position;
-	float2 texCoords : TEXCOORD0;
-};
-
-VOut main(uint id : SV_VertexID)
-{
-	VOut output;
-	output.position.x = scaleX * ((float)(id / 2) * 4.0 - 1.0);
-	output.position.y = scaleY * ((float)(id % 2) * 4.0 - 1.0);
-	output.position.z = 0.0;
-	output.position.w = 1.0;
-	output.texCoords.x = (float)(id / 2) * 2.0;
-	output.texCoords.y = 1.0 - (float)(id % 2) * 2.0;
-
-	return output;
-}
-)grml";
-
-#pragma pack(push, 1)
 
 struct PostPixelRC
 {
@@ -71,43 +42,6 @@ struct PostPixelRC
 };
 
 #pragma pack(pop)
-
-static const char* post_ps = R"grml(
-// X3571: pow(f, e) won't work if f is negative
-#pragma warning(disable : 3571)
-
-cbuffer RootConstants
-{
-	float invGamma;
-	float brightness;
-	float greyscale;
-};
-
-struct VOut
-{
-	float4 position : SV_Position;
-	float2 texCoords : TEXCOORD0;
-};
-
-Texture2D texture0 : register(t0);
-SamplerState sampler0 : register(s0);
-
-float4 MakeGreyscale(float4 input, float amount)
-{
-	float grey = dot(input.rgb, float3(0.299, 0.587, 0.114));
-	float4 result = lerp(input, float4(grey, grey, grey, input.a), amount);
-
-	return result;
-}
-
-float4 main(VOut input) : SV_Target
-{
-	float3 base = texture0.Sample(sampler0, input.texCoords).rgb;
-	float3 gc = pow(base, invGamma) * brightness;
-
-	return MakeGreyscale(float4(gc.rgb, 1.0), greyscale);
-}
-)grml";
 
 
 void PostProcess::Init()
@@ -138,8 +72,8 @@ void PostProcess::Init()
 	}
 	{
 		GraphicsPipelineDesc desc("Post Process", rootSignature);
-		desc.vertexShader = CompileVertexShader(post_vs);
-		desc.pixelShader = CompilePixelShader(post_ps);
+		desc.vertexShader = ShaderByteCode(g_vs);
+		desc.pixelShader = ShaderByteCode(g_ps);
 		desc.depthStencil.DisableDepth();
 		desc.rasterizer.cullMode = CT_TWO_SIDED;
 		desc.AddRenderTarget(0, TextureFormat::RGBA32_UNorm);

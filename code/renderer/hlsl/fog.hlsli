@@ -1,6 +1,6 @@
 /*
 ===========================================================================
-Copyright (C) 2022-2023 Gian 'myT' Schellenbaum
+Copyright (C) 2023 Gian 'myT' Schellenbaum
 
 This file is part of Challenge Quake 3 (CNQ3).
 
@@ -18,37 +18,50 @@ You should have received a copy of the GNU General Public License
 along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 ===========================================================================
 */
-// Rendering Hardware Interface - public interface
+// fog volume (AABB) rendering - shared code
 
 
-#pragma once
-
-
-#include <stdint.h>
-
-
-namespace RHI
+struct VOut
 {
-	typedef uint32_t Handle;
+	float4 position : SV_Position;
+	float2 proj2232 : TEXCOORD0;
+	float depthVS : DEPTHVS;
+};
 
-#define RHI_HANDLE_TYPE(TypeName) struct TypeName { Handle v; }; \
-	inline bool operator==(TypeName a, TypeName b) { return a.v == b.v; } \
-	inline bool operator!=(TypeName a, TypeName b) { return a.v != b.v; }
-	RHI_HANDLE_TYPE(HBuffer);
-	RHI_HANDLE_TYPE(HRootSignature);
-	RHI_HANDLE_TYPE(HDescriptorTable);
-	RHI_HANDLE_TYPE(HPipeline);
-	RHI_HANDLE_TYPE(HTexture);
-	RHI_HANDLE_TYPE(HSampler);
-	RHI_HANDLE_TYPE(HDurationQuery);
-	RHI_HANDLE_TYPE(HShader);
-#undef RHI_HANDLE_TYPE
 
-	struct MappedTexture
-	{
-		uint8_t* mappedData;
-		uint32_t rowCount;
-		uint32_t srcRowByteCount;
-		uint32_t dstRowByteCount;
-	};
+#ifdef VERTEX_SHADER
+
+cbuffer RootConstants
+{
+	matrix modelViewMatrix;
+	matrix projectionMatrix;
+	float4 boxMin;
+	float4 boxMax;
+};
+
+VOut vs(float3 positionOS : POSITION)
+{
+	float3 positionWS = boxMin.xyz + positionOS * (boxMax.xyz - boxMin.xyz);
+	float4 positionVS = mul(modelViewMatrix, float4(positionWS, 1));
+
+	VOut output;
+	output.position = mul(projectionMatrix, positionVS);
+	output.proj2232 = float2(-projectionMatrix[2][2], projectionMatrix[2][3]);
+	output.depthVS = -positionVS.z;
+
+	return output;
 }
+
+#endif
+
+
+#ifdef PIXEL_SHADER
+
+cbuffer RootConstants
+{
+	float4 colorDepth;
+};
+
+Texture2D depthTexture : register(t0);
+
+#endif

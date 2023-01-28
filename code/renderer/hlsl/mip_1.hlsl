@@ -1,6 +1,6 @@
 /*
 ===========================================================================
-Copyright (C) 2022-2023 Gian 'myT' Schellenbaum
+Copyright (C) 2023 Gian 'myT' Schellenbaum
 
 This file is part of Challenge Quake 3 (CNQ3).
 
@@ -18,37 +18,20 @@ You should have received a copy of the GNU General Public License
 along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 ===========================================================================
 */
-// Rendering Hardware Interface - public interface
+// mip-map generation: gamma-space to linear-space transform
 
 
-#pragma once
-
-
-#include <stdint.h>
-
-
-namespace RHI
+cbuffer RootConstants
 {
-	typedef uint32_t Handle;
+	float gamma;
+}
 
-#define RHI_HANDLE_TYPE(TypeName) struct TypeName { Handle v; }; \
-	inline bool operator==(TypeName a, TypeName b) { return a.v == b.v; } \
-	inline bool operator!=(TypeName a, TypeName b) { return a.v != b.v; }
-	RHI_HANDLE_TYPE(HBuffer);
-	RHI_HANDLE_TYPE(HRootSignature);
-	RHI_HANDLE_TYPE(HDescriptorTable);
-	RHI_HANDLE_TYPE(HPipeline);
-	RHI_HANDLE_TYPE(HTexture);
-	RHI_HANDLE_TYPE(HSampler);
-	RHI_HANDLE_TYPE(HDurationQuery);
-	RHI_HANDLE_TYPE(HShader);
-#undef RHI_HANDLE_TYPE
+RWTexture2D<float4> src : register(u3);
+RWTexture2D<float4> dst : register(u0);
 
-	struct MappedTexture
-	{
-		uint8_t* mappedData;
-		uint32_t rowCount;
-		uint32_t srcRowByteCount;
-		uint32_t dstRowByteCount;
-	};
+[numthreads(8, 8, 1)]
+void cs(uint3 id : SV_DispatchThreadID)
+{
+	float4 v = src[id.xy];
+	dst[id.xy] = float4(pow(v.xyz, gamma), v.a);
 }

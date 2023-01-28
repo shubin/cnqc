@@ -22,9 +22,12 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 
 
 #include "grp_local.h"
+#include "hlsl/ui_vs.h"
+#include "hlsl/ui_ps.h"
 
 
 #pragma pack(push, 4)
+
 struct VertexRC
 {
 	float scale[2];
@@ -35,62 +38,8 @@ struct PixelRC
 	uint32_t texture;
 	uint32_t sampler;
 };
+
 #pragma pack(pop)
-
-static const char* vs = R"grml(
-cbuffer RootConstants
-{
-	float2 scale;
-};
-
-struct VIn
-{
-	float2 position : POSITION;
-	float2 texCoords : TEXCOORD0;
-	float4 color : COLOR0;
-};
-
-struct VOut
-{
-	float4 position : SV_Position;
-	float2 texCoords : TEXCOORD0;
-	float4 color : COLOR0;
-};
-
-VOut main(VIn input)
-{
-	const float2 position = input.position * scale;
-	VOut output;
-	output.position = float4(position.x - 1.0, 1.0 - position.y, 0.0, 1.0);
-	output.texCoords = input.texCoords;
-	output.color = input.color;
-
-	return output;
-}
-)grml";
-
-static const char* ps = R"grml(
-cbuffer RootConstants
-{
-	uint textureIndex;
-	uint samplerIndex;
-};
-
-Texture2D textures2D[4096] : register(t0);
-SamplerState samplers[12] : register(s0);
-
-struct VOut
-{
-	float4 position : SV_Position;
-	float2 texCoords : TEXCOORD0;
-	float4 color : COLOR0;
-};
-
-float4 main(VOut input) : SV_Target
-{
-	return textures2D[textureIndex].Sample(samplers[samplerIndex], input.texCoords) * input.color;
-}
-)grml";
 
 
 void UI::Init()
@@ -109,8 +58,8 @@ void UI::Init()
 	}
 	{
 		GraphicsPipelineDesc desc("UI", rootSignature);
-		desc.vertexShader = CompileVertexShader(vs);
-		desc.pixelShader = CompilePixelShader(ps);
+		desc.vertexShader = ShaderByteCode(g_vs);
+		desc.pixelShader = ShaderByteCode(g_ps);
 		desc.vertexLayout.bindingStrides[0] = sizeof(UI::Vertex);
 		desc.vertexLayout.AddAttribute(0, ShaderSemantic::Position,
 			DataType::Float32, 2, offsetof(UI::Vertex, position));

@@ -1,6 +1,6 @@
 /*
 ===========================================================================
-Copyright (C) 2022-2023 Gian 'myT' Schellenbaum
+Copyright (C) 2023 Gian 'myT' Schellenbaum
 
 This file is part of Challenge Quake 3 (CNQ3).
 
@@ -18,37 +18,31 @@ You should have received a copy of the GNU General Public License
 along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 ===========================================================================
 */
-// Rendering Hardware Interface - public interface
+// helper functions used by multiple shader files
 
 
-#pragma once
-
-
-#include <stdint.h>
-
-
-namespace RHI
+float4 MakeGreyscale(float4 input, float amount)
 {
-	typedef uint32_t Handle;
+	float grey = dot(input.rgb, float3(0.299, 0.587, 0.114));
+	float4 result = lerp(input, float4(grey, grey, grey, input.a), amount);
 
-#define RHI_HANDLE_TYPE(TypeName) struct TypeName { Handle v; }; \
-	inline bool operator==(TypeName a, TypeName b) { return a.v == b.v; } \
-	inline bool operator!=(TypeName a, TypeName b) { return a.v != b.v; }
-	RHI_HANDLE_TYPE(HBuffer);
-	RHI_HANDLE_TYPE(HRootSignature);
-	RHI_HANDLE_TYPE(HDescriptorTable);
-	RHI_HANDLE_TYPE(HPipeline);
-	RHI_HANDLE_TYPE(HTexture);
-	RHI_HANDLE_TYPE(HSampler);
-	RHI_HANDLE_TYPE(HDurationQuery);
-	RHI_HANDLE_TYPE(HShader);
-#undef RHI_HANDLE_TYPE
+	return result;
+}
 
-	struct MappedTexture
-	{
-		uint8_t* mappedData;
-		uint32_t rowCount;
-		uint32_t srcRowByteCount;
-		uint32_t dstRowByteCount;
-	};
+/*
+f   = far  clip plane distance
+n   = near clip plane distance
+exp = exponential depth value (as stored in the Z-buffer)
+
+					 2 * f * n             B
+linear(exp) = ----------------------- = -------
+			  (f + n) - exp * (f - n)   exp - A
+
+			f + n               -2 * f * n
+with    A = -----    and    B = ----------
+			f - n                  f - n
+*/
+float LinearDepth(float zwDepth, float proj22, float proj32)
+{
+	return proj32 / (zwDepth - proj22);
 }

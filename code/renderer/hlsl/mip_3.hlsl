@@ -1,6 +1,6 @@
 /*
 ===========================================================================
-Copyright (C) 2022-2023 Gian 'myT' Schellenbaum
+Copyright (C) 2023 Gian 'myT' Schellenbaum
 
 This file is part of Challenge Quake 3 (CNQ3).
 
@@ -18,37 +18,33 @@ You should have received a copy of the GNU General Public License
 along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 ===========================================================================
 */
-// Rendering Hardware Interface - public interface
+// mip-map generation: linear-space to gamma-space transform
 
 
-#pragma once
-
-
-#include <stdint.h>
-
-
-namespace RHI
+cbuffer RootConstants
 {
-	typedef uint32_t Handle;
+	float4 blendColor;
+	float intensity;
+	float invGamma; // 1.0 / gamma
+	uint srcMip;
+	uint dstMip;
+}
 
-#define RHI_HANDLE_TYPE(TypeName) struct TypeName { Handle v; }; \
-	inline bool operator==(TypeName a, TypeName b) { return a.v == b.v; } \
-	inline bool operator!=(TypeName a, TypeName b) { return a.v != b.v; }
-	RHI_HANDLE_TYPE(HBuffer);
-	RHI_HANDLE_TYPE(HRootSignature);
-	RHI_HANDLE_TYPE(HDescriptorTable);
-	RHI_HANDLE_TYPE(HPipeline);
-	RHI_HANDLE_TYPE(HTexture);
-	RHI_HANDLE_TYPE(HSampler);
-	RHI_HANDLE_TYPE(HDurationQuery);
-	RHI_HANDLE_TYPE(HShader);
-#undef RHI_HANDLE_TYPE
+RWTexture2D<float4> mips[3 + 16] : register(u0);
 
-	struct MappedTexture
-	{
-		uint8_t* mappedData;
-		uint32_t rowCount;
-		uint32_t srcRowByteCount;
-		uint32_t dstRowByteCount;
-	};
+[numthreads(8, 8, 1)]
+void cs(uint3 id : SV_DispatchThreadID)
+{
+	RWTexture2D<float4> src = mips[srcMip];
+	RWTexture2D<float4> dst = mips[dstMip];
+
+	// yes, intensity *should* be done in light-linear space
+	// but we keep the old behavior for consistency...
+	float4 in0 = src[id.xy];
+	float3 in1 = 0.5 * (in0.rgb + blendColor.rgb);
+	float3 inV = lerp(in0.rgb, in1.rgb, blendColor.a);
+	float3 out0 = pow(max(inV, 0.0), invGamma);
+	float3 out1 = out0 * intensity;
+	float4 outV = saturate(float4(out1, in0.a));
+	dst[id.xy] = outV;
 }

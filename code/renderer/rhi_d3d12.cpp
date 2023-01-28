@@ -167,6 +167,7 @@ namespace RHI
 			DescriptorTable,
 			Pipeline,
 			DurationQuery,
+			Shader,
 			Count
 		};
 	};
@@ -269,6 +270,12 @@ namespace RHI
 		ComputePipelineDesc computeDesc;
 		ID3D12PipelineState* pso = NULL;
 		PipelineType::Id type = PipelineType::Graphics;
+		bool shortLifeTime = false;
+	};
+
+	struct Shader
+	{
+		ID3DBlob* blob = NULL;
 		bool shortLifeTime = false;
 	};
 
@@ -430,6 +437,7 @@ namespace RHI
 		POOL(RootSignature, 64) rootSignatures;
 		POOL(DescriptorTable, 64) descriptorTables;
 		POOL(Pipeline, 256) pipelines;
+		POOL(Shader, 16) shaders;
 #undef POOL
 
 #define DESTROY_POOL_LIST(POOL) \
@@ -437,7 +445,8 @@ namespace RHI
 		POOL(textures, DestroyTexture) \
 		POOL(rootSignatures, DestroyRootSignature) \
 		POOL(descriptorTables, DestroyDescriptorTable) \
-		POOL(pipelines, DestroyPipeline)
+		POOL(pipelines, DestroyPipeline) \
+		POOL(shaders, DestroyShader)
 
 		// null resources, no manual clean-up needed
 		HTexture nullTexture; // SRV
@@ -1637,6 +1646,7 @@ namespace RHI
 			ITEM("Root Signatures", rhi.rootSignatures);
 			ITEM("Descriptor Tables", rhi.descriptorTables);
 			ITEM("Pipelines", rhi.pipelines);
+			ITEM("Shaders", rhi.shaders);
 #undef ITEM
 
 			ImGui::EndTable();
@@ -2965,6 +2975,78 @@ namespace RHI
 		rhi.pipelines.Remove(pipeline);
 	}
 
+	HShader CreateShader(const ShaderDesc& desc)
+	{
+		// extra entries: NULL terminator + VERTEX_SHADER + PIXEL_SHADER + COMPUTE_SHADER
+		D3D_SHADER_MACRO shaderMacros[16];
+		Q_assert(ARRAY_LEN(shaderMacros) >= desc.macroCount + 4);
+
+		const char* target = "???";
+		switch(desc.stage)
+		{
+			case ShaderStage::Vertex: target = "vs_5_1"; break;
+			case ShaderStage::Pixel: target = "ps_5_1"; break;
+			case ShaderStage::Compute: target = "cs_5_1"; break;
+			default: Q_assert(0); break;
+		}
+
+		// yup, this leaks memory but we don't care as it's for quick and dirty testing
+		// could write to a linear allocator instead...
+		ID3DBlob* blob;
+		ID3DBlob* error;
+#if defined(_DEBUG)
+		const UINT flags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#else
+		const UINT flags = D3DCOMPILE_OPTIMIZATION_LEVEL3;
+#endif
+
+		uint32_t md = 0;
+		shaderMacros[md].Name = "VERTEX_SHADER";
+		shaderMacros[md].Definition = desc.stage == ShaderStage::Vertex ? "1" : "0";
+		md++;
+		shaderMacros[md].Name = "PIXEL_SHADER";
+		shaderMacros[md].Definition = desc.stage == ShaderStage::Pixel ? "1" : "0";
+		md++;
+		shaderMacros[md].Name = "COMPUTE_SHADER";
+		shaderMacros[md].Definition = desc.stage == ShaderStage::Compute ? "1" : "0";
+		md++;
+		for(uint32_t ms = 0; ms < desc.macroCount; ++ms)
+		{
+			shaderMacros[md].Name = desc.macros[ms].name;
+			shaderMacros[md].Definition = desc.macros[ms].value;
+			md++;
+		}
+		shaderMacros[md].Name = NULL;
+		shaderMacros[md].Definition = NULL;
+		if(FAILED(D3DCompile(desc.source, desc.sourceLength, NULL, shaderMacros, NULL, desc.entryPoint, target, flags, 0, &blob, &error)))
+		{
+			ri.Error(ERR_FATAL, "Shader (%s) compilation failed:\n%s\n", target, (const char*)error->GetBufferPointer());
+			return RHI_MAKE_NULL_HANDLE();
+		}
+
+		Shader shader;
+		shader.blob = blob;
+
+		return rhi.shaders.Add(shader);
+	}
+
+	ShaderByteCode GetShaderByteCode(HShader shader)
+	{
+		ID3DBlob* const blob = rhi.shaders.Get(shader).blob;
+
+		ShaderByteCode byteCode;
+		byteCode.data = blob->GetBufferPointer();
+		byteCode.byteCount = blob->GetBufferSize();
+
+		return byteCode;
+	}
+
+	void DestroyShader(HShader shader)
+	{
+		COM_RELEASE(rhi.shaders.Get(shader).blob);
+		rhi.shaders.Remove(shader);
+	}
+
 	void CmdBindRenderTargets(uint32_t colorCount, const HTexture* colorTargets, const HTexture* depthStencilTarget)
 	{
 		Q_assert(CanWriteCommands());
@@ -3388,6 +3470,7 @@ namespace RHI
 		rhi.tempCommandListOpen = false;
 	}
 
+#if 0 // @TODO: delete!!!
 	// @TODO: update to a CreateShader / DestroyShader interface,
 	// with the struct containing a void* to the blob
 	ShaderByteCode CompileShader(ShaderStage::Id stage, const char* source, const char* entryPoint, uint32_t macroCount, const ShaderMacro* macros)
@@ -3445,6 +3528,7 @@ namespace RHI
 
 		return byteCode;
 	}
+#endif
 }
 
 void R_GUI_RHI()

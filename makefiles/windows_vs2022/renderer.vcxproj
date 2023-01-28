@@ -262,6 +262,100 @@
     <ClCompile Include="..\..\code\renderer\tr_surface.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_world.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\code\renderer\hlsl\fog.hlsli">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">true</ExcludedFromBuild>
+    </None>
+    <None Include="..\..\code\renderer\hlsl\shared.hlsli">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">true</ExcludedFromBuild>
+    </None>
+    <None Include="..\..\code\renderer\hlsl\smaa.hlsli">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">true</ExcludedFromBuild>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="..\..\code\renderer\hlsl\depth_pre_pass.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\fog_inside.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\fog_outside.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\mip_1.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\mip_2.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\mip_3.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\post_gamma.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\imgui.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\smaa_1.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\smaa_2.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\smaa_3.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\ui.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

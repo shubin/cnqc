@@ -22,8 +22,23 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 
 
 #include "grp_local.h"
-#include "smaa/AreaTex.h"
-#include "smaa/SearchTex.h"
+#include "smaa_area_texture.h"
+#include "smaa_search_texture.h"
+namespace pass_1
+{
+#include "hlsl/smaa_1_vs.h"
+#include "hlsl/smaa_1_ps.h"
+}
+namespace pass_2
+{
+#include "hlsl/smaa_2_vs.h"
+#include "hlsl/smaa_2_ps.h"
+}
+namespace pass_3
+{
+#include "hlsl/smaa_3_vs.h"
+#include "hlsl/smaa_3_ps.h"
+}
 
 
 // SMAA has 3 passes:
@@ -39,7 +54,16 @@ to do:
 - transform into and away from gamma space
 - evaluate perf. using a 2-channel edge texture
 - evaluate perf. using the depth/stencil texture
+- CVar (r_aa to pick a mode? none, SMAA, CMAA 2, etc)
 */
+
+
+#pragma pack(push, 4)
+struct RootConstants
+{
+	vec4_t rtMetrics;
+};
+#pragma pack(pop)
 
 
 void SMAA::Init()
@@ -82,8 +106,10 @@ void SMAA::Init()
 		}
 		{
 			RootSignatureDesc desc("SMAA");
-			desc.samplerCount = 2;
+			desc.constants[ShaderStage::Vertex].byteCount = sizeof(RootConstants);
+			desc.constants[ShaderStage::Pixel].byteCount = sizeof(RootConstants);
 			desc.samplerVisibility = ShaderStages::PixelBit;
+			desc.samplerCount = 2;
 			desc.genericVisibility = ShaderStages::PixelBit;
 			desc.AddRange(DescriptorType::Texture, 0, 5);
 			rootSignature = CreateRootSignature(desc);
@@ -102,93 +128,34 @@ void SMAA::Init()
 			update.SetSamplers(ARRAY_LEN(samplers), samplers);
 			UpdateDescriptorTable(descriptorTable, update);
 		}
-		void* buf;
-		char* smaaShader;
 		{
-			const int fileLength = ri.FS_ReadFile("SMAA.hlsl", &buf);
-			Q_assert(fileLength > 0);
-			smaaShader = (char*)buf;
-			smaaShader[fileLength - 1] = '\0';
-		}
-		const char* rtMetrics = va("float4(%g, %g, %.1f, %.1f)",
-			1.0f / (float)glConfig.vidWidth, 1.0f / (float)glConfig.vidHeight,
-			(float)glConfig.vidWidth, (float)glConfig.vidHeight);
-		{
-			const ShaderMacro macrosVS[] =
-			{
-				ShaderMacro("SMAA_INCLUDE_VS", "1"),
-				ShaderMacro("SMAA_HLSL_5_1", "1"),
-				ShaderMacro("SMAA_RT_METRICS", rtMetrics),
-				ShaderMacro("SMAA_PRESET_HIGH", "1"),
-				ShaderMacro("CNQ3_PASS_1", "1")
-			};
-			const ShaderMacro macrosPS[] =
-			{
-				ShaderMacro("SMAA_INCLUDE_PS", "1"),
-				ShaderMacro("SMAA_HLSL_5_1", "1"),
-				ShaderMacro("SMAA_RT_METRICS", rtMetrics),
-				ShaderMacro("SMAA_PRESET_HIGH", "1"),
-				ShaderMacro("CNQ3_PASS_1", "1")
-			};
+			
 			GraphicsPipelineDesc desc("SMAA edge detection", rootSignature);
-			desc.vertexShader = CompileShader(ShaderStage::Vertex, smaaShader, "CNQ3FirstPassVS", ARRAY_LEN(macrosVS), macrosVS);
-			desc.pixelShader = CompileShader(ShaderStage::Pixel, smaaShader, "CNQ3FirstPassPS", ARRAY_LEN(macrosPS), macrosPS);
+			desc.vertexShader = ShaderByteCode(pass_1::g_vs);
+			desc.pixelShader = ShaderByteCode(pass_1::g_ps);
 			desc.depthStencil.DisableDepth();
 			desc.rasterizer.cullMode = CT_TWO_SIDED;
 			desc.AddRenderTarget(0, TextureFormat::RGBA32_UNorm);
 			firstPassPipeline = CreateGraphicsPipeline(desc);
 		}
 		{
-			const ShaderMacro macrosVS[] =
-			{
-				ShaderMacro("SMAA_INCLUDE_VS", "1"),
-				ShaderMacro("SMAA_HLSL_5_1", "1"),
-				ShaderMacro("SMAA_RT_METRICS", rtMetrics),
-				ShaderMacro("SMAA_PRESET_HIGH", "1"),
-				ShaderMacro("CNQ3_PASS_2", "1")
-			};
-			const ShaderMacro macrosPS[] =
-			{
-				ShaderMacro("SMAA_INCLUDE_PS", "1"),
-				ShaderMacro("SMAA_HLSL_5_1", "1"),
-				ShaderMacro("SMAA_RT_METRICS", rtMetrics),
-				ShaderMacro("SMAA_PRESET_HIGH", "1"),
-				ShaderMacro("CNQ3_PASS_2", "1")
-			};
 			GraphicsPipelineDesc desc("SMAA blend weight computation", rootSignature);
-			desc.vertexShader = CompileShader(ShaderStage::Vertex, smaaShader, "CNQ3SecondPassVS", ARRAY_LEN(macrosVS), macrosVS);
-			desc.pixelShader = CompileShader(ShaderStage::Pixel, smaaShader, "CNQ3SecondPassPS", ARRAY_LEN(macrosPS), macrosPS);
+			desc.vertexShader = ShaderByteCode(pass_2::g_vs);
+			desc.pixelShader = ShaderByteCode(pass_2::g_ps);
 			desc.depthStencil.DisableDepth();
 			desc.rasterizer.cullMode = CT_TWO_SIDED;
 			desc.AddRenderTarget(0, TextureFormat::RGBA32_UNorm);
 			secondPassPipeline = CreateGraphicsPipeline(desc);
 		}
 		{
-			const ShaderMacro macrosVS[] =
-			{
-				ShaderMacro("SMAA_INCLUDE_VS", "1"),
-				ShaderMacro("SMAA_HLSL_5_1", "1"),
-				ShaderMacro("SMAA_RT_METRICS", rtMetrics),
-				ShaderMacro("SMAA_PRESET_HIGH", "1"),
-				ShaderMacro("CNQ3_PASS_3", "1")
-			};
-			const ShaderMacro macrosPS[] =
-			{
-				ShaderMacro("SMAA_INCLUDE_PS", "1"),
-				ShaderMacro("SMAA_HLSL_5_1", "1"),
-				ShaderMacro("SMAA_RT_METRICS", rtMetrics),
-				ShaderMacro("SMAA_PRESET_HIGH", "1"),
-				ShaderMacro("CNQ3_PASS_3", "1")
-			};
 			GraphicsPipelineDesc desc("SMAA neighborhood blending", rootSignature);
-			desc.vertexShader = CompileShader(ShaderStage::Vertex, smaaShader, "CNQ3ThirdPassVS", ARRAY_LEN(macrosVS), macrosVS);
-			desc.pixelShader = CompileShader(ShaderStage::Pixel, smaaShader, "CNQ3ThirdPassPS", ARRAY_LEN(macrosPS), macrosPS);
+			desc.vertexShader = ShaderByteCode(pass_3::g_vs);
+			desc.pixelShader = ShaderByteCode(pass_3::g_ps);
 			desc.depthStencil.DisableDepth();
 			desc.rasterizer.cullMode = CT_TWO_SIDED;
 			desc.AddRenderTarget(0, TextureFormat::RGBA32_UNorm);
 			thirdPassPipeline = CreateGraphicsPipeline(desc);
 		}
-		ri.FS_FreeFile(buf);
 	}
 
 	{
@@ -249,6 +216,12 @@ void SMAA::Init()
 
 void SMAA::Draw(const viewParms_t& parms)
 {
+	// @TODO: CVar
+	if(1)
+	{
+		return;
+	}
+
 	grp.BeginRenderPass("SMAA", 0.5f, 0.25f, 0.75f);
 
 	// @TODO: apply our post-process to the 3D scene
@@ -259,6 +232,14 @@ void SMAA::Draw(const viewParms_t& parms)
 
 	CmdBindRootSignature(rootSignature);
 	CmdBindDescriptorTable(rootSignature, descriptorTable);
+
+	RootConstants rc = {};
+	rc.rtMetrics[0] = 1.0f / (float)glConfig.vidWidth;
+	rc.rtMetrics[1] = 1.0f / (float)glConfig.vidHeight;
+	rc.rtMetrics[2] = (float)glConfig.vidWidth;
+	rc.rtMetrics[3] = (float)glConfig.vidHeight;
+	CmdSetRootConstants(rootSignature, ShaderStage::Vertex, &rc);
+	CmdSetRootConstants(rootSignature, ShaderStage::Pixel, &rc);
 
 	CmdSetViewport(0, 0, glConfig.vidWidth, glConfig.vidHeight);
 	CmdSetScissor(parms.viewportX, parms.viewportY, parms.viewportWidth, parms.viewportHeight);

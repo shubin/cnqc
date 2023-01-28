@@ -22,35 +22,27 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 
 
 #include "grp_local.h"
+namespace start
+{
+#include "hlsl/mip_1_cs.h"
+}
+namespace down
+{
+#include "hlsl/mip_2_cs.h"
+}
+namespace end
+{
+#include "hlsl/mip_3_cs.h"
+}
 
 
 #pragma pack(push, 4)
+
 struct StartConstants
 {
 	float gamma;
 };
-#pragma pack(pop)
 
-static const char* start_cs = R"grml(
-// gamma-space to linear-space compute shader
-
-RWTexture2D<float4> src : register(u3);
-RWTexture2D<float4> dst : register(u0);
-
-cbuffer RootConstants
-{
-	float gamma;
-}
-
-[numthreads(8, 8, 1)]
-void main(uint3 id : SV_DispatchThreadID)
-{
-	float4 v = src[id.xy];
-	dst[id.xy] = float4(pow(v.xyz, gamma), v.a);
-}
-)grml";
-
-#pragma pack(push, 4)
 struct DownConstants
 {
 	float weights[4];
@@ -61,57 +53,7 @@ struct DownConstants
 	uint32_t srcMip;
 	uint32_t dstMip;
 };
-#pragma pack(pop)
 
-static const char* down_cs = R"grml(
-// 8-tap 1D filter compute shader
-
-RWTexture2D<float4> mips[2] : register(u0);
-
-cbuffer RootConstants
-{
-	float4 weights;
-	int2 maxSize;
-	int2 scale;
-	int2 offset;
-	uint clampMode; // 0 = repeat
-	uint srcMip;
-	uint dstMip;
-}
-
-uint2 FixCoords(int2 c)
-{
-	if(clampMode > 0)
-	{
-		// clamp
-		return uint2(clamp(c, int2(0, 0), maxSize));
-	}
-
-	// repeat
-	return uint2(c & maxSize);
-}
-
-[numthreads(8, 8, 1)]
-void main(uint3 id : SV_DispatchThreadID)
-{
-	RWTexture2D<float4> src = mips[srcMip];
-	RWTexture2D<float4> dst = mips[dstMip];
-
-	int2 base = int2(id.xy) * scale;
-	float4 r = float4(0, 0, 0, 0);
-	r += src[FixCoords(base - offset * 3)] * weights.x;
-	r += src[FixCoords(base - offset * 2)] * weights.y;
-	r += src[FixCoords(base - offset * 1)] * weights.z;
-	r += src[          base              ] * weights.w;
-	r += src[          base + offset     ] * weights.w;
-	r += src[FixCoords(base + offset * 2)] * weights.z;
-	r += src[FixCoords(base + offset * 3)] * weights.y;
-	r += src[FixCoords(base + offset * 4)] * weights.x;
-	dst[id.xy] = r;
-}
-)grml";
-
-#pragma pack(push, 4)
 struct EndConstants
 {
 	float blendColor[4];
@@ -120,39 +62,8 @@ struct EndConstants
 	uint32_t srcMip;
 	uint32_t dstMip;
 };
+
 #pragma pack(pop)
-
-static const char* end_cs = R"grml(
-// linear-space to gamma-space compute shader
-
-RWTexture2D<float4> mips[3 + 16] : register(u0);
-
-cbuffer RootConstants
-{
-	float4 blendColor;
-	float intensity;
-	float invGamma; // 1.0 / gamma
-	uint srcMip;
-	uint dstMip;
-}
-
-[numthreads(8, 8, 1)]
-void main(uint3 id : SV_DispatchThreadID)
-{
-	RWTexture2D<float4> src = mips[srcMip];
-	RWTexture2D<float4> dst = mips[dstMip];
-
-	// yes, intensity *should* be done in light-linear space
-	// but we keep the old behavior for consistency...
-	float4 in0 = src[id.xy];
-	float3 in1 = 0.5 * (in0.rgb + blendColor.rgb);
-	float3 inV = lerp(in0.rgb, in1.rgb, blendColor.a);
-	float3 out0 = pow(max(inV, 0.0), invGamma);
-	float3 out1 = out0 * intensity;
-	float4 outV = saturate(float4(out1, in0.a));
-	dst[id.xy] = outV;
-}
-)grml";
 
 
 void MipMapGenerator::Init()
@@ -164,7 +75,7 @@ void MipMapGenerator::Init()
 
 	const char* stageNames[] = { "start", "down", "end" };
 	uint32_t stageRCByteCount[] = { sizeof(StartConstants), sizeof(DownConstants), sizeof(EndConstants) };
-	const char* stageShaders[] = { start_cs, down_cs, end_cs };
+	const ShaderByteCode stageShaders[] = { ShaderByteCode(start::g_cs), ShaderByteCode(down::g_cs), ShaderByteCode(end::g_cs) };
 
 	for(int s = 0; s < 3; ++s)
 	{
@@ -182,7 +93,7 @@ void MipMapGenerator::Init()
 		}
 		{
 			ComputePipelineDesc desc(va("mip-map %s", stageNames[s]), stage.rootSignature);
-			desc.shader = CompileComputeShader(stageShaders[s]);
+			desc.shader = stageShaders[s];
 			stage.pipeline = CreateComputePipeline(desc);
 		}
 	}

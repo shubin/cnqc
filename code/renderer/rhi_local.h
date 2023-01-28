@@ -258,6 +258,15 @@ namespace RHI
 
 	struct ShaderByteCode
 	{
+		ShaderByteCode() = default;
+
+		template<uint32_t N>
+		ShaderByteCode(const uint8_t (&byteCode)[N])
+		{
+			data = byteCode;
+			byteCount = N;
+		}
+
 		const void* data = NULL;
 		uint32_t byteCount = 0;
 	};
@@ -585,6 +594,27 @@ namespace RHI
 		uint32_t h = 0;
 	};
 
+	struct ShaderDesc
+	{
+		ShaderDesc() = default;
+		ShaderDesc(ShaderStage::Id stage_, uint32_t sourceLength_, const void* source_, const char* entryPoint_ = "main", uint32_t macroCount_ = 0, const ShaderMacro* macros_ = NULL)
+		{
+			stage = stage_;
+			source = source_;
+			sourceLength = sourceLength_;
+			entryPoint = entryPoint_;
+			macroCount = macroCount_;
+			macros = macros_;
+		}
+
+		ShaderStage::Id stage = ShaderStage::Count;
+		uint32_t sourceLength = 0;
+		const void* source = NULL;
+		const char* entryPoint = "main";
+		uint32_t macroCount = 0;
+		const ShaderMacro* macros = NULL;
+	};
+
 	void Init();
 	void ShutDown(qbool destroyWindow);
 
@@ -616,6 +646,10 @@ namespace RHI
 	HPipeline CreateComputePipeline(const ComputePipelineDesc& desc);
 	void DestroyPipeline(HPipeline pipeline);
 
+	HShader CreateShader(const ShaderDesc& desc);
+	ShaderByteCode GetShaderByteCode(HShader shader);
+	void DestroyShader(HShader shader);
+
 	void CmdBindRenderTargets(uint32_t colorCount, const HTexture* colorTargets, const HTexture* depthStencilTarget);
 	void CmdBindRootSignature(HRootSignature rootSignature);
 	void CmdBindDescriptorTable(HRootSignature sigHandle, HDescriptorTable table);
@@ -646,12 +680,6 @@ namespace RHI
 	// the temporary command list is guaranteed to be done executing before the next BeginFrame call ends
 	void BeginTempCommandList();
 	void EndTempCommandList();
-
-	ShaderByteCode CompileShader(ShaderStage::Id stage, const char* source, const char* entryPoint = "main", uint32_t macroCount = 0, const ShaderMacro* macros = NULL);
-
-	inline ShaderByteCode CompileVertexShader(const char* source) { return CompileShader(ShaderStage::Vertex, source); }
-	inline ShaderByteCode CompilePixelShader(const char* source) { return CompileShader(ShaderStage::Pixel, source); }
-	inline ShaderByteCode CompileComputeShader(const char* source) { return CompileShader(ShaderStage::Compute, source); }
 
 	const Handle HandleIndexBitCount = 16;
 	const Handle HandleIndexBitOffset = 0;

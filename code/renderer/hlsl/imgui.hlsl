@@ -1,6 +1,6 @@
 /*
 ===========================================================================
-Copyright (C) 2022-2023 Gian 'myT' Schellenbaum
+Copyright (C) 2023 Gian 'myT' Schellenbaum
 
 This file is part of Challenge Quake 3 (CNQ3).
 
@@ -18,37 +18,58 @@ You should have received a copy of the GNU General Public License
 along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 ===========================================================================
 */
-// Rendering Hardware Interface - public interface
+// Dear ImGui integration
 
 
-#pragma once
-
-
-#include <stdint.h>
-
-
-namespace RHI
+struct VOut
 {
-	typedef uint32_t Handle;
+	float4 pos : SV_POSITION;
+	float4 col : COLOR0;
+	float2 uv : TEXCOORD0;
+};
 
-#define RHI_HANDLE_TYPE(TypeName) struct TypeName { Handle v; }; \
-	inline bool operator==(TypeName a, TypeName b) { return a.v == b.v; } \
-	inline bool operator!=(TypeName a, TypeName b) { return a.v != b.v; }
-	RHI_HANDLE_TYPE(HBuffer);
-	RHI_HANDLE_TYPE(HRootSignature);
-	RHI_HANDLE_TYPE(HDescriptorTable);
-	RHI_HANDLE_TYPE(HPipeline);
-	RHI_HANDLE_TYPE(HTexture);
-	RHI_HANDLE_TYPE(HSampler);
-	RHI_HANDLE_TYPE(HDurationQuery);
-	RHI_HANDLE_TYPE(HShader);
-#undef RHI_HANDLE_TYPE
 
-	struct MappedTexture
-	{
-		uint8_t* mappedData;
-		uint32_t rowCount;
-		uint32_t srcRowByteCount;
-		uint32_t dstRowByteCount;
-	};
+#if VERTEX_SHADER
+
+cbuffer RootConstants
+{
+	float4x4 projectionMatrix;
+};
+
+struct VIn
+{
+	float2 pos : POSITION;
+	float4 col : COLOR0;
+	float2 uv : TEXCOORD0;
+};
+
+VOut vs(VIn input)
+{
+	VOut output;
+	output.pos = mul(projectionMatrix, float4(input.pos.xy, 0.0, 1.0));
+	output.col = input.col;
+	output.uv = input.uv;
+
+	return output;
 }
+
+#endif
+
+
+#if PIXEL_SHADER
+
+cbuffer RootConstants
+{
+	uint textureIndex;
+	uint samplerIndex;
+};
+
+SamplerState samplers[12] : register(s0);
+Texture2D textures[4096] : register(t0);
+
+float4 ps(VOut input) : SV_Target
+{
+	return input.col * textures[textureIndex].Sample(samplers[samplerIndex], input.uv);
+}
+
+#endif
