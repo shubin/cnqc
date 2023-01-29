@@ -70,6 +70,7 @@ void UI::Init()
 	}
 	{
 		GraphicsPipelineDesc desc("UI", rootSignature);
+		desc.shortLifeTime = true;
 		desc.vertexShader = ShaderByteCode(g_vs);
 		desc.pixelShader = ShaderByteCode(g_ps);
 		desc.vertexLayout.bindingStrides[0] = sizeof(UI::Vertex);

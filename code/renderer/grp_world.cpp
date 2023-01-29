@@ -307,6 +307,7 @@ void World::Init()
 	//
 	{
 		GraphicsPipelineDesc desc("fog outside", fogRootSignature);
+		desc.shortLifeTime = true;
 		desc.vertexShader = ShaderByteCode(fog::g_vs);
 		desc.pixelShader = ShaderByteCode(fog_outside::g_ps);
 		desc.depthStencil.DisableDepth();
@@ -319,6 +320,7 @@ void World::Init()
 	}
 	{
 		GraphicsPipelineDesc desc("fog inside", fogRootSignature);
+		desc.shortLifeTime = true;
 		desc.vertexShader = ShaderByteCode(fog::g_vs);
 		desc.pixelShader = ShaderByteCode(fog_inside::g_ps);
 		desc.depthStencil.DisableDepth();

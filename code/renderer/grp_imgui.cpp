@@ -48,39 +48,54 @@ struct PixelRC
 void ImGUI::Init()
 {
 	ImGuiIO& io = ImGui::GetIO();
-	if(io.BackendRendererUserData != NULL)
+	if(grp.firstInit)
 	{
-		RegisterFontAtlas();
-		return;
-	}
+		io.BackendRendererUserData = this;
+		io.BackendRendererName = "CNQ3 Direct3D 12";
+		io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 
-	io.BackendRendererUserData = this;
-	io.BackendRendererName = "CNQ3 Direct3D 12";
-	io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
+		for(int i = 0; i < FrameCount; i++)
+		{
+			FrameResources* fr = &frameResources[i];
 
-	for(int i = 0; i < FrameCount; i++)
-	{
-		FrameResources* fr = &frameResources[i];
+			BufferDesc vtx("Dear ImGUI index", MAX_INDEX_COUNT * sizeof(ImDrawIdx), ResourceStates::IndexBufferBit);
+			vtx.memoryUsage = MemoryUsage::Upload;
+			fr->indexBuffer = CreateBuffer(vtx);
 
-		BufferDesc vtx("Dear ImGUI index", MAX_INDEX_COUNT * sizeof(ImDrawIdx), ResourceStates::IndexBufferBit);
-		vtx.memoryUsage = MemoryUsage::Upload;
-		fr->indexBuffer = CreateBuffer(vtx);
+			BufferDesc idx("Dear ImGUI vertex", MAX_VERTEX_COUNT * sizeof(ImDrawData), ResourceStates::VertexBufferBit);
+			idx.memoryUsage = MemoryUsage::Upload;
+			fr->vertexBuffer = CreateBuffer(idx);
+		}
 
-		BufferDesc idx("Dear ImGUI vertex", MAX_VERTEX_COUNT * sizeof(ImDrawData), ResourceStates::VertexBufferBit);
-		idx.memoryUsage = MemoryUsage::Upload;
-		fr->vertexBuffer = CreateBuffer(idx);
-	}
+		{
+			RootSignatureDesc desc = grp.rootSignatureDesc;
+			desc.name = "Dear ImGUI";
+			desc.constants[ShaderStage::Vertex].byteCount = sizeof(VertexRC);
+			desc.constants[ShaderStage::Pixel].byteCount = sizeof(PixelRC);
+			rootSignature = CreateRootSignature(desc);
+		}
 
-	{
-		RootSignatureDesc desc = grp.rootSignatureDesc;
-		desc.name = "Dear ImGUI";
-		desc.constants[ShaderStage::Vertex].byteCount = sizeof(VertexRC);
-		desc.constants[ShaderStage::Pixel].byteCount = sizeof(PixelRC);
-		rootSignature = CreateRootSignature(desc);
+		{
+			unsigned char* pixels;
+			int width, height;
+			io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+
+			TextureDesc desc("Dear ImGUI font atlas", width, height, 1);
+			fontAtlas = CreateTexture(desc);
+
+			MappedTexture update;
+			BeginTextureUpload(update, fontAtlas);
+			for(uint32_t r = 0; r < update.rowCount; ++r)
+			{
+				memcpy(update.mappedData + r * update.dstRowByteCount, pixels + r * update.srcRowByteCount, update.srcRowByteCount);
+			}
+			EndTextureUpload(fontAtlas);
+		}
 	}
 
 	{
 		GraphicsPipelineDesc desc("Dear ImGUI", rootSignature);
+		desc.shortLifeTime = true;
 		desc.vertexShader = ShaderByteCode(g_vs);
 		desc.pixelShader = ShaderByteCode(g_ps);
 		desc.vertexLayout.bindingStrides[0] = sizeof(ImDrawVert);
@@ -99,24 +114,7 @@ void ImGUI::Init()
 		pipeline = CreateGraphicsPipeline(desc);
 	}
 
-	{
-		unsigned char* pixels;
-		int width, height;
-		io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-
-		TextureDesc desc("Dear ImGUI font atlas", width, height, 1);
-		fontAtlas = CreateTexture(desc);
-
-		MappedTexture update;
-		BeginTextureUpload(update, fontAtlas);
-		for(uint32_t r = 0; r < update.rowCount; ++r)
-		{
-			memcpy(update.mappedData + r * update.dstRowByteCount, pixels + r * update.srcRowByteCount, update.srcRowByteCount);
-		}
-		EndTextureUpload(fontAtlas);
-
-		RegisterFontAtlas();
-	}
+	RegisterFontAtlas();
 }
 
 void ImGUI::RegisterFontAtlas()
