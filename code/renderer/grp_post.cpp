@@ -22,8 +22,8 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 
 
 #include "grp_local.h"
-#include "hlsl/gamma_vs.h"
-#include "hlsl/gamma_ps.h"
+#include "hlsl/post_gamma_vs.h"
+#include "hlsl/post_gamma_ps.h"
 
 
 #pragma pack(push, 4)
