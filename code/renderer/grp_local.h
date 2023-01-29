@@ -274,6 +274,7 @@ struct World
 	void DrawPrePass();
 	void BeginBatch(const shader_t* shader, bool hasStaticGeo);
 	void EndBatch(HPipeline& pso);
+	void RestartBatch();
 	void DrawGUI();
 	void ProcessWorld(world_t& world);
 	void DrawSceneView(const drawSceneViewCommand_t& cmd);
@@ -316,6 +317,7 @@ struct World
 	BufferFamily::Id boundIndexBuffer;
 	uint32_t boundStaticVertexBuffersFirst;
 	uint32_t boundStaticVertexBuffersCount;
+	HPipeline batchPSO;
 	bool batchHasStaticGeo;
 
 	// dynamic
@@ -523,6 +525,7 @@ struct GRP : IRenderPipeline
 	void UIDrawTriangle(const uiDrawTriangleCommand_t& cmd) override { ui.UIDrawTriangle(cmd); }
 	void DrawSceneView(const drawSceneViewCommand_t& cmd) override { EndUI(); world.DrawSceneView(cmd); }
 	void EndScene(const viewParms_t& parms) override { smaa.Draw(parms); }
+	void TessellationOverflow() { world.RestartBatch(); }
 
 	uint32_t RegisterTexture(HTexture htexture);
 

@@ -1675,6 +1675,7 @@ struct IRenderPipeline
 	virtual void UIDrawTriangle(const uiDrawTriangleCommand_t& cmd) = 0;
 	virtual void DrawSceneView(const drawSceneViewCommand_t& cmd) = 0;
 	virtual void EndScene(const viewParms_t& parms) = 0;
+	virtual void TessellationOverflow() = 0;
 };
 
 extern IRenderPipeline* renderPipeline;

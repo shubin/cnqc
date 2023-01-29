@@ -40,6 +40,8 @@ shaderCommands_t tess;
 
 void RB_BeginSurface( const shader_t* shader, int fogNum )
 {
+	Q_assert(!"RB_BeginSurface");
+
 	tess.numIndexes = 0;
 	tess.numVertexes = 0;
 	tess.shader = shader;
@@ -195,6 +197,8 @@ static void RB_DrawDebug( const shaderCommands_t* input, qbool drawNormals, int 
 
 void RB_EndSurface()
 {
+	Q_assert(!"RB_EndSurface");
+
 	shaderCommands_t* input = &tess;
 
 	if (!input->numIndexes || !input->numVertexes)

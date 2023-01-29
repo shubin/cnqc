@@ -29,6 +29,7 @@ to do:
 	- dynamic lights
 * SMAA integration
 - CMAA 2 integration
+- figure out LOD of baked map surfaces (r_lodCurveError)
 - entityMergeable support ("entityMergable" in the code)
 - speed up map loads with BeginGraphicsPipelineCreation() / WaitForAllPipelineCreations()
 	use for non-UI shaders and run PSO creation on worker threads

@@ -70,6 +70,7 @@ static bool drawPrePass = false;
 static bool drawDynamic = true;
 static bool drawTransparents = true;
 static bool drawFog = true;
+static bool forceDynamic = false;
 
 
 static bool HasStaticGeo(const drawSurf_t* drawSurf)
@@ -440,8 +441,10 @@ void World::BeginBatch(const shader_t* shader, bool hasStaticGeo)
 
 void World::EndBatch(HPipeline& pso)
 {
-	if((!batchHasStaticGeo && tess.numVertexes <= 0) ||
-		tess.numIndexes <= 0 ||
+	const int vertexCount = tess.numVertexes;
+	const int indexCount = tess.numIndexes;
+	if((!batchHasStaticGeo && vertexCount <= 0) ||
+		indexCount <= 0 ||
 		tess.shader->numStages == 0 ||
 		tess.shader->numPipelines <= 0)
 	{
@@ -452,18 +455,26 @@ void World::EndBatch(HPipeline& pso)
 	}
 
 	GeometryBuffers& db = dynBuffers[GetFrameIndex()];
-	if(!db.vertexBuffers.CanAdd(tess.numVertexes) ||
-		!db.indexBuffer.CanAdd(tess.numIndexes))
+	if(!db.vertexBuffers.CanAdd(vertexCount) ||
+		!db.indexBuffer.CanAdd(indexCount))
 	{
 		Q_assert(!"Dynamic buffer too small!");
 		return;
 	}
 
+	const shader_t* const shader = tess.shader;
+	RB_DeformTessGeometry(0, vertexCount, 0, indexCount);
+	for(int s = 0; s < shader->numStages; ++s)
+	{
+		R_ComputeColors(shader->stages[s], tess.svars[s], 0, vertexCount);
+		R_ComputeTexCoords(shader->stages[s], tess.svars[s], 0, vertexCount, qfalse);
+	}
+
 	// darken the hell fog in the BS pit on cpm21 for debugging
 #if 0
-	if(Q_stristr(tess.shader->name, "hellfog"))
+	if(Q_stristr(shader->name, "hellfog"))
 	{
-		for(int v = 0; v < tess.numVertexes; ++v)
+		for(int v = 0; v < vertexCount; ++v)
 		{
 			tess.svars[0].colors[v][0] = 127;
 			tess.svars[0].colors[v][1] = 127;
@@ -475,15 +486,15 @@ void World::EndBatch(HPipeline& pso)
 
 	if(!batchHasStaticGeo)
 	{
-		db.vertexBuffers.Upload(0, tess.shader->numStages);
+		db.vertexBuffers.Upload(0, shader->numStages);
 	}
 	db.indexBuffer.Upload();
 
 	BindIndexBuffer(false);
 
-	for(int p = 0; p < tess.shader->numPipelines; ++p)
+	for(int p = 0; p < shader->numPipelines; ++p)
 	{
-		const pipeline_t& pipeline = tess.shader->pipelines[p];
+		const pipeline_t& pipeline = shader->pipelines[p];
 		const int psoIndex = pipeline.pipeline;
 		if(pso != grp.psos[psoIndex].pipeline)
 		{
@@ -505,7 +516,7 @@ void World::EndBatch(HPipeline& pso)
 		pixelRC.invGamma = 1.0f / r_gamma->value;
 		for(int s = 0; s < pipeline.numStages; ++s)
 		{
-			const image_t* image = GetBundleImage(tess.shader->stages[pipeline.firstStage + s]->bundle);
+			const image_t* image = GetBundleImage(shader->stages[pipeline.firstStage + s]->bundle);
 			const uint32_t texIdx = image->textureIndex;
 			const uint32_t sampIdx = GetSamplerIndex(image);
 			Q_assert(texIdx > 0);
@@ -515,7 +526,7 @@ void World::EndBatch(HPipeline& pso)
 
 		BindVertexBuffers(batchHasStaticGeo, pipeline.firstStage, pipeline.numStages);
 		
-		CmdDrawIndexed(tess.numIndexes, db.indexBuffer.batchFirst, batchHasStaticGeo ? 0 : db.vertexBuffers.batchFirst);
+		CmdDrawIndexed(indexCount, db.indexBuffer.batchFirst, batchHasStaticGeo ? 0 : db.vertexBuffers.batchFirst);
 	}
 
 	if(!batchHasStaticGeo)
@@ -525,6 +536,12 @@ void World::EndBatch(HPipeline& pso)
 	db.indexBuffer.EndBatch(tess.numIndexes);
 	tess.numVertexes = 0;
 	tess.numIndexes = 0;
+}
+
+void World::RestartBatch()
+{
+	EndBatch(batchPSO);
+	BeginBatch(tess.shader, batchHasStaticGeo);
 }
 
 void World::DrawGUI()
@@ -550,6 +567,8 @@ void World::DrawGUI()
 		ImGui::Checkbox("Draw Dynamic", &drawDynamic);
 		ImGui::Checkbox("Draw Transparents", &drawTransparents);
 		ImGui::Checkbox("Draw Fog", &drawFog);
+		ImGui::Checkbox("Force Dynamic", &forceDynamic);
+
 		ImGui::Text("PSO count: %d", (int)grp.psoCount);
 
 		vec3_t axis[3];
@@ -818,7 +837,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			continue;
 		}
 
-		const bool hasStaticGeo = HasStaticGeo(drawSurf);
+		const bool hasStaticGeo = forceDynamic ? false : HasStaticGeo(drawSurf);
 		const bool staticChanged = hasStaticGeo != oldHasStaticGeo;
 		const bool shaderChanged = shader != oldShader;
 		const bool entityChanged = entityNum != oldEntityNum;
@@ -847,50 +866,23 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			UpdateEntityData(entityNum, originalTime);
 		}
 
-		int estVertexCount, estIndexCount;
 		if(hasStaticGeo)
 		{
 			const StaticGeometryChunk& chunk = statChunks[drawSurf->staticGeoChunk];
-			estVertexCount = chunk.vertexCount;
-			estIndexCount = chunk.indexCount;
-		}
-		else
-		{
-			R_ComputeTessellatedSize(&estVertexCount, &estIndexCount, drawSurf->surface);
-		}
+			if(tess.numIndexes + chunk.indexCount > SHADER_MAX_INDEXES)
+			{
+				EndBatch(pso);
+				BeginBatch(tess.shader, batchHasStaticGeo);
+			}
 
-		// >= shouldn't be necessary but it's the overflow check currently used within
-		// R_TessellateSurface, so we have to be at least as aggressive as it is
-		if(tess.numVertexes + estVertexCount >= SHADER_MAX_VERTEXES ||
-			tess.numIndexes + estIndexCount >= SHADER_MAX_INDEXES)
-		{
-			EndBatch(pso);
-			BeginBatch(tess.shader, batchHasStaticGeo);
-		}
-
-		if(hasStaticGeo)
-		{
-			const StaticGeometryChunk& chunk = statChunks[drawSurf->staticGeoChunk];
 			memcpy(tess.indexes + tess.numIndexes, statIndices + chunk.firstCPUIndex, chunk.indexCount * sizeof(uint32_t));
 			tess.numIndexes += chunk.indexCount;
 		}
 		else
 		{
-			const int firstVertex = tess.numVertexes;
-			const int firstIndex = tess.numIndexes;
+			batchPSO = pso;
 			R_TessellateSurface(drawSurf->surface);
-			const int numVertexes = tess.numVertexes - firstVertex;
-			const int numIndexes = tess.numIndexes - firstIndex;
-			Q_assert(numVertexes >= 0);
-			Q_assert(numIndexes >= 0);
-			Q_assert(estVertexCount == numVertexes);
-			Q_assert(estIndexCount == numIndexes);
-			RB_DeformTessGeometry(firstVertex, numVertexes, firstIndex, numIndexes);
-			for(int s = 0; s < shader->numStages; ++s)
-			{
-				R_ComputeColors(shader->stages[s], tess.svars[s], firstVertex, numVertexes);
-				R_ComputeTexCoords(shader->stages[s], tess.svars[s], firstVertex, numVertexes, qfalse);
-			}
+			pso = batchPSO;
 		}
 	}
 

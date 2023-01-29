@@ -150,6 +150,11 @@ void R_AddDrawSurfCmd( drawSurf_t* drawSurfs, int numDrawSurfs, int numTranspSur
 		shouldClearColor = qtrue;
 	} else if ( r_fastsky->integer && !(tr.refdef.rdflags & RDF_NOWORLDMODEL) ) {
 		shouldClearColor = qtrue;
+	} else if ( r_clear->integer ) {
+		clearColor[0] = 1.0f;
+		clearColor[1] = 0.0f;
+		clearColor[2] = 1.0f;
+		shouldClearColor = qtrue;
 	}
 
 	drawSceneViewCommand_t cmd;
