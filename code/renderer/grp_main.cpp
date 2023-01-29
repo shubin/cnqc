@@ -156,8 +156,8 @@ void GRP::Init()
 
 		desc.name = "opaque";
 		desc.usingVertexBuffers = true;
-		desc.constants[ShaderStage::Vertex].byteCount = sizeof(DynamicVertexRC);
-		desc.constants[ShaderStage::Pixel].byteCount = sizeof(DynamicPixelRC);
+		desc.constants[ShaderStage::Vertex].byteCount = sizeof(WorldVertexRC);
+		desc.constants[ShaderStage::Pixel].byteCount = sizeof(WorldPixelRC);
 		desc.samplerVisibility = ShaderStages::PixelBit;
 		desc.genericVisibility = ShaderStages::VertexBit | ShaderStages::PixelBit;
 		opaqueRootSignature = CreateRootSignature(desc);
@@ -209,6 +209,8 @@ void GRP::BeginFrame()
 
 	// nothing is bound to the command list yet!
 	renderMode = RenderMode::None;
+
+	frameSeed = (float)rand() / (float)RAND_MAX;
 }
 
 void GRP::EndFrame()

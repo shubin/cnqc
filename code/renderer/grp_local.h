@@ -33,16 +33,21 @@ using namespace RHI;
 
 #pragma pack(push, 4)
 
-struct DynamicVertexRC
+struct WorldVertexRC
 {
 	float modelViewMatrix[16];
 	float projectionMatrix[16];
 	float clipPlane[4];
 };
 
-struct DynamicPixelRC
+struct WorldPixelRC
 {
 	uint32_t stageIndices[8];
+	float greyscale;
+	float frameSeed;
+	float noiseScale;
+	float invGamma;
+	float invBrightness;
 };
 
 #pragma pack(pop)
@@ -536,6 +541,7 @@ struct GRP : IRenderPipeline
 	SMAA smaa;
 	bool firstInit = true;
 	RenderMode::Id renderMode;
+	float frameSeed;
 
 	HTexture renderTarget;
 	RootSignatureDesc rootSignatureDesc;

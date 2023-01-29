@@ -165,6 +165,17 @@ cbuffer RootConstants
 	// low 16 = texture, high 16 = sampler
 	uint4 stageIndices0;
 	uint4 stageIndices1;
+//#if GREYSCALE
+#if 1
+	float greyscale;
+#endif
+//#if DITHER
+#if 1
+	float frameSeed;
+	float noiseScale;
+	float invGamma;
+	float invBrightness;
+#endif
 };
 
 Texture2D textures2D[4096] : register(t0);
@@ -308,6 +319,14 @@ float4 main(VOut input) : SV_Target
 #endif
 #if STAGE_COUNT >= 8
 	ProcessFullStage(dst, input.color7, input.texCoords7, stageIndices1.w & 0xFFFF, stageIndices1.w >> 16, STAGE7_BITS);
+#endif
+
+#if GREYSCALE
+	dst = MakeGreyscale(dst, greyscale);
+#endif
+
+#if DITHER
+	dst = Dither(dst, input.position.xyz, seed, noiseScale, invBrightness, invGamma);
 #endif
 
 	return dst;

@@ -487,13 +487,18 @@ void World::EndBatch(HPipeline& pso)
 			CmdBindPipeline(pso);
 		}
 
-		DynamicVertexRC vertexRC = {};
+		WorldVertexRC vertexRC = {};
 		memcpy(vertexRC.modelViewMatrix, backEnd.orient.modelMatrix, sizeof(vertexRC.modelViewMatrix));
 		memcpy(vertexRC.projectionMatrix, backEnd.viewParms.projectionMatrix, sizeof(vertexRC.projectionMatrix));
 		memcpy(vertexRC.clipPlane, clipPlane, sizeof(vertexRC.clipPlane));
 		CmdSetRootConstants(grp.opaqueRootSignature, ShaderStage::Vertex, &vertexRC);
 
-		DynamicPixelRC pixelRC = {};
+		WorldPixelRC pixelRC = {};
+		pixelRC.greyscale = r_greyscale->value; // @TODO: tess.greyscale, must be set properly
+		pixelRC.frameSeed = grp.frameSeed;
+		pixelRC.noiseScale = r_ditherStrength->value;
+		pixelRC.invBrightness = 1.0f / r_brightness->value;
+		pixelRC.invGamma = 1.0f / r_gamma->value;
 		for(int s = 0; s < pipeline.numStages; ++s)
 		{
 			const image_t* image = GetBundleImage(tess.shader->stages[pipeline.firstStage + s]->bundle);

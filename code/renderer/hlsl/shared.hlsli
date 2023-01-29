@@ -46,3 +46,22 @@ float LinearDepth(float zwDepth, float proj22, float proj32)
 {
 	return proj32 / (zwDepth - proj22);
 }
+
+// this is from Morgan McGuire's "Hashed Alpha Testing" paper
+float Hash(float2 input)
+{
+	return frac(1.0e4 * sin(17.0 * input.x + 0.1 * input.y) + (0.1 + abs(sin(13.0 * input.y + input.x))));
+}
+
+float LinearColor(float color, float invBrightness, float invGamma)
+{
+	return pow(abs(color * invBrightness), invGamma) * sign(color);
+}
+
+float4 Dither(float4 color, float3 position, float seed, float noiseScale, float invBrightness, float invGamma)
+{
+	float2 newSeed = position.xy + float2(0.6849, 0.6849) * seed + float2(position.z, position.z);
+	float noise = (noiseScale / 255.0) * LinearColor(Hash(newSeed) - 0.5, invBrightness, invGamma);
+
+	return color + float4(noise, noise, noise, 0.0);
+}
