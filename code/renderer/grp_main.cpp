@@ -285,7 +285,8 @@ void GRP::ProcessShader(shader_t& shader)
 		// @TODO: fix up cache.stageStateBits[0] based on depth state from follow-up states
 		CachedPSO cache = {};
 		cache.desc.cullType = shader.cullType;
-		cache.desc.polygonOffset = shader.polygonOffset;
+		cache.desc.polygonOffset = !!shader.polygonOffset;
+		cache.desc.clampDepth = r_depthClamp->integer != 0;
 		cache.stageStateBits[0] = shader.stages[0]->stateBits & (~GLS_POLYMODE_LINE);
 		for(int s = 1; s < shader.numStages; ++s)
 		{
@@ -302,7 +303,8 @@ void GRP::ProcessShader(shader_t& shader)
 	{
 		CachedPSO cache = {};
 		cache.desc.cullType = shader.cullType;
-		cache.desc.polygonOffset = shader.polygonOffset;
+		cache.desc.polygonOffset = !!shader.polygonOffset;
+		cache.desc.clampDepth = r_depthClamp->integer != 0;
 		cache.stageCount = 0;
 
 		unsigned int prevStateBits = 0xFFFFFFFF;
@@ -455,6 +457,7 @@ uint32_t GRP::CreatePSO(CachedPSO& cache, const char* name)
 	desc.depthStencil.enableDepthWrites = (cache.stageStateBits[0] & GLS_DEPTHMASK_TRUE) != 0;
 	desc.rasterizer.cullMode = cache.desc.cullType;
 	desc.rasterizer.polygonOffset = cache.desc.polygonOffset;
+	desc.rasterizer.clampDepth = cache.desc.clampDepth;
 	desc.AddRenderTarget(cache.stageStateBits[0] & GLS_BLEND_BITS, TextureFormat::RGBA32_UNorm);
 	cache.pipeline = CreateGraphicsPipeline(desc);
 

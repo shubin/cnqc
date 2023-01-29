@@ -348,6 +348,7 @@ namespace RHI
 		{
 			cullType_t cullMode = CT_FRONT_SIDED;
 			bool polygonOffset = false;
+			bool clampDepth = false;
 		}
 		rasterizer;
 		struct RenderTarget

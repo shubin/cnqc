@@ -2929,7 +2929,7 @@ namespace RHI
 		desc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
 		desc.RasterizerState.ForcedSampleCount = 0;
 		desc.RasterizerState.MultisampleEnable = FALSE;
-		desc.RasterizerState.DepthClipEnable = FALSE; // @TODO:
+		desc.RasterizerState.DepthClipEnable = rhiDesc.rasterizer.clampDepth ? FALSE : TRUE;
 
 		ID3D12PipelineState* pso;
 		D3D(rhi.device->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&pso)));

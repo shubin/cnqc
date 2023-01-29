@@ -272,6 +272,7 @@ void World::Init()
 		desc.depthStencil.DisableDepth();
 		desc.rasterizer.cullMode = CT_BACK_SIDED;
 		desc.rasterizer.polygonOffset = false;
+		//desc.rasterizer.clampDepth = true; // @TODO:
 		desc.AddRenderTarget(GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, TextureFormat::RGBA32_UNorm);
 		desc.vertexLayout.AddAttribute(0, ShaderSemantic::Position, DataType::Float32, 3, 0);
 		fogOutsidePipeline = CreateGraphicsPipeline(desc);
@@ -283,6 +284,7 @@ void World::Init()
 		desc.depthStencil.DisableDepth();
 		desc.rasterizer.cullMode = CT_FRONT_SIDED;
 		desc.rasterizer.polygonOffset = false;
+		//desc.rasterizer.clampDepth = true; // @TODO:
 		desc.AddRenderTarget(GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, TextureFormat::RGBA32_UNorm);
 		desc.vertexLayout.AddAttribute(0, ShaderSemantic::Position, DataType::Float32, 3, 0);
 		fogInsidePipeline = CreateGraphicsPipeline(desc);

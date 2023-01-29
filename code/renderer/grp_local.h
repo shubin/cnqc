@@ -455,7 +455,8 @@ struct RenderPassFrame
 struct PSODesc
 {
 	cullType_t cullType;
-	qbool polygonOffset;
+	bool polygonOffset;
+	bool clampDepth;
 };
 
 #pragma pack(pop)
