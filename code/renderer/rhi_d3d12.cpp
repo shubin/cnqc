@@ -53,9 +53,6 @@ to do:
 	and ALLOW_TEARING set on both the flip mode swap chain and Present() flags
 	will enable true immediate independent flip mode and give us the lowest latency possible
 - resources that should be committed: depth buffer, render targets, static geometry - optional: large textures
-- sort out whether we want to force depth clamping or not
-	note: fog boxes must be drawn with depth clipping disabled
-	otherwise you can pierce through when at a box edge
 
 rejected:
 - NvAPI_D3D_GetLatency to get (simulated) input to display latency
