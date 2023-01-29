@@ -26,10 +26,10 @@ to do:
 
 * 3D/world rendering
 	- sky and clouds
-	- CMAA 2 / SMAA integration
 	- dynamic lights
+* SMAA integration
+- CMAA 2 integration
 - entityMergeable support ("entityMergable" in the code)
-- higher bit-depth render targets (r_rtColorFormat)
 - speed up map loads with BeginGraphicsPipelineCreation() / WaitForAllPipelineCreations()
 	use for non-UI shaders and run PSO creation on worker threads
 - r_blitMode support
@@ -52,6 +52,11 @@ to do:
 	and ALLOW_TEARING set on both the flip mode swap chain and Present() flags
 	will enable true immediate independent flip mode and give us the lowest latency possible
 - resources that should be committed: depth buffer, render targets, static geometry - optional: large textures
+- move UI to the uber shader system, tessellate to generate proper data
+- share structs between HLSL and C++ with .hlsli files -> change cbuffer to ConstantBuffer<MyStruct>
+- share texture and sampler array sizes between HLSL and C++ with .hlsli files
+- what's the actual fog curve used by Q3?
+- not rendering creates issues with resources not getting transitioned
 
 rejected:
 - NvAPI_D3D_GetLatency to get (simulated) input to display latency
