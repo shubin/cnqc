@@ -494,7 +494,7 @@ void World::EndBatch(HPipeline& pso)
 		CmdSetRootConstants(grp.opaqueRootSignature, ShaderStage::Vertex, &vertexRC);
 
 		WorldPixelRC pixelRC = {};
-		pixelRC.greyscale = r_greyscale->value; // @TODO: tess.greyscale, must be set properly
+		pixelRC.greyscale = r_mapGreyscale->value; // @TODO: tess.greyscale, must be set properly
 		pixelRC.frameSeed = grp.frameSeed;
 		pixelRC.noiseScale = r_ditherStrength->value;
 		pixelRC.invBrightness = 1.0f / r_brightness->value;

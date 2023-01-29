@@ -426,7 +426,7 @@ uint32_t GRP::CreatePSO(CachedPSO& cache, const char* name)
 	macros[macroCount].name = "STAGE_COUNT";
 	macros[macroCount].value = va("%d", cache.stageCount);
 	macroCount++;
-	const HShader vertexShader = CreateShader(ShaderDesc(ShaderStage::Vertex, sizeof(uber_shader_hlsl), uber_shader_hlsl, "main", macroCount, macros));
+	const HShader vertexShader = CreateShader(ShaderDesc(ShaderStage::Vertex, sizeof(uber_shader_string), uber_shader_string, "main", macroCount, macros));
 
 	for(int s = 0; s < cache.stageCount; ++s)
 	{
@@ -434,7 +434,7 @@ uint32_t GRP::CreatePSO(CachedPSO& cache, const char* name)
 		macros[macroCount].value = va("%d", (int)cache.stageStateBits[s]);
 		macroCount++;
 	}
-	const HShader pixelShader = CreateShader(ShaderDesc(ShaderStage::Pixel, sizeof(uber_shader_hlsl), uber_shader_hlsl, "main", macroCount, macros));
+	const HShader pixelShader = CreateShader(ShaderDesc(ShaderStage::Pixel, sizeof(uber_shader_string), uber_shader_string, "main", macroCount, macros));
 
 	Q_assert(macroCount <= ARRAY_LEN(macros));
 
