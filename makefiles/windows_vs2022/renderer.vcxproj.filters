@@ -93,5 +93,8 @@
     <FxCompile Include="..\..\code\renderer\hlsl\ui.hlsl">
       <Filter>hlsl</Filter>
     </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\uber_shader.hlsl">
+      <Filter>hlsl</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

@@ -107,5 +107,7 @@ Compile-SMAA-PS "smaa_2_ps.h" "smaa_2.hlsl"
 Compile-SMAA-VS "smaa_3_vs.h" "smaa_3.hlsl"
 Compile-SMAA-PS "smaa_3_ps.h" "smaa_3.hlsl"
 
+./bin2header.exe --output uber_shader.h uber_shader.hlsl
+
 pause
 exit
