@@ -434,6 +434,12 @@ uint32_t GRP::CreatePSO(CachedPSO& cache, const char* name)
 		macros[macroCount].value = va("%d", (int)cache.stageStateBits[s]);
 		macroCount++;
 	}
+	if(r_dither->integer)
+	{
+		macros[macroCount].name = "DITHER";
+		macros[macroCount].value = "1";
+		macroCount++;
+	}
 	const HShader pixelShader = CreateShader(ShaderDesc(ShaderStage::Pixel, sizeof(uber_shader_string), uber_shader_string, "main", macroCount, macros));
 
 	Q_assert(macroCount <= ARRAY_LEN(macros));
