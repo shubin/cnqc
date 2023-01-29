@@ -176,95 +176,135 @@ void World::Init()
 		}
 	}
 
-	if(!grp.firstInit)
+	if(grp.firstInit)
 	{
-		return;
-	}
-
-	//
-	// depth pre-pass
-	//
-	{
-		RootSignatureDesc desc("Z pre-pass");
-		desc.usingVertexBuffers = true;
-		desc.constants[ShaderStage::Vertex].byteCount = sizeof(ZPPVertexRC);
-		desc.constants[ShaderStage::Pixel].byteCount = 0;
-		desc.samplerVisibility = ShaderStages::None;
-		desc.genericVisibility = ShaderStages::None;
-		zppRootSignature = CreateRootSignature(desc);
-	}
-	{
-		zppDescriptorTable = CreateDescriptorTable(DescriptorTableDesc("Z pre-pass", zppRootSignature));
-	}
-	{
-		GraphicsPipelineDesc desc("Z pre-pass", zppRootSignature);
-		desc.vertexShader = ShaderByteCode(zpp::g_vs);
-		desc.pixelShader = ShaderByteCode(zpp::g_ps);
-		desc.vertexLayout.AddAttribute(0, ShaderSemantic::Position, DataType::Float32, 4, 0);
-		desc.depthStencil.depthComparison = ComparisonFunction::GreaterEqual;
-		desc.depthStencil.depthStencilFormat = TextureFormat::Depth32_Float;
-		desc.depthStencil.enableDepthTest = true;
-		desc.depthStencil.enableDepthWrites = true;
-		desc.rasterizer.cullMode = CT_FRONT_SIDED; // need 1 PSO per cull mode...
-		zppPipeline = CreateGraphicsPipeline(desc);
-	}
-	{
-		const uint32_t maxVertexCount = 1 << 20;
-		const uint32_t maxIndexCount = 8 * maxVertexCount;
-		zppVertexBuffer.Init(maxVertexCount, 16);
-		zppIndexBuffer.Init(maxIndexCount, sizeof(Index));
+		//
+		// depth pre-pass
+		//
 		{
-			BufferDesc desc("depth pre-pass vertex", zppVertexBuffer.byteCount, ResourceStates::VertexBufferBit);
-			zppVertexBuffer.buffer = CreateBuffer(desc);
+			RootSignatureDesc desc("Z pre-pass");
+			desc.usingVertexBuffers = true;
+			desc.constants[ShaderStage::Vertex].byteCount = sizeof(ZPPVertexRC);
+			desc.constants[ShaderStage::Pixel].byteCount = 0;
+			desc.samplerVisibility = ShaderStages::None;
+			desc.genericVisibility = ShaderStages::None;
+			zppRootSignature = CreateRootSignature(desc);
 		}
 		{
-			BufferDesc desc("depth pre-pass index", zppIndexBuffer.byteCount, ResourceStates::IndexBufferBit);
-			zppIndexBuffer.buffer = CreateBuffer(desc);
+			zppDescriptorTable = CreateDescriptorTable(DescriptorTableDesc("Z pre-pass", zppRootSignature));
 		}
-	}
+		{
+			GraphicsPipelineDesc desc("Z pre-pass", zppRootSignature);
+			desc.vertexShader = ShaderByteCode(zpp::g_vs);
+			desc.pixelShader = ShaderByteCode(zpp::g_ps);
+			desc.vertexLayout.AddAttribute(0, ShaderSemantic::Position, DataType::Float32, 4, 0);
+			desc.depthStencil.depthComparison = ComparisonFunction::GreaterEqual;
+			desc.depthStencil.depthStencilFormat = TextureFormat::Depth32_Float;
+			desc.depthStencil.enableDepthTest = true;
+			desc.depthStencil.enableDepthWrites = true;
+			desc.rasterizer.cullMode = CT_FRONT_SIDED; // need 1 PSO per cull mode...
+			zppPipeline = CreateGraphicsPipeline(desc);
+		}
+		{
+			const uint32_t maxVertexCount = 1 << 20;
+			const uint32_t maxIndexCount = 8 * maxVertexCount;
+			zppVertexBuffer.Init(maxVertexCount, 16);
+			zppIndexBuffer.Init(maxIndexCount, sizeof(Index));
+			{
+				BufferDesc desc("depth pre-pass vertex", zppVertexBuffer.byteCount, ResourceStates::VertexBufferBit);
+				zppVertexBuffer.buffer = CreateBuffer(desc);
+			}
+			{
+				BufferDesc desc("depth pre-pass index", zppIndexBuffer.byteCount, ResourceStates::IndexBufferBit);
+				zppIndexBuffer.buffer = CreateBuffer(desc);
+			}
+		}
 
-	//
-	// dynamic (streamed) geometry
-	//
-	for(uint32_t f = 0; f < FrameCount; ++f)
-	{
-		const int MaxDynamicVertexCount = 256 << 10;
-		const int MaxDynamicIndexCount = MaxDynamicVertexCount * 8;
-		GeometryBuffers& db = dynBuffers[f];
-		db.vertexBuffers.Create(va("dynamic #%d", f + 1), MemoryUsage::Upload, MaxDynamicVertexCount);
-		db.indexBuffer.Create(va("dynamic #%d", f + 1), MemoryUsage::Upload, MaxDynamicIndexCount);
-	}
+		//
+		// dynamic (streamed) geometry
+		//
+		for(uint32_t f = 0; f < FrameCount; ++f)
+		{
+			const int MaxDynamicVertexCount = 256 << 10;
+			const int MaxDynamicIndexCount = MaxDynamicVertexCount * 8;
+			GeometryBuffers& db = dynBuffers[f];
+			db.vertexBuffers.Create(va("dynamic #%d", f + 1), MemoryUsage::Upload, MaxDynamicVertexCount);
+			db.indexBuffer.Create(va("dynamic #%d", f + 1), MemoryUsage::Upload, MaxDynamicIndexCount);
+		}
 
-	//
-	// static (GPU-resident) geometry
-	//
-	{
-		const int MaxVertexCount = 256 << 10;
-		const int MaxIndexCount = MaxVertexCount * 8;
-		statBuffers.vertexBuffers.Create("static", MemoryUsage::GPU, MaxVertexCount);
-		statBuffers.indexBuffer.Create("static", MemoryUsage::GPU, MaxIndexCount);
+		//
+		// static (GPU-resident) geometry
+		//
+		{
+			const int MaxVertexCount = 256 << 10;
+			const int MaxIndexCount = MaxVertexCount * 8;
+			statBuffers.vertexBuffers.Create("static", MemoryUsage::GPU, MaxVertexCount);
+			statBuffers.indexBuffer.Create("static", MemoryUsage::GPU, MaxIndexCount);
+		}
+
+		//
+		// fog
+		//
+		{
+			RootSignatureDesc desc("fog");
+			desc.usingVertexBuffers = true;
+			desc.AddRange(DescriptorType::Texture, 0, 1);
+			desc.genericVisibility = ShaderStages::PixelBit;
+			desc.constants[ShaderStage::Vertex].byteCount = sizeof(FogVertexRC);
+			desc.constants[ShaderStage::Pixel].byteCount = sizeof(FogPixelRC);
+			fogRootSignature = CreateRootSignature(desc);
+		}
+		{
+			DescriptorTableDesc desc("fog", fogRootSignature);
+			fogDescriptorTable = CreateDescriptorTable(desc);
+
+			DescriptorTableUpdate update;
+			update.SetTextures(1, &depthTexture);
+			UpdateDescriptorTable(fogDescriptorTable, update);
+		}
+		{
+			const uint32_t indices[] =
+			{
+				0, 1, 2, 2, 1, 3,
+				4, 0, 6, 6, 0, 2,
+				7, 5, 6, 6, 5, 4,
+				3, 1, 7, 7, 1, 5,
+				4, 5, 0, 0, 5, 1,
+				3, 7, 2, 2, 7, 6
+			};
+
+			BufferDesc desc("box index", sizeof(indices), ResourceStates::IndexBufferBit);
+			boxIndexBuffer = CreateBuffer(desc);
+
+			uint8_t* mapped = BeginBufferUpload(boxIndexBuffer);
+			memcpy(mapped, indices, sizeof(indices));
+			EndBufferUpload(boxIndexBuffer);
+		}
+		{
+			const float vertices[] =
+			{
+				0.0f, 1.0f, 0.0f,
+				1.0f, 1.0f, 0.0f,
+				0.0f, 0.0f, 0.0f,
+				1.0f, 0.0f, 0.0f,
+				0.0f, 1.0f, 1.0f,
+				1.0f, 1.0f, 1.0f,
+				0.0f, 0.0f, 1.0f,
+				1.0f, 0.0f, 1.0f
+			};
+
+			BufferDesc desc("box vertex", sizeof(vertices), ResourceStates::VertexBufferBit);
+			boxVertexBuffer = CreateBuffer(desc);
+
+			uint8_t* mapped = BeginBufferUpload(boxVertexBuffer);
+			memcpy(mapped, vertices, sizeof(vertices));
+			EndBufferUpload(boxVertexBuffer);
+		}
 	}
 
 	//
 	// fog
 	//
-	{
-		RootSignatureDesc desc("fog");
-		desc.usingVertexBuffers = true;
-		desc.AddRange(DescriptorType::Texture, 0, 1);
-		desc.genericVisibility = ShaderStages::PixelBit;
-		desc.constants[ShaderStage::Vertex].byteCount = sizeof(FogVertexRC);
-		desc.constants[ShaderStage::Pixel].byteCount = sizeof(FogPixelRC);
-		fogRootSignature = CreateRootSignature(desc);
-	}
-	{
-		DescriptorTableDesc desc("fog", fogRootSignature);
-		fogDescriptorTable = CreateDescriptorTable(desc);
-
-		DescriptorTableUpdate update;
-		update.SetTextures(1, &depthTexture);
-		UpdateDescriptorTable(fogDescriptorTable, update);
-	}
 	{
 		GraphicsPipelineDesc desc("fog outside", fogRootSignature);
 		desc.vertexShader = ShaderByteCode(fog::g_vs);
@@ -273,7 +313,7 @@ void World::Init()
 		desc.rasterizer.cullMode = CT_BACK_SIDED;
 		desc.rasterizer.polygonOffset = false;
 		desc.rasterizer.clampDepth = true;
-		desc.AddRenderTarget(GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, TextureFormat::RGBA32_UNorm);
+		desc.AddRenderTarget(GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, grp.renderTargetFormat);
 		desc.vertexLayout.AddAttribute(0, ShaderSemantic::Position, DataType::Float32, 3, 0);
 		fogOutsidePipeline = CreateGraphicsPipeline(desc);
 	}
@@ -285,47 +325,9 @@ void World::Init()
 		desc.rasterizer.cullMode = CT_FRONT_SIDED;
 		desc.rasterizer.polygonOffset = false;
 		desc.rasterizer.clampDepth = true;
-		desc.AddRenderTarget(GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, TextureFormat::RGBA32_UNorm);
+		desc.AddRenderTarget(GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, grp.renderTargetFormat);
 		desc.vertexLayout.AddAttribute(0, ShaderSemantic::Position, DataType::Float32, 3, 0);
 		fogInsidePipeline = CreateGraphicsPipeline(desc);
-	}
-	{
-		const uint32_t indices[] =
-		{
-			0, 1, 2, 2, 1, 3,
-			4, 0, 6, 6, 0, 2,
-			7, 5, 6, 6, 5, 4,
-			3, 1, 7, 7, 1, 5,
-			4, 5, 0, 0, 5, 1,
-			3, 7, 2, 2, 7, 6
-		};
-
-		BufferDesc desc("box index", sizeof(indices), ResourceStates::IndexBufferBit);
-		boxIndexBuffer = CreateBuffer(desc);
-
-		uint8_t* mapped = BeginBufferUpload(boxIndexBuffer);
-		memcpy(mapped, indices, sizeof(indices));
-		EndBufferUpload(boxIndexBuffer);
-	}
-	{
-		const float vertices[] =
-		{
-			0.0f, 1.0f, 0.0f,
-			1.0f, 1.0f, 0.0f,
-			0.0f, 0.0f, 0.0f,
-			1.0f, 0.0f, 0.0f,
-			0.0f, 1.0f, 1.0f,
-			1.0f, 1.0f, 1.0f,
-			0.0f, 0.0f, 1.0f,
-			1.0f, 0.0f, 1.0f
-		};
-
-		BufferDesc desc("box vertex", sizeof(vertices), ResourceStates::VertexBufferBit);
-		boxVertexBuffer = CreateBuffer(desc);
-
-		uint8_t* mapped = BeginBufferUpload(boxVertexBuffer);
-		memcpy(mapped, vertices, sizeof(vertices));
-		EndBufferUpload(boxVertexBuffer);
 	}
 }
 

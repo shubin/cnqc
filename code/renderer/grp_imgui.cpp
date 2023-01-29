@@ -95,7 +95,7 @@ void ImGUI::Init()
 		desc.depthStencil.enableDepthTest = false;
 		desc.depthStencil.enableDepthWrites = false;
 		desc.rasterizer.cullMode = CT_TWO_SIDED;
-		desc.AddRenderTarget(GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, TextureFormat::RGBA32_UNorm);
+		desc.AddRenderTarget(GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, grp.renderTargetFormat);
 		pipeline = CreateGraphicsPipeline(desc);
 	}
 
