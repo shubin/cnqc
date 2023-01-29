@@ -494,7 +494,7 @@ void World::EndBatch(HPipeline& pso)
 		CmdSetRootConstants(grp.opaqueRootSignature, ShaderStage::Vertex, &vertexRC);
 
 		WorldPixelRC pixelRC = {};
-		pixelRC.greyscale = r_mapGreyscale->value; // @TODO: tess.greyscale, must be set properly
+		pixelRC.greyscale = tess.greyscale;
 		pixelRC.frameSeed = grp.frameSeed;
 		pixelRC.noiseScale = r_ditherStrength->value;
 		pixelRC.invBrightness = 1.0f / r_brightness->value;
@@ -835,6 +835,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			oldHasStaticGeo = hasStaticGeo;
 			EndBatch(pso);
 			BeginBatch(shader, hasStaticGeo);
+			tess.greyscale = drawSurf->greyscale;
 		}
 
 		if(entityChanged)
