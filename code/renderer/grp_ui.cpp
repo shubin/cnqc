@@ -152,10 +152,11 @@ void UI::DrawBatch()
 
 void UI::UISetColor(const uiSetColorCommand_t& cmd)
 {
+	const float rgbScale = tr.identityLight * 255.0f;
 	byte* const colors = (byte*)&color;
-	colors[0] = (byte)(cmd.color[0] * 255.0f);
-	colors[1] = (byte)(cmd.color[1] * 255.0f);
-	colors[2] = (byte)(cmd.color[2] * 255.0f);
+	colors[0] = (byte)(cmd.color[0] * rgbScale);
+	colors[1] = (byte)(cmd.color[1] * rgbScale);
+	colors[2] = (byte)(cmd.color[2] * rgbScale);
 	colors[3] = (byte)(cmd.color[3] * 255.0f);
 }
 
