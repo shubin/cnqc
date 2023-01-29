@@ -154,7 +154,7 @@ void GRP::Init()
 		update.SetSamplers(ARRAY_LEN(samplers), samplers);
 		UpdateDescriptorTable(descriptorTable, update);
 
-		desc.name = "opaque";
+		desc.name = "world";
 		desc.usingVertexBuffers = true;
 		desc.constants[ShaderStage::Vertex].byteCount = sizeof(WorldVertexRC);
 		desc.constants[ShaderStage::Pixel].byteCount = sizeof(WorldPixelRC);
@@ -167,6 +167,20 @@ void GRP::Init()
 	psoCount = 1; // we treat index 0 as invalid
 
 	{
+		switch(r_rtColorFormat->integer)
+		{
+			case RTCF_R10G10B10A2:
+				renderTargetFormat = TextureFormat::R10G10B10A2_UNorm;
+				break;
+			case RTCF_R16G16B16A16:
+				renderTargetFormat = TextureFormat::RGBA64_Float;
+				break;
+			case RTCF_R8G8B8A8:
+			default:
+				renderTargetFormat = TextureFormat::RGBA32_UNorm;
+				break;
+		}
+
 		TextureDesc desc("render target", glConfig.vidWidth, glConfig.vidHeight);
 		desc.initialState = ResourceStates::RenderTargetBit;
 		desc.allowedState = ResourceStates::RenderTargetBit | ResourceStates::PixelShaderAccessBit;
@@ -174,7 +188,7 @@ void GRP::Init()
 		Vector4Copy(colorPink, desc.clearColor);
 		desc.usePreferredClearValue = true;
 		desc.committedResource = true;
-		desc.format = TextureFormat::RGBA32_UNorm;
+		desc.format = renderTargetFormat;
 		desc.shortLifeTime = true;
 		renderTarget = RHI::CreateTexture(desc);
 	}
@@ -466,7 +480,7 @@ uint32_t GRP::CreatePSO(CachedPSO& cache, const char* name)
 	desc.rasterizer.cullMode = cache.desc.cullType;
 	desc.rasterizer.polygonOffset = cache.desc.polygonOffset;
 	desc.rasterizer.clampDepth = cache.desc.clampDepth;
-	desc.AddRenderTarget(cache.stageStateBits[0] & GLS_BLEND_BITS, TextureFormat::RGBA32_UNorm);
+	desc.AddRenderTarget(cache.stageStateBits[0] & GLS_BLEND_BITS, renderTargetFormat);
 	cache.pipeline = CreateGraphicsPipeline(desc);
 
 	DestroyShader(vertexShader);

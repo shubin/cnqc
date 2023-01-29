@@ -163,6 +163,7 @@ namespace RHI
 			RG16_UNorm,
 			R8_UNorm,
 			Depth24_Stencil8,
+			R10G10B10A2_UNorm,
 			Count
 		};
 	};

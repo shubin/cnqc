@@ -44,17 +44,29 @@ struct PixelRC
 
 void UI::Init()
 {
-	if(!grp.firstInit)
+	if(grp.firstInit)
 	{
-		return;
-	}
-
-	{
-		RootSignatureDesc desc = grp.rootSignatureDesc;
-		desc.name = "UI";
-		desc.constants[ShaderStage::Vertex].byteCount = 8;
-		desc.constants[ShaderStage::Pixel].byteCount = 8;
-		rootSignature = CreateRootSignature(desc);
+		{
+			RootSignatureDesc desc = grp.rootSignatureDesc;
+			desc.name = "UI";
+			desc.constants[ShaderStage::Vertex].byteCount = 8;
+			desc.constants[ShaderStage::Pixel].byteCount = 8;
+			rootSignature = CreateRootSignature(desc);
+		}
+		maxVertexCount = 640 << 10;
+		maxIndexCount = 8 * maxVertexCount;
+		{
+			BufferDesc desc("UI index", sizeof(UI::Index) * maxIndexCount * FrameCount, ResourceStates::IndexBufferBit);
+			desc.memoryUsage = MemoryUsage::Upload;
+			indexBuffer = CreateBuffer(desc);
+			indices = (UI::Index*)MapBuffer(indexBuffer);
+		}
+		{
+			BufferDesc desc("UI vertex", sizeof(UI::Vertex) * maxVertexCount * FrameCount, ResourceStates::VertexBufferBit);
+			desc.memoryUsage = MemoryUsage::Upload;
+			vertexBuffer = CreateBuffer(desc);
+			vertices = (UI::Vertex*)MapBuffer(vertexBuffer);
+		}
 	}
 	{
 		GraphicsPipelineDesc desc("UI", rootSignature);
@@ -72,22 +84,8 @@ void UI::Init()
 		desc.depthStencil.enableDepthTest = false;
 		desc.depthStencil.enableDepthWrites = false;
 		desc.rasterizer.cullMode = CT_TWO_SIDED;
-		desc.AddRenderTarget(GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, TextureFormat::RGBA32_UNorm);
+		desc.AddRenderTarget(GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, grp.renderTargetFormat);
 		pipeline = CreateGraphicsPipeline(desc);
-	}
-	maxVertexCount = 640 << 10;
-	maxIndexCount = 8 * maxVertexCount;
-	{
-		BufferDesc desc("UI index", sizeof(UI::Index) * maxIndexCount * FrameCount, ResourceStates::IndexBufferBit);
-		desc.memoryUsage = MemoryUsage::Upload;
-		indexBuffer = CreateBuffer(desc);
-		indices = (UI::Index*)MapBuffer(indexBuffer);
-	}
-	{
-		BufferDesc desc("UI vertex", sizeof(UI::Vertex) * maxVertexCount * FrameCount, ResourceStates::VertexBufferBit);
-		desc.memoryUsage = MemoryUsage::Upload;
-		vertexBuffer = CreateBuffer(desc);
-		vertices = (UI::Vertex*)MapBuffer(vertexBuffer);
 	}
 }
 

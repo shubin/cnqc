@@ -30,7 +30,6 @@ to do:
 	- dynamic lights
 - entityMergeable support ("entityMergable" in the code)
 - higher bit-depth render targets (r_rtColorFormat)
-- dithering (r_dither / r_ditherStrength)
 - speed up map loads with BeginGraphicsPipelineCreation() / WaitForAllPipelineCreations()
 	use for non-UI shaders and run PSO creation on worker threads
 - r_blitMode support
@@ -567,6 +566,7 @@ namespace RHI
 			case TextureFormat::RGBA32_UNorm:
 			case TextureFormat::Depth32_Float:
 			case TextureFormat::Depth24_Stencil8:
+			case TextureFormat::R10G10B10A2_UNorm:
 				return 4;
 			case TextureFormat::RG16_UNorm:
 				return 2;
@@ -1223,6 +1223,7 @@ namespace RHI
 			case TextureFormat::Depth24_Stencil8: return DXGI_FORMAT_D24_UNORM_S8_UINT;
 			case TextureFormat::RG16_UNorm: return DXGI_FORMAT_R8G8_UNORM;
 			case TextureFormat::R8_UNorm: return DXGI_FORMAT_R8_UNORM;
+			case TextureFormat::R10G10B10A2_UNorm: return DXGI_FORMAT_R10G10B10A2_UNORM;
 			default: Q_assert(!"Unsupported texture format"); return DXGI_FORMAT_R8G8B8A8_UNORM;
 		}
 	}

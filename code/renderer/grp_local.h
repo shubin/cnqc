@@ -544,6 +544,7 @@ struct GRP : IRenderPipeline
 	float frameSeed;
 
 	HTexture renderTarget;
+	TextureFormat::Id renderTargetFormat;
 	RootSignatureDesc rootSignatureDesc;
 	HRootSignature rootSignature;
 	HDescriptorTable descriptorTable;

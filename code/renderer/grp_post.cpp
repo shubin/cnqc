@@ -86,12 +86,12 @@ void PostProcess::Draw()
 	grp.BeginRenderPass("Post-process", 0.0f, 0.0f, 0.1f);
 
 	const HTexture swapChain = GetSwapChainTexture();
-	const TextureBarrier barries[2] =
+	const TextureBarrier barriers[2] =
 	{
 		TextureBarrier(grp.renderTarget, ResourceStates::PixelShaderAccessBit),
 		TextureBarrier(swapChain, ResourceStates::RenderTargetBit)
 	};
-	CmdBarrier(ARRAY_LEN(barries), barries);
+	CmdBarrier(ARRAY_LEN(barriers), barriers);
 
 	DescriptorTableUpdate update;
 	update.SetTextures(1, &grp.renderTarget);
