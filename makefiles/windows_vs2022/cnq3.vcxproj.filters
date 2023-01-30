@@ -255,6 +255,9 @@
     <ClInclude Include="..\..\code\imgui\ProggyClean.h">
       <Filter>imgui</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\code\client\cl_imgui.h">
+      <Filter>client</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\code\client\cl_avi.cpp">
@@ -454,6 +457,9 @@
     </ClCompile>
     <ClCompile Include="..\..\code\imgui\imgui_widgets.cpp">
       <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\client\cl_imgui.cpp">
+      <Filter>client</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

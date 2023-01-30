@@ -274,6 +274,7 @@ copy "..\..\.bin\release_x32\cnq3-x86.pdb" "$(QUAKE3DIR)"</Command>
     <ClInclude Include="..\..\code\botlib\l_struct.h" />
     <ClInclude Include="..\..\code\client\client.h" />
     <ClInclude Include="..\..\code\client\client_help.h" />
+    <ClInclude Include="..\..\code\client\cl_imgui.h" />
     <ClInclude Include="..\..\code\client\keycodes.h" />
     <ClInclude Include="..\..\code\client\keys.h" />
     <ClInclude Include="..\..\code\client\snd_codec.h" />
@@ -325,6 +326,7 @@ copy "..\..\.bin\release_x32\cnq3-x86.pdb" "$(QUAKE3DIR)"</Command>
     <ClCompile Include="..\..\code\client\cl_console.cpp" />
     <ClCompile Include="..\..\code\client\cl_demo.cpp" />
     <ClCompile Include="..\..\code\client\cl_download.cpp" />
+    <ClCompile Include="..\..\code\client\cl_imgui.cpp" />
     <ClCompile Include="..\..\code\client\cl_input.cpp" />
     <ClCompile Include="..\..\code\client\cl_keys.cpp" />
     <ClCompile Include="..\..\code\client\cl_main.cpp" />

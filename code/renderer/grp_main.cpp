@@ -23,7 +23,7 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 
 #include "grp_local.h"
 #include "hlsl/uber_shader.h"
-#include "../imgui/imgui.h"
+#include "../client/cl_imgui.h"
 
 
 GRP grp;
@@ -226,45 +226,6 @@ void GRP::BeginFrame()
 	renderMode = RenderMode::None;
 
 	frameSeed = (float)rand() / (float)RAND_MAX;
-}
-
-// @TODO: move
-static bool BeginTable(const char* name, int count)
-{
-	ImGui::Text(name);
-
-	return ImGui::BeginTable(name, count, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable);
-}
-
-// @TODO: move
-static void TableHeader(int count, ...)
-{
-	va_list args;
-	va_start(args, count);
-	for(int i = 0; i < count; ++i)
-	{
-		const char* header = va_arg(args, const char*);
-		ImGui::TableSetupColumn(header);
-	}
-	va_end(args);
-
-	ImGui::TableHeadersRow();
-}
-
-// @TODO: move
-static void TableRow(int count, ...)
-{
-	ImGui::TableNextRow();
-
-	va_list args;
-	va_start(args, count);
-	for(int i = 0; i < count; ++i)
-	{
-		const char* item = va_arg(args, const char*);
-		ImGui::TableSetColumnIndex(i);
-		ImGui::Text(item);
-	}
-	va_end(args);
 }
 
 void GRP::EndFrame()

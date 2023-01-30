@@ -131,6 +131,7 @@ One mitigation for this restriction is the diligent use of Null descriptors.
 #include "../nvapi/nvapi.h"
 #pragma comment(lib, "nvapi64")
 #include "../pix/pix3.h"
+#include "../client/cl_imgui.h"
 
 
 #if defined(_DEBUG) || defined(CNQ3_DEV)
@@ -1590,47 +1591,6 @@ namespace RHI
 		const BYTE bb = (BYTE)(Com_Clamp(0.0f, 1.0f, b) * 255.0f);
 
 		return PIX_COLOR(br, bg, bb);
-	}
-
-	static bool BeginTable(const char* name, int count)
-	{
-		ImGui::Text(name);
-
-		return ImGui::BeginTable(name, count, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable);
-	}
-
-	static void TableHeader(int count, ...)
-	{
-		va_list args;
-		va_start(args, count);
-		for(int i = 0; i < count; ++i)
-		{
-			const char* header = va_arg(args, const char*);
-			ImGui::TableSetupColumn(header);
-		}
-		va_end(args);
-
-		ImGui::TableHeadersRow();
-	}
-
-	static void TableRow(int count, ...)
-	{
-		ImGui::TableNextRow();
-
-		va_list args;
-		va_start(args, count);
-		for(int i = 0; i < count; ++i)
-		{
-			const char* item = va_arg(args, const char*);
-			ImGui::TableSetColumnIndex(i);
-			ImGui::Text(item);
-		}
-		va_end(args);
-	}
-
-	static void TableRow2Bool(const char* item0, bool item1)
-	{
-		TableRow(2, item0, item1 ? "YES" : "NO");
 	}
 
 	static void DrawResourceUsage()
