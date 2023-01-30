@@ -71,7 +71,7 @@
     <FxCompile Include="..\..\code\renderer\hlsl\imgui.hlsl">
       <Filter>hlsl</Filter>
     </FxCompile>
-	<FxCompile Include="..\..\code\renderer\hlsl\post_gamma.hlsl">
+    <FxCompile Include="..\..\code\renderer\hlsl\post_gamma.hlsl">
       <Filter>hlsl</Filter>
     </FxCompile>
     <FxCompile Include="..\..\code\renderer\hlsl\depth_pre_pass.hlsl">
@@ -96,6 +96,9 @@
       <Filter>hlsl</Filter>
     </FxCompile>
     <FxCompile Include="..\..\code\renderer\hlsl\uber_shader.hlsl">
+      <Filter>hlsl</Filter>
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\post_inverse_gamma.hlsl">
       <Filter>hlsl</Filter>
     </FxCompile>
   </ItemGroup>

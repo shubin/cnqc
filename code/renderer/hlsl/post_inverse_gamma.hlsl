@@ -18,11 +18,7 @@ You should have received a copy of the GNU General Public License
 along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 ===========================================================================
 */
-// post-processing: moves from linear to gamma space
-// applies r_gamma, r_brightness, r_greyscale
-
-
-#include "shared.hlsli"
+// post-processing: moves from gamma to linear space
 
 
 struct VOut
@@ -34,17 +30,11 @@ struct VOut
 
 #if VERTEX_SHADER
 
-cbuffer RootConstants
-{
-	float scaleX;
-	float scaleY;
-};
-
 VOut vs(uint id : SV_VertexID)
 {
 	VOut output;
-	output.position.x = scaleX * ((float)(id / 2) * 4.0 - 1.0);
-	output.position.y = scaleY * ((float)(id % 2) * 4.0 - 1.0);
+	output.position.x = (float)(id / 2) * 4.0 - 1.0;
+	output.position.y = (float)(id % 2) * 4.0 - 1.0;
 	output.position.z = 0.0;
 	output.position.w = 1.0;
 	output.texCoords.x = (float)(id / 2) * 2.0;
@@ -63,9 +53,8 @@ VOut vs(uint id : SV_VertexID)
 
 cbuffer RootConstants
 {
-	float invGamma;
-	float brightness;
-	float greyscale;
+	float gamma;
+	float invBrightness;
 };
 
 Texture2D texture0 : register(t0);
@@ -75,9 +64,9 @@ float4 ps(VOut input) : SV_Target
 {
 	float3 raw = texture0.Sample(sampler0, input.texCoords).rgb;
 	float3 base = saturate(raw); // can have negative values in the float render target
-	float3 gc = pow(base, invGamma) * brightness;
+	float3 linearSpace = pow(base * invBrightness, gamma);
 
-	return MakeGreyscale(float4(gc.rgb, 1.0), greyscale);
+	return float4(linearSpace, 1.0f);
 }
 
 #endif

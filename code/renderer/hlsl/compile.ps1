@@ -83,6 +83,9 @@ function Compile-CS
 Compile-VS "post_gamma_vs.h" "post_gamma.hlsl"
 Compile-PS "post_gamma_ps.h" "post_gamma.hlsl"
 
+Compile-VS "post_inverse_gamma_vs.h" "post_inverse_gamma.hlsl"
+Compile-PS "post_inverse_gamma_ps.h" "post_inverse_gamma.hlsl"
+
 Compile-VS "imgui_vs.h" "imgui.hlsl"
 Compile-PS "imgui_ps.h" "imgui.hlsl"
 

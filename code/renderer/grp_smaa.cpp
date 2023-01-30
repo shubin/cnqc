@@ -184,7 +184,7 @@ void SMAA::Init()
 		// @TODO: remove pixel shader access?
 		TextureDesc desc("SMAA destination", glConfig.vidWidth, glConfig.vidHeight);
 		desc.initialState = ResourceStates::RenderTargetBit;
-		desc.allowedState = ResourceStates::RenderTargetBit | ResourceStates::PixelShaderAccessBit | ResourceStates::CopySourceBit;
+		desc.allowedState = ResourceStates::RenderTargetBit | ResourceStates::PixelShaderAccessBit;
 		desc.committedResource = true;
 		desc.format = TextureFormat::RGBA32_UNorm;
 		desc.shortLifeTime = true;
@@ -206,7 +206,7 @@ void SMAA::Init()
 	{
 		const HTexture textures[] =
 		{
-			grp.renderTarget, edgeTexture, areaTexture, searchTexture, blendTexture
+			destTexture, edgeTexture, areaTexture, searchTexture, blendTexture
 		};
 
 		DescriptorTableUpdate update;
@@ -224,11 +224,32 @@ void SMAA::Draw(const viewParms_t& parms)
 
 	SCOPED_RENDER_PASS("SMAA", 0.5f, 0.25f, 0.75f);
 
-	// @TODO: apply our post-process to the 3D scene
-	// so we can do SMAA in gamma space
+	// can't clear targets if they're not in render target state
+	const TextureBarrier barriers[2] =
+	{
+		TextureBarrier(edgeTexture, ResourceStates::RenderTargetBit),
+		TextureBarrier(blendTexture, ResourceStates::RenderTargetBit)
+	};
+	CmdBarrier(ARRAY_LEN(barriers), barriers);
 
 	CmdClearColorTarget(edgeTexture, vec4_zero);
 	CmdClearColorTarget(blendTexture, vec4_zero);
+
+	CmdSetViewport(0, 0, glConfig.vidWidth, glConfig.vidHeight);
+	CmdSetScissor(parms.viewportX, parms.viewportY, parms.viewportWidth, parms.viewportHeight);
+
+	// move to gamma space for higher quality AA
+	{
+		const TextureBarrier barriers[2] =
+		{
+			TextureBarrier(grp.renderTarget, ResourceStates::PixelShaderAccessBit),
+			TextureBarrier(destTexture, ResourceStates::RenderTargetBit)
+		};
+		CmdBarrier(ARRAY_LEN(barriers), barriers);
+
+		CmdBindRenderTargets(1, &destTexture, NULL);
+		grp.post.ToneMap(grp.renderTarget);
+	}
 
 	CmdBindRootSignature(rootSignature);
 	CmdBindDescriptorTable(rootSignature, descriptorTable);
@@ -241,11 +262,9 @@ void SMAA::Draw(const viewParms_t& parms)
 	CmdSetRootConstants(rootSignature, ShaderStage::Vertex, &rc);
 	CmdSetRootConstants(rootSignature, ShaderStage::Pixel, &rc);
 
-	CmdSetViewport(0, 0, glConfig.vidWidth, glConfig.vidHeight);
-	CmdSetScissor(parms.viewportX, parms.viewportY, parms.viewportWidth, parms.viewportHeight);
-
 	{
-		const TextureBarrier barrier(grp.renderTarget, ResourceStates::PixelShaderAccessBit);
+		const TextureBarrier barrier(destTexture, ResourceStates::PixelShaderAccessBit);
+		CmdBarrier(1, &barrier);
 
 		// @TODO: stencilTexture
 		CmdBindRenderTargets(1, &edgeTexture, NULL);
@@ -255,6 +274,7 @@ void SMAA::Draw(const viewParms_t& parms)
 
 	{
 		const TextureBarrier barrier(edgeTexture, ResourceStates::PixelShaderAccessBit);
+		CmdBarrier(1, &barrier);
 
 		// @TODO: stencilTexture
 		CmdBindRenderTargets(1, &blendTexture, NULL);
@@ -263,12 +283,12 @@ void SMAA::Draw(const viewParms_t& parms)
 	}
 
 	{
-		//const TextureBarrier barrier(blendTexture, ResourceStates::PixelShaderAccessBit);
 		const TextureBarrier barriers[2] =
 		{
 			TextureBarrier(blendTexture, ResourceStates::PixelShaderAccessBit),
 			TextureBarrier(destTexture, ResourceStates::RenderTargetBit)
 		};
+		CmdBarrier(ARRAY_LEN(barriers), barriers);
 
 		// @TODO: stencilTexture
 		CmdBindRenderTargets(1, &destTexture, NULL);
@@ -276,12 +296,17 @@ void SMAA::Draw(const viewParms_t& parms)
 		CmdDraw(3, 0);
 	}
 
-	// @TODO: apply the inverse of our post-process to the SMAA result
+	// apply the inverse of our post-process to the SMAA result
 	// to move back into linear space (since we must still render UI/HUD etc.)
-
 	{
-		const TextureBarrier barrier(destTexture, ResourceStates::CopySourceBit);
+		const TextureBarrier barriers[2] =
+		{
+			TextureBarrier(destTexture, ResourceStates::PixelShaderAccessBit),
+			TextureBarrier(grp.renderTarget, ResourceStates::RenderTargetBit)
+		};
+		CmdBarrier(ARRAY_LEN(barriers), barriers);
 
-		//CmdCopyTexture();
+		CmdBindRenderTargets(1, &grp.renderTarget, NULL);
+		grp.post.InverseToneMap(destTexture);
 	}
 }

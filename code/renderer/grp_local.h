@@ -484,10 +484,16 @@ struct PostProcess
 {
 	void Init();
 	void Draw();
+	void ToneMap(HTexture texture);
+	void InverseToneMap(HTexture texture);
 
-	HPipeline pipeline;
-	HRootSignature rootSignature;
-	HDescriptorTable descriptorTable;
+	HPipeline toneMapPipeline;
+	HRootSignature toneMapRootSignature;
+	HDescriptorTable toneMapDescriptorTable;
+
+	HPipeline inverseToneMapPipeline;
+	HRootSignature inverseToneMapRootSignature;
+	HDescriptorTable inverseToneMapDescriptorTable;
 };
 
 struct SMAA

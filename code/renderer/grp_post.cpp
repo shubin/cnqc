@@ -22,23 +22,37 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 
 
 #include "grp_local.h"
+namespace tone_map
+{
 #include "hlsl/post_gamma_vs.h"
 #include "hlsl/post_gamma_ps.h"
+}
+namespace inverse_tone_map
+{
+#include "hlsl/post_inverse_gamma_vs.h"
+#include "hlsl/post_inverse_gamma_ps.h"
+}
 
 
 #pragma pack(push, 4)
 
-struct PostVertexRC
+struct GammaVertexRC
 {
 	float scaleX;
 	float scaleY;
 };
 
-struct PostPixelRC
+struct GammaPixelRC
 {
 	float invGamma;
 	float brightness;
 	float greyscale;
+};
+
+struct InverseGammaPixelRC
+{
+	float gamma;
+	float invBrightness;
 };
 
 #pragma pack(pop)
@@ -52,32 +66,61 @@ void PostProcess::Init()
 	}
 
 	{
-		RootSignatureDesc desc("Post Process");
+		RootSignatureDesc desc("tone map");
 		desc.usingVertexBuffers = false;
-		desc.constants[ShaderStage::Vertex].byteCount = sizeof(PostVertexRC);
-		desc.constants[ShaderStage::Pixel].byteCount = sizeof(PostPixelRC);
+		desc.constants[ShaderStage::Vertex].byteCount = sizeof(GammaVertexRC);
+		desc.constants[ShaderStage::Pixel].byteCount = sizeof(GammaPixelRC);
 		desc.samplerCount = 1;
 		desc.samplerVisibility = ShaderStages::PixelBit;
 		desc.AddRange(DescriptorType::Texture, 0, 1);
 		desc.genericVisibility = ShaderStages::PixelBit;
-		rootSignature = CreateRootSignature(desc);
+		toneMapRootSignature = CreateRootSignature(desc);
 	}
 	{
-		DescriptorTableDesc desc("Post Process", rootSignature);
-		descriptorTable = CreateDescriptorTable(desc);
+		DescriptorTableDesc desc("tone map", toneMapRootSignature);
+		toneMapDescriptorTable = CreateDescriptorTable(desc);
 
 		DescriptorTableUpdate update;
 		update.SetSamplers(1, &grp.samplers[GetSamplerIndex(TW_CLAMP_TO_EDGE, TextureFilter::Linear)]);
-		UpdateDescriptorTable(descriptorTable, update);
+		UpdateDescriptorTable(toneMapDescriptorTable, update);
 	}
 	{
-		GraphicsPipelineDesc desc("Post Process", rootSignature);
-		desc.vertexShader = ShaderByteCode(g_vs);
-		desc.pixelShader = ShaderByteCode(g_ps);
+		GraphicsPipelineDesc desc("tone map", toneMapRootSignature);
+		desc.vertexShader = ShaderByteCode(tone_map::g_vs);
+		desc.pixelShader = ShaderByteCode(tone_map::g_ps);
 		desc.depthStencil.DisableDepth();
 		desc.rasterizer.cullMode = CT_TWO_SIDED;
 		desc.AddRenderTarget(0, TextureFormat::RGBA32_UNorm);
-		pipeline = CreateGraphicsPipeline(desc);
+		toneMapPipeline = CreateGraphicsPipeline(desc);
+	}
+
+	{
+		RootSignatureDesc desc("inverse tone map");
+		desc.usingVertexBuffers = false;
+		desc.constants[ShaderStage::Vertex].byteCount = 0;
+		desc.constants[ShaderStage::Pixel].byteCount = sizeof(InverseGammaPixelRC);
+		desc.samplerCount = 1;
+		desc.samplerVisibility = ShaderStages::PixelBit;
+		desc.AddRange(DescriptorType::Texture, 0, 1);
+		desc.genericVisibility = ShaderStages::PixelBit;
+		inverseToneMapRootSignature = CreateRootSignature(desc);
+	}
+	{
+		DescriptorTableDesc desc("inverse tone map", inverseToneMapRootSignature);
+		inverseToneMapDescriptorTable = CreateDescriptorTable(desc);
+
+		DescriptorTableUpdate update;
+		update.SetSamplers(1, &grp.samplers[GetSamplerIndex(TW_CLAMP_TO_EDGE, TextureFilter::Linear)]);
+		UpdateDescriptorTable(inverseToneMapDescriptorTable, update);
+	}
+	{
+		GraphicsPipelineDesc desc("inverse tone map", inverseToneMapRootSignature);
+		desc.vertexShader = ShaderByteCode(inverse_tone_map::g_vs);
+		desc.pixelShader = ShaderByteCode(inverse_tone_map::g_ps);
+		desc.depthStencil.DisableDepth();
+		desc.rasterizer.cullMode = CT_TWO_SIDED;
+		desc.AddRenderTarget(0, TextureFormat::RGBA32_UNorm);
+		inverseToneMapPipeline = CreateGraphicsPipeline(desc);
 	}
 }
 
@@ -95,24 +138,64 @@ void PostProcess::Draw()
 
 	DescriptorTableUpdate update;
 	update.SetTextures(1, &grp.renderTarget);
-	UpdateDescriptorTable(descriptorTable, update);
+	UpdateDescriptorTable(toneMapDescriptorTable, update);
 
 	// @TODO: r_blitMode support
-	PostVertexRC vertexRC = {};
+	GammaVertexRC vertexRC = {};
 	vertexRC.scaleX = 1.0f;
 	vertexRC.scaleY = 1.0f;
 
-	PostPixelRC pixelRC = {};
+	GammaPixelRC pixelRC = {};
 	pixelRC.invGamma = 1.0f / r_gamma->value;
 	pixelRC.brightness = r_brightness->value;
 	pixelRC.greyscale = r_greyscale->value;
 
 	CmdSetViewportAndScissor(0, 0, glConfig.vidWidth, glConfig.vidHeight);
 	CmdBindRenderTargets(1, &swapChain, NULL);
-	CmdBindPipeline(pipeline);
-	CmdBindRootSignature(rootSignature);
-	CmdBindDescriptorTable(rootSignature, descriptorTable);
-	CmdSetRootConstants(rootSignature, ShaderStage::Vertex, &vertexRC);
-	CmdSetRootConstants(rootSignature, ShaderStage::Pixel, &pixelRC);
+	CmdBindPipeline(toneMapPipeline);
+	CmdBindRootSignature(toneMapRootSignature);
+	CmdBindDescriptorTable(toneMapRootSignature, toneMapDescriptorTable);
+	CmdSetRootConstants(toneMapRootSignature, ShaderStage::Vertex, &vertexRC);
+	CmdSetRootConstants(toneMapRootSignature, ShaderStage::Pixel, &pixelRC);
+	CmdDraw(3, 0);
+}
+
+void PostProcess::ToneMap(HTexture texture)
+{
+	DescriptorTableUpdate update;
+	update.SetTextures(1, &grp.renderTarget);
+	UpdateDescriptorTable(toneMapDescriptorTable, update);
+
+	GammaVertexRC vertexRC = {};
+	vertexRC.scaleX = 1.0f;
+	vertexRC.scaleY = 1.0f;
+
+	GammaPixelRC pixelRC = {};
+	pixelRC.invGamma = 1.0f / r_gamma->value;
+	pixelRC.brightness = r_brightness->value;
+	pixelRC.greyscale = 0.0f;
+
+	CmdBindPipeline(toneMapPipeline);
+	CmdBindRootSignature(toneMapRootSignature);
+	CmdBindDescriptorTable(toneMapRootSignature, toneMapDescriptorTable);
+	CmdSetRootConstants(toneMapRootSignature, ShaderStage::Vertex, &vertexRC);
+	CmdSetRootConstants(toneMapRootSignature, ShaderStage::Pixel, &pixelRC);
+	CmdDraw(3, 0);
+}
+
+void PostProcess::InverseToneMap(HTexture texture)
+{
+	DescriptorTableUpdate update;
+	update.SetTextures(1, &texture);
+	UpdateDescriptorTable(inverseToneMapDescriptorTable, update);
+
+	InverseGammaPixelRC pixelRC = {};
+	pixelRC.gamma = r_gamma->value;
+	pixelRC.invBrightness = 1.0f / r_brightness->value;
+
+	CmdBindPipeline(inverseToneMapPipeline);
+	CmdBindRootSignature(inverseToneMapRootSignature);
+	CmdBindDescriptorTable(inverseToneMapRootSignature, inverseToneMapDescriptorTable);
+	CmdSetRootConstants(inverseToneMapRootSignature, ShaderStage::Pixel, &pixelRC);
 	CmdDraw(3, 0);
 }
