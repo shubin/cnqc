@@ -451,9 +451,8 @@ struct RenderPassQueries
 {
 	char name[64];
 	uint32_t cpuDurationUS;
-	uint32_t gpuDurationUS;
 	int64_t cpuStartUS;
-	HDurationQuery query;
+	uint32_t queryIndex;
 };
 
 struct RenderPassFrame

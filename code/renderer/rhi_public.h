@@ -40,7 +40,6 @@ namespace RHI
 	RHI_HANDLE_TYPE(HPipeline);
 	RHI_HANDLE_TYPE(HTexture);
 	RHI_HANDLE_TYPE(HSampler);
-	RHI_HANDLE_TYPE(HDurationQuery);
 	RHI_HANDLE_TYPE(HShader);
 #undef RHI_HANDLE_TYPE
 

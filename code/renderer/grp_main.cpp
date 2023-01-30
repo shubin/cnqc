@@ -23,6 +23,7 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 
 #include "grp_local.h"
 #include "hlsl/uber_shader.h"
+#include "../imgui/imgui.h"
 
 
 GRP grp;
@@ -227,8 +228,72 @@ void GRP::BeginFrame()
 	frameSeed = (float)rand() / (float)RAND_MAX;
 }
 
+// @TODO: move
+static bool BeginTable(const char* name, int count)
+{
+	ImGui::Text(name);
+
+	return ImGui::BeginTable(name, count, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable);
+}
+
+// @TODO: move
+static void TableHeader(int count, ...)
+{
+	va_list args;
+	va_start(args, count);
+	for(int i = 0; i < count; ++i)
+	{
+		const char* header = va_arg(args, const char*);
+		ImGui::TableSetupColumn(header);
+	}
+	va_end(args);
+
+	ImGui::TableHeadersRow();
+}
+
+// @TODO: move
+static void TableRow(int count, ...)
+{
+	ImGui::TableNextRow();
+
+	va_list args;
+	va_start(args, count);
+	for(int i = 0; i < count; ++i)
+	{
+		const char* item = va_arg(args, const char*);
+		ImGui::TableSetColumnIndex(i);
+		ImGui::Text(item);
+	}
+	va_end(args);
+}
+
 void GRP::EndFrame()
 {
+	// @TODO: move
+	{
+		uint32_t durations[MaxDurationQueries];
+		GetDurations(durations);
+
+		if(BeginTable("GPU timings", 2))
+		{
+			TableHeader(2, "Pass", "Micro-seconds");
+
+			TableRow(2, "Whole frame", va("%d", (int)durations[0]));
+
+			RenderPassFrame& f = renderPasses[GetFrameIndex() ^ 1];
+			for(uint32_t p = 0; p < f.count; ++p)
+			{
+				const uint32_t index = f.passes[p].queryIndex;
+				if(index < MaxDurationQueries)
+				{
+					TableRow(2, f.passes[p].name, va("%d", (int)durations[index]));
+				}
+			}
+
+			ImGui::EndTable();
+		}
+	}
+
 	EndUI();
 	imgui.Draw();
 	post.Draw();
@@ -389,7 +454,7 @@ uint32_t GRP::BeginRenderPass(const char* name, float r, float g, float b)
 	RenderPassQueries& q = f.passes[index];
 	Q_strncpyz(q.name, name, sizeof(q.name));
 	q.cpuStartUS = Sys_Microseconds();
-	q.query = CmdBeginDurationQuery(name);
+	q.queryIndex = CmdBeginDurationQuery();
 
 	return index;
 }
@@ -407,7 +472,7 @@ void GRP::EndRenderPass(uint32_t index)
 
 	RenderPassQueries& q = f.passes[index];
 	q.cpuDurationUS = (uint32_t)(Sys_Microseconds() - q.cpuStartUS);
-	CmdEndDurationQuery(q.query);
+	CmdEndDurationQuery(q.queryIndex);
 }
 
 void GRP::EndUI()

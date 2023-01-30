@@ -664,14 +664,18 @@ namespace RHI
 	void CmdDraw(uint32_t vertexCount, uint32_t firstVertex);
 	void CmdDrawIndexed(uint32_t indexCount, uint32_t firstIndex, uint32_t firstVertex);
 	void CmdDispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ);
-	HDurationQuery CmdBeginDurationQuery(const char* name);
-	void CmdEndDurationQuery(HDurationQuery query);
+	uint32_t CmdBeginDurationQuery();
+	void CmdEndDurationQuery(uint32_t index);
 	void CmdBarrier(uint32_t texCount, const TextureBarrier* textures, uint32_t buffCount = 0, const BufferBarrier* buffers = NULL);
 	void CmdClearColorTarget(HTexture texture, const vec4_t clearColor, const Rect* rect = NULL);
 	void CmdClearDepthTarget(HTexture texture, float clearDepth, const Rect* rect = NULL);
 	void CmdInsertDebugLabel(const char* name, float r = 1.0f, float g = 1.0f, float b = 1.0f);
 	void CmdBeginDebugLabel(const char* name, float r = 1.0f, float g = 1.0f, float b = 1.0f);
 	void CmdEndDebugLabel();
+
+	// the duration at index 0 is for the entire frame
+	uint32_t GetDurationCount();
+	void GetDurations(uint32_t* gpuMicroSeconds);
 
 	uint8_t* BeginBufferUpload(HBuffer buffer);
 	void EndBufferUpload(HBuffer buffer);
