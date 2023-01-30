@@ -15,7 +15,18 @@
 #pragma once
 
 // CNQ3
+#include <assert.h>
+
+// CNQ3
 #define ImTextureID unsigned int
+
+// CNQ3
+#if defined(_DEBUG)
+int Sys_IsDebuggerAttached();
+#define IM_ASSERT(Cond) do { if(!(Cond)) { if(Sys_IsDebuggerAttached()) __debugbreak(); else assert((Cond)); } } while(0)
+#else
+#define IM_ASSERT(Cond)
+#endif
 
 //---- Define assertion handler. Defaults to calling assert().
 // If your macro uses multiple statements, make sure is enclosed in a 'do { .. } while (0)' block so it can be used as a single statement.
