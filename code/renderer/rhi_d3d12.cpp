@@ -1484,7 +1484,9 @@ namespace RHI
 		D3D(rhi.mainCommandQueue->GetTimestampFrequency(&gpuFrequency));
 		const double frequency = (double)gpuFrequency;
 
-		const uint32_t frameIndex = rhi.frameIndex ^ 1;
+		// @TODO: is it correct to grab from the current one instead of the previous one?
+		//const uint32_t frameIndex = rhi.frameIndex ^ 1;
+		const uint32_t frameIndex = rhi.frameIndex;
 		FrameQueries& fq = rhi.frameQueries[frameIndex];
 		ResolvedQueries& rq = rhi.resolvedQueries;
 		const UINT64* const timeStamps = rhi.mappedTimeStamps + (frameIndex * MaxDurationQueries * 2);
@@ -1652,6 +1654,9 @@ namespace RHI
 			ITEM("Pipelines", rhi.pipelines);
 			ITEM("Shaders", rhi.shaders);
 #undef ITEM
+			TableRow(3, "Duration Queries",
+				va("%d", rhi.frameQueries[rhi.frameIndex].durationQueryCount),
+				va("%d", MaxDurationQueries));
 
 			ImGui::EndTable();
 		}
@@ -3246,6 +3251,15 @@ namespace RHI
 	{
 		Q_assert(CanWriteCommands());
 
+		// @TODO: we want profiling off when the UI isn't shown,
+		// but that should all be moved out of the RHI
+		/*
+		if(strcmp(name, "Whole frame") != 0)
+		{
+			return RHI_MAKE_NULL_HANDLE();
+		}
+		*/
+
 		FrameQueries& fq = rhi.frameQueries[rhi.frameIndex];
 		Q_assert(fq.durationQueryCount < MaxDurationQueries);
 		if(fq.durationQueryCount >= MaxDurationQueries)
@@ -3263,6 +3277,7 @@ namespace RHI
 		}
 		Handle type, index, generation;
 		DecomposeHandle(&type, &index, &generation, query.handle);
+		generation++;
 		query.handle = CreateHandle(ResourceType::DurationQuery, fq.durationQueryCount, generation);
 		query.queryIndex = rhi.durationQueryIndex;
 		query.state = QueryState::Begun;
@@ -3277,6 +3292,11 @@ namespace RHI
 	void CmdEndDurationQuery(HDurationQuery handle)
 	{
 		Q_assert(CanWriteCommands());
+
+		if(IsNullHandle(handle))
+		{
+			return;
+		}
 
 		Handle type, index, gen;
 		DecomposeHandle(&type, &index, &gen, handle.v);
