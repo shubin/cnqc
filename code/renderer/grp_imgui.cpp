@@ -48,6 +48,9 @@ struct PixelRC
 void ImGUI::Init()
 {
 	ImGuiIO& io = ImGui::GetIO();
+	io.DisplaySize.x = glConfig.vidWidth;
+	io.DisplaySize.y = glConfig.vidHeight;
+
 	if(grp.firstInit)
 	{
 		io.BackendRendererUserData = this;
@@ -115,6 +118,8 @@ void ImGUI::Init()
 	}
 
 	RegisterFontAtlas();
+
+	SafeBeginFrame();
 }
 
 void ImGUI::RegisterFontAtlas()
@@ -138,10 +143,7 @@ void ImGUI::Draw()
 	io.DisplaySize.x = glConfig.vidWidth;
 	io.DisplaySize.y = glConfig.vidHeight;
 
-	ImGui::NewFrame();
-	R_GUI_RHI();
-	grp.world.DrawGUI();
-	ImGui::EndFrame();
+	SafeEndFrame();
 	ImGui::Render();
 
 	const ImDrawData* drawData = ImGui::GetDrawData();
@@ -227,5 +229,25 @@ void ImGUI::Draw()
 
 		globalIdxOffset += cmdList->IdxBuffer.Size;
 		globalVtxOffset += cmdList->VtxBuffer.Size;
+	}
+
+	SafeBeginFrame();
+}
+
+void ImGUI::SafeBeginFrame()
+{
+	if(!frameStarted)
+	{
+		ImGui::NewFrame();
+		frameStarted = true;
+	}
+}
+
+void ImGUI::SafeEndFrame()
+{
+	if(frameStarted)
+	{
+		ImGui::EndFrame();
+		frameStarted = false;
 	}
 }

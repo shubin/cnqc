@@ -1602,8 +1602,6 @@ void R_TransposeMatrix( const float* in, float* out );
 void R_MakeIdentityMatrix( float* m );
 void R_MakeOrthoProjectionMatrix( float* m, float w, float h );
 
-void R_GUI_RHI();
-
 
 ///////////////////////////////////////////////////////////////
 

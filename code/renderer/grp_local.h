@@ -419,6 +419,8 @@ struct ImGUI
 	void Init();
 	void RegisterFontAtlas();
 	void Draw();
+	void SafeBeginFrame();
+	void SafeEndFrame();
 
 	struct FrameResources
 	{
@@ -430,6 +432,7 @@ struct ImGUI
 	HPipeline pipeline;
 	HTexture fontAtlas;
 	FrameResources frameResources[FrameCount];
+	bool frameStarted = false;
 };
 
 struct RenderMode

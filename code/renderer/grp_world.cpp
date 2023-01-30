@@ -342,6 +342,8 @@ void World::BeginFrame()
 	boundIndexBuffer = BufferFamily::Invalid;
 	boundStaticVertexBuffersFirst = 0;
 	boundStaticVertexBuffersCount = UINT32_MAX;
+
+	DrawGUI();
 }
 
 void World::Begin()
@@ -569,7 +571,7 @@ void World::DrawGUI()
 
 		ImGui::Text("PSO count: %d", (int)grp.psoCount);
 
-		vec3_t axis[3];
+		/*vec3_t axis[3];
 		ExtractCameraAxisVectors(axis[0], axis[1], axis[2], backEnd.viewParms.world.modelMatrix);
 		const char* axisNames[] = { "X", "Y", "Z", };
 		for(int a = 0; a < 3; ++a)
@@ -584,7 +586,7 @@ void World::DrawGUI()
 		for(int f = 1; f < tr.world->numfogs; ++f)
 		{
 			ImGui::Text("Fog: %s", v4tos(tr.world->fogs[f].surface));
-		}
+		}*/
 	}
 	ImGui::End();
 }
