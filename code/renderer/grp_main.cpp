@@ -213,6 +213,9 @@ void GRP::BeginFrame()
 {
 	renderPasses[GetFrameIndex()].count = 0;
 
+	// have it be first to we can use ImGUI in the other components too
+	grp.imgui.SafeBeginFrame();
+
 	RHI::BeginFrame();
 	ui.BeginFrame();
 	world.BeginFrame();

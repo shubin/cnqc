@@ -2101,6 +2101,8 @@ namespace RHI
 
 	void BeginFrame()
 	{
+		DrawGUI();
+
 		Q_assert(rhi.commandList == rhi.mainCommandList);
 
 		rhi.currentRootSignature = RHI_MAKE_NULL_HANDLE();
@@ -2158,8 +2160,6 @@ namespace RHI
 		}
 
 		MoveToNextFrame();
-
-		DrawGUI();
 	}
 
 	uint32_t GetFrameIndex()

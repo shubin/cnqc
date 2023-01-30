@@ -118,8 +118,6 @@ void ImGUI::Init()
 	}
 
 	RegisterFontAtlas();
-
-	SafeBeginFrame();
 }
 
 void ImGUI::RegisterFontAtlas()
@@ -230,8 +228,6 @@ void ImGUI::Draw()
 		globalIdxOffset += cmdList->IdxBuffer.Size;
 		globalVtxOffset += cmdList->VtxBuffer.Size;
 	}
-
-	SafeBeginFrame();
 }
 
 void ImGUI::SafeBeginFrame()
