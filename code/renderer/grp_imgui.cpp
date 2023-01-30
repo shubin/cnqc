@@ -152,7 +152,7 @@ void ImGUI::Draw()
 		return;
 	}
 
-	grp.BeginRenderPass("Dear ImGUI", 0.5f, 0.5f, 1.0f);
+	SCOPED_RENDER_PASS("Dear ImGUI", 0.5f, 0.5f, 1.0f);
 
 	FrameResources* fr = &frameResources[GetFrameIndex()];
 
@@ -228,6 +228,4 @@ void ImGUI::Draw()
 		globalIdxOffset += cmdList->IdxBuffer.Size;
 		globalVtxOffset += cmdList->VtxBuffer.Size;
 	}
-
-	grp.EndRenderPass();
 }

@@ -398,7 +398,7 @@ void World::DrawPrePass()
 		return;
 	}
 
-	grp.BeginRenderPass("Depth Pre-Pass", 0.75f, 0.75f, 0.375f);
+	SCOPED_RENDER_PASS("Depth Pre-Pass", 0.75f, 0.75f, 0.375f);
 
 	// @TODO: evaluate later whether binding the color target here is OK?
 	CmdBindRenderTargets(0, NULL, &depthTexture);
@@ -418,8 +418,6 @@ void World::DrawPrePass()
 	CmdDrawIndexed(zppIndexBuffer.batchCount, 0, 0);
 	boundVertexBuffers = BufferFamily::PrePass;
 	boundIndexBuffer = BufferFamily::PrePass;
-
-	grp.EndRenderPass();
 }
 
 void World::BeginBatch(const shader_t* shader, bool hasStaticGeo)
@@ -779,7 +777,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 		}
 	}
 
-	grp.BeginRenderPass("3D Scene View", 1.0f, 0.5f, 0.5f);
+	SCOPED_RENDER_PASS("3D Scene View", 1.0f, 0.5f, 0.5f);
 
 	CmdBindRootSignature(grp.opaqueRootSignature);
 	CmdBindDescriptorTable(grp.opaqueRootSignature, grp.descriptorTable);
@@ -898,8 +896,6 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 	db.vertexBuffers.EndUpload();
 	db.indexBuffer.EndUpload();
 
-	grp.EndRenderPass();
-
 	// @TODO: go back to the world model-view matrix, restore depth range
 }
 
@@ -950,7 +946,7 @@ void World::DrawFog()
 		return;
 	}
 
-	grp.BeginRenderPass("Fog", 0.25f, 0.125f, 0.0f);
+	SCOPED_RENDER_PASS("Fog", 0.25f, 0.125f, 0.0f);
 
 	CmdBindPipeline(fogOutsidePipeline);
 	CmdBindRootSignature(fogRootSignature);
@@ -1033,6 +1029,4 @@ void World::DrawFog()
 
 		CmdDrawIndexed(36, 0, 0);
 	}
-
-	grp.EndRenderPass();
 }

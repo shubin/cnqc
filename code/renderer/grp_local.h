@@ -353,6 +353,8 @@ struct UI
 	typedef uint32_t Index;
 	const IndexType::Id indexType = IndexType::UInt32;
 
+	uint32_t renderPassIndex;
+
 #pragma pack(push, 1)
 	struct Vertex
 	{
@@ -529,8 +531,8 @@ struct GRP : IRenderPipeline
 
 	uint32_t RegisterTexture(HTexture htexture);
 
-	void BeginRenderPass(const char* name, float r, float g, float b);
-	void EndRenderPass();
+	uint32_t BeginRenderPass(const char* name, float r, float g, float b);
+	void EndRenderPass(uint32_t index);
 
 	void EndUI();
 
@@ -562,6 +564,23 @@ struct GRP : IRenderPipeline
 };
 
 extern GRP grp;
+
+struct ScopedRenderPass
+{
+	ScopedRenderPass(const char* name, float r, float g, float b)
+	{
+		index = grp.BeginRenderPass(name, r, g, b);
+	}
+
+	~ScopedRenderPass()
+	{
+		grp.EndRenderPass(index);
+	}
+
+	uint32_t index;
+};
+
+#define SCOPED_RENDER_PASS(Name, R, G, B) ScopedRenderPass rp##__LINE__(Name, R, G, B)
 
 inline void CmdSetViewportAndScissor(uint32_t x, uint32_t y, uint32_t w, uint32_t h)
 {

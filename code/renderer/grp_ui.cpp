@@ -96,6 +96,7 @@ void UI::BeginFrame()
 	const uint32_t frameIndex = GetFrameIndex();
 	firstIndex = frameIndex * maxIndexCount;
 	firstVertex = frameIndex * maxVertexCount;
+	renderPassIndex = UINT32_MAX;
 }
 
 void UI::Begin()
@@ -105,7 +106,7 @@ void UI::Begin()
 		return;
 	}
 
-	grp.BeginRenderPass("UI", 0.0f, 0.85f, 1.0f);
+	renderPassIndex = grp.BeginRenderPass("UI", 0.0f, 0.85f, 1.0f);
 
 	CmdBindRenderTargets(1, &grp.renderTarget, NULL);
 

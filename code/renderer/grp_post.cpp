@@ -83,7 +83,7 @@ void PostProcess::Init()
 
 void PostProcess::Draw()
 {
-	grp.BeginRenderPass("Post-process", 0.0f, 0.0f, 0.1f);
+	SCOPED_RENDER_PASS("Post-process", 0.0f, 0.0f, 0.1f);
 
 	const HTexture swapChain = GetSwapChainTexture();
 	const TextureBarrier barriers[2] =
@@ -115,6 +115,4 @@ void PostProcess::Draw()
 	CmdSetRootConstants(rootSignature, ShaderStage::Vertex, &vertexRC);
 	CmdSetRootConstants(rootSignature, ShaderStage::Pixel, &pixelRC);
 	CmdDraw(3, 0);
-
-	grp.EndRenderPass();
 }

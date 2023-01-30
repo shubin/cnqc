@@ -222,7 +222,7 @@ void SMAA::Draw(const viewParms_t& parms)
 		return;
 	}
 
-	grp.BeginRenderPass("SMAA", 0.5f, 0.25f, 0.75f);
+	SCOPED_RENDER_PASS("SMAA", 0.5f, 0.25f, 0.75f);
 
 	// @TODO: apply our post-process to the 3D scene
 	// so we can do SMAA in gamma space
@@ -273,6 +273,4 @@ void SMAA::Draw(const viewParms_t& parms)
 
 	// @TODO: apply the inverse of our post-process to the SMAA result
 	// to move back into linear space (since we must still render UI/HUD etc.)
-
-	grp.EndRenderPass();
 }

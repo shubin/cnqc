@@ -374,31 +374,30 @@ uint32_t GRP::RegisterTexture(HTexture htexture)
 	return index;
 }
 
-void GRP::BeginRenderPass(const char* name, float r, float g, float b)
+uint32_t GRP::BeginRenderPass(const char* name, float r, float g, float b)
 {
-	CmdBeginDebugLabel(name, r, g, b);
-
-	/*RenderPassFrame& f = renderPasses[GetFrameIndex()];
+	RenderPassFrame& f = renderPasses[GetFrameIndex()];
 	if(f.count >= ARRAY_LEN(f.passes))
 	{
 		Q_assert(0);
-		return;
+		return UINT32_MAX;
 	}
 
 	CmdBeginDebugLabel(name, r, g, b);
 
-	RenderPassQueries& q = f.passes[f.count++];
+	const uint32_t index = f.count++;
+	RenderPassQueries& q = f.passes[index];
 	Q_strncpyz(q.name, name, sizeof(q.name));
 	q.cpuStartUS = Sys_Microseconds();
-	q.query = CmdBeginDurationQuery(name);*/
+	q.query = CmdBeginDurationQuery(name);
+
+	return index;
 }
 
-void GRP::EndRenderPass()
+void GRP::EndRenderPass(uint32_t index)
 {
-	CmdEndDebugLabel();
-
-	/*RenderPassFrame& f = renderPasses[GetFrameIndex()];
-	if(f.count == 0)
+	RenderPassFrame& f = renderPasses[GetFrameIndex()];
+	if(index >= f.count)
 	{
 		Q_assert(0);
 		return;
@@ -406,9 +405,9 @@ void GRP::EndRenderPass()
 
 	CmdEndDebugLabel();
 
-	RenderPassQueries& q = f.passes[f.count - 1];
+	RenderPassQueries& q = f.passes[index];
 	q.cpuDurationUS = (uint32_t)(Sys_Microseconds() - q.cpuStartUS);
-	CmdEndDurationQuery(q.query);*/
+	CmdEndDurationQuery(q.query);
 }
 
 void GRP::EndUI()
@@ -416,7 +415,7 @@ void GRP::EndUI()
 	ui.DrawBatch();
 	if(renderMode == RenderMode::UI)
 	{
-		grp.EndRenderPass();
+		EndRenderPass(ui.renderPassIndex);
 	}
 }
 
