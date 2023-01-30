@@ -83,7 +83,7 @@ void PostProcess::Init()
 
 void PostProcess::Draw()
 {
-	SCOPED_RENDER_PASS("Post-process", 0.0f, 0.0f, 0.1f);
+	SCOPED_RENDER_PASS("Post-process", 0.125f, 0.125f, 0.5f);
 
 	const HTexture swapChain = GetSwapChainTexture();
 	const TextureBarrier barriers[2] =
