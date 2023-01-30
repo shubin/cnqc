@@ -120,7 +120,8 @@ void SMAA::Init()
 
 			const HSampler samplers[] =
 			{
-				// @TODO: linear & point or linear & linear?
+				// can do linear & point or linear & linear
+				// it seems point was some GCN-specific optimization
 				grp.samplers[GetSamplerIndex(TW_CLAMP_TO_EDGE, TextureFilter::Linear)],
 				grp.samplers[GetSamplerIndex(TW_CLAMP_TO_EDGE, TextureFilter::Linear)]
 			};
@@ -135,7 +136,7 @@ void SMAA::Init()
 			desc.pixelShader = ShaderByteCode(pass_1::g_ps);
 			desc.depthStencil.DisableDepth();
 			desc.rasterizer.cullMode = CT_TWO_SIDED;
-			desc.AddRenderTarget(0, TextureFormat::RGBA32_UNorm);
+			desc.AddRenderTarget(0, TextureFormat::RG16_UNorm);
 			firstPassPipeline = CreateGraphicsPipeline(desc);
 		}
 		{
@@ -165,7 +166,7 @@ void SMAA::Init()
 		Vector4Clear(desc.clearColor);
 		desc.usePreferredClearValue = true;
 		desc.committedResource = true;
-		desc.format = TextureFormat::RGBA32_UNorm; // @TODO: evaluate RG16_UNorm for speed
+		desc.format = TextureFormat::RG16_UNorm;
 		desc.shortLifeTime = true;
 		edgeTexture = CreateTexture(desc);
 	}
@@ -181,7 +182,6 @@ void SMAA::Init()
 		blendTexture = CreateTexture(desc);
 	}
 	{
-		// @TODO: remove pixel shader access?
 		TextureDesc desc("SMAA destination", glConfig.vidWidth, glConfig.vidHeight);
 		desc.initialState = ResourceStates::RenderTargetBit;
 		desc.allowedState = ResourceStates::RenderTargetBit | ResourceStates::PixelShaderAccessBit;
@@ -225,12 +225,12 @@ void SMAA::Draw(const viewParms_t& parms)
 	SCOPED_RENDER_PASS("SMAA", 0.5f, 0.25f, 0.75f);
 
 	// can't clear targets if they're not in render target state
-	const TextureBarrier barriers[2] =
+	const TextureBarrier clearBarriers[2] =
 	{
 		TextureBarrier(edgeTexture, ResourceStates::RenderTargetBit),
 		TextureBarrier(blendTexture, ResourceStates::RenderTargetBit)
 	};
-	CmdBarrier(ARRAY_LEN(barriers), barriers);
+	CmdBarrier(ARRAY_LEN(clearBarriers), clearBarriers);
 
 	CmdClearColorTarget(edgeTexture, vec4_zero);
 	CmdClearColorTarget(blendTexture, vec4_zero);
@@ -262,6 +262,7 @@ void SMAA::Draw(const viewParms_t& parms)
 	CmdSetRootConstants(rootSignature, ShaderStage::Vertex, &rc);
 	CmdSetRootConstants(rootSignature, ShaderStage::Pixel, &rc);
 
+	// run edge detection
 	{
 		const TextureBarrier barrier(destTexture, ResourceStates::PixelShaderAccessBit);
 		CmdBarrier(1, &barrier);
@@ -272,6 +273,7 @@ void SMAA::Draw(const viewParms_t& parms)
 		CmdDraw(3, 0);
 	}
 
+	// compute blend weights
 	{
 		const TextureBarrier barrier(edgeTexture, ResourceStates::PixelShaderAccessBit);
 		CmdBarrier(1, &barrier);
@@ -282,6 +284,7 @@ void SMAA::Draw(const viewParms_t& parms)
 		CmdDraw(3, 0);
 	}
 
+	// blend pass
 	{
 		const TextureBarrier barriers[2] =
 		{

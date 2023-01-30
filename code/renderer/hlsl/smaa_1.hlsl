@@ -59,11 +59,9 @@ VOut vs(uint id : SV_VertexID)
 
 Texture2D inputTex : register(t0);
 
-float4 ps(VOut input) : SV_Target
+float2 ps(VOut input) : SV_Target
 {
-	float2 r = SMAAColorEdgeDetectionPS(input.texCoords, input.offsets, inputTex);
-
-	return float4(r, 0.0, 1.0);
+	return SMAAColorEdgeDetectionPS(input.texCoords, input.offsets, inputTex);
 }
 
 #endif
