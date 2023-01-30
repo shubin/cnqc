@@ -668,7 +668,7 @@ namespace RHI
 	void CmdEndDurationQuery(uint32_t index);
 	void CmdBarrier(uint32_t texCount, const TextureBarrier* textures, uint32_t buffCount = 0, const BufferBarrier* buffers = NULL);
 	void CmdClearColorTarget(HTexture texture, const vec4_t clearColor, const Rect* rect = NULL);
-	void CmdClearDepthTarget(HTexture texture, float clearDepth, const Rect* rect = NULL);
+	void CmdClearDepthTarget(HTexture texture, float clearDepth, uint8_t clearStencil = 0, const Rect* rect = NULL);
 	void CmdInsertDebugLabel(const char* name, float r = 1.0f, float g = 1.0f, float b = 1.0f);
 	void CmdBeginDebugLabel(const char* name, float r = 1.0f, float g = 1.0f, float b = 1.0f);
 	void CmdEndDebugLabel();

@@ -3295,7 +3295,7 @@ namespace RHI
 		rhi.commandList->ClearRenderTargetView(rtvHandle, clearColor, rectCount, d3dRectPtr);
 	}
 
-	void CmdClearDepthTarget(HTexture texture, float clearDepth, const Rect* rect)
+	void CmdClearDepthTarget(HTexture texture, float clearDepth, uint8_t clearStencil, const Rect* rect)
 	{
 		Q_assert(CanWriteCommands());
 
@@ -3314,7 +3314,7 @@ namespace RHI
 
 		const Texture& depthStencil = rhi.textures.Get(texture);
 		const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = rhi.descHeapDSVs.GetCPUHandle(depthStencil.dsvIndex);
-		rhi.commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, clearDepth, 0, rectCount, d3dRectPtr);
+		rhi.commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, clearDepth, clearStencil, rectCount, d3dRectPtr);
 	}
 
 	void CmdInsertDebugLabel(const char* name, float r, float g, float b)

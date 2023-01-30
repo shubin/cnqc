@@ -200,6 +200,9 @@ void SMAA::Init()
 		desc.allowedState = ResourceStates::DepthAccessBits | ResourceStates::PixelShaderAccessBit;
 		desc.committedResource = true;
 		desc.format = TextureFormat::Depth24_Stencil8;
+		desc.clearDepth = 0.0f;
+		desc.clearStencil = 0;
+		desc.usePreferredClearValue = true;
 		desc.shortLifeTime = true;
 		stencilTexture = CreateTexture(desc);
 	}
@@ -234,6 +237,7 @@ void SMAA::Draw(const viewParms_t& parms)
 
 	CmdClearColorTarget(edgeTexture, vec4_zero);
 	CmdClearColorTarget(blendTexture, vec4_zero);
+	CmdClearDepthTarget(stencilTexture, 0.0f, 0);
 
 	CmdSetViewport(0, 0, glConfig.vidWidth, glConfig.vidHeight);
 	CmdSetScissor(parms.viewportX, parms.viewportY, parms.viewportWidth, parms.viewportHeight);
@@ -267,8 +271,7 @@ void SMAA::Draw(const viewParms_t& parms)
 		const TextureBarrier barrier(destTexture, ResourceStates::PixelShaderAccessBit);
 		CmdBarrier(1, &barrier);
 
-		// @TODO: stencilTexture
-		CmdBindRenderTargets(1, &edgeTexture, NULL);
+		CmdBindRenderTargets(1, &edgeTexture, &stencilTexture);
 		CmdBindPipeline(firstPassPipeline);
 		CmdDraw(3, 0);
 	}
@@ -278,8 +281,7 @@ void SMAA::Draw(const viewParms_t& parms)
 		const TextureBarrier barrier(edgeTexture, ResourceStates::PixelShaderAccessBit);
 		CmdBarrier(1, &barrier);
 
-		// @TODO: stencilTexture
-		CmdBindRenderTargets(1, &blendTexture, NULL);
+		CmdBindRenderTargets(1, &blendTexture, &stencilTexture);
 		CmdBindPipeline(secondPassPipeline);
 		CmdDraw(3, 0);
 	}
@@ -293,7 +295,6 @@ void SMAA::Draw(const viewParms_t& parms)
 		};
 		CmdBarrier(ARRAY_LEN(barriers), barriers);
 
-		// @TODO: stencilTexture
 		CmdBindRenderTargets(1, &destTexture, NULL);
 		CmdBindPipeline(thirdPassPipeline);
 		CmdDraw(3, 0);
