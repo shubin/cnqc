@@ -74,7 +74,7 @@ cvar_t	*r_mipGenGamma;
 cvar_t	*r_ditherStrength;
 cvar_t	*r_transpSort;
 cvar_t	*r_ext_max_anisotropy;
-cvar_t	*r_msaa;
+cvar_t	*r_smaa;
 
 cvar_t	*r_ignoreGLErrors;
 cvar_t	*r_ignoreShaderSortKey;
@@ -350,7 +350,7 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_mipGenFilter, "r_mipGenFilter", "L4", CVAR_ARCHIVE | CVAR_LATCH, CVART_STRING, NULL, NULL, help_r_mipGenFilter },
 	{ &r_mipGenGamma, "r_mipGenGamma", "1.8", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "1.0", "3.0", help_r_mipGenGamma },
 	{ &r_ext_max_anisotropy, "r_ext_max_anisotropy", "16", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "16", help_r_ext_max_anisotropy },
-	{ &r_msaa, "r_msaa", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "32", "anti-aliasing sample count, " S_COLOR_VAL "0" S_COLOR_HELP "=off" },
+	{ &r_smaa, "r_smaa", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "enables SMAA" },
 	{ &r_picmip, "r_picmip", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "16", help_r_picmip },
 	{ &r_roundImagesDown, "r_roundImagesDown", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_roundImagesDown },
 	{ &r_colorMipLevels, "r_colorMipLevels", "0", CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_colorMipLevels },

@@ -59,6 +59,7 @@ to do:
 - what's the actual fog curve used by Q3?
 - not rendering creates issues with resources not getting transitioned
 - use the new dxc compiler library instead of the old one
+- depth pre-pass: world entities can reference world surfaces -> must ignore
 
 rejected:
 - NvAPI_D3D_GetLatency to get (simulated) input to display latency

@@ -181,9 +181,10 @@ void SMAA::Init()
 		blendTexture = CreateTexture(desc);
 	}
 	{
+		// @TODO: remove pixel shader access?
 		TextureDesc desc("SMAA destination", glConfig.vidWidth, glConfig.vidHeight);
 		desc.initialState = ResourceStates::RenderTargetBit;
-		desc.allowedState = ResourceStates::RenderTargetBit | ResourceStates::PixelShaderAccessBit;
+		desc.allowedState = ResourceStates::RenderTargetBit | ResourceStates::PixelShaderAccessBit | ResourceStates::CopySourceBit;
 		desc.committedResource = true;
 		desc.format = TextureFormat::RGBA32_UNorm;
 		desc.shortLifeTime = true;
@@ -216,8 +217,7 @@ void SMAA::Init()
 
 void SMAA::Draw(const viewParms_t& parms)
 {
-	// @TODO: CVar
-	if(1)
+	if(r_smaa->integer == 0)
 	{
 		return;
 	}
@@ -263,7 +263,12 @@ void SMAA::Draw(const viewParms_t& parms)
 	}
 
 	{
-		const TextureBarrier barrier(blendTexture, ResourceStates::PixelShaderAccessBit);
+		//const TextureBarrier barrier(blendTexture, ResourceStates::PixelShaderAccessBit);
+		const TextureBarrier barriers[2] =
+		{
+			TextureBarrier(blendTexture, ResourceStates::PixelShaderAccessBit),
+			TextureBarrier(destTexture, ResourceStates::RenderTargetBit)
+		};
 
 		// @TODO: stencilTexture
 		CmdBindRenderTargets(1, &destTexture, NULL);
@@ -273,4 +278,10 @@ void SMAA::Draw(const viewParms_t& parms)
 
 	// @TODO: apply the inverse of our post-process to the SMAA result
 	// to move back into linear space (since we must still render UI/HUD etc.)
+
+	{
+		const TextureBarrier barrier(destTexture, ResourceStates::CopySourceBit);
+
+		//CmdCopyTexture();
+	}
 }

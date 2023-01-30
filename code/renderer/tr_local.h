@@ -1039,7 +1039,7 @@ extern cvar_t	*r_gpuPreference;		// shall we use high-performance or low-power d
 extern cvar_t	*r_mipGenFilter;			// if the string is invalid, Lanczos 4 is used
 extern cvar_t	*r_mipGenGamma;				// what gamma-space do we consider the textures to be in
 extern cvar_t	*r_ext_max_anisotropy;
-extern cvar_t	*r_msaa;
+extern cvar_t	*r_smaa;
 
 extern	cvar_t	*r_singleShader;		// make most world faces use default shader
 extern	cvar_t	*r_roundImagesDown;
