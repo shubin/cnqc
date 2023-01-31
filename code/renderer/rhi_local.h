@@ -218,6 +218,22 @@ namespace RHI
 		};
 	};
 
+	struct StencilOp
+	{
+		enum Id
+		{
+			Keep,
+			Zero,
+			Replace,
+			SaturatedIncrement,
+			SaturatedDecrement,
+			Invert,
+			WrappedIncrement,
+			WrappedDecrement,
+			Count
+		};
+	};
+
 	struct RootSignatureDesc
 	{
 		RootSignatureDesc() = default;
@@ -294,6 +310,14 @@ namespace RHI
 		uint32_t structByteOffset = 0; // where in the struct to look when using interleaved data
 	};
 
+	struct DepthStencilOpDesc
+	{
+		ComparisonFunction::Id comparison = ComparisonFunction::Always;
+		StencilOp::Id passOp = StencilOp::Keep;
+		StencilOp::Id failOp = StencilOp::Keep;
+		StencilOp::Id depthFailOp = StencilOp::Keep;
+	};
+
 	struct GraphicsPipelineDesc
 	{
 		GraphicsPipelineDesc() = default;
@@ -343,6 +367,12 @@ namespace RHI
 			bool enableDepthWrites = true;
 			ComparisonFunction::Id depthComparison = ComparisonFunction::GreaterEqual;
 			TextureFormat::Id depthStencilFormat = TextureFormat::Depth32_Float;
+
+			bool enableStencil = false;
+			uint8_t stencilReadMask = 0xFF;
+			uint8_t stencilWriteMask = 0xFF;
+			DepthStencilOpDesc frontFace;
+			DepthStencilOpDesc backFace;
 		}
 		depthStencil;
 		struct Rasterizer
@@ -668,10 +698,11 @@ namespace RHI
 	void CmdEndDurationQuery(uint32_t index);
 	void CmdBarrier(uint32_t texCount, const TextureBarrier* textures, uint32_t buffCount = 0, const BufferBarrier* buffers = NULL);
 	void CmdClearColorTarget(HTexture texture, const vec4_t clearColor, const Rect* rect = NULL);
-	void CmdClearDepthTarget(HTexture texture, float clearDepth, uint8_t clearStencil = 0, const Rect* rect = NULL);
+	void CmdClearDepthStencilTarget(HTexture texture, bool clearDepth, float depth, bool clearStencil = false, uint8_t stencil = 0, const Rect* rect = NULL);
 	void CmdInsertDebugLabel(const char* name, float r = 1.0f, float g = 1.0f, float b = 1.0f);
 	void CmdBeginDebugLabel(const char* name, float r = 1.0f, float g = 1.0f, float b = 1.0f);
 	void CmdEndDebugLabel();
+	void CmdSetStencilReference(uint8_t stencilRef);
 
 	// the duration at index 0 is for the entire frame
 	uint32_t GetDurationCount();

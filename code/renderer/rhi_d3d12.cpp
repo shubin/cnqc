@@ -27,7 +27,7 @@ to do:
 * 3D/world rendering
 	- sky and clouds
 	- dynamic lights
-* SMAA integration
+- SMAA integration: quality presets, maybe S2X ?
 - CMAA 2 integration
 - figure out LOD of baked map surfaces (r_lodCurveError)
 - entityMergeable support ("entityMergable" in the code)
@@ -116,6 +116,13 @@ even if the shader (perhaps due to branching) does not need the descriptor.
 
 There is no such restriction for Tier 3 hardware.
 One mitigation for this restriction is the diligent use of Null descriptors.
+*/
+
+/*
+Depth24_Stencil8 requires:
+DXGI_FORMAT_R24G8_TYPELESS
+DXGI_FORMAT_D24_UNORM_S8_UINT
+DXGI_FORMAT_R24_UNORM_X8_TYPELESS
 */
 
 
@@ -1255,6 +1262,22 @@ namespace RHI
 			case TextureFilter::Linear: return D3D12_FILTER_MIN_MAG_MIP_LINEAR;
 			case TextureFilter::Anisotropic: return D3D12_FILTER_ANISOTROPIC;
 			default: Q_assert(!"Unsupported texture filter mode"); return D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+		}
+	}
+
+	static D3D12_STENCIL_OP GetD3DStencilOp(StencilOp::Id stencilOp)
+	{
+		switch(stencilOp)
+		{
+			case StencilOp::Keep: return D3D12_STENCIL_OP_KEEP;
+			case StencilOp::Zero: return D3D12_STENCIL_OP_ZERO;
+			case StencilOp::Replace: return D3D12_STENCIL_OP_REPLACE;
+			case StencilOp::SaturatedIncrement: return D3D12_STENCIL_OP_INCR_SAT;
+			case StencilOp::SaturatedDecrement: return D3D12_STENCIL_OP_DECR_SAT;
+			case StencilOp::Invert: return D3D12_STENCIL_OP_INVERT;
+			case StencilOp::WrappedIncrement: return D3D12_STENCIL_OP_INCR;
+			case StencilOp::WrappedDecrement: return D3D12_STENCIL_OP_DECR;
+			default: Q_assert(!"Unsupported stencop operation"); return D3D12_STENCIL_OP_REPLACE;
 		}
 	}
 
@@ -2870,6 +2893,17 @@ namespace RHI
 		desc.DepthStencilState.DepthEnable = rhiDesc.depthStencil.enableDepthTest ? TRUE : FALSE;
 		desc.DepthStencilState.DepthFunc = GetD3DComparisonFunction(rhiDesc.depthStencil.depthComparison);
 		desc.DepthStencilState.DepthWriteMask = rhiDesc.depthStencil.enableDepthWrites ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
+		desc.DepthStencilState.StencilEnable = rhiDesc.depthStencil.enableStencil;
+		desc.DepthStencilState.StencilReadMask = rhiDesc.depthStencil.stencilReadMask;
+		desc.DepthStencilState.StencilWriteMask = rhiDesc.depthStencil.stencilWriteMask;
+		desc.DepthStencilState.BackFace.StencilFunc = GetD3DComparisonFunction(rhiDesc.depthStencil.backFace.comparison);
+		desc.DepthStencilState.BackFace.StencilPassOp = GetD3DStencilOp(rhiDesc.depthStencil.backFace.passOp);
+		desc.DepthStencilState.BackFace.StencilFailOp = GetD3DStencilOp(rhiDesc.depthStencil.backFace.failOp);
+		desc.DepthStencilState.BackFace.StencilDepthFailOp = GetD3DStencilOp(rhiDesc.depthStencil.backFace.depthFailOp);
+		desc.DepthStencilState.FrontFace.StencilFunc = GetD3DComparisonFunction(rhiDesc.depthStencil.frontFace.comparison);
+		desc.DepthStencilState.FrontFace.StencilPassOp = GetD3DStencilOp(rhiDesc.depthStencil.frontFace.passOp);
+		desc.DepthStencilState.FrontFace.StencilFailOp = GetD3DStencilOp(rhiDesc.depthStencil.frontFace.failOp);
+		desc.DepthStencilState.FrontFace.StencilDepthFailOp = GetD3DStencilOp(rhiDesc.depthStencil.frontFace.depthFailOp);
 		desc.DSVFormat = GetD3DFormat(rhiDesc.depthStencil.depthStencilFormat);
 		
 		desc.VS.pShaderBytecode = rhiDesc.vertexShader.data;
@@ -3295,9 +3329,14 @@ namespace RHI
 		rhi.commandList->ClearRenderTargetView(rtvHandle, clearColor, rectCount, d3dRectPtr);
 	}
 
-	void CmdClearDepthTarget(HTexture texture, float clearDepth, uint8_t clearStencil, const Rect* rect)
+	void CmdClearDepthStencilTarget(HTexture texture, bool clearDepth, float depth, bool clearStencil, uint8_t stencil, const Rect* rect)
 	{
 		Q_assert(CanWriteCommands());
+		Q_assert(clearDepth || clearStencil);
+		if(!clearDepth && !clearStencil)
+		{
+			return;
+		}
 
 		D3D12_RECT* d3dRectPtr = NULL;
 		D3D12_RECT d3dRect = {};
@@ -3312,9 +3351,19 @@ namespace RHI
 			d3dRectPtr = &d3dRect;
 		}
 
+		D3D12_CLEAR_FLAGS flags = (D3D12_CLEAR_FLAGS)0;
+		if(clearDepth)
+		{
+			flags |= D3D12_CLEAR_FLAG_DEPTH;
+		}
+		if(clearStencil)
+		{
+			flags |= D3D12_CLEAR_FLAG_STENCIL;
+		}
+
 		const Texture& depthStencil = rhi.textures.Get(texture);
 		const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = rhi.descHeapDSVs.GetCPUHandle(depthStencil.dsvIndex);
-		rhi.commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, clearDepth, clearStencil, rectCount, d3dRectPtr);
+		rhi.commandList->ClearDepthStencilView(dsvHandle, flags, depth, stencil, rectCount, d3dRectPtr);
 	}
 
 	void CmdInsertDebugLabel(const char* name, float r, float g, float b)
@@ -3359,6 +3408,11 @@ namespace RHI
 		{
 			rhi.commandList->EndEvent();
 		}
+	}
+
+	void CmdSetStencilReference(uint8_t stencilRef)
+	{
+		rhi.commandList->OMSetStencilRef((UINT)stencilRef);
 	}
 
 	uint32_t GetDurationCount()

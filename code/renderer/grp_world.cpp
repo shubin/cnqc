@@ -762,7 +762,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 
 	Begin();
 
-	CmdClearDepthTarget(depthTexture, 0.0f);
+	CmdClearDepthStencilTarget(depthTexture, true, 0.0f);
 
 	boundVertexBuffers = BufferFamily::Invalid;
 	boundIndexBuffer = BufferFamily::Invalid;

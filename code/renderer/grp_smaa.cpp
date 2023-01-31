@@ -135,6 +135,10 @@ void SMAA::Init()
 			desc.vertexShader = ShaderByteCode(pass_1::g_vs);
 			desc.pixelShader = ShaderByteCode(pass_1::g_ps);
 			desc.depthStencil.DisableDepth();
+			desc.depthStencil.enableStencil = true;
+			desc.depthStencil.depthStencilFormat = TextureFormat::Depth24_Stencil8;
+			desc.depthStencil.frontFace.passOp = StencilOp::Replace;
+			desc.depthStencil.backFace.passOp = StencilOp::Replace;
 			desc.rasterizer.cullMode = CT_TWO_SIDED;
 			desc.AddRenderTarget(0, TextureFormat::RG16_UNorm);
 			firstPassPipeline = CreateGraphicsPipeline(desc);
@@ -144,6 +148,11 @@ void SMAA::Init()
 			desc.vertexShader = ShaderByteCode(pass_2::g_vs);
 			desc.pixelShader = ShaderByteCode(pass_2::g_ps);
 			desc.depthStencil.DisableDepth();
+			desc.depthStencil.enableStencil = true;
+			desc.depthStencil.stencilWriteMask = 0;
+			desc.depthStencil.depthStencilFormat = TextureFormat::Depth24_Stencil8;
+			desc.depthStencil.frontFace.comparison = ComparisonFunction::Equal;
+			desc.depthStencil.backFace.comparison = ComparisonFunction::Equal;
 			desc.rasterizer.cullMode = CT_TWO_SIDED;
 			desc.AddRenderTarget(0, TextureFormat::RGBA32_UNorm);
 			secondPassPipeline = CreateGraphicsPipeline(desc);
@@ -191,13 +200,9 @@ void SMAA::Init()
 		destTexture = CreateTexture(desc);
 	}
 	{
-		//Depth24_Stencil8:
-		//DXGI_FORMAT_R24G8_TYPELESS
-		//DXGI_FORMAT_D24_UNORM_S8_UINT
-		//DXGI_FORMAT_R24_UNORM_X8_TYPELESS
 		TextureDesc desc("SMAA stencil buffer", glConfig.vidWidth, glConfig.vidHeight);
 		desc.initialState = ResourceStates::DepthWriteBit;
-		desc.allowedState = ResourceStates::DepthAccessBits | ResourceStates::PixelShaderAccessBit;
+		desc.allowedState = ResourceStates::DepthWriteBit;
 		desc.committedResource = true;
 		desc.format = TextureFormat::Depth24_Stencil8;
 		desc.clearDepth = 0.0f;
@@ -237,7 +242,8 @@ void SMAA::Draw(const viewParms_t& parms)
 
 	CmdClearColorTarget(edgeTexture, vec4_zero);
 	CmdClearColorTarget(blendTexture, vec4_zero);
-	CmdClearDepthTarget(stencilTexture, 0.0f, 0);
+	CmdClearDepthStencilTarget(stencilTexture, false, 0.0f, true, 0);
+	CmdSetStencilReference(255);
 
 	CmdSetViewport(0, 0, glConfig.vidWidth, glConfig.vidHeight);
 	CmdSetScissor(parms.viewportX, parms.viewportY, parms.viewportWidth, parms.viewportHeight);
