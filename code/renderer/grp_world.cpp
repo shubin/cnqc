@@ -1002,7 +1002,7 @@ void World::DrawFog()
 		CmdSetRootConstants(fogRootSignature, ShaderStage::Vertex, &vertexRC);
 
 		FogPixelRC pixelRC = {};
-		VectorCopy(fog.parms.color, pixelRC.colorDepth);
+		VectorScale(fog.parms.color, tr.identityLight, pixelRC.colorDepth);
 		pixelRC.colorDepth[3] = fog.parms.depthForOpaque;
 		CmdSetRootConstants(fogRootSignature, ShaderStage::Pixel, &pixelRC);
 
@@ -1025,7 +1025,7 @@ void World::DrawFog()
 		CmdSetRootConstants(fogRootSignature, ShaderStage::Vertex, &vertexRC);
 
 		FogPixelRC pixelRC = {};
-		VectorCopy(fog.parms.color, pixelRC.colorDepth);
+		VectorScale(fog.parms.color, tr.identityLight, pixelRC.colorDepth);
 		pixelRC.colorDepth[3] = fog.parms.depthForOpaque;
 		CmdSetRootConstants(fogRootSignature, ShaderStage::Pixel, &pixelRC);
 
