@@ -327,6 +327,7 @@ struct World
 	uint32_t boundStaticVertexBuffersCount;
 	HPipeline batchPSO;
 	bool batchHasStaticGeo;
+	int psoChangeCount;
 
 	// dynamic
 	GeometryBuffers dynBuffers[FrameCount];

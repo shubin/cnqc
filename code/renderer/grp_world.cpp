@@ -349,6 +349,8 @@ void World::BeginFrame()
 	boundStaticVertexBuffersCount = UINT32_MAX;
 
 	DrawGUI();
+
+	psoChangeCount = 0; // read by the GUI code
 }
 
 void World::Begin()
@@ -515,6 +517,7 @@ void World::EndBatch()
 		{
 			batchPSO = grp.psos[psoIndex].pipeline;
 			CmdBindPipeline(batchPSO);
+			psoChangeCount++;
 		}
 
 		WorldVertexRC vertexRC = {};
@@ -613,6 +616,7 @@ void World::DrawGUI()
 		ImGui::Checkbox("Force Dynamic", &forceDynamic);
 
 		ImGui::Text("PSO count: %d", (int)grp.psoCount);
+		ImGui::Text("PSO changes: %d", psoChangeCount);
 
 		/*vec3_t axis[3];
 		ExtractCameraAxisVectors(axis[0], axis[1], axis[2], backEnd.viewParms.world.modelMatrix);
