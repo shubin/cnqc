@@ -1438,6 +1438,14 @@ static int CompareDrawSurfGeneric(const void* aPtr, const void* bPtr)
 		return portalB - portalA;
 	}
 
+	// sky first
+	const int skyA = tr.shaders[a->shaderNum]->sort == SS_ENVIRONMENT;
+	const int skyB = tr.shaders[b->shaderNum]->sort == SS_ENVIRONMENT;
+	if(skyA != skyB)
+	{
+		return skyB - skyA;
+	}
+
 	// opaque first
 	const int opaqueA = tr.shaders[a->shaderNum]->sort <= SS_OPAQUE;
 	const int opaqueB = tr.shaders[b->shaderNum]->sort <= SS_OPAQUE;

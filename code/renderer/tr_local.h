@@ -351,7 +351,7 @@ typedef enum {
 
 typedef struct {
 	float		cloudHeight;
-	image_t *outerbox[6], *innerbox[6];
+	image_t *outerbox[6], *innerbox[6]; // innerbox was never actually used by Q3
 } skyParms_t;
 
 typedef struct {
@@ -1674,6 +1674,8 @@ struct IRenderPipeline
 	virtual void DrawSceneView(const drawSceneViewCommand_t& cmd) = 0;
 	virtual void EndScene(const viewParms_t& parms) = 0;
 	virtual void TessellationOverflow() = 0;
+	virtual void DrawSkyBox() = 0;
+	virtual void DrawClouds() = 0;
 };
 
 extern IRenderPipeline* renderPipeline;

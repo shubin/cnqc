@@ -70,6 +70,8 @@ static bool drawPrePass = false;
 static bool drawDynamic = true;
 static bool drawTransparents = true;
 static bool drawFog = true;
+static bool drawSky = true;
+static bool drawClouds = true;
 static bool forceDynamic = false;
 
 
@@ -110,6 +112,8 @@ static void UpdateEntityData(int entityNum, double originalTime)
 	}
 }
 
+// @TODO: move
+#if 0
 static void ExtractCameraPosition(vec3_t cameraPos, const float* modelView)
 {
 	float modelViewT[16];
@@ -155,6 +159,7 @@ static void ExtractCameraAxisVectors(vec3_t axisX, vec3_t axisY, vec3_t axisZ, c
 	axisZ[1] = modelView[ 6];
 	axisZ[2] = modelView[10];
 }
+#endif
 
 
 void World::Init()
@@ -439,7 +444,7 @@ void World::BeginBatch(const shader_t* shader, bool hasStaticGeo)
 	batchHasStaticGeo = hasStaticGeo;
 }
 
-void World::EndBatch(HPipeline& pso)
+void World::EndBatch()
 {
 	const int vertexCount = tess.numVertexes;
 	const int indexCount = tess.numIndexes;
@@ -454,6 +459,13 @@ void World::EndBatch(HPipeline& pso)
 		return;
 	}
 
+	// for debugging of sort order issues, stop rendering after a given sort value
+	if(r_debugSort->value > 0.0f &&
+		r_debugSort->value < tess.shader->sort)
+	{
+		return;
+	}
+
 	GeometryBuffers& db = dynBuffers[GetFrameIndex()];
 	if(!db.vertexBuffers.CanAdd(vertexCount) ||
 		!db.indexBuffer.CanAdd(indexCount))
@@ -463,11 +475,14 @@ void World::EndBatch(HPipeline& pso)
 	}
 
 	const shader_t* const shader = tess.shader;
-	RB_DeformTessGeometry(0, vertexCount, 0, indexCount);
-	for(int s = 0; s < shader->numStages; ++s)
+	if(!tess.deformsPreApplied)
 	{
-		R_ComputeColors(shader->stages[s], tess.svars[s], 0, vertexCount);
-		R_ComputeTexCoords(shader->stages[s], tess.svars[s], 0, vertexCount, qfalse);
+		RB_DeformTessGeometry(0, vertexCount, 0, indexCount);
+		for(int s = 0; s < shader->numStages; ++s)
+		{
+			R_ComputeColors(shader->stages[s], tess.svars[s], 0, vertexCount);
+			R_ComputeTexCoords(shader->stages[s], tess.svars[s], 0, vertexCount, qfalse);
+		}
 	}
 
 	// darken the hell fog in the BS pit on cpm21 for debugging
@@ -496,10 +511,10 @@ void World::EndBatch(HPipeline& pso)
 	{
 		const pipeline_t& pipeline = shader->pipelines[p];
 		const int psoIndex = pipeline.pipeline;
-		if(pso != grp.psos[psoIndex].pipeline)
+		if(batchPSO != grp.psos[psoIndex].pipeline)
 		{
-			pso = grp.psos[psoIndex].pipeline;
-			CmdBindPipeline(pso);
+			batchPSO = grp.psos[psoIndex].pipeline;
+			CmdBindPipeline(batchPSO);
 		}
 
 		WorldVertexRC vertexRC = {};
@@ -538,9 +553,30 @@ void World::EndBatch(HPipeline& pso)
 	tess.numIndexes = 0;
 }
 
+void World::EndSkyBatch()
+{
+	// this only exists as a separate function from EndBatch so that
+	// we don't have to deal with recursion (through the call to RB_DrawSky)
+
+	if(tess.shader == NULL ||
+		tess.shader->sort != SS_ENVIRONMENT ||
+		(!drawSky && !drawClouds))
+	{
+		return;
+	}
+
+	Q_assert(batchHasStaticGeo == false);
+
+	SCOPED_RENDER_PASS("Sky", 0.0, 0.5f, 1.0f);
+
+	RB_DrawSky();
+	tess.numVertexes = 0;
+	tess.numIndexes = 0;
+}
+
 void World::RestartBatch()
 {
-	EndBatch(batchPSO);
+	EndBatch();
 	BeginBatch(tess.shader, batchHasStaticGeo);
 }
 
@@ -567,6 +603,8 @@ void World::DrawGUI()
 		ImGui::Checkbox("Draw Dynamic", &drawDynamic);
 		ImGui::Checkbox("Draw Transparents", &drawTransparents);
 		ImGui::Checkbox("Draw Fog", &drawFog);
+		ImGui::Checkbox("Draw Sky", &drawSky);
+		ImGui::Checkbox("Draw Clouds", &drawClouds);
 		ImGui::Checkbox("Force Dynamic", &forceDynamic);
 
 		ImGui::Text("PSO count: %d", (int)grp.psoCount);
@@ -784,7 +822,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 	CmdBindRootSignature(grp.opaqueRootSignature);
 	CmdBindDescriptorTable(grp.opaqueRootSignature, grp.descriptorTable);
 	CmdBindRenderTargets(1, &grp.renderTarget, &depthTexture);
-	HPipeline pso = RHI_MAKE_NULL_HANDLE();
+	batchPSO = RHI_MAKE_NULL_HANDLE();
 
 	const drawSurf_t* drawSurfs = cmd.drawSurfs;
 	const int surfCount = cmd.numDrawSurfs;
@@ -808,7 +846,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 	{
 		if(ds == opaqueCount)
 		{
-			EndBatch(pso);
+			EndBatch();
 
 			DrawFog();
 
@@ -817,7 +855,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 				CmdBindRootSignature(grp.opaqueRootSignature);
 				CmdBindDescriptorTable(grp.opaqueRootSignature, grp.descriptorTable);
 				CmdBindRenderTargets(1, &grp.renderTarget, &depthTexture);
-				pso = RHI_MAKE_NULL_HANDLE();
+				batchPSO = RHI_MAKE_NULL_HANDLE();
 				boundVertexBuffers = BufferFamily::Invalid;
 				boundIndexBuffer = BufferFamily::Invalid;
 
@@ -829,18 +867,22 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 		int fogNum;
 		int entityNum;
 		R_DecomposeSort(drawSurf->sort, &entityNum, &shader, &fogNum);
-		// @TODO:
-		if(shader->numPipelines == 0 ||
-			shader->pipelines[0].pipeline <= 0 ||
-			shader->pipelines[0].numStages <= 0)
+
+		// sky shaders can have no stages and be valid (box drawn with no clouds)
+		if(shader->sort != SS_ENVIRONMENT)
 		{
-			continue;
+			if(shader->numPipelines == 0 ||
+				shader->pipelines[0].pipeline <= 0 ||
+				shader->pipelines[0].numStages <= 0)
+			{
+				continue;
+			}
 		}
 
 		const bool hasStaticGeo = forceDynamic ? false : HasStaticGeo(drawSurf);
 		const bool staticChanged = hasStaticGeo != oldHasStaticGeo;
 		const bool shaderChanged = shader != oldShader;
-		const bool entityChanged = entityNum != oldEntityNum;
+		bool entityChanged = entityNum != oldEntityNum;
 		Q_assert(shader != NULL);
 		if(!hasStaticGeo && !drawDynamic)
 		{
@@ -856,7 +898,8 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			oldShader = shader;
 			oldEntityNum = entityNum;
 			oldHasStaticGeo = hasStaticGeo;
-			EndBatch(pso);
+			EndSkyBatch();
+			EndBatch();
 			BeginBatch(shader, hasStaticGeo);
 			tess.greyscale = drawSurf->greyscale;
 		}
@@ -871,7 +914,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			const StaticGeometryChunk& chunk = statChunks[drawSurf->staticGeoChunk];
 			if(tess.numIndexes + chunk.indexCount > SHADER_MAX_INDEXES)
 			{
-				EndBatch(pso);
+				EndBatch();
 				BeginBatch(tess.shader, batchHasStaticGeo);
 			}
 
@@ -880,15 +923,14 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 		}
 		else
 		{
-			batchPSO = pso;
 			R_TessellateSurface(drawSurf->surface);
-			pso = batchPSO;
 		}
 	}
 
 	backEnd.refdef.floatTime = originalTime;
 
-	EndBatch(pso);
+	EndSkyBatch();
+	EndBatch();
 
 	if(transpCount <= 0)
 	{
@@ -1031,4 +1073,34 @@ void World::DrawFog()
 
 		CmdDrawIndexed(36, 0, 0);
 	}
+}
+
+void World::DrawSkyBox()
+{
+	if(!drawSky)
+	{
+		tess.numVertexes = 0;
+		tess.numIndexes = 0;
+		return;
+	}
+
+	// force creation of a PSO for the temp shader
+	grp.ProcessShader((shader_t&)*tess.shader);
+
+	tess.deformsPreApplied = qtrue;
+	Q_assert(batchHasStaticGeo == false);
+	EndBatch();
+}
+
+void World::DrawClouds()
+{
+	if(!drawClouds)
+	{
+		tess.numVertexes = 0;
+		tess.numIndexes = 0;
+		return;
+	}
+
+	Q_assert(batchHasStaticGeo == false);
+	EndBatch();
 }

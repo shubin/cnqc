@@ -31,6 +31,11 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 using namespace RHI;
 
 
+// @TODO: move out
+#define CONCAT_IMM(x, y) x ## y
+#define CONCAT(x, y) CONCAT_IMM(x, y)
+
+
 #pragma pack(push, 4)
 
 struct WorldVertexRC
@@ -273,7 +278,8 @@ struct World
 	void Begin();
 	void DrawPrePass();
 	void BeginBatch(const shader_t* shader, bool hasStaticGeo);
-	void EndBatch(HPipeline& pso);
+	void EndBatch();
+	void EndSkyBatch();
 	void RestartBatch();
 	void DrawGUI();
 	void ProcessWorld(world_t& world);
@@ -281,6 +287,8 @@ struct World
 	void BindVertexBuffers(bool staticGeo, uint32_t firstStage, uint32_t stageCount);
 	void BindIndexBuffer(bool staticGeo);
 	void DrawFog();
+	void DrawSkyBox();
+	void DrawClouds();
 
 	typedef uint32_t Index;
 	const IndexType::Id indexType = IndexType::UInt32;
@@ -535,7 +543,9 @@ struct GRP : IRenderPipeline
 	void UIDrawTriangle(const uiDrawTriangleCommand_t& cmd) override { ui.UIDrawTriangle(cmd); }
 	void DrawSceneView(const drawSceneViewCommand_t& cmd) override { EndUI(); world.DrawSceneView(cmd); }
 	void EndScene(const viewParms_t& parms) override { smaa.Draw(parms); }
-	void TessellationOverflow() { world.RestartBatch(); }
+	void TessellationOverflow() override { world.RestartBatch(); }
+	void DrawSkyBox() override { world.DrawSkyBox(); }
+	void DrawClouds() override { world.DrawClouds(); }
 
 	uint32_t RegisterTexture(HTexture htexture);
 
@@ -588,7 +598,7 @@ struct ScopedRenderPass
 	uint32_t index;
 };
 
-#define SCOPED_RENDER_PASS(Name, R, G, B) ScopedRenderPass rp##__LINE__(Name, R, G, B)
+#define SCOPED_RENDER_PASS(Name, R, G, B) ScopedRenderPass CONCAT(rp_, __LINE__)(Name, R, G, B)
 
 inline void CmdSetViewportAndScissor(uint32_t x, uint32_t y, uint32_t w, uint32_t h)
 {
