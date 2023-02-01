@@ -498,6 +498,7 @@ static void DrawSkyBox()
 	RB_PushSingleStageShader( 0, CT_TWO_SIDED );
 	shaderStage_t* const stage = tess.shader->stages[0];
 	stage->rgbGen = CGEN_IDENTITY_LIGHTING;
+	((shader_t*)tess.shader)->isSky = qtrue;
 
 	for (int i = 0; i < 6; ++i)
 	{

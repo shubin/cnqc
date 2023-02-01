@@ -325,13 +325,15 @@ void GRP::ProcessShader(shader_t& shader)
 
 	// @TODO: GLS_POLYMODE_LINE
 
+	const bool clampDepth = r_depthClamp->integer != 0 || shader.isSky;
+
 	if(shader.isOpaque)
 	{
 		// @TODO: fix up cache.stageStateBits[0] based on depth state from follow-up states
 		CachedPSO cache = {};
 		cache.desc.cullType = shader.cullType;
 		cache.desc.polygonOffset = !!shader.polygonOffset;
-		cache.desc.clampDepth = r_depthClamp->integer != 0;
+		cache.desc.clampDepth = clampDepth;
 		cache.stageStateBits[0] = shader.stages[0]->stateBits & (~GLS_POLYMODE_LINE);
 		for(int s = 1; s < shader.numStages; ++s)
 		{
@@ -349,7 +351,7 @@ void GRP::ProcessShader(shader_t& shader)
 		CachedPSO cache = {};
 		cache.desc.cullType = shader.cullType;
 		cache.desc.polygonOffset = !!shader.polygonOffset;
-		cache.desc.clampDepth = r_depthClamp->integer != 0;
+		cache.desc.clampDepth = clampDepth;
 		cache.stageCount = 0;
 
 		unsigned int prevStateBits = 0xFFFFFFFF;
