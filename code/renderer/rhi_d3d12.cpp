@@ -25,7 +25,6 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 to do:
 
 * 3D/world rendering
-	- sky and clouds
 	- dynamic lights
 - SMAA integration: quality presets, maybe S2X ?
 - CMAA 2 integration
@@ -41,7 +40,7 @@ to do:
 - don't do persistent mapping to help out RenderDoc?
 * implicit barrier & profiling API outside the RHI: Begin/EndRenderPass (specify inputs and outputs too?)
 * partial inits and shutdown
-- move as much GUI logic as possible out of the RHI (especially render pass timings)
+* move as much GUI logic as possible out of the RHI (especially render pass timings)
 - evaluate the benefit of static samplers
 - leverage rhi.allocator->IsCacheCoherentUMA()
 	- buffers: create with CPU access, map the destination buffer directly
@@ -1495,8 +1494,6 @@ namespace RHI
 
 	static void ResolveDurationQueries()
 	{
-		// @TODO: use the query heap as a linear buffer and do a single ResolveQueryData call?
-
 		const uint32_t frameIndex = rhi.frameIndex ^ 1;
 		const HBuffer hbuffer = rhi.timeStampBuffers[frameIndex];
 		const Buffer& buffer = rhi.buffers.Get(hbuffer);
@@ -1907,9 +1904,6 @@ namespace RHI
 			rhi.descHeapRTVs.Create(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, MaxCPURTVDescriptors, freeList, "all-encompassing RTV");
 			freeList += MaxCPURTVDescriptors;
 			rhi.descHeapDSVs.Create(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, MaxCPUDSVDescriptors, freeList, "all-encompassing DSV");
-
-			// @TODO: remove test
-			rhi.descHeapRTVs.Allocate();
 		}
 
 		{
@@ -3235,7 +3229,6 @@ namespace RHI
 		Q_assert(CanWriteCommands());
 
 		FrameQueries& fq = rhi.frameQueries[rhi.frameIndex];
-		//if(fq.durationQueryCount > 0) return UINT32_MAX; // @TODO: remove
 		Q_assert(fq.durationQueryCount < MaxDurationQueries);
 		if(fq.durationQueryCount >= MaxDurationQueries)
 		{
