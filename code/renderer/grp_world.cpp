@@ -560,7 +560,9 @@ void World::EndSkyBatch()
 
 	if(tess.shader == NULL ||
 		tess.shader->sort != SS_ENVIRONMENT ||
-		(!drawSky && !drawClouds))
+		(!drawSky && !drawClouds) ||
+		tess.numVertexes <= 0 ||
+		tess.numIndexes <= 0)
 	{
 		return;
 	}
@@ -569,7 +571,10 @@ void World::EndSkyBatch()
 
 	SCOPED_RENDER_PASS("Sky", 0.0, 0.5f, 1.0f);
 
+	const viewParms_t& vp = backEnd.viewParms;
+	CmdSetViewport(vp.viewportX, vp.viewportY, vp.viewportWidth, vp.viewportHeight, 0.0f, 0.0f);
 	RB_DrawSky();
+	CmdSetViewport(vp.viewportX, vp.viewportY, vp.viewportWidth, vp.viewportHeight, 0.0f, 1.0f);
 	tess.numVertexes = 0;
 	tess.numIndexes = 0;
 }
@@ -846,6 +851,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 	{
 		if(ds == opaqueCount)
 		{
+			EndSkyBatch();
 			EndBatch();
 
 			DrawFog();
