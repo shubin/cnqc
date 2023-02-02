@@ -276,6 +276,11 @@ namespace RHI
 	struct ShaderByteCode
 	{
 		ShaderByteCode() = default;
+		ShaderByteCode(const void* data_, uint32_t byteCount_)
+		{
+			data = data_;
+			byteCount = byteCount_;
+		}
 
 		template<uint32_t N>
 		ShaderByteCode(const uint8_t (&byteCode)[N])

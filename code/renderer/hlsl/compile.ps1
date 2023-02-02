@@ -26,10 +26,12 @@ function Compile-SMAA-VS
     (
         [string] $HeaderFileName,
         [string] $ShaderFileName,
+        [string] $PresetMacro,
+        [string] $VariableName,
         [parameter(ValueFromRemainingArguments = $true)] [string[]] $Passthrough
     )
 
-    Compile-Shader $HeaderFileName $ShaderFileName "vs" "vs_6_0" "-D SMAA_INCLUDE_VS=1" "-D SMAA_HLSL_5_1=1" "-D SMAA_RT_METRICS=rtMetrics" "-D SMAA_PRESET_HIGH=1"
+    Compile-Shader $HeaderFileName $ShaderFileName "vs" "vs_6_0" $VariableName $PresetMacro "-D SMAA_INCLUDE_VS=1" "-D SMAA_HLSL_5_1=1" "-D SMAA_RT_METRICS=rtMetrics"
 }
 
 function Compile-SMAA-PS
@@ -38,10 +40,31 @@ function Compile-SMAA-PS
     (
         [string] $HeaderFileName,
         [string] $ShaderFileName,
+        [string] $PresetMacro,
+        [string] $VariableName,
         [parameter(ValueFromRemainingArguments = $true)] [string[]] $Passthrough
     )
 
-    Compile-Shader $HeaderFileName $ShaderFileName "ps" "ps_6_0" "-D SMAA_INCLUDE_PS=1" "-D SMAA_HLSL_5_1=1" "-D SMAA_RT_METRICS=rtMetrics" "-D SMAA_PRESET_HIGH=1"
+    Compile-Shader $HeaderFileName $ShaderFileName "ps" "ps_6_0" $VariableName $PresetMacro "-D SMAA_INCLUDE_PS=1" "-D SMAA_HLSL_5_1=1" "-D SMAA_RT_METRICS=rtMetrics"
+}
+
+function Compile-SMAA
+{
+    param
+    (
+        [string] $PresetName,
+        [string] $PresetMacro
+    )
+
+    $FileNamePrefix = "smaa_" + $PresetName + "_"
+    $VarNamePrefix = "-Vn " + $PresetName + "_"
+
+    Compile-SMAA-VS ($FileNamePrefix + "1_vs.h") "smaa_1.hlsl" $PresetMacro ($VarNamePrefix + "1_vs")
+    Compile-SMAA-PS ($FileNamePrefix + "1_ps.h") "smaa_1.hlsl" $PresetMacro ($VarNamePrefix + "1_ps")
+    Compile-SMAA-VS ($FileNamePrefix + "2_vs.h") "smaa_2.hlsl" $PresetMacro ($VarNamePrefix + "2_vs")
+    Compile-SMAA-PS ($FileNamePrefix + "2_ps.h") "smaa_2.hlsl" $PresetMacro ($VarNamePrefix + "2_ps")
+    Compile-SMAA-VS ($FileNamePrefix + "3_vs.h") "smaa_3.hlsl" $PresetMacro ($VarNamePrefix + "3_vs")
+    Compile-SMAA-PS ($FileNamePrefix + "3_ps.h") "smaa_3.hlsl" $PresetMacro ($VarNamePrefix + "3_ps")
 }
 
 function Compile-VS
@@ -103,16 +126,16 @@ Compile-CS "mip_1_cs.h" "mip_1.hlsl"
 Compile-CS "mip_2_cs.h" "mip_2.hlsl"
 Compile-CS "mip_3_cs.h" "mip_3.hlsl"
 
-Compile-SMAA-VS "smaa_1_vs.h" "smaa_1.hlsl"
-Compile-SMAA-PS "smaa_1_ps.h" "smaa_1.hlsl"
-Compile-SMAA-VS "smaa_2_vs.h" "smaa_2.hlsl"
-Compile-SMAA-PS "smaa_2_ps.h" "smaa_2.hlsl"
-Compile-SMAA-VS "smaa_3_vs.h" "smaa_3.hlsl"
-Compile-SMAA-PS "smaa_3_ps.h" "smaa_3.hlsl"
+Compile-SMAA "low" "-D SMAA_PRESET_LOW=1"
+Compile-SMAA "medium" "-D SMAA_PRESET_MEDIUM=1"
+Compile-SMAA "high" "-D SMAA_PRESET_HIGH=1"
+Compile-SMAA "ultra" "-D SMAA_PRESET_ULTRA=1"
 
 Get-Content shared.hlsli, uber_shader.hlsl | Set-Content uber_shader.temp
 ./bin2header.exe --output uber_shader.h --hname uber_shader_string uber_shader.temp
 rm uber_shader.temp
+
+Get-Content smaa*.h | Set-Content complete_smaa.h
 
 pause
 exit

@@ -24,15 +24,15 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 /*
 to do:
 
-* 3D/world rendering
-	- dynamic lights
-- SMAA integration: quality presets, maybe S2X ?
-- CMAA 2 integration
+- working depth pre-pass (account for cull mode, generate buffers on demand)
+- GPU resident vertex data for models: load on demand based on { surface, shader } pair
+- r_blitMode support
+- dynamic lights
+- CMAA 2 integration?
 - figure out LOD of baked map surfaces (r_lodCurveError)
 - entityMergeable support ("entityMergable" in the code)
 - speed up map loads with BeginGraphicsPipelineCreation() / WaitForAllPipelineCreations()
 	use for non-UI shaders and run PSO creation on worker threads
-- r_blitMode support
 - when creating the root signature, validate that neither of the tables have any gap
 - use root signature 1.1 to use the hints that help the drivers optimize out static resources
 - is it possible to force Resource Binding Tier 2 somehow? are we supposed to run on old HW to test? :(

@@ -62,8 +62,6 @@ cvar_t	*r_novis;
 cvar_t	*r_nocull;
 cvar_t	*r_nocurves;
 cvar_t	*r_depthFade;
-cvar_t	*r_gpuMipGen;
-cvar_t	*r_alphaToCoverage;
 cvar_t	*r_dither;
 cvar_t	*r_rtColorFormat;
 cvar_t	*r_depthClamp;
@@ -76,7 +74,6 @@ cvar_t	*r_transpSort;
 cvar_t	*r_ext_max_anisotropy;
 cvar_t	*r_smaa;
 
-cvar_t	*r_ignoreGLErrors;
 cvar_t	*r_ignoreShaderSortKey;
 
 cvar_t	*r_vertexLight;
@@ -100,8 +97,6 @@ cvar_t	*r_portalOnly;
 
 cvar_t	*r_subdivisions;
 cvar_t	*r_lodCurveError;
-
-cvar_t	*r_alphaToCoverageMipBoost;
 
 cvar_t	*r_width;
 cvar_t	*r_height;
@@ -350,13 +345,10 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_mipGenFilter, "r_mipGenFilter", "L4", CVAR_ARCHIVE | CVAR_LATCH, CVART_STRING, NULL, NULL, help_r_mipGenFilter },
 	{ &r_mipGenGamma, "r_mipGenGamma", "1.8", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "1.0", "3.0", help_r_mipGenGamma },
 	{ &r_ext_max_anisotropy, "r_ext_max_anisotropy", "16", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "16", help_r_ext_max_anisotropy },
-	{ &r_smaa, "r_smaa", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "enables SMAA" },
-	{ &r_picmip, "r_picmip", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "16", help_r_picmip },
 	{ &r_roundImagesDown, "r_roundImagesDown", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_roundImagesDown },
 	{ &r_colorMipLevels, "r_colorMipLevels", "0", CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_colorMipLevels },
 	{ &r_detailTextures, "r_detailtextures", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, "enables detail textures shader stages" },
 	{ &r_mode, "r_mode", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", XSTRING(VIDEOMODE_MAX), help_r_mode },
-	{ &r_blitMode, "r_blitMode", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", XSTRING(BLITMODE_MAX), help_r_blitMode },
 	{ &r_brightness, "r_brightness", "2", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "0.25", "32", "overall brightness" },
 	// should be called r_lightmapBrightness
 	{ &r_mapBrightness, "r_mapBrightness", "2", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "0.25", "32", "brightness of lightmap textures" },
@@ -387,8 +379,10 @@ static const cvarTableItem_t r_cvars[] =
 	//
 	// archived variables that can change at any time
 	//
+	{ &r_smaa, "r_smaa", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "4", help_r_smaa },
+	{ &r_picmip, "r_picmip", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "16", help_r_picmip },
+	{ &r_blitMode, "r_blitMode", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", XSTRING(BLITMODE_MAX), help_r_blitMode },
 	{ &r_lodbias, "r_lodbias", "-2", CVAR_ARCHIVE, CVART_INTEGER, "-16", "16", help_r_lodbias },
-	{ &r_ignoreGLErrors, "r_ignoreGLErrors", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "if " S_COLOR_VAL "0" S_COLOR_HELP ", OpenGL errors are fatal" },
 	{ &r_ignoreShaderSortKey, "r_ignoreShaderSortKey", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_ignoreShaderSortKey },
 	{ &r_fastsky, "r_fastsky", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_fastsky },
 	{ &r_noportals, "r_noportals", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_noportals },
@@ -401,7 +395,6 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_ditherStrength, "r_ditherStrength", "1.0", CVAR_ARCHIVE, CVART_FLOAT, "0.125", "8.0", help_r_ditherStrength },
 	{ &r_transpSort, "r_transpSort", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_transpSort },
 	{ &r_lodCurveError, "r_lodCurveError", "2000", CVAR_ARCHIVE, CVART_FLOAT, "250", "10000", "curved surfaces LOD scale" },
-	{ &r_alphaToCoverageMipBoost, "r_alphaToCoverageMipBoost", "0.125", CVAR_ARCHIVE, CVART_FLOAT, "0", "0.5", "increases the alpha value of higher mip levels" },
 	{ &r_mapGreyscale, "r_mapGreyscale", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", "1", "how desaturated the map looks" },
 	{ &r_mapGreyscaleCTF, "r_mapGreyscaleCTF", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", "1", help_r_mapGreyscaleCTF },
 

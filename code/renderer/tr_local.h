@@ -1029,8 +1029,6 @@ extern cvar_t	*r_mapGreyscale;		// how monochrome the map looks
 extern cvar_t	*r_mapGreyscaleCTF;		// how monochrome CTF map surfaces look
 extern cvar_t	*r_fullbright;			// avoid lightmap pass
 extern cvar_t	*r_depthFade;			// fades marked shaders based on depth
-extern cvar_t	*r_gpuMipGen;			// uses GPU-side mip-map generation
-extern cvar_t	*r_alphaToCoverage;		// enables A2C on alpha-tested surfaces
 extern cvar_t	*r_dither;				// enables dithering
 extern cvar_t	*r_rtColorFormat;		// color render target format, see RTCF_*
 extern cvar_t	*r_depthClamp;			// disables clipping vertices against the near and far clip planes
@@ -1064,9 +1062,6 @@ extern	cvar_t	*r_portalOnly;
 extern	cvar_t	*r_subdivisions;
 extern	cvar_t	*r_lodCurveError;
 
-extern	cvar_t	*r_alphaToCoverageMipBoost; // increases the alpha value of higher mip levels
-
-extern	cvar_t	*r_ignoreGLErrors;
 extern	cvar_t	*r_ignoreShaderSortKey;
 
 extern	cvar_t	*r_brightness;

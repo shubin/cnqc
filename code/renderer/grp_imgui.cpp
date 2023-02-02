@@ -132,6 +132,7 @@ void ImGUI::Draw()
 {
 	if(r_debugUI->integer == 0)
 	{
+		SafeEndFrame();
 		return;
 	}
 
@@ -159,9 +160,21 @@ void ImGUI::Draw()
 	// Upload vertex/index data into a single contiguous GPU buffer
 	ImDrawVert* vtxDst = (ImDrawVert*)MapBuffer(fr->vertexBuffer);
 	ImDrawIdx* idxDst = (ImDrawIdx*)MapBuffer(fr->indexBuffer);
+	ImDrawVert* const vtxDstEnd = vtxDst + MAX_VERTEX_COUNT;
+	ImDrawIdx* const idxDstEnd = idxDst + MAX_INDEX_COUNT;
 	for(int cl = 0; cl < drawData->CmdListsCount; cl++)
 	{
 		const ImDrawList* cmdList = drawData->CmdLists[cl];
+		if(vtxDst + cmdList->VtxBuffer.Size > vtxDstEnd)
+		{
+			Q_assert(!"Dear ImGui vertex buffer too small");
+			break;
+		}
+		if(idxDst + cmdList->IdxBuffer.Size > idxDstEnd)
+		{
+			Q_assert(!"Dear ImGui index buffer too small");
+			break;
+		}
 		memcpy(vtxDst, cmdList->VtxBuffer.Data, cmdList->VtxBuffer.Size * sizeof(ImDrawVert));
 		memcpy(idxDst, cmdList->IdxBuffer.Data, cmdList->IdxBuffer.Size * sizeof(ImDrawIdx));
 		vtxDst += cmdList->VtxBuffer.Size;

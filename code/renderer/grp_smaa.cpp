@@ -24,38 +24,31 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 #include "grp_local.h"
 #include "smaa_area_texture.h"
 #include "smaa_search_texture.h"
-namespace pass_1
+#include "hlsl/complete_smaa.h"
+
+
+#define SMAA_PRESET_LIST(P) \
+	P(low) \
+	P(medium) \
+	P(high) \
+	P(ultra)
+
+#define SMAA_PRESET(Name) \
+	ShaderByteCode(Name##_1_vs), \
+	ShaderByteCode(Name##_1_ps), \
+	ShaderByteCode(Name##_2_vs), \
+	ShaderByteCode(Name##_2_ps), \
+	ShaderByteCode(Name##_3_vs), \
+	ShaderByteCode(Name##_3_ps),
+
+// 4 presets, 3 passes, 2 shaders per pass
+static const ShaderByteCode shaders[4 * 3 * 2] =
 {
-#include "hlsl/smaa_1_vs.h"
-#include "hlsl/smaa_1_ps.h"
-}
-namespace pass_2
-{
-#include "hlsl/smaa_2_vs.h"
-#include "hlsl/smaa_2_ps.h"
-}
-namespace pass_3
-{
-#include "hlsl/smaa_3_vs.h"
-#include "hlsl/smaa_3_ps.h"
-}
+	SMAA_PRESET_LIST(SMAA_PRESET)
+};
 
-
-// SMAA has 3 passes:
-// 1. edge detection
-// 2. blend weight computation
-// 3. neighborhood blending
-
-
-/*
-to do:
-
-- render the result into grp.renderTarget
-- transform into and away from gamma space
-- evaluate perf. using a 2-channel edge texture
-- evaluate perf. using the depth/stencil texture
-- CVar (r_aa to pick a mode? none, SMAA, CMAA 2, etc)
-*/
+#undef SMAA_PRESET
+#undef SMAA_PRESET_LIST
 
 
 #pragma pack(push, 4)
@@ -66,10 +59,55 @@ struct RootConstants
 #pragma pack(pop)
 
 
+static const ShaderByteCode& GetShaderByteCode(uint32_t passIndex, bool pixelShader)
+{
+	Q_assert(r_smaa->integer >= 1 && r_smaa->integer <= 4);
+	const uint32_t presetIndex = r_smaa->integer - 1;
+	const uint32_t shaderIndex = (presetIndex * 6) + (passIndex * 2) + (pixelShader ? 1 : 0);
+	Q_assert(shaderIndex < ARRAY_LEN(shaders));
+
+	return shaders[shaderIndex];
+}
+
+
 void SMAA::Init()
 {
-	if(grp.firstInit)
+	Update();
+}
+
+void SMAA::Update()
+{
+	const Mode::Id newMode = (Mode::Id)r_smaa->integer;
+	const int newWidth = glConfig.vidWidth;
+	const int newHeight = glConfig.vidHeight;
+
+	const bool alwaysEnabled = mode != Mode::Disabled && newMode != Mode::Disabled;
+	const bool justEnabled = mode == Mode::Disabled && newMode != Mode::Disabled;
+	const bool justDisabled = mode != Mode::Disabled && newMode == Mode::Disabled;
+	const bool resChanged = newWidth != width || newHeight != height;
+	const bool presetChanged = newMode != mode;
+
+	const bool createFixed = justEnabled && !fixedLoaded;
+	const bool destroyFixed = justDisabled && fixedLoaded;
+
+	const bool createResDep = justEnabled || (alwaysEnabled && resChanged);
+	const bool destroyResDep = justDisabled || (alwaysEnabled && resChanged);
+
+	const bool createPresetDep = justEnabled || (alwaysEnabled && presetChanged);
+	const bool destroyPresetDep = justDisabled || (alwaysEnabled && presetChanged);
+
+	if(destroyFixed)
 	{
+		fixedLoaded = false;
+		DestroyTexture(areaTexture);
+		DestroyTexture(searchTexture);
+		DestroyRootSignature(rootSignature);
+		DestroyDescriptorTable(descriptorTable);
+	}
+
+	if(createFixed)
+	{
+		fixedLoaded = true;
 		{
 			TextureDesc desc("SMAA area", AREATEX_WIDTH, AREATEX_HEIGHT);
 			desc.initialState = ResourceStates::PixelShaderAccessBit;
@@ -129,11 +167,82 @@ void SMAA::Init()
 			update.SetSamplers(ARRAY_LEN(samplers), samplers);
 			UpdateDescriptorTable(descriptorTable, update);
 		}
+	}
+
+	if(destroyResDep)
+	{
+		DestroyTexture(edgeTexture);
+		DestroyTexture(blendTexture);
+		DestroyTexture(stencilTexture);
+		DestroyTexture(destTexture);
+	}
+
+	if(createResDep)
+	{
 		{
-			
+			TextureDesc desc("SMAA edges", glConfig.vidWidth, glConfig.vidHeight);
+			desc.initialState = ResourceStates::RenderTargetBit;
+			desc.allowedState = ResourceStates::RenderTargetBit | ResourceStates::PixelShaderAccessBit;
+			Vector4Clear(desc.clearColor);
+			desc.usePreferredClearValue = true;
+			desc.committedResource = true;
+			desc.format = TextureFormat::RG16_UNorm;
+			edgeTexture = CreateTexture(desc);
+		}
+		{
+			TextureDesc desc("SMAA blend", glConfig.vidWidth, glConfig.vidHeight);
+			desc.initialState = ResourceStates::RenderTargetBit;
+			desc.allowedState = ResourceStates::RenderTargetBit | ResourceStates::PixelShaderAccessBit;
+			Vector4Clear(desc.clearColor);
+			desc.usePreferredClearValue = true;
+			desc.committedResource = true;
+			desc.format = TextureFormat::RGBA32_UNorm;
+			blendTexture = CreateTexture(desc);
+		}
+		{
+			TextureDesc desc("SMAA destination", glConfig.vidWidth, glConfig.vidHeight);
+			desc.initialState = ResourceStates::RenderTargetBit;
+			desc.allowedState = ResourceStates::RenderTargetBit | ResourceStates::PixelShaderAccessBit;
+			desc.committedResource = true;
+			desc.format = TextureFormat::RGBA32_UNorm;
+			destTexture = CreateTexture(desc);
+		}
+		{
+			TextureDesc desc("SMAA stencil buffer", glConfig.vidWidth, glConfig.vidHeight);
+			desc.initialState = ResourceStates::DepthWriteBit;
+			desc.allowedState = ResourceStates::DepthWriteBit;
+			desc.committedResource = true;
+			desc.format = TextureFormat::Depth24_Stencil8;
+			desc.clearDepth = 0.0f;
+			desc.clearStencil = 0;
+			desc.usePreferredClearValue = true;
+			stencilTexture = CreateTexture(desc);
+		}
+		{
+			const HTexture textures[] =
+			{
+				destTexture, edgeTexture, areaTexture, searchTexture, blendTexture
+			};
+
+			DescriptorTableUpdate update;
+			update.SetTextures(ARRAY_LEN(textures), textures);
+			UpdateDescriptorTable(descriptorTable, update);
+		}
+	}
+
+	if(destroyPresetDep)
+	{
+		DestroyPipeline(firstPassPipeline);
+		DestroyPipeline(secondPassPipeline);
+		DestroyPipeline(thirdPassPipeline);
+	}
+
+	if(createPresetDep)
+	{
+		{
 			GraphicsPipelineDesc desc("SMAA edge detection", rootSignature);
-			desc.vertexShader = ShaderByteCode(pass_1::g_vs);
-			desc.pixelShader = ShaderByteCode(pass_1::g_ps);
+			desc.vertexShader = GetShaderByteCode(0, false);
+			desc.pixelShader = GetShaderByteCode(0, true);
 			desc.depthStencil.DisableDepth();
 			desc.depthStencil.enableStencil = true;
 			desc.depthStencil.depthStencilFormat = TextureFormat::Depth24_Stencil8;
@@ -145,8 +254,8 @@ void SMAA::Init()
 		}
 		{
 			GraphicsPipelineDesc desc("SMAA blend weight computation", rootSignature);
-			desc.vertexShader = ShaderByteCode(pass_2::g_vs);
-			desc.pixelShader = ShaderByteCode(pass_2::g_ps);
+			desc.vertexShader = GetShaderByteCode(1, false);
+			desc.pixelShader = GetShaderByteCode(1, true);
 			desc.depthStencil.DisableDepth();
 			desc.depthStencil.enableStencil = true;
 			desc.depthStencil.stencilWriteMask = 0;
@@ -159,8 +268,8 @@ void SMAA::Init()
 		}
 		{
 			GraphicsPipelineDesc desc("SMAA neighborhood blending", rootSignature);
-			desc.vertexShader = ShaderByteCode(pass_3::g_vs);
-			desc.pixelShader = ShaderByteCode(pass_3::g_ps);
+			desc.vertexShader = GetShaderByteCode(2, false);
+			desc.pixelShader = GetShaderByteCode(2, true);
 			desc.depthStencil.DisableDepth();
 			desc.rasterizer.cullMode = CT_TWO_SIDED;
 			desc.AddRenderTarget(0, TextureFormat::RGBA32_UNorm);
@@ -168,59 +277,9 @@ void SMAA::Init()
 		}
 	}
 
-	{
-		TextureDesc desc("SMAA edges", glConfig.vidWidth, glConfig.vidHeight);
-		desc.initialState = ResourceStates::RenderTargetBit;
-		desc.allowedState = ResourceStates::RenderTargetBit | ResourceStates::PixelShaderAccessBit;
-		Vector4Clear(desc.clearColor);
-		desc.usePreferredClearValue = true;
-		desc.committedResource = true;
-		desc.format = TextureFormat::RG16_UNorm;
-		desc.shortLifeTime = true;
-		edgeTexture = CreateTexture(desc);
-	}
-	{
-		TextureDesc desc("SMAA blend", glConfig.vidWidth, glConfig.vidHeight);
-		desc.initialState = ResourceStates::RenderTargetBit;
-		desc.allowedState = ResourceStates::RenderTargetBit | ResourceStates::PixelShaderAccessBit;
-		Vector4Clear(desc.clearColor);
-		desc.usePreferredClearValue = true;
-		desc.committedResource = true;
-		desc.format = TextureFormat::RGBA32_UNorm;
-		desc.shortLifeTime = true;
-		blendTexture = CreateTexture(desc);
-	}
-	{
-		TextureDesc desc("SMAA destination", glConfig.vidWidth, glConfig.vidHeight);
-		desc.initialState = ResourceStates::RenderTargetBit;
-		desc.allowedState = ResourceStates::RenderTargetBit | ResourceStates::PixelShaderAccessBit;
-		desc.committedResource = true;
-		desc.format = TextureFormat::RGBA32_UNorm;
-		desc.shortLifeTime = true;
-		destTexture = CreateTexture(desc);
-	}
-	{
-		TextureDesc desc("SMAA stencil buffer", glConfig.vidWidth, glConfig.vidHeight);
-		desc.initialState = ResourceStates::DepthWriteBit;
-		desc.allowedState = ResourceStates::DepthWriteBit;
-		desc.committedResource = true;
-		desc.format = TextureFormat::Depth24_Stencil8;
-		desc.clearDepth = 0.0f;
-		desc.clearStencil = 0;
-		desc.usePreferredClearValue = true;
-		desc.shortLifeTime = true;
-		stencilTexture = CreateTexture(desc);
-	}
-	{
-		const HTexture textures[] =
-		{
-			destTexture, edgeTexture, areaTexture, searchTexture, blendTexture
-		};
-
-		DescriptorTableUpdate update;
-		update.SetTextures(ARRAY_LEN(textures), textures);
-		UpdateDescriptorTable(descriptorTable, update);
-	}
+	mode = (Mode::Id)r_smaa->integer;
+	width = glConfig.vidWidth;
+	height = glConfig.vidHeight;
 }
 
 void SMAA::Draw(const viewParms_t& parms)
@@ -230,7 +289,8 @@ void SMAA::Draw(const viewParms_t& parms)
 		return;
 	}
 
-	SCOPED_RENDER_PASS("SMAA", 0.5f, 0.25f, 0.75f);
+	const char* const presetNames[] = { "", "Low", "Medium", "High", "Ultra" };
+	SCOPED_RENDER_PASS(va("SMAA %s", presetNames[r_smaa->integer]), 0.5f, 0.25f, 0.75f);
 
 	// can't clear targets if they're not in render target state
 	const TextureBarrier clearBarriers[2] =
@@ -248,7 +308,7 @@ void SMAA::Draw(const viewParms_t& parms)
 	CmdSetViewport(0, 0, glConfig.vidWidth, glConfig.vidHeight);
 	CmdSetScissor(parms.viewportX, parms.viewportY, parms.viewportWidth, parms.viewportHeight);
 
-	// move to gamma space for higher quality AA
+	// tone map for higher quality AA
 	{
 		const TextureBarrier barriers[2] =
 		{
@@ -306,8 +366,7 @@ void SMAA::Draw(const viewParms_t& parms)
 		CmdDraw(3, 0);
 	}
 
-	// apply the inverse of our post-process to the SMAA result
-	// to move back into linear space (since we must still render UI/HUD etc.)
+	// inverse tone map and write back to the main render target
 	{
 		const TextureBarrier barriers[2] =
 		{

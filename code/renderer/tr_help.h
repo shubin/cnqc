@@ -134,8 +134,7 @@ S_COLOR_VAL "    1 " S_COLOR_HELP "= Low power\n" \
 S_COLOR_VAL "    2 " S_COLOR_HELP "= None"
 
 #define help_r_colorMipLevels \
-"colorizes textures based on their mip level\n" \
-"This disables MSAA on back-ends that use centroid sampling."
+"colorizes textures based on their mip level"
 
 #define help_r_mapGreyscaleCTF \
 "how desaturated CTF map surfaces look\n" \
@@ -160,3 +159,12 @@ help_r_showtris_bitmask
 #define help_r_shownormals \
 "draws vertex normals\n" \
 help_r_showtris_bitmask
+
+#define help_r_smaa \
+"enables SMAA\n" \
+"SMAA is Enhanced Subpixel Morphological Antialiasing\n" \
+S_COLOR_VAL "    0 " S_COLOR_HELP "= No SMAA\n" \
+S_COLOR_VAL "    1 " S_COLOR_HELP "= Low quality\n" \
+S_COLOR_VAL "    2 " S_COLOR_HELP "= Medium quality\n" \
+S_COLOR_VAL "    3 " S_COLOR_HELP "= High quality\n" \
+S_COLOR_VAL "    4 " S_COLOR_HELP "= Ultra quality"

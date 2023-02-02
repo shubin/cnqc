@@ -508,20 +508,48 @@ struct PostProcess
 struct SMAA
 {
 	void Init();
+	void Update();
 	void Draw(const viewParms_t& parms);
 
-	HTexture edgeTexture;
-	HTexture blendTexture;
+	// matches r_smaa
+	struct Mode
+	{
+		enum Id
+		{
+			Disabled,
+			Low,
+			Medium,
+			High,
+			Ultra,
+			Count
+		};
+	};
+
+	// fixed
 	HTexture areaTexture;
 	HTexture searchTexture;
+	HRootSignature rootSignature;
+	HDescriptorTable descriptorTable;
+
+	// depends on render target resolution
+	HTexture edgeTexture;
+	HTexture blendTexture;
 	HTexture stencilTexture;
 	HTexture destTexture;
 
-	HRootSignature rootSignature;
+	// depends on selected preset/mode
+	// SMAA has 3 passes:
+	// 1. edge detection
+	// 2. blend weight computation
+	// 3. neighborhood blending
 	HPipeline firstPassPipeline;
 	HPipeline secondPassPipeline;
 	HPipeline thirdPassPipeline;
-	HDescriptorTable descriptorTable;
+
+	Mode::Id mode = Mode::Disabled;
+	int width = -1;
+	int height = -1;
+	bool fixedLoaded = false;
 };
 
 struct GRP : IRenderPipeline
