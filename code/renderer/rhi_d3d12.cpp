@@ -426,6 +426,7 @@ namespace RHI
 		HBuffer timeStampBuffers[FrameCount];
 		uint32_t frameDurationQueryIndex;
 		HRootSignature currentRootSignature;
+		bool isTearingSupported;
 
 		uint16_t descriptorFreeListData[MaxCPUDescriptors];
 		DescriptorHeap descHeapGeneric;
@@ -1028,7 +1029,7 @@ namespace RHI
 	static void Present()
 	{
 		const UINT swapInterval = (UINT)min(abs(r_swapInterval->integer), 4);
-		const UINT flags = swapInterval == 0 ? DXGI_PRESENT_ALLOW_TEARING : 0;
+		const UINT flags = (rhi.isTearingSupported && swapInterval == 0) ? DXGI_PRESENT_ALLOW_TEARING : 0;
 		const HRESULT hr = rhi.swapChain->Present(swapInterval, flags);
 
 		enum PresentError
@@ -1623,6 +1624,47 @@ namespace RHI
 		return PIX_COLOR(br, bg, bb);
 	}
 
+	static bool IsTearingSupported()
+	{
+		HMODULE library = LoadLibraryA("DXGI.dll");
+		if(library == NULL)
+		{
+			ri.Printf(PRINT_WARNING, "D3D12: DXGI.dll couldn't be found or opened\n");
+			return false;
+		}
+
+		typedef HRESULT(WINAPI* PFN_CreateDXGIFactory)(REFIID riid, _Out_ void** ppFactory);
+		PFN_CreateDXGIFactory pCreateDXGIFactory = (PFN_CreateDXGIFactory)GetProcAddress(library, "CreateDXGIFactory");
+		if(pCreateDXGIFactory == NULL)
+		{
+			FreeLibrary(library);
+			ri.Printf(PRINT_WARNING, "D3D12: Failed to locate CreateDXGIFactory in DXGI.dll\n");
+			return false;
+		}
+
+		HRESULT hr;
+		BOOL enabled = FALSE;
+		IDXGIFactory5* pFactory;
+		hr = (*pCreateDXGIFactory)(__uuidof(IDXGIFactory5), (void**)&pFactory);
+		if(FAILED(hr))
+		{
+			FreeLibrary(library);
+			ri.Printf(PRINT_WARNING, "D3D12: 'CreateDXGIFactory' failed with code 0x%08X (%s)\n", (unsigned int)hr, GetSystemErrorString(hr));
+			return false;
+		}
+		hr = pFactory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &enabled, sizeof(enabled));
+		pFactory->Release();
+		FreeLibrary(library);
+
+		if(FAILED(hr))
+		{
+			ri.Printf(PRINT_WARNING, "D3D12: 'IDXGIFactory5::CheckFeatureSupport' failed with code 0x%08X (%s)\n", (unsigned int)hr, GetSystemErrorString(hr));
+			return false;
+		}
+
+		return enabled != 0;
+	}
+
 	static void DrawResourceUsage()
 	{
 		if(BeginTable("Handles", 3))
@@ -1929,6 +1971,8 @@ namespace RHI
 			SetDebugName(rhi.computeCommandQueue, "compute", D3DResourceType::CommandQueue);
 		}
 
+		rhi.isTearingSupported = IsTearingSupported();
+
 		{
 			IDXGISwapChain* dxgiSwapChain;
 			DXGI_SWAP_CHAIN_DESC swapChainDesc = { 0 };
@@ -1941,7 +1985,7 @@ namespace RHI
 			swapChainDesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
 			swapChainDesc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
 			swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-			swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+			swapChainDesc.Flags = rhi.isTearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
 			swapChainDesc.OutputWindow = GetActiveWindow();
 			swapChainDesc.SampleDesc.Count = 1;
 			swapChainDesc.SampleDesc.Quality = 0;
