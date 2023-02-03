@@ -25,9 +25,11 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 to do:
 
 - working depth pre-pass (account for cull mode, generate buffers on demand)
+	!!! pre-compiled and run-time compiled shaders don't have bit-exact matching Z output
 - GPU resident vertex data for models: load on demand based on { surface, shader } pair
-- r_blitMode support
-- dynamic lights
+- r_blitMode
+- r_depthFade
+- r_dynamiclight
 - CMAA 2 integration?
 - figure out LOD of baked map surfaces (r_lodCurveError)
 - entityMergeable support ("entityMergable" in the code)
@@ -1025,8 +1027,9 @@ namespace RHI
 
 	static void Present()
 	{
-		// DXGI_PRESENT_ALLOW_TEARING
-		const HRESULT hr = rhi.swapChain->Present(abs(r_swapInterval->integer), 0);
+		const UINT swapInterval = (UINT)min(abs(r_swapInterval->integer), 4);
+		const UINT flags = swapInterval == 0 ? DXGI_PRESENT_ALLOW_TEARING : 0;
+		const HRESULT hr = rhi.swapChain->Present(swapInterval, flags);
 
 		enum PresentError
 		{
@@ -1052,6 +1055,12 @@ namespace RHI
 		{
 			presentError = PE_DEVICE_RESET;
 		}
+#if defined(_DEBUG)
+		else if(hr != S_OK)
+		{
+			Sys_DebugPrintf("Present error: 0x%08X (%s)\n", (unsigned int)hr, GetSystemErrorString(hr));
+		}
+#endif
 
 		if(presentError == PE_DEVICE_REMOVED)
 		{
@@ -1932,7 +1941,7 @@ namespace RHI
 			swapChainDesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
 			swapChainDesc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
 			swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-			swapChainDesc.Flags = 0; // DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING
+			swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 			swapChainDesc.OutputWindow = GetActiveWindow();
 			swapChainDesc.SampleDesc.Count = 1;
 			swapChainDesc.SampleDesc.Quality = 0;
