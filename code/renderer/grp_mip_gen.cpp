@@ -105,17 +105,12 @@ void MipMapGenerator::Init()
 
 	for(int t = 0; t < 2; ++t)
 	{
-		TextureDesc desc(va("mip-map generation float16 #%d", t + 1), MAX_TEXTURE_SIZE, MAX_TEXTURE_SIZE);
+		TextureDesc desc(va("mip-map generation #%d", t + 1), MAX_TEXTURE_SIZE, MAX_TEXTURE_SIZE);
 		desc.format = TextureFormat::RGBA64_Float;
 		desc.initialState = ResourceStates::UnorderedAccessBit;
 		desc.allowedState = ResourceStates::UnorderedAccessBit | ResourceStates::ComputeShaderAccessBit;
 		textures[MipSlice::Float16_0 + t] = CreateTexture(desc);
 	}
-
-	TextureDesc desc("mip-map generation unorm", MAX_TEXTURE_SIZE, MAX_TEXTURE_SIZE);
-	desc.initialState = ResourceStates::UnorderedAccessBit;
-	desc.allowedState = ResourceStates::UnorderedAccessBit | ResourceStates::ComputeShaderAccessBit;
-	textures[MipSlice::UNorm_0] = CreateTexture(desc);
 }
 
 void MipMapGenerator::GenerateMipMaps(HTexture texture)

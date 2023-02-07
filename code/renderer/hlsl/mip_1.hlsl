@@ -26,7 +26,7 @@ cbuffer RootConstants
 	float gamma;
 }
 
-RWTexture2D<float4> src : register(u3);
+RWTexture2D<float4> src : register(u2);
 RWTexture2D<float4> dst : register(u0);
 
 [numthreads(8, 8, 1)]

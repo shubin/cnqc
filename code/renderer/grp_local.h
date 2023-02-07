@@ -414,7 +414,6 @@ struct MipMapGenerator
 		{
 			Float16_0,
 			Float16_1,
-			UNorm_0, // @TODO: nuke
 			Count
 		};
 	};

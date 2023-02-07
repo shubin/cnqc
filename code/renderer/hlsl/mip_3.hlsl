@@ -30,7 +30,7 @@ cbuffer RootConstants
 	uint dstMip;
 }
 
-RWTexture2D<float4> mips[3 + 16] : register(u0);
+RWTexture2D<float4> mips[2 + 16] : register(u0);
 
 [numthreads(8, 8, 1)]
 void cs(uint3 id : SV_DispatchThreadID)
