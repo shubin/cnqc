@@ -448,6 +448,8 @@ namespace RHI
 
 	struct RHIPrivate
 	{
+		bool initialized;
+
 		ID3D12Debug* debug; // can be NULL
 		ID3D12InfoQueue* infoQueue; // can be NULL
 		IDXGIInfoQueue* dxgiInfoQueue; // can be NULL
@@ -2292,6 +2294,8 @@ namespace RHI
 		glInfo.maxTextureSize = MAX_TEXTURE_SIZE;
 		glInfo.maxAnisotropy = 16;
 		glInfo.depthFadeSupport = qfalse;
+
+		rhi.initialized = true;
 	}
 
 	void ShutDown(bool destroyWindow)
@@ -2308,6 +2312,8 @@ namespace RHI
 
 			return;
 		}
+
+		rhi.initialized = false;
 
 		FreeLibrary(rhi.pix.module);
 
