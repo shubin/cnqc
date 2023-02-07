@@ -29,7 +29,6 @@ to do:
 	-> this leads to ImGui crashing and shouldn't happen in the first place anyway
 	-> do we make sure it never happens or deal with it happening?
 - mip-map generation: figure out whether out of bounds texture UAV writes are OK or not
-- mip-map generation: remove the unorm texture
 - mip-map generation: improve descriptor table management
 - tone map: there's a race condition with the descriptor set updates
 	it hasn't lead to any problem so far because the entries never really change...
