@@ -24,6 +24,14 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 /*
 to do:
 
+- fix texture creation/mip-map gen happening between BeginFrame and EndFrame (e.g. levelshots)
+- BeginFrame is called twice in a row on map load for rokky somehow
+	-> this leads to ImGui crashing and shouldn't happen in the first place anyway
+	-> do we make sure it never happens or deal with it happening?
+- mip-map generation: figure out whether out of bounds texture UAV writes are OK or not
+- mip-map generation: remove the unorm texture
+- mip-map generation: improve descriptor table management
+- fix the uploader (overlapped Begin*Upload calls -> sync fails on overflow)
 - working depth pre-pass (account for cull mode, generate buffers on demand)
 	!!! pre-compiled and run-time compiled shaders don't have bit-exact matching Z output
 - GPU resident vertex data for models: load on demand based on { surface, shader } pair
