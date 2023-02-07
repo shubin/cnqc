@@ -566,6 +566,13 @@ qbool Cvar_GetHelp( const char **desc, const char **help, const char* var_name )
 
 void Cvar_SetRange( const char *var_name, cvarType_t type, const char *minStr, const char *maxStr )
 {
+	// @TODO: remove
+	if(!Q_stricmp(var_name, "com_maxfps"))
+	{
+		minStr = "30";
+		maxStr = "1000";
+	}
+
 #define WARNING( Message ) { assert(0); Com_Printf( "^3Cvar_SetRange on %s: " Message "\n", var_name ); return; }
 
 	cvar_t* var = Cvar_FindVar( var_name );

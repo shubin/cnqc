@@ -2223,10 +2223,8 @@ static void ImGUI_Init()
 	ImGuiIO& io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 	io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
-	//io.MouseDrawCursor = true;
-#if !defined(_DEBUG)
-	io.IniFilename = NULL; // don't pollute users' installs
-#endif
+	io.IniFilename = "cnq3/imgui.ini";
+	//io.MouseDrawCursor = true; // just use the operating system's
 
 	ImFontConfig fontConfig;
 	fontConfig.FontDataOwnedByAtlas = false;

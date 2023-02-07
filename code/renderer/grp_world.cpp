@@ -605,6 +605,7 @@ void World::DrawGUI()
 	ImGui::End();
 #endif
 
+#if DRAW_GUI
 	if(ImGui::Begin("World"))
 	{
 		ImGui::Checkbox("Depth Pre-Pass", &drawPrePass);
@@ -636,6 +637,7 @@ void World::DrawGUI()
 		}*/
 	}
 	ImGui::End();
+#endif
 }
 
 void World::ProcessWorld(world_t& world)

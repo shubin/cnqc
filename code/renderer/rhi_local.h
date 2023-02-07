@@ -653,13 +653,15 @@ namespace RHI
 	};
 
 	void Init();
-	void ShutDown(qbool destroyWindow);
+	void ShutDown(bool destroyWindow);
 
 	void BeginFrame();
 	void EndFrame();
 
+	bool IsRendering();
+
 	uint32_t GetFrameIndex();
-    HTexture GetSwapChainTexture();
+	HTexture GetSwapChainTexture();
 
 	HBuffer CreateBuffer(const BufferDesc& desc);
 	void DestroyBuffer(HBuffer buffer);
@@ -708,6 +710,10 @@ namespace RHI
 	void CmdBeginDebugLabel(const char* name, float r = 1.0f, float g = 1.0f, float b = 1.0f);
 	void CmdEndDebugLabel();
 	void CmdSetStencilReference(uint8_t stencilRef);
+
+	// @TODO:
+	void CmdClearUAV(HTexture htexture, uint32_t mip);
+	void CmdNullUAVBarrier();
 
 	// the duration at index 0 is for the entire frame
 	uint32_t GetDurationCount();

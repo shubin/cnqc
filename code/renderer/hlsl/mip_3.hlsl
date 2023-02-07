@@ -38,6 +38,14 @@ void cs(uint3 id : SV_DispatchThreadID)
 	RWTexture2D<float4> src = mips[srcMip];
 	RWTexture2D<float4> dst = mips[dstMip];
 
+	// @TODO: is this actually required?
+	uint w, h;
+	dst.GetDimensions(w, h);
+	if(any(id.xy >= uint2(w, h)))
+	{
+		return;
+	}
+
 	// yes, intensity *should* be done in light-linear space
 	// but we keep the old behavior for consistency...
 	float4 in0 = src[id.xy];

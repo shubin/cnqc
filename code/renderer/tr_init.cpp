@@ -87,9 +87,8 @@ cvar_t	*r_picmip;
 cvar_t	*r_showsky;
 cvar_t	*r_showtris;
 cvar_t	*r_shownormals;
-cvar_t	*r_finish;
 cvar_t	*r_clear;
-cvar_t	*r_swapInterval;
+cvar_t	*r_vsync;
 cvar_t	*r_lego;
 cvar_t	*r_lockpvs;
 cvar_t	*r_noportals;
@@ -369,6 +368,7 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_rtColorFormat, "r_rtColorFormat", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", XSTRING(RTCF_MAX), help_r_rtColorFormat },
 	{ &r_depthClamp, "r_depthClamp", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_depthClamp },
 	{ &r_gpuPreference, "r_gpuPreference", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", XSTRING(GPUPREF_MAX), help_r_gpuPreference},
+	{ &r_vsync, "r_vsync", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, "enables v-sync" },
 
 	//
 	// latched variables that can only change over a restart
@@ -387,8 +387,6 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_fastsky, "r_fastsky", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_fastsky },
 	{ &r_noportals, "r_noportals", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_noportals },
 	{ &r_dynamiclight, "r_dynamiclight", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "enables dynamic lights" },
-	{ &r_finish, "r_finish", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "enables glFinish calls" },
-	{ &r_swapInterval, "r_swapInterval", "0", CVAR_ARCHIVE, CVART_INTEGER, "-8", "8", help_r_swapInterval },
 	{ &r_lego, "r_lego", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "LEGO(R) texture filtering" },
 	{ &r_gamma, "r_gamma", "1.2", CVAR_ARCHIVE, CVART_FLOAT, "0.5", "3", help_r_gamma },
 	{ &r_greyscale, "r_greyscale", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", "1", "how desaturated the final image looks" },

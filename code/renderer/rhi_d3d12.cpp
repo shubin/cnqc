@@ -126,6 +126,43 @@ DXGI_FORMAT_D24_UNORM_S8_UINT
 DXGI_FORMAT_R24_UNORM_X8_TYPELESS
 */
 
+/*
+Never got the PIX programmable capture API to work
+PIXBeginCapture returns "not implemented"
+
+// before include
+#define USE_PIX 1
+
+// before creating the device
+PIXLoadLatestWinPixGpuCapturerLibrary();
+HRESULT hr = PIXSetTargetWindow(GetActiveWindow());
+Check(hr, "PIXSetTargetWindow");
+
+// whenever...
+PIXCaptureParameters params = {};
+params.GpuCaptureParameters.FileName = L"temp.wpix";
+HRESULT hr = PIXBeginCapture(0, &params);
+Check(hr, "PIXBeginCapture");
+*/
+
+/*
+The legacy API fails as well
+DXGIGetDebugInterface1 returns "no such interface supported"
+
+#include <DXProgrammableCapture.h>
+
+IDXGraphicsAnalysis* graphicsAnalysis;
+D3D(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&graphicsAnalysis)));
+*/
+
+
+#if defined(_DEBUG)
+#define D3D_DEBUG 1
+#endif
+#define D3D_AGILITY_SDK 1
+#define D3D_GPU_BASED_VALIDATION 1
+#define DEBUG_FENCE 0
+
 
 #include "rhi_local.h"
 #include <Windows.h>
@@ -143,7 +180,7 @@ DXGI_FORMAT_R24_UNORM_X8_TYPELESS
 #include "../client/cl_imgui.h"
 
 
-#if defined(_DEBUG) || defined(CNQ3_DEV)
+#if defined(D3D_DEBUG) || defined(D3D_AGILITY_SDK)
 extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = D3D12_SDK_VERSION; }
 extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8".\\cnq3\\"; }
 #endif
@@ -399,11 +436,11 @@ namespace RHI
 		ID3D12Debug* debug; // can be NULL
 		ID3D12InfoQueue* infoQueue; // can be NULL
 		IDXGIInfoQueue* dxgiInfoQueue; // can be NULL
-	#if defined(_DEBUG)
+#if defined(D3D_DEBUG)
 		IDXGIFactory2* factory;
-	#else
+#else
 		IDXGIFactory1* factory;
-	#endif
+#endif
 		IDXGIAdapter1* adapter;
 		ID3D12Device* device;
 		D3D12MA::Allocator* allocator;
@@ -415,9 +452,15 @@ namespace RHI
 		ID3D12GraphicsCommandList* mainCommandList;
 		ID3D12CommandAllocator* tempCommandAllocator;
 		ID3D12GraphicsCommandList* tempCommandList;
-		bool tempCommandListOpen = false;
+		bool tempCommandListOpen;
 		ID3D12GraphicsCommandList* commandList; // not owned, don't release it!
+		uint32_t swapChainBufferCount;
+		uint32_t renderFrameCount;
+		HANDLE frameLatencyWaitableObject;
+		bool frameLatencyWaitNeeded;
+		int64_t inputSamplingTime;
 		UINT frameIndex;
+		UINT swapChainBufferIndex;
 		Fence mainFence;
 		UINT64 mainFenceValues[FrameCount];
 		Fence tempFence;
@@ -427,6 +470,8 @@ namespace RHI
 		uint32_t frameDurationQueryIndex;
 		HRootSignature currentRootSignature;
 		bool isTearingSupported;
+		bool vsync;
+		bool frameBegun;
 
 		uint16_t descriptorFreeListData[MaxCPUDescriptors];
 		DescriptorHeap descHeapGeneric;
@@ -689,15 +734,17 @@ namespace RHI
 		Buffer& userBuffer = rhi.buffers.Get(userHBuffer);
 		Q_assert(!userBuffer.uploading);
 
-		const uint32_t uploadByteCount = userBuffer.desc.byteCount;
-		WaitToStartUploading(uploadByteCount);
-
 		uint8_t* mapped = NULL;
 		Q_assert(userBuffer.desc.memoryUsage != MemoryUsage::Readback);
 		if(userBuffer.desc.memoryUsage == MemoryUsage::GPU)
 		{
+			const uint32_t uploadByteCount = userBuffer.desc.byteCount;
+			WaitToStartUploading(uploadByteCount);
+
 			mapped = mappedBuffer + bufferByteOffset;
 			userBuffer.uploadByteOffset = bufferByteOffset;
+
+			bufferByteOffset = AlignUp(bufferByteOffset + uploadByteCount, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 		}
 		else
 		{
@@ -705,7 +752,6 @@ namespace RHI
 		}
 
 		userBuffer.uploading = true;
-		bufferByteOffset = AlignUp(bufferByteOffset + uploadByteCount, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 
 		return mapped;
 	}
@@ -798,15 +844,6 @@ namespace RHI
 		commandQueue->Signal(fence.fence, fenceValue);
 
 		texture.uploading = false;
-
-		// @TODO: let the user issue the barrier
-		/*if(desc.x == 0 &&
-			desc.y == 0 &&
-			desc.width == texture.desc.width &&
-			desc.height && texture.desc.height)
-		{
-			rhi.texturesToTransition.Add(htexture);
-		}*/
 	}
 
 	void UploadManager::WaitToStartDrawing(ID3D12CommandQueue* commandQueue_)
@@ -1010,27 +1047,33 @@ namespace RHI
 		return NULL;
 	}
 
-	static void MoveToNextFrame()
-	{
-		const UINT64 currentFenceValue = rhi.mainFenceValues[rhi.frameIndex];
-		rhi.mainFence.Signal(rhi.mainCommandQueue, currentFenceValue);
-		rhi.frameIndex = rhi.swapChain->GetCurrentBackBufferIndex();
-		rhi.mainFence.WaitOnCPU(rhi.mainFenceValues[rhi.frameIndex]);
-		rhi.mainFenceValues[rhi.frameIndex] = currentFenceValue + 1;
-	}
-
 	static void WaitUntilDeviceIsIdle()
 	{
+		rhi.mainFenceValues[rhi.frameIndex]++;
+#if DEBUG_FENCE
+		Sys_DebugPrintf("Signal: %d (WaitUntilDeviceIsIdle)\n", (int)rhi.mainFenceValues[rhi.frameIndex]);
+		Sys_DebugPrintf("Wait: %d (WaitUntilDeviceIsIdle)\n", (int)rhi.mainFenceValues[rhi.frameIndex]);
+#endif
 		rhi.mainFence.Signal(rhi.mainCommandQueue, rhi.mainFenceValues[rhi.frameIndex]);
 		rhi.mainFence.WaitOnCPU(rhi.mainFenceValues[rhi.frameIndex]);
-		rhi.mainFenceValues[rhi.frameIndex]++;
 	}
 
 	static void Present()
 	{
-		const UINT swapInterval = (UINT)min(abs(r_swapInterval->integer), 4);
-		const UINT flags = (rhi.isTearingSupported && swapInterval == 0) ? DXGI_PRESENT_ALLOW_TEARING : 0;
+		UINT flags;
+		UINT swapInterval;
+		if(r_vsync->integer)
+		{
+			swapInterval = 1;
+			flags = 0;
+		}
+		else
+		{
+			swapInterval = 0;
+			flags = rhi.isTearingSupported ? DXGI_PRESENT_ALLOW_TEARING : 0;
+		}
 		const HRESULT hr = rhi.swapChain->Present(swapInterval, flags);
+		rhi.frameLatencyWaitNeeded = true;
 
 		enum PresentError
 		{
@@ -1056,7 +1099,7 @@ namespace RHI
 		{
 			presentError = PE_DEVICE_RESET;
 		}
-#if defined(_DEBUG)
+#if defined(D3D_DEBUG)
 		else if(hr != S_OK)
 		{
 			Sys_DebugPrintf("Present error: 0x%08X (%s)\n", (unsigned int)hr, GetSystemErrorString(hr));
@@ -1504,9 +1547,17 @@ namespace RHI
 
 	static void ResolveDurationQueries()
 	{
-		const uint32_t frameIndex = rhi.frameIndex ^ 1;
+		const uint32_t frameIndex = (rhi.frameIndex + 1) % rhi.renderFrameCount;
 		const HBuffer hbuffer = rhi.timeStampBuffers[frameIndex];
 		const Buffer& buffer = rhi.buffers.Get(hbuffer);
+
+#if defined(D3D_DEBUG)
+		if(r_vsync->integer)
+		{
+			Q_assert(rhi.frameIndex == 0);
+			Q_assert(frameIndex == 0);
+		}
+#endif
 
 		FrameQueries& fq = rhi.frameQueries[frameIndex];
 		if(fq.durationQueryCount == 0)
@@ -1568,16 +1619,16 @@ namespace RHI
 
 	static void GrabSwapChainTextures()
 	{
-		for(uint32_t f = 0; f < FrameCount; ++f)
+		for(uint32_t b = 0; b < rhi.swapChainBufferCount; ++b)
 		{
 			ID3D12Resource* renderTarget;
-			D3D(rhi.swapChain->GetBuffer(f, IID_PPV_ARGS(&renderTarget)));
+			D3D(rhi.swapChain->GetBuffer(b, IID_PPV_ARGS(&renderTarget)));
 
-			TextureDesc desc(va("swap chain #%d", f + 1), glConfig.vidWidth, glConfig.vidHeight);
+			TextureDesc desc(va("swap chain #%d", b + 1), glConfig.vidWidth, glConfig.vidHeight);
 			desc.nativeResource = renderTarget;
 			desc.initialState = ResourceStates::PresentBit;
 			desc.allowedState = ResourceStates::PresentBit | ResourceStates::RenderTargetBit;
-			rhi.renderTargets[f] = CreateTexture(desc);
+			rhi.renderTargets[b] = CreateTexture(desc);
 		}
 	}
 
@@ -1663,6 +1714,43 @@ namespace RHI
 		}
 
 		return enabled != 0;
+	}
+
+	static UINT GetSwapChainFlags()
+	{
+		UINT flags = 0;
+		if(r_vsync->integer)
+		{
+			flags = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
+		}
+		else
+		{
+			flags = rhi.isTearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
+		}
+
+		return flags;
+	}
+
+	static void WaitForTempCommandList()
+	{
+		rhi.tempFence.WaitOnCPU(rhi.tempFenceValue);
+		if(rhi.tempCommandListOpen)
+		{
+			rhi.tempCommandList->Close();
+		}
+		D3D(rhi.tempCommandAllocator->Reset());
+		D3D(rhi.tempCommandList->Reset(rhi.tempCommandAllocator, NULL));
+		rhi.tempCommandListOpen = true;
+	}
+
+	static void WaitForSwapChain()
+	{
+		if(rhi.frameLatencyWaitableObject != NULL && rhi.frameLatencyWaitNeeded)
+		{
+			Q_assert(r_vsync->integer != 0);
+			WaitForSingleObjectEx(rhi.frameLatencyWaitableObject, INFINITE, TRUE);
+			rhi.frameLatencyWaitNeeded = false;
+		}
 	}
 
 	static void DrawResourceUsage()
@@ -1854,30 +1942,80 @@ namespace RHI
 			DXGI_SWAP_CHAIN_DESC desc;
 			D3D(rhi.swapChain->GetDesc(&desc));
 
-			if(glConfig.vidWidth != desc.BufferDesc.Width ||
-				glConfig.vidHeight != desc.BufferDesc.Height)
+			// V-Sync toggles require changing the swap chain flags,
+			// which means ResizeBuffers can't be used
+			const bool vsync = r_vsync->integer != 0;
+			rhi.renderFrameCount = vsync ? 1 : 2;
+
+			if(glConfig.vidWidth != desc.BufferDesc.Width || 
+				glConfig.vidHeight != desc.BufferDesc.Height ||
+				vsync != rhi.vsync)
 			{
 				WaitUntilDeviceIsIdle();
 
-				for(uint32_t f = 0; f < FrameCount; ++f)
+				for(uint32_t f = 0; f < rhi.swapChainBufferCount; ++f)
 				{
 					DestroyTexture(rhi.renderTargets[f]);
 				}
-				
-				D3D(rhi.swapChain->ResizeBuffers(desc.BufferCount, glConfig.vidWidth, glConfig.vidHeight, desc.BufferDesc.Format, desc.Flags));				
+		
+				const UINT flags = GetSwapChainFlags();
+				if(vsync == rhi.vsync && false)
+				{
+					D3D(rhi.swapChain->ResizeBuffers(desc.BufferCount, glConfig.vidWidth, glConfig.vidHeight, desc.BufferDesc.Format, flags));
+				}
+				else
+				{
+					if(rhi.frameLatencyWaitableObject != NULL)
+					{
+						CloseHandle(rhi.frameLatencyWaitableObject);
+						rhi.frameLatencyWaitableObject = NULL;
+					}
+
+					COM_RELEASE(rhi.swapChain);
+
+					IDXGISwapChain* dxgiSwapChain;
+					DXGI_SWAP_CHAIN_DESC swapChainDesc = { 0 };
+					swapChainDesc.BufferCount = rhi.swapChainBufferCount;
+					swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+					swapChainDesc.BufferDesc.Width = glConfig.vidWidth;
+					swapChainDesc.BufferDesc.Height = glConfig.vidHeight;
+					swapChainDesc.BufferDesc.RefreshRate.Numerator = 0;
+					swapChainDesc.BufferDesc.RefreshRate.Denominator = 1;
+					swapChainDesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
+					swapChainDesc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
+					swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+					swapChainDesc.Flags = flags;
+					swapChainDesc.OutputWindow = GetActiveWindow();
+					swapChainDesc.SampleDesc.Count = 1;
+					swapChainDesc.SampleDesc.Quality = 0;
+					swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+					swapChainDesc.Windowed = TRUE;
+					D3D(rhi.factory->CreateSwapChain(rhi.mainCommandQueue, &swapChainDesc, &dxgiSwapChain));
+
+					D3D(dxgiSwapChain->QueryInterface(IID_PPV_ARGS(&rhi.swapChain)));
+					COM_RELEASE(dxgiSwapChain);
+
+					if(vsync)
+					{
+						rhi.frameLatencyWaitableObject = rhi.swapChain->GetFrameLatencyWaitableObject();
+						rhi.frameLatencyWaitNeeded = true;
+						D3D(rhi.swapChain->SetMaximumFrameLatency(1));
+					}
+				}
 
 				GrabSwapChainTextures();
 
-				rhi.frameIndex = rhi.swapChain->GetCurrentBackBufferIndex();
+				rhi.swapChainBufferIndex = rhi.swapChain->GetCurrentBackBufferIndex();
 
 				for(uint32_t f = 0; f < FrameCount; ++f)
 				{
 					rhi.mainFenceValues[f] = 0;
 				}
-				rhi.mainFenceValues[rhi.frameIndex]++;
 			}
 
 			rhi.tempStringAllocator.Clear();
+
+			rhi.vsync = vsync;
 
 			return;
 		}
@@ -1888,14 +2026,23 @@ namespace RHI
 		rhi.persStringAllocator.Init(rhi.persStringData, sizeof(rhi.persStringData));
 		rhi.tempStringAllocator.Init(rhi.tempStringData, sizeof(rhi.tempStringData));
 
-#if defined(_DEBUG)
+#if defined(D3D_DEBUG)
 		if(SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&rhi.debug))))
 		{
 			// calling after device creation will remove the device
 			// if you hit this error:
-			// D3D Error 887e0003: (13368@153399640) at 00007FFC84ECF985 - D3D12 SDKLayers dll does not match the D3D12SDKVersion of D3D12 Core dll.
+			// "D3D12 SDKLayers dll does not match the D3D12SDKVersion of D3D12 Core dll."
 			// make sure your D3D12SDKVersion and D3D12SDKPath are valid!
 			rhi.debug->EnableDebugLayer();
+
+#if defined(D3D_GPU_BASED_VALIDATION)
+			ID3D12Debug1* debug1;
+			if(SUCCEEDED(rhi.debug->QueryInterface(IID_PPV_ARGS(&debug1))))
+			{
+				debug1->SetEnableGPUBasedValidation(TRUE);
+				debug1->SetEnableSynchronizedCommandQueueValidation(TRUE);
+			}
+#endif
 		}
 
 		UINT dxgiFactoryFlags = 0;
@@ -1907,7 +2054,7 @@ namespace RHI
 		}
 #endif
 
-#if defined(_DEBUG)
+#if defined(D3D_DEBUG)
 		D3D(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&rhi.factory)));
 #else
 		D3D(CreateDXGIFactory1(IID_PPV_ARGS(&rhi.factory)));
@@ -1925,7 +2072,7 @@ namespace RHI
 			D3D(D3D12MA::CreateAllocator(&desc, &rhi.allocator));
 		}
 
-#if defined(_DEBUG)
+#if defined(D3D_DEBUG)
 		if(rhi.debug)
 		{
 			rhi.device->QueryInterface(IID_PPV_ARGS(&rhi.infoQueue));
@@ -1942,6 +2089,31 @@ namespace RHI
 				filter.DenyList.NumIDs = ARRAY_LEN(filteredMessages);
 				filter.DenyList.pIDList = filteredMessages;
 				rhi.infoQueue->AddStorageFilterEntries(&filter);
+			}
+		}
+
+		if(rhi.debug)
+		{
+			ID3D12DebugDevice1* debugDevice1;
+			if(SUCCEEDED(rhi.device->QueryInterface(IID_PPV_ARGS(&debugDevice1))))
+			{
+				// defaults:
+				// D3D12_GPU_BASED_VALIDATION_SHADER_PATCH_MODE_UNGUARDED_VALIDATION
+				// 256
+				// D3D12_GPU_BASED_VALIDATION_PIPELINE_STATE_CREATE_FLAG_NONE
+				D3D12_DEBUG_DEVICE_GPU_BASED_VALIDATION_SETTINGS gbv = {};
+				gbv.DefaultShaderPatchMode = D3D12_GPU_BASED_VALIDATION_SHADER_PATCH_MODE_GUARDED_VALIDATION;
+				gbv.MaxMessagesPerCommandList = 1024; // defaults to 256
+				gbv.PipelineStateCreateFlags = D3D12_GPU_BASED_VALIDATION_PIPELINE_STATE_CREATE_FLAG_FRONT_LOAD_CREATE_GUARDED_VALIDATION_SHADERS;
+				debugDevice1->SetDebugParameter(D3D12_DEBUG_DEVICE_PARAMETER_GPU_BASED_VALIDATION_SETTINGS, &gbv, sizeof(gbv));
+
+				// default: D3D12_DEBUG_FEATURE_NONE
+				const D3D12_DEBUG_FEATURE features =
+					D3D12_DEBUG_FEATURE_ALLOW_BEHAVIOR_CHANGING_DEBUG_AIDS |
+					D3D12_DEBUG_FEATURE_CONSERVATIVE_RESOURCE_STATE_TRACKING;
+				debugDevice1->SetDebugParameter(D3D12_DEBUG_DEVICE_PARAMETER_FEATURE_FLAGS, &features, sizeof(features));
+				
+				COM_RELEASE(debugDevice1);
 			}
 		}
 #endif
@@ -1972,11 +2144,15 @@ namespace RHI
 		}
 
 		rhi.isTearingSupported = IsTearingSupported();
+		rhi.swapChainBufferCount = 2;
+		rhi.renderFrameCount = r_vsync->integer ? 1 : 2;
 
 		{
+			const UINT flags = GetSwapChainFlags();
+
 			IDXGISwapChain* dxgiSwapChain;
 			DXGI_SWAP_CHAIN_DESC swapChainDesc = { 0 };
-			swapChainDesc.BufferCount = FrameCount;
+			swapChainDesc.BufferCount = rhi.swapChainBufferCount;
 			swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 			swapChainDesc.BufferDesc.Width = glConfig.vidWidth;
 			swapChainDesc.BufferDesc.Height = glConfig.vidHeight;
@@ -1985,17 +2161,25 @@ namespace RHI
 			swapChainDesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
 			swapChainDesc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
 			swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-			swapChainDesc.Flags = rhi.isTearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
+			swapChainDesc.Flags = flags;
 			swapChainDesc.OutputWindow = GetActiveWindow();
 			swapChainDesc.SampleDesc.Count = 1;
 			swapChainDesc.SampleDesc.Quality = 0;
 			swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 			swapChainDesc.Windowed = TRUE;
 			D3D(rhi.factory->CreateSwapChain(rhi.mainCommandQueue, &swapChainDesc, &dxgiSwapChain));
+			rhi.vsync = r_vsync->integer != 0;
 
 			D3D(dxgiSwapChain->QueryInterface(IID_PPV_ARGS(&rhi.swapChain)));
-			rhi.frameIndex = rhi.swapChain->GetCurrentBackBufferIndex();
+			rhi.swapChainBufferIndex = rhi.swapChain->GetCurrentBackBufferIndex();
 			COM_RELEASE(dxgiSwapChain);
+
+			if(r_vsync->integer)
+			{
+				rhi.frameLatencyWaitableObject = rhi.swapChain->GetFrameLatencyWaitableObject();
+				rhi.frameLatencyWaitNeeded = true;
+				D3D(rhi.swapChain->SetMaximumFrameLatency(1));
+			}
 
 			GrabSwapChainTextures();
 		}
@@ -2022,7 +2206,6 @@ namespace RHI
 		rhi.commandList = rhi.mainCommandList;
 
 		rhi.mainFence.Create(rhi.mainFenceValues[rhi.frameIndex], "main command queue");
-		rhi.mainFenceValues[rhi.frameIndex]++;
 
 		rhi.tempFence.Create(rhi.tempFenceValue, "temp command queue");
 
@@ -2096,7 +2279,7 @@ namespace RHI
 		glInfo.depthFadeSupport = qfalse;
 	}
 
-	void ShutDown(qbool destroyWindow)
+	void ShutDown(bool destroyWindow)
 	{
 #define DESTROY_POOL(Name, Func) DestroyPool(rhi.Name, &Func, !!destroyWindow);
 
@@ -2114,6 +2297,11 @@ namespace RHI
 		FreeLibrary(rhi.pix.module);
 
 		WaitUntilDeviceIsIdle();
+
+		if(rhi.frameLatencyWaitableObject != NULL)
+		{
+			CloseHandle(rhi.frameLatencyWaitableObject);
+		}
 
 		rhi.upload.Release();
 		rhi.mainFence.Release();
@@ -2143,7 +2331,7 @@ namespace RHI
 
 		NvAPI_Unload();
 		
-#if defined(_DEBUG)
+#if defined(D3D_DEBUG)
 		IDXGIDebug1* debug = NULL;
 		if(SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&debug))))
 		{
@@ -2158,21 +2346,31 @@ namespace RHI
 #undef DESTROY_POOL
 	}
 
-	static void WaitForTempCommandList()
-	{
-		rhi.tempFence.WaitOnCPU(rhi.tempFenceValue);
-		if(rhi.tempCommandListOpen)
-		{
-			rhi.tempCommandList->Close();
-		}
-		D3D(rhi.tempCommandAllocator->Reset());
-		D3D(rhi.tempCommandList->Reset(rhi.tempCommandAllocator, NULL));
-		rhi.tempCommandListOpen = true;
-	}
-
 	void BeginFrame()
 	{
+		if(rhi.frameBegun)
+		{
+			Sys_DebugPrintf("BeginFrame already called!\n");
+			return;
+		}
+		rhi.frameBegun = true;
+
+		WaitForSwapChain();
+
+		{
+			const UINT64 currentFenceValue = rhi.mainFenceValues[rhi.frameIndex];
+#if DEBUG_FENCE
+			Sys_DebugPrintf("Wait: %d (BeginFrame)\n", (int)currentFenceValue);
+#endif
+			rhi.mainFence.WaitOnCPU(currentFenceValue);
+			rhi.frameIndex = (rhi.frameIndex + 1) % rhi.renderFrameCount;
+			rhi.mainFenceValues[rhi.frameIndex] = currentFenceValue + 1;
+			rhi.swapChainBufferIndex = rhi.swapChain->GetCurrentBackBufferIndex();
+		}
+
+#if DRAW_GUI
 		DrawGUI();
+#endif
 
 		Q_assert(rhi.commandList == rhi.mainCommandList);
 
@@ -2183,6 +2381,14 @@ namespace RHI
 		// wait for pending copies from the upload manager to be finished
 		rhi.upload.WaitToStartDrawing(rhi.mainCommandQueue);
 
+		// @TODO: move...
+#if DRAW_GUI
+		{
+			const int64_t us = Sys_Microseconds() - rhi.inputSamplingTime;
+			ImGui::Text("Input to render delay: %d us", (int)us);
+		}
+#endif
+
 		// reclaim used memory and start recording
 		D3D(rhi.mainCommandAllocators[rhi.frameIndex]->Reset());
 		D3D(rhi.commandList->Reset(rhi.mainCommandAllocators[rhi.frameIndex], NULL));
@@ -2191,7 +2397,7 @@ namespace RHI
 
 		rhi.commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-		const TextureBarrier barrier(rhi.renderTargets[rhi.frameIndex], ResourceStates::RenderTargetBit);
+		const TextureBarrier barrier(rhi.renderTargets[rhi.swapChainBufferIndex], ResourceStates::RenderTargetBit);
 		CmdBarrier(1, &barrier);
 
 		static TextureBarrier barriers[MAX_DRAWIMAGES];
@@ -2209,9 +2415,16 @@ namespace RHI
 
 	void EndFrame()
 	{
+		if(!rhi.frameBegun)
+		{
+			Sys_DebugPrintf("EndFrame already called!\n");
+			return;
+		}
+		rhi.frameBegun = false;
+
 		CmdInsertDebugLabel("RHI::EndFrame", 0.8f, 0.8f, 0.8f);
 
-		const TextureBarrier barrier(rhi.renderTargets[rhi.frameIndex], ResourceStates::PresentBit);
+		const TextureBarrier barrier(rhi.renderTargets[rhi.swapChainBufferIndex], ResourceStates::PresentBit);
 		CmdBarrier(1, &barrier);
 
 		CmdEndDurationQuery(rhi.frameDurationQueryIndex);
@@ -2222,6 +2435,11 @@ namespace RHI
 		// stop recording
 		D3D(rhi.commandList->Close());
 
+#if DEBUG_FENCE
+		Sys_DebugPrintf("Signal: %d (EndFrame)\n", rhi.mainFenceValues[rhi.frameIndex]);
+#endif
+		rhi.mainFence.Signal(rhi.mainCommandQueue, rhi.mainFenceValues[rhi.frameIndex]);
+
 		if(backEnd.renderFrame)
 		{
 			ID3D12CommandList* commandListArray[] = { rhi.commandList };
@@ -2229,8 +2447,11 @@ namespace RHI
 
 			Present();
 		}
+	}
 
-		MoveToNextFrame();
+	bool IsRendering()
+	{
+		return rhi.frameBegun;
 	}
 
 	uint32_t GetFrameIndex()
@@ -2240,7 +2461,7 @@ namespace RHI
 
 	HTexture GetSwapChainTexture()
 	{
-		return rhi.renderTargets[rhi.frameIndex];
+		return rhi.renderTargets[rhi.swapChainBufferIndex];
 	}
 
 	HBuffer CreateBuffer(const BufferDesc& rhiDesc)
@@ -2392,8 +2613,6 @@ namespace RHI
 		Q_assert(rhiDesc.mipCount > 0);
 		Q_assert(rhiDesc.mipCount <= MaxTextureMips);
 
-		bool requestTransition = false;
-
 		// Alignment 0 is the same as specifying D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT
 		D3D12_RESOURCE_DESC desc = { 0 };
 		desc.Alignment = 0;
@@ -2496,7 +2715,6 @@ namespace RHI
 			rtv.Texture2D.MipSlice = 0;
 			rtv.Texture2D.PlaneSlice = 0;
 			rtvIndex = rhi.descHeapRTVs.CreateRTV(resource, rtv);
-			requestTransition = true;
 		}
 
 		uint32_t dsvIndex = InvalidDescriptorIndex;
@@ -2512,7 +2730,6 @@ namespace RHI
 				dsv.Format = DXGI_FORMAT_D24_UNORM_S8_UINT; // @TODO:
 			}
 			dsvIndex = rhi.descHeapDSVs.CreateDSV(resource, dsv);
-			requestTransition = true;
 		}
 
 		Texture texture = {};
@@ -2556,23 +2773,24 @@ namespace RHI
 	void DestroyTexture(HTexture handle)
 	{
 		Texture& texture = rhi.textures.Get(handle);
-		if(texture.desc.allowedState & ResourceStates::ShaderAccessBits)
+		if(texture.srvIndex != InvalidDescriptorIndex)
 		{
 			rhi.descHeapGeneric.Free(texture.srvIndex);
 		}
-		if(texture.desc.allowedState & ResourceStates::RenderTargetBit)
+		if(texture.rtvIndex != InvalidDescriptorIndex)
 		{
 			rhi.descHeapRTVs.Free(texture.rtvIndex);
 		}
-		if(texture.desc.allowedState & ResourceStates::DepthWriteBit)
+		if(texture.dsvIndex != InvalidDescriptorIndex)
 		{
 			rhi.descHeapDSVs.Free(texture.dsvIndex);
 		}
-		if(texture.desc.allowedState & ResourceStates::UnorderedAccessBit)
+		for(uint32_t m = 0; m < texture.desc.mipCount; ++m)
 		{
-			for(uint32_t m = 0; m < texture.desc.mipCount; ++m)
+			const uint32_t uavIndex = texture.mips[m].uavIndex;
+			if(uavIndex != InvalidDescriptorIndex)
 			{
-				rhi.descHeapGeneric.Free(texture.mips[m].uavIndex);
+				rhi.descHeapGeneric.Free(uavIndex);
 			}
 		}
 		COM_RELEASE(texture.texture);
@@ -3033,7 +3251,7 @@ namespace RHI
 		// could write to a linear allocator instead...
 		ID3DBlob* blob;
 		ID3DBlob* error;
-#if defined(_DEBUG)
+#if defined(D3D_DEBUG)
 		const UINT flags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 #else
 		const UINT flags = D3DCOMPILE_OPTIMIZATION_LEVEL3;
@@ -3354,6 +3572,17 @@ namespace RHI
 		}
 	}
 
+	void CmdNullUAVBarrier()
+	{
+		Q_assert(CanWriteCommands());
+
+		D3D12_RESOURCE_BARRIER barrier = {};
+		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+		barrier.UAV.pResource = NULL;
+		rhi.commandList->ResourceBarrier(1, &barrier);
+	}
+
 	void CmdClearColorTarget(HTexture texture, const vec4_t clearColor, const Rect* rect)
 	{
 		Q_assert(CanWriteCommands());
@@ -3361,7 +3590,8 @@ namespace RHI
 		D3D12_RECT* d3dRectPtr = NULL;
 		D3D12_RECT d3dRect = {};
 		UINT rectCount = 0;
-		if(rect != NULL) {
+		if(rect != NULL)
+		{
 			rectCount = 1;
 			d3dRect.left = rect->x;
 			d3dRect.top = rect->y;
@@ -3373,6 +3603,17 @@ namespace RHI
 		const Texture& renderTarget = rhi.textures.Get(texture);
 		const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rhi.descHeapRTVs.GetCPUHandle(renderTarget.rtvIndex);
 		rhi.commandList->ClearRenderTargetView(rtvHandle, clearColor, rectCount, d3dRectPtr);
+	}
+
+	void CmdClearUAV(HTexture htexture, uint32_t mip)
+	{
+		const Texture& texture = rhi.textures.Get(htexture);
+		const uint32_t uavIndex = texture.mips[mip].uavIndex;
+		const D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = rhi.descHeapGeneric.GetCPUHandle(uavIndex);
+		D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle = rhi.descHeapGeneric.heap->GetGPUDescriptorHandleForHeapStart();
+		gpuHandle.ptr += uavIndex * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		const UINT values[4] = { 0, 255, 0, 255 };
+		rhi.commandList->ClearUnorderedAccessViewUint(gpuHandle, cpuHandle, texture.texture, values, 0, NULL);
 	}
 
 	void CmdClearDepthStencilTarget(HTexture texture, bool clearDepth, float depth, bool clearStencil, uint8_t stencil, const Rect* rect)
@@ -3517,4 +3758,14 @@ namespace RHI
 		rhi.tempFence.Signal(queue, rhi.tempFenceValue);
 		rhi.tempCommandListOpen = false;
 	}
+}
+
+void R_WaitBeforeInputSampling()
+{
+	// @TODO: remove that dumb toggle...
+	if(r_dynamiclight->integer)
+	{
+		RHI::WaitForSwapChain();
+	}
+	RHI::rhi.inputSamplingTime = Sys_Microseconds();
 }

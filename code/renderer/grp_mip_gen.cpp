@@ -85,6 +85,7 @@ void MipMapGenerator::Init()
 	{
 		Stage& stage = stages[s];
 		{
+			// @TODO: only the first and end stages need slots for the destination texture's mips
 			RootSignatureDesc desc(va("mip-map %s", stageNames[s]));
 			desc.pipelineType = PipelineType::Compute;
 			desc.constants[ShaderStage::Compute].byteCount = stageRCByteCount[s];
@@ -144,15 +145,6 @@ void MipMapGenerator::GenerateMipMaps(HTexture texture)
 	HTexture textureArray[MipSlice::Count + 1];
 	memcpy(textureArray, textures, sizeof(textureArray));
 	textureArray[MipSlice::Count] = texture;
-
-	for(int s = 0; s < 3; ++s)
-	{
-		Stage& stage = stages[s];
-
-		DescriptorTableUpdate update;
-		update.SetRWTexturesChain(ARRAY_LEN(textureArray), textureArray);
-		UpdateDescriptorTable(stage.descriptorTable, update);
-	}
 	
 	enum { GroupSize = 8, GroupMask = GroupSize - 1 };
 
@@ -166,7 +158,23 @@ void MipMapGenerator::GenerateMipMaps(HTexture texture)
 	}
 
 	BeginTempCommandList();
-	CmdBarrier(ARRAY_LEN(barriers), barriers);
+	CmdBarrier(ARRAY_LEN(barriers), barriers); // needed for transitions
+
+	{
+		TextureBarrier tb(texture, ResourceStates::UnorderedAccessBit);
+		CmdBarrier(1, &tb);
+	}
+
+	// this must happens after the BeginTempCommandList call because
+	// it has a CPU wait that guarantees it's safe to update the descriptor tables
+	for(int s = 0; s < 3; ++s)
+	{
+		Stage& stage = stages[s];
+
+		DescriptorTableUpdate update;
+		update.SetRWTexturesChain(ARRAY_LEN(textureArray), textureArray);
+		UpdateDescriptorTable(stage.descriptorTable, update);
+	}
 
 	// create a linear-space copy of mip 0 into float16 texture 0
 	{

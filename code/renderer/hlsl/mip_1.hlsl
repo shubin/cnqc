@@ -32,6 +32,14 @@ RWTexture2D<float4> dst : register(u0);
 [numthreads(8, 8, 1)]
 void cs(uint3 id : SV_DispatchThreadID)
 {
+	// @TODO: is this actually required?
+	uint w, h;
+	dst.GetDimensions(w, h);
+	if(any(id.xy >= uint2(w, h)))
+	{
+		return;
+	}
+
 	float4 v = src[id.xy];
 	dst[id.xy] = float4(pow(v.xyz, gamma), v.a);
 }

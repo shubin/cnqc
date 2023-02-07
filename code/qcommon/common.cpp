@@ -2579,6 +2579,9 @@ void Com_Frame( qbool demoPlayback )
 	// client system
 	//
 	if ( !com_dedicated->integer ) {
+		void R_WaitBeforeInputSampling();
+		R_WaitBeforeInputSampling();
+
 		//
 		// run event loop a second time to get server to client packets
 		// without a frame of latency

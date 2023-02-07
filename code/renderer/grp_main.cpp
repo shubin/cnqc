@@ -211,7 +211,7 @@ void GRP::ShutDown(bool fullShutDown)
 
 void GRP::BeginFrame()
 {
-	renderPasses[GetFrameIndex()].count = 0;
+	renderPasses[tr.frameCount % FrameCount].count = 0;
 
 	smaa.Update();
 
@@ -236,29 +236,31 @@ void GRP::BeginFrame()
 void GRP::EndFrame()
 {
 	// @TODO: move
+#if DRAW_GUI
 	{
 		uint32_t durations[MaxDurationQueries];
 		GetDurations(durations);
 
-		if(BeginTable("GPU timings", 2))
+		if(BeginTable("GPU timings", 3))
 		{
-			TableHeader(2, "Pass", "Micro-seconds");
+			TableHeader(3, "Pass", "GPU [us]", "CPU [us]");
 
-			TableRow(2, "Whole frame", va("%d", (int)durations[0]));
+			TableRow(3, "Whole frame", va("%d", (int)durations[0]), "");
 
-			RenderPassFrame& f = renderPasses[GetFrameIndex() ^ 1];
+			RenderPassFrame& f = renderPasses[(tr.frameCount % FrameCount) ^ 1];
 			for(uint32_t p = 0; p < f.count; ++p)
 			{
 				const uint32_t index = f.passes[p].queryIndex;
 				if(index < MaxDurationQueries)
 				{
-					TableRow(2, f.passes[p].name, va("%d", (int)durations[index]));
+					TableRow(3, f.passes[p].name, va("%d", (int)durations[index]), va("%d", (int)f.passes[p].cpuDurationUS));
 				}
 			}
 
 			ImGui::EndTable();
 		}
 	}
+#endif
 
 	EndUI();
 	imgui.Draw();
@@ -285,6 +287,15 @@ void GRP::CreateTexture(image_t* image, int mipCount, int width, int height)
 
 void GRP::UpoadTextureAndGenerateMipMaps(image_t* image, const byte* data)
 {
+	// @TODO:
+	if(IsRendering())
+	{
+		//Sys_DebugPrintf("Rendering, barrier for: %s\n", image->name);
+		TextureBarrier barrier(image->texture, ResourceStates::PixelShaderAccessBit);
+		CmdBarrier(1, &barrier);
+		return;
+	}
+
 	MappedTexture texture;
 	RHI::BeginTextureUpload(texture, image->texture);
 	for(uint32_t r = 0; r < texture.rowCount; ++r)
@@ -409,7 +420,7 @@ uint32_t GRP::RegisterTexture(HTexture htexture)
 
 uint32_t GRP::BeginRenderPass(const char* name, float r, float g, float b)
 {
-	RenderPassFrame& f = renderPasses[GetFrameIndex()];
+	RenderPassFrame& f = renderPasses[tr.frameCount % FrameCount];
 	if(f.count >= ARRAY_LEN(f.passes))
 	{
 		Q_assert(0);
@@ -429,7 +440,7 @@ uint32_t GRP::BeginRenderPass(const char* name, float r, float g, float b)
 
 void GRP::EndRenderPass(uint32_t index)
 {
-	RenderPassFrame& f = renderPasses[GetFrameIndex()];
+	RenderPassFrame& f = renderPasses[tr.frameCount % FrameCount];
 	if(index >= f.count)
 	{
 		Q_assert(0);

@@ -1086,7 +1086,7 @@ void CL_KeyEvent( int key, qbool down, unsigned time )
 	}
 #endif
 
-#if defined(_DEBUG)
+#if defined(_DEBUG) || 1
 	// @TODO: CVars to remap the keys?
 	if ( down && key == K_F1 ) {
 		if ( Cvar_VariableIntegerValue( "r_debugUI" ) ) {

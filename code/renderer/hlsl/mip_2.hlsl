@@ -52,6 +52,14 @@ void cs(uint3 id : SV_DispatchThreadID)
 	RWTexture2D<float4> src = mips[srcMip];
 	RWTexture2D<float4> dst = mips[dstMip];
 
+	// @TODO: is this actually required?
+	uint w, h;
+	dst.GetDimensions(w, h);
+	if(any(id.xy >= uint2(w, h)))
+	{
+		return;
+	}
+
 	int2 base = int2(id.xy) * scale;
 	float4 r = float4(0, 0, 0, 0);
 	r += src[FixCoords(base - offset * 3)] * weights.x;

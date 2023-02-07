@@ -404,6 +404,11 @@ static intptr_t CL_CgameSystemCalls( intptr_t *args )
 		Cvar_Update( VMA(1) );
 		return 0;
 	case CG_CVAR_SET:
+		// @TODO: remove
+		if(!Q_stricmp(VMA(1), "com_maxfps"))
+		{
+			return 0;
+		}
 		Cvar_Set( VMA(1), VMA(2) );
 		return 0;
 	case CG_CVAR_VARIABLESTRINGBUFFER:
