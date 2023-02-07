@@ -25,6 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 
 static qbool scr_initialized;	// ready to draw
+static qbool scr_updateActive;	// are we drawing right now?
 
 cvar_t		*cl_timegraph;
 static cvar_t* cl_graphheight;
@@ -299,11 +300,6 @@ static void SCR_DrawMouseInputLatencies()
 
 static void SCR_DrawScreenField( stereoFrame_t stereoFrame )
 {
-	if (!cls.rendererStarted)
-		return;
-
-	re.BeginFrame( stereoFrame );
-
 	// wide aspect ratio screens need to have the sides cleared
 	// unless they are displaying game renderings
 	if ( cls.state != CA_ACTIVE && cls.state != CA_CINEMATIC ) {
@@ -441,13 +437,20 @@ static void SCR_PerformanceCounters()
 }
 
 
+void CL_AbortFrame()
+{
+	scr_updateActive = qfalse;
+}
+
+
 // called every frame, and can also be called explicitly to flush text to the screen
 
 void SCR_UpdateScreen()
 {
-	static int recursive = 0;
-
 	if ( !scr_initialized )
+		return;
+
+	if ( !cls.rendererStarted )
 		return;
 
 	if ( cls.maxFPS > 0 && Sys_Milliseconds() < cls.nextFrameTimeMS )
@@ -455,8 +458,8 @@ void SCR_UpdateScreen()
 	
 	// there are several cases where this IS called twice in one frame
 	// easiest example is: conn to a server, kill the server
-	if ( ++recursive > 2 ) {
-		Com_Error( ERR_FATAL, "SCR_UpdateScreen: recursively called" );
+	if ( scr_updateActive ) {
+		return;
 	}
 
 	// Why set to 1 and 0 explicitly?
@@ -464,10 +467,7 @@ void SCR_UpdateScreen()
 	// One of the calls below might invoke Com_Error, which will in turn
 	// call longjmp and "abort" the current frame, meaning the end of this
 	// function (or any function for that matter) is not always reached.
-	recursive = 1;
-
-	const qbool drawFrame = CL_VideoRecording() || !Sys_IsMinimized();
-	SCR_DrawScreenField( STEREO_CENTER );
+	scr_updateActive = qtrue;
 
 	PushSample( &usecFE, pcFE[RF_USEC] );
 	PushSample( &usec3D, pc3D[RB_USEC] );
@@ -477,8 +477,21 @@ void SCR_UpdateScreen()
 	else
 		usecGPU.sampleCount = 0;
 
+	static qbool begun = false;
+
+	if ( begun ) {
+		re.EndFrame( NULL, NULL, NULL, qfalse );
+		begun = qfalse;
+	}
+
+	re.BeginFrame( STEREO_CENTER );
+	begun = qtrue;
+	SCR_DrawScreenField( STEREO_CENTER );
+
+	const qbool drawFrame = CL_VideoRecording() || !Sys_IsMinimized();
 	if ( com_speeds->integer ) {
 		re.EndFrame( pcFE, pc2D, pc3D, drawFrame );
+		begun = qfalse;
 		time_frontend = pcFE[RF_USEC];
 		time_backend = pc3D[RB_USEC];
 	} else if ( Cvar_VariableIntegerValue("r_speeds") ) {
@@ -487,13 +500,15 @@ void SCR_UpdateScreen()
 		if ( re.Registered() )
 			SCR_PerformanceCounters();
 		re.EndFrame( pcFE, pc2D, pc3D, drawFrame );
+		begun = qfalse;
 	} else {
 		re.EndFrame( NULL, NULL, NULL, drawFrame );
+		begun = qfalse;
 	}
 
 	if ( cls.maxFPS > 0 )
 		cls.nextFrameTimeMS = Sys_Milliseconds() + 1000 / cls.maxFPS;
 
-	recursive = 0;
+	scr_updateActive = qfalse;
 }
 

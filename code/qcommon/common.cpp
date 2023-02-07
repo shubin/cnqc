@@ -2500,6 +2500,10 @@ static void Com_FrameSleep( qbool demoPlayback )
 void Com_Frame( qbool demoPlayback )
 {
 	if ( setjmp(abortframe) ) {
+#ifndef DEDICATED
+		void CL_AbortFrame();
+		CL_AbortFrame();
+#endif
 		return;			// an ERR_DROP was thrown
 	}
 
@@ -2579,6 +2583,7 @@ void Com_Frame( qbool demoPlayback )
 	// client system
 	//
 	if ( !com_dedicated->integer ) {
+		// @TODO:
 		void R_WaitBeforeInputSampling();
 		R_WaitBeforeInputSampling();
 
