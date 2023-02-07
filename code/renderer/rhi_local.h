@@ -729,6 +729,8 @@ namespace RHI
 	void BeginTempCommandList();
 	void EndTempCommandList();
 
+	void FinalizeTexture(HTexture texture);
+
 	const Handle HandleIndexBitCount = 16;
 	const Handle HandleIndexBitOffset = 0;
 	const Handle HandleGenBitCount = 10;

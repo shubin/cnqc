@@ -224,7 +224,6 @@ void GRP::BeginFrame()
 
 	const TextureBarrier barrier(renderTarget, ResourceStates::RenderTargetBit);
 	CmdBarrier(1, &barrier);
-	CmdBindRenderTargets(1, &renderTarget, NULL);
 	CmdClearColorTarget(renderTarget, colorPink);
 
 	// nothing is bound to the command list yet!
@@ -287,15 +286,6 @@ void GRP::CreateTexture(image_t* image, int mipCount, int width, int height)
 
 void GRP::UpoadTextureAndGenerateMipMaps(image_t* image, const byte* data)
 {
-	// @TODO:
-	if(IsRendering())
-	{
-		//Sys_DebugPrintf("Rendering, barrier for: %s\n", image->name);
-		TextureBarrier barrier(image->texture, ResourceStates::PixelShaderAccessBit);
-		CmdBarrier(1, &barrier);
-		return;
-	}
-
 	MappedTexture texture;
 	RHI::BeginTextureUpload(texture, image->texture);
 	for(uint32_t r = 0; r < texture.rowCount; ++r)
@@ -305,6 +295,8 @@ void GRP::UpoadTextureAndGenerateMipMaps(image_t* image, const byte* data)
 	RHI::EndTextureUpload(image->texture);
 
 	mipMapGen.GenerateMipMaps(image->texture);
+
+	FinalizeTexture(image->texture);
 }
 
 void GRP::BeginTextureUpload(MappedTexture& mappedTexture, image_t* image)

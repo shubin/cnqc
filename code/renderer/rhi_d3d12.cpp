@@ -3779,6 +3779,17 @@ namespace RHI
 		rhi.tempFence.Signal(queue, rhi.tempFenceValue);
 		rhi.tempCommandListOpen = false;
 	}
+
+	void FinalizeTexture(HTexture texture)
+	{
+		if(rhi.frameBegun)
+		{
+			TextureBarrier barrier(texture, ResourceStates::PixelShaderAccessBit);
+			CmdBarrier(1, &barrier);
+
+			rhi.upload.WaitToStartDrawing(rhi.computeCommandQueue);
+		}
+	}
 }
 
 void R_WaitBeforeInputSampling()
