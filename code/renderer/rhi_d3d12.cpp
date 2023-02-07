@@ -31,6 +31,8 @@ to do:
 - mip-map generation: figure out whether out of bounds texture UAV writes are OK or not
 - mip-map generation: remove the unorm texture
 - mip-map generation: improve descriptor table management
+- tone map: there's a race condition with the descriptor set updates
+	it hasn't lead to any problem so far because the entries never really change...
 - fix the uploader (overlapped Begin*Upload calls -> sync fails on overflow)
 - working depth pre-pass (account for cull mode, generate buffers on demand)
 	!!! pre-compiled and run-time compiled shaders don't have bit-exact matching Z output
