@@ -163,7 +163,7 @@ void PostProcess::Draw()
 void PostProcess::ToneMap(HTexture texture)
 {
 	DescriptorTableUpdate update;
-	update.SetTextures(1, &grp.renderTarget);
+	update.SetTextures(1, &texture);
 	UpdateDescriptorTable(toneMapDescriptorTable, update);
 
 	GammaVertexRC vertexRC = {};
