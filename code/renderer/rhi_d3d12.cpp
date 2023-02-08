@@ -2302,6 +2302,13 @@ namespace RHI
 	{
 #define DESTROY_POOL(Name, Func) DestroyPool(rhi.Name, &Func, !!destroyWindow);
 
+		if(rhi.frameBegun)
+		{
+			backEnd.renderFrame = qfalse;
+			EndFrame();
+			backEnd.renderFrame = qtrue;
+		}
+
 		if(!destroyWindow)
 		{
 			WaitUntilDeviceIsIdle();

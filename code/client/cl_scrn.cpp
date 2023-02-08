@@ -26,6 +26,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 static qbool scr_initialized;	// ready to draw
 static qbool scr_updateActive;	// are we drawing right now?
+static qbool scr_frameBegun;
 
 cvar_t		*cl_timegraph;
 static cvar_t* cl_graphheight;
@@ -440,6 +441,7 @@ static void SCR_PerformanceCounters()
 void CL_AbortFrame()
 {
 	scr_updateActive = qfalse;
+	scr_frameBegun = qfalse;
 }
 
 
@@ -477,21 +479,19 @@ void SCR_UpdateScreen()
 	else
 		usecGPU.sampleCount = 0;
 
-	static qbool begun = false;
-
-	if ( begun ) {
+	if ( scr_frameBegun ) {
 		re.EndFrame( NULL, NULL, NULL, qfalse );
-		begun = qfalse;
+		scr_frameBegun = qfalse;
 	}
 
 	re.BeginFrame( STEREO_CENTER );
-	begun = qtrue;
+	scr_frameBegun = qtrue;
 	SCR_DrawScreenField( STEREO_CENTER );
 
 	const qbool drawFrame = CL_VideoRecording() || !Sys_IsMinimized();
 	if ( com_speeds->integer ) {
 		re.EndFrame( pcFE, pc2D, pc3D, drawFrame );
-		begun = qfalse;
+		scr_frameBegun = qfalse;
 		time_frontend = pcFE[RF_USEC];
 		time_backend = pc3D[RB_USEC];
 	} else if ( Cvar_VariableIntegerValue("r_speeds") ) {
@@ -500,10 +500,10 @@ void SCR_UpdateScreen()
 		if ( re.Registered() )
 			SCR_PerformanceCounters();
 		re.EndFrame( pcFE, pc2D, pc3D, drawFrame );
-		begun = qfalse;
+		scr_frameBegun = qfalse;
 	} else {
 		re.EndFrame( NULL, NULL, NULL, drawFrame );
-		begun = qfalse;
+		scr_frameBegun = qfalse;
 	}
 
 	if ( cls.maxFPS > 0 )
