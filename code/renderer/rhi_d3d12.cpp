@@ -25,7 +25,6 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 to do:
 
 - mip-map generation: figure out whether out of bounds texture UAV writes are OK or not
-- mip-map generation: improve descriptor table management
 - tone map: there's a race condition with the descriptor set updates
 	it hasn't lead to any problem so far because the entries never really change...
 - fix the uploader (overlapped Begin*Upload calls -> sync fails on overflow)
@@ -36,6 +35,7 @@ to do:
 - r_depthFade
 - r_dynamiclight
 - CMAA 2 integration?
+- SMAA S2x support?
 - figure out LOD of baked map surfaces (r_lodCurveError)
 - entityMergeable support ("entityMergable" in the code)
 - speed up map loads with BeginGraphicsPipelineCreation() / WaitForAllPipelineCreations()
