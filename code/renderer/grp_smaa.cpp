@@ -174,7 +174,8 @@ void SMAA::Update()
 		DestroyTexture(edgeTexture);
 		DestroyTexture(blendTexture);
 		DestroyTexture(stencilTexture);
-		DestroyTexture(destTexture);
+		DestroyTexture(inputTexture);
+		DestroyTexture(outputTexture);
 	}
 
 	if(createResDep)
@@ -200,12 +201,20 @@ void SMAA::Update()
 			blendTexture = CreateTexture(desc);
 		}
 		{
-			TextureDesc desc("SMAA destination", glConfig.vidWidth, glConfig.vidHeight);
+			TextureDesc desc("SMAA tone mapped input", glConfig.vidWidth, glConfig.vidHeight);
 			desc.initialState = ResourceStates::RenderTargetBit;
 			desc.allowedState = ResourceStates::RenderTargetBit | ResourceStates::PixelShaderAccessBit;
 			desc.committedResource = true;
 			desc.format = TextureFormat::RGBA32_UNorm;
-			destTexture = CreateTexture(desc);
+			inputTexture = CreateTexture(desc);
+		}
+		{
+			TextureDesc desc("SMAA tone mapped output", glConfig.vidWidth, glConfig.vidHeight);
+			desc.initialState = ResourceStates::RenderTargetBit;
+			desc.allowedState = ResourceStates::RenderTargetBit | ResourceStates::PixelShaderAccessBit;
+			desc.committedResource = true;
+			desc.format = TextureFormat::RGBA32_UNorm;
+			outputTexture = CreateTexture(desc);
 		}
 		{
 			TextureDesc desc("SMAA stencil buffer", glConfig.vidWidth, glConfig.vidHeight);
@@ -221,7 +230,7 @@ void SMAA::Update()
 		{
 			const HTexture textures[] =
 			{
-				destTexture, edgeTexture, areaTexture, searchTexture, blendTexture
+				inputTexture, edgeTexture, areaTexture, searchTexture, blendTexture
 			};
 
 			DescriptorTableUpdate update;
@@ -313,11 +322,11 @@ void SMAA::Draw(const viewParms_t& parms)
 		const TextureBarrier barriers[2] =
 		{
 			TextureBarrier(grp.renderTarget, ResourceStates::PixelShaderAccessBit),
-			TextureBarrier(destTexture, ResourceStates::RenderTargetBit)
+			TextureBarrier(inputTexture, ResourceStates::RenderTargetBit)
 		};
 		CmdBarrier(ARRAY_LEN(barriers), barriers);
 
-		CmdBindRenderTargets(1, &destTexture, NULL);
+		CmdBindRenderTargets(1, &inputTexture, NULL);
 		grp.post.ToneMap(grp.renderTarget);
 	}
 
@@ -334,7 +343,7 @@ void SMAA::Draw(const viewParms_t& parms)
 
 	// run edge detection
 	{
-		const TextureBarrier barrier(destTexture, ResourceStates::PixelShaderAccessBit);
+		const TextureBarrier barrier(inputTexture, ResourceStates::PixelShaderAccessBit);
 		CmdBarrier(1, &barrier);
 
 		CmdBindRenderTargets(1, &edgeTexture, &stencilTexture);
@@ -357,11 +366,11 @@ void SMAA::Draw(const viewParms_t& parms)
 		const TextureBarrier barriers[2] =
 		{
 			TextureBarrier(blendTexture, ResourceStates::PixelShaderAccessBit),
-			TextureBarrier(destTexture, ResourceStates::RenderTargetBit)
+			TextureBarrier(outputTexture, ResourceStates::RenderTargetBit)
 		};
 		CmdBarrier(ARRAY_LEN(barriers), barriers);
 
-		CmdBindRenderTargets(1, &destTexture, NULL);
+		CmdBindRenderTargets(1, &outputTexture, NULL);
 		CmdBindPipeline(thirdPassPipeline);
 		CmdDraw(3, 0);
 	}
@@ -370,12 +379,12 @@ void SMAA::Draw(const viewParms_t& parms)
 	{
 		const TextureBarrier barriers[2] =
 		{
-			TextureBarrier(destTexture, ResourceStates::PixelShaderAccessBit),
+			TextureBarrier(outputTexture, ResourceStates::PixelShaderAccessBit),
 			TextureBarrier(grp.renderTarget, ResourceStates::RenderTargetBit)
 		};
 		CmdBarrier(ARRAY_LEN(barriers), barriers);
 
 		CmdBindRenderTargets(1, &grp.renderTarget, NULL);
-		grp.post.InverseToneMap(destTexture);
+		grp.post.InverseToneMap(outputTexture);
 	}
 }

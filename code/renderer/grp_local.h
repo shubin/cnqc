@@ -534,7 +534,8 @@ struct SMAA
 	HTexture edgeTexture;
 	HTexture blendTexture;
 	HTexture stencilTexture;
-	HTexture destTexture;
+	HTexture inputTexture;  // tone mapped
+	HTexture outputTexture; // tone mapped
 
 	// depends on selected preset/mode
 	// SMAA has 3 passes:

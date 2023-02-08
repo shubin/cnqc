@@ -24,17 +24,10 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 /*
 to do:
 
-- fix texture creation/mip-map gen happening between BeginFrame and EndFrame (e.g. levelshots)
-- BeginFrame is called twice in a row on map load for rokky somehow
-	-> this leads to ImGui crashing and shouldn't happen in the first place anyway
-	-> do we make sure it never happens or deal with it happening?
 - mip-map generation: figure out whether out of bounds texture UAV writes are OK or not
 - mip-map generation: improve descriptor table management
 - tone map: there's a race condition with the descriptor set updates
 	it hasn't lead to any problem so far because the entries never really change...
-- SMAA: the blend pass fails GBV because destTexture is bound as an SRV and RTV at the same time
-	it *should* be safe since it's never actually accessed as an SRV?
-	need to check the specs to see if it's OK and just a false positive
 - fix the uploader (overlapped Begin*Upload calls -> sync fails on overflow)
 - working depth pre-pass (account for cull mode, generate buffers on demand)
 	!!! pre-compiled and run-time compiled shaders don't have bit-exact matching Z output
