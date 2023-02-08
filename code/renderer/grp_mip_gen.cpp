@@ -77,32 +77,6 @@ void MipMapGenerator::Init()
 		return;
 	}
 
-	const char* stageNames[] = { "start", "down", "end" };
-	uint32_t stageRCByteCount[] = { sizeof(StartConstants), sizeof(DownConstants), sizeof(EndConstants) };
-	const ShaderByteCode stageShaders[] = { ShaderByteCode(start::g_cs), ShaderByteCode(down::g_cs), ShaderByteCode(end::g_cs) };
-
-	for(int s = 0; s < 3; ++s)
-	{
-		Stage& stage = stages[s];
-		{
-			// @TODO: only the first and end stages need slots for the destination texture's mips
-			RootSignatureDesc desc(va("mip-map %s", stageNames[s]));
-			desc.pipelineType = PipelineType::Compute;
-			desc.constants[ShaderStage::Compute].byteCount = stageRCByteCount[s];
-			desc.AddRange(DescriptorType::RWTexture, 0, MipSlice::Count + MaxTextureMips);
-			stage.rootSignature = CreateRootSignature(desc);
-		}
-		{
-			const DescriptorTableDesc desc(DescriptorTableDesc(va("mip-map %s", stageNames[s]), stage.rootSignature));
-			stage.descriptorTable = CreateDescriptorTable(desc);
-		}
-		{
-			ComputePipelineDesc desc(va("mip-map %s", stageNames[s]), stage.rootSignature);
-			desc.shader = stageShaders[s];
-			stage.pipeline = CreateComputePipeline(desc);
-		}
-	}
-
 	for(int t = 0; t < 2; ++t)
 	{
 		TextureDesc desc(va("mip-map generation #%d", t + 1), MAX_TEXTURE_SIZE, MAX_TEXTURE_SIZE);
@@ -110,6 +84,36 @@ void MipMapGenerator::Init()
 		desc.initialState = ResourceStates::UnorderedAccessBit;
 		desc.allowedState = ResourceStates::UnorderedAccessBit | ResourceStates::ComputeShaderAccessBit;
 		textures[MipSlice::Float16_0 + t] = CreateTexture(desc);
+	}
+
+	const char* const stageNames[] = { "start", "down", "end" };
+	const uint32_t stageRCByteCount[] = { sizeof(StartConstants), sizeof(DownConstants), sizeof(EndConstants) };
+	const ShaderByteCode stageShaders[] = { ShaderByteCode(start::g_cs), ShaderByteCode(down::g_cs), ShaderByteCode(end::g_cs) };
+	const uint32_t stageExtraMips[] = { 1, 0, MaxTextureMips };
+
+	for(int s = 0; s < 3; ++s)
+	{
+		Stage& stage = stages[s];
+		{
+			RootSignatureDesc desc(va("mip-map %s", stageNames[s]));
+			desc.pipelineType = PipelineType::Compute;
+			desc.constants[ShaderStage::Compute].byteCount = stageRCByteCount[s];
+			desc.AddRange(DescriptorType::RWTexture, 0, MipSlice::Count + stageExtraMips[s]);
+			stage.rootSignature = CreateRootSignature(desc);
+		}
+		{
+			const DescriptorTableDesc desc(DescriptorTableDesc(va("mip-map %s", stageNames[s]), stage.rootSignature));
+			stage.descriptorTable = CreateDescriptorTable(desc);
+
+			DescriptorTableUpdate update;
+			update.SetRWTexturesSlice(ARRAY_LEN(textures), textures, 0, 0);
+			UpdateDescriptorTable(stage.descriptorTable, update);
+		}
+		{
+			ComputePipelineDesc desc(va("mip-map %s", stageNames[s]), stage.rootSignature);
+			desc.shader = stageShaders[s];
+			stage.pipeline = CreateComputePipeline(desc);
+		}
 	}
 }
 
@@ -137,39 +141,38 @@ void MipMapGenerator::GenerateMipMaps(HTexture texture)
 		return;
 	}
 
-	HTexture textureArray[MipSlice::Count + 1];
-	memcpy(textureArray, textures, sizeof(textureArray));
-	textureArray[MipSlice::Count] = texture;
-	
-	enum { GroupSize = 8, GroupMask = GroupSize - 1 };
+	BeginTempCommandList();
+
+	{
+		TextureBarrier allBarriers[MipSlice::Count + 1];
+		for(int i = 0; i < MipSlice::Count; ++i)
+		{
+			allBarriers[i] = TextureBarrier(textures[i], ResourceStates::UnorderedAccessBit);
+		}
+		allBarriers[MipSlice::Count] = TextureBarrier(texture, ResourceStates::UnorderedAccessBit);
+		CmdBarrier(ARRAY_LEN(allBarriers), allBarriers);
+	}
+
+	// this must happen after the BeginTempCommandList call because
+	// it has a CPU wait that guarantees it's safe to update the descriptor tables
+	{
+		Stage& stage = stages[Stage::Start];
+		DescriptorTableUpdate update;
+		update.SetRWTexturesSlice(1, &texture, MipSlice::Count, 0);
+		UpdateDescriptorTable(stage.descriptorTable, update);
+	}
+	{
+		Stage& stage = stages[Stage::End];
+		DescriptorTableUpdate update;
+		update.SetRWTexturesChain(1, &texture, MipSlice::Count);
+		UpdateDescriptorTable(stage.descriptorTable, update);
+	}
 
 	int w = image->width;
 	int h = image->height;
+	enum { GroupSize = 8, GroupMask = GroupSize - 1 };
 
-	TextureBarrier barriers[MipSlice::Count];
-	for(int i = 0; i < MipSlice::Count; ++i)
-	{
-		barriers[i] = TextureBarrier(textures[i], ResourceStates::UnorderedAccessBit);
-	}
-
-	BeginTempCommandList();
-	CmdBarrier(ARRAY_LEN(barriers), barriers); // needed for transitions
-
-	{
-		TextureBarrier tb(texture, ResourceStates::UnorderedAccessBit);
-		CmdBarrier(1, &tb);
-	}
-
-	// this must happens after the BeginTempCommandList call because
-	// it has a CPU wait that guarantees it's safe to update the descriptor tables
-	for(int s = 0; s < 3; ++s)
-	{
-		Stage& stage = stages[s];
-
-		DescriptorTableUpdate update;
-		update.SetRWTexturesChain(ARRAY_LEN(textureArray), textureArray);
-		UpdateDescriptorTable(stage.descriptorTable, update);
-	}
+#define Dispatch(Width, Height) CmdDispatch((Width + GroupMask) / GroupSize, (Height + GroupMask) / GroupSize, 1)
 
 	// create a linear-space copy of mip 0 into float16 texture 0
 	{
@@ -181,7 +184,13 @@ void MipMapGenerator::GenerateMipMaps(HTexture texture)
 		CmdBindPipeline(stage.pipeline);
 		CmdBindDescriptorTable(stage.rootSignature, stage.descriptorTable);
 		CmdSetRootConstants(stage.rootSignature, ShaderStage::Compute, &rc);
-		CmdDispatch((w + GroupMask) / GroupSize, (h + GroupMask) / GroupSize, 1);
+		Dispatch(w, h);
+	}
+
+	TextureBarrier tempBarriers[MipSlice::Count];
+	for(int i = 0; i < MipSlice::Count; ++i)
+	{
+		tempBarriers[i] = TextureBarrier(textures[i], ResourceStates::UnorderedAccessBit);
 	}
 
 	// overwrite mip 0 to apply r_intensity if needed
@@ -202,14 +211,14 @@ void MipMapGenerator::GenerateMipMaps(HTexture texture)
 		CmdBindPipeline(stage.pipeline);
 		CmdBindDescriptorTable(stage.rootSignature, stage.descriptorTable);
 		CmdSetRootConstants(stage.rootSignature, ShaderStage::Compute, &rc);
-		CmdBarrier(ARRAY_LEN(barriers), barriers);
-		CmdDispatch((w + GroupMask) / GroupSize, (h + GroupMask) / GroupSize, 1);
+		CmdBarrier(ARRAY_LEN(tempBarriers), tempBarriers);
+		Dispatch(w, h);
 	}
 
 	for(int i = 1; i < mipCount; ++i)
 	{
-		const int w1 = w;
-		const int h1 = h;
+		const int ws = w;
+		const int hs = h;
 		w = max(w / 2, 1);
 		h = max(h / 2, 1);
 
@@ -227,28 +236,28 @@ void MipMapGenerator::GenerateMipMaps(HTexture texture)
 			// down-sample on the X-axis
 			rc.srcMip = MipSlice::Float16_0;
 			rc.dstMip = MipSlice::Float16_1;
-			rc.scale[0] = w1 / w;
+			rc.scale[0] = ws / w;
 			rc.scale[1] = 1;
-			rc.maxSize[0] = w1 - 1;
-			rc.maxSize[1] = h1 - 1;
+			rc.maxSize[0] = ws - 1;
+			rc.maxSize[1] = hs - 1;
 			rc.offset[0] = 1;
 			rc.offset[1] = 0;
 			CmdSetRootConstants(stage.rootSignature, ShaderStage::Compute, &rc);
-			CmdBarrier(ARRAY_LEN(barriers), barriers);
-			CmdDispatch((w + GroupMask) / GroupSize, (h1 + GroupMask) / GroupSize, 1);
+			CmdBarrier(ARRAY_LEN(tempBarriers), tempBarriers);
+			Dispatch(w, hs);
 
 			// down-sample on the Y-axis
 			rc.srcMip = MipSlice::Float16_1;
 			rc.dstMip = MipSlice::Float16_0;
 			rc.scale[0] = 1;
-			rc.scale[1] = h1 / h;
+			rc.scale[1] = hs / h;
 			rc.maxSize[0] = w - 1;
-			rc.maxSize[1] = h1 - 1;
+			rc.maxSize[1] = hs - 1;
 			rc.offset[0] = 0;
 			rc.offset[1] = 1;
 			CmdSetRootConstants(stage.rootSignature, ShaderStage::Compute, &rc);
-			CmdBarrier(ARRAY_LEN(barriers), barriers);
-			CmdDispatch((w + GroupMask) / GroupSize, (h + GroupMask) / GroupSize, 1);
+			CmdBarrier(ARRAY_LEN(tempBarriers), tempBarriers);
+			Dispatch(w, h);
 		}
 
 		// save the results in gamma-space
@@ -267,11 +276,12 @@ void MipMapGenerator::GenerateMipMaps(HTexture texture)
 			CmdBindPipeline(stage.pipeline);
 			CmdBindDescriptorTable(stage.rootSignature, stage.descriptorTable);
 			CmdSetRootConstants(stage.rootSignature, ShaderStage::Compute, &rc);
-			CmdBarrier(ARRAY_LEN(barriers), barriers);
-			CmdDispatch((w + GroupMask) / GroupSize, (h + GroupMask) / GroupSize, 1);
+			CmdBarrier(ARRAY_LEN(tempBarriers), tempBarriers);
+			Dispatch(w, h);
 		}
 	}
 
-	CmdBarrier(ARRAY_LEN(barriers), barriers);
+#undef Dispatch
+
 	EndTempCommandList();
 }
