@@ -136,10 +136,6 @@ void PostProcess::Draw()
 	};
 	CmdBarrier(ARRAY_LEN(barriers), barriers);
 
-	DescriptorTableUpdate update;
-	update.SetTextures(1, &grp.renderTarget);
-	UpdateDescriptorTable(toneMapDescriptorTable, update);
-
 	// @TODO: r_blitMode support
 	GammaVertexRC vertexRC = {};
 	vertexRC.scaleX = 1.0f;
@@ -160,12 +156,8 @@ void PostProcess::Draw()
 	CmdDraw(3, 0);
 }
 
-void PostProcess::ToneMap(HTexture texture)
+void PostProcess::ToneMap()
 {
-	DescriptorTableUpdate update;
-	update.SetTextures(1, &texture);
-	UpdateDescriptorTable(toneMapDescriptorTable, update);
-
 	GammaVertexRC vertexRC = {};
 	vertexRC.scaleX = 1.0f;
 	vertexRC.scaleY = 1.0f;
@@ -183,12 +175,8 @@ void PostProcess::ToneMap(HTexture texture)
 	CmdDraw(3, 0);
 }
 
-void PostProcess::InverseToneMap(HTexture texture)
+void PostProcess::InverseToneMap()
 {
-	DescriptorTableUpdate update;
-	update.SetTextures(1, &texture);
-	UpdateDescriptorTable(inverseToneMapDescriptorTable, update);
-
 	InverseGammaPixelRC pixelRC = {};
 	pixelRC.gamma = r_gamma->value;
 	pixelRC.invBrightness = 1.0f / r_brightness->value;
@@ -198,4 +186,18 @@ void PostProcess::InverseToneMap(HTexture texture)
 	CmdBindDescriptorTable(inverseToneMapRootSignature, inverseToneMapDescriptorTable);
 	CmdSetRootConstants(inverseToneMapRootSignature, ShaderStage::Pixel, &pixelRC);
 	CmdDraw(3, 0);
+}
+
+void PostProcess::SetToneMapInput(HTexture toneMapInput)
+{
+	DescriptorTableUpdate update;
+	update.SetTextures(1, &toneMapInput);
+	UpdateDescriptorTable(toneMapDescriptorTable, update);
+}
+
+void PostProcess::SetInverseToneMapInput(HTexture inverseToneMapInput)
+{
+	DescriptorTableUpdate update;
+	update.SetTextures(1, &inverseToneMapInput);
+	UpdateDescriptorTable(inverseToneMapDescriptorTable, update);
 }

@@ -215,6 +215,8 @@ void SMAA::Update()
 			desc.committedResource = true;
 			desc.format = TextureFormat::RGBA32_UNorm;
 			outputTexture = CreateTexture(desc);
+
+			grp.post.SetInverseToneMapInput(outputTexture);
 		}
 		{
 			TextureDesc desc("SMAA stencil buffer", glConfig.vidWidth, glConfig.vidHeight);
@@ -327,7 +329,7 @@ void SMAA::Draw(const viewParms_t& parms)
 		CmdBarrier(ARRAY_LEN(barriers), barriers);
 
 		CmdBindRenderTargets(1, &inputTexture, NULL);
-		grp.post.ToneMap(grp.renderTarget);
+		grp.post.ToneMap(); // writes to grp.renderTarget
 	}
 
 	CmdBindRootSignature(rootSignature);
@@ -385,6 +387,6 @@ void SMAA::Draw(const viewParms_t& parms)
 		CmdBarrier(ARRAY_LEN(barriers), barriers);
 
 		CmdBindRenderTargets(1, &grp.renderTarget, NULL);
-		grp.post.InverseToneMap(outputTexture);
+		grp.post.InverseToneMap(); // writes to outputTexture
 	}
 }

@@ -492,8 +492,10 @@ struct PostProcess
 {
 	void Init();
 	void Draw();
-	void ToneMap(HTexture texture);
-	void InverseToneMap(HTexture texture);
+	void ToneMap();
+	void InverseToneMap();
+	void SetToneMapInput(HTexture toneMapInput);
+	void SetInverseToneMapInput(HTexture inverseToneMapInput);
 
 	HPipeline toneMapPipeline;
 	HRootSignature toneMapRootSignature;
