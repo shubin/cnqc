@@ -128,6 +128,25 @@ One mitigation for this restriction is the diligent use of Null descriptors.
 */
 
 /*
+State decay to common
+
+The flip-side of common state promotion is decay back to D3D12_RESOURCE_STATE_COMMON.
+Resources that meet certain requirements are considered to be stateless and effectively
+return to the common state when the GPU finishes execution of an ExecuteCommandLists operation.
+Decay does not occur between command lists executed together in the same ExecuteCommandLists call.
+
+The following resources will decay when an ExecuteCommandLists operation is completed on the GPU:
+- Resources being accessed on a Copy queue, or
+- Buffer resources on any queue type, or
+- Texture resources on any queue type that have the D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS flag set, or
+- Any resource implicitly promoted to a read-only state.
+
+------------------------------------
+
+So... textures written to on the copy queue can end up in the D3D12_RESOURCE_STATE_COMMON state?
+*/
+
+/*
 Depth24_Stencil8 requires:
 DXGI_FORMAT_R24G8_TYPELESS
 DXGI_FORMAT_D24_UNORM_S8_UINT
