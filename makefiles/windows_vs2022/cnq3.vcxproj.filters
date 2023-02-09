@@ -22,6 +22,9 @@
     <Filter Include="imgui">
       <UniqueIdentifier>{e33e635b-aacb-41cb-a81f-10a117d80739}</UniqueIdentifier>
     </Filter>
+    <Filter Include="implot">
+      <UniqueIdentifier>{2bd2c092-476d-4f05-8246-3f217702f09a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\code\botlib\aasfile.h">
@@ -258,6 +261,12 @@
     <ClInclude Include="..\..\code\client\cl_imgui.h">
       <Filter>client</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\code\implot\implot.h">
+      <Filter>implot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\implot\implot_internal.h">
+      <Filter>implot</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\code\client\cl_avi.cpp">
@@ -446,9 +455,6 @@
     <ClCompile Include="..\..\code\imgui\imgui.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\code\imgui\imgui_demo.cpp">
-      <Filter>imgui</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\code\imgui\imgui_draw.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
@@ -460,6 +466,12 @@
     </ClCompile>
     <ClCompile Include="..\..\code\client\cl_imgui.cpp">
       <Filter>client</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\implot\implot.cpp">
+      <Filter>implot</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\implot\implot_items.cpp">
+      <Filter>implot</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -179,9 +179,12 @@ D3D(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&graphicsAnalysis)));
 #include <dxgidebug.h>
 #include <d3dcompiler.h>
 #pragma comment(lib, "d3dcompiler")
+#include <dwmapi.h>
+#pragma comment(lib, "dwmapi")
 #define D3D12MA_D3D12_HEADERS_ALREADY_INCLUDED
 #include "D3D12MemAlloc.h"
 #include "../imgui/imgui.h"
+#include "../implot/implot.h"
 #include "../nvapi/nvapi.h"
 #pragma comment(lib, "nvapi64")
 #include "../pix/pix3.h"
@@ -439,6 +442,64 @@ namespace RHI
 		bool canBeginAndEnd;
 	};
 
+	struct FrameStats
+	{
+		enum { MaxFrames = 1024 };
+
+		static int QDECL CompareFloats(const void* a, const void* b)
+		{
+			return *(const float*)b - *(const float*)a;
+		}
+
+		void EndFrame()
+		{
+			frameCount = min(frameCount + 1, MaxFrames);
+			frameIndex = (frameIndex + 1) % MaxFrames;
+
+			if(frameCount == MaxFrames)
+			{
+				memcpy(temp, p2pMS, sizeof(temp));
+				qsort(temp, frameCount, sizeof(float), &CompareFloats);
+				median = temp[frameCount / 2];
+				percentile99 = temp[frameCount / 100];
+
+				float sum = 0.0f;
+				minimum = FLT_MAX;
+				maximum = -FLT_MAX;
+				for(int i = 0; i < MaxFrames; ++i)
+				{
+					const float sample = p2pMS[i];
+					sum += sample;
+					minimum = min(minimum, sample);
+					maximum = max(maximum, sample);
+				}
+				average = sum / (float)MaxFrames;
+
+				variance = 0.0f;
+				for(int i = 0; i < MaxFrames; ++i)
+				{
+					const float delta = p2pMS[i] - average;
+					variance += delta * delta;
+				}
+
+				stdDev = sqrtf(variance);
+			}
+		}
+
+		float p2pMS[MaxFrames];
+		float temp[MaxFrames];
+		float minimum;
+		float maximum;
+		float average;
+		float median;
+		float variance;
+		float stdDev;
+		float percentile99;
+		int frameCount;
+		int frameIndex;
+		int skippedFrames;
+	};
+
 	struct RHIPrivate
 	{
 		bool initialized;
@@ -521,7 +582,8 @@ namespace RHI
 		StaticUnorderedArray<HTexture, MAX_DRAWIMAGES> texturesToTransition;
 		FrameQueries frameQueries[FrameCount];
 		ResolvedQueries resolvedQueries;
-
+		FrameStats frameStats;
+		float monitorFrameTimeMS;
 		Pix pix;
 	};
 
@@ -1642,6 +1704,20 @@ namespace RHI
 		}
 	}
 
+	static void GetMonitorRefreshRate()
+	{
+		DWM_TIMING_INFO info = {};
+		info.cbSize = sizeof(info);
+		if(SUCCEEDED(DwmGetCompositionTimingInfo(NULL, &info)))
+		{
+			rhi.monitorFrameTimeMS = 1000.0f * ((float)(info.rateRefresh.uiDenominator) / (float)info.rateRefresh.uiNumerator);
+		}
+		else
+		{
+			rhi.monitorFrameTimeMS = 0.0f;
+		}
+	}
+
 	static void CreateNullResources()
 	{
 		{
@@ -1930,6 +2006,19 @@ namespace RHI
 		}
 	}
 
+	static ImPlotPoint FrameTimeGetter(int index, void*)
+	{
+		const FrameStats& fs = rhi.frameStats;
+		const int realIndex = (fs.frameIndex + index) % fs.frameCount;
+		const float value = fs.p2pMS[realIndex];
+
+		ImPlotPoint p;
+		p.x = index;
+		p.y = value;
+
+		return p;
+	}
+
 	static void DrawGUI()
 	{
 		if(ImGui::Begin("Direct3D 12 RHI"))
@@ -1939,6 +2028,56 @@ namespace RHI
 			DrawSection("Caps", &DrawCaps);
 			DrawSection("Textures", &DrawTextures);
 			ImGui::EndTabBar();
+		}
+		ImGui::End();
+
+		if(ImGui::Begin("D3D12 Perf. Graphs"))
+		{
+			const FrameStats& fs = rhi.frameStats;
+			double target = 8.0;
+			if(r_vsync->integer == 0)
+			{
+				const float maxFPS = ri.Cvar_Get("com_maxfps", "125", CVAR_ARCHIVE)->value;
+				target = 1000.0 / maxFPS;
+			}
+			else if(rhi.monitorFrameTimeMS > 0.0f)
+			{
+				target = (double)rhi.monitorFrameTimeMS;
+			}
+
+			ImGui::Text("Skipped : %d", fs.skippedFrames);
+			ImGui::Text("Average : %g", fs.average);
+			ImGui::Text("Median  : %g", fs.median);
+			ImGui::Text("Std Dev.: %g", fs.stdDev);
+			ImGui::Text("1%% Low  : %g", fs.percentile99);
+			ImGui::Text("Minimum : %g", fs.minimum);
+			ImGui::Text("Maximum : %g", fs.maximum);
+			ImGui::NewLine();
+
+			static bool autoFit = false;
+			ImGui::Checkbox("Auto-fit", &autoFit);
+
+			if(ImPlot::BeginPlot("Frame Times", ImVec2(-1, 0), ImPlotFlags_NoInputs))
+			{
+				const int flags = 0; // ImPlotAxisFlags_NoTickLabels
+				const int flagsY = flags | (autoFit ? ImPlotAxisFlags_AutoFit : 0);
+				ImPlot::SetupAxes(NULL, NULL, flags, flagsY);
+				ImPlot::SetupAxisLimits(ImAxis_X1, 0, FrameStats::MaxFrames, ImGuiCond_Always);
+				if(!autoFit)
+				{
+					ImPlot::SetupAxisLimits(ImAxis_Y1, max(target - 2.0, 0.0), target + 2.0, ImGuiCond_Always);
+				}
+
+				ImPlot::SetNextFillStyle(IMPLOT_AUTO_COL, 1.0f);
+				ImPlot::SetNextLineStyle(IMPLOT_AUTO_COL, 1.0f);
+				ImPlot::PlotInfLines("Target", &target, 1, ImPlotInfLinesFlags_Horizontal);
+
+				ImPlot::SetNextFillStyle(IMPLOT_AUTO_COL, 1.0f);
+				ImPlot::SetNextLineStyle(IMPLOT_AUTO_COL, 1.0f);
+				ImPlot::PlotLineG("Frame Time", &FrameTimeGetter, NULL, fs.frameCount, ImPlotLineFlags_None);
+
+				ImPlot::EndPlot();
+			}
 		}
 		ImGui::End();
 	}
@@ -2022,6 +2161,8 @@ namespace RHI
 					rhi.mainFenceValues[f] = 0;
 				}
 			}
+
+			GetMonitorRefreshRate();
 
 			rhi.tempStringAllocator.Clear();
 
@@ -2193,6 +2334,8 @@ namespace RHI
 
 			GrabSwapChainTextures();
 		}
+
+		GetMonitorRefreshRate();
 
 		for(UINT f = 0; f < FrameCount; ++f)
 		{
@@ -2466,8 +2609,20 @@ namespace RHI
 			ID3D12CommandList* commandListArray[] = { rhi.commandList };
 			rhi.mainCommandQueue->ExecuteCommandLists(ARRAY_LEN(commandListArray), commandListArray);
 
+			static int64_t prevTS = 0;
 			Present();
+			const int64_t currTS = Sys_Microseconds();
+			const int64_t us = currTS - prevTS;
+			prevTS = currTS;
+			rhi.frameStats.p2pMS[rhi.frameStats.frameIndex] = (float)us / 1000.0f;
 		}
+		else
+		{
+			rhi.frameStats.p2pMS[rhi.frameStats.frameIndex] = -1.0f;
+			rhi.frameStats.skippedFrames++;
+		}
+
+		rhi.frameStats.EndFrame();
 	}
 
 	bool IsRendering()

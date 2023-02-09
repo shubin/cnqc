@@ -25,6 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "client_help.h"
 #include "../imgui/imgui.h"
 #include "../imgui/ProggyClean.h"
+#include "../implot/implot.h"
 
 
 cvar_t	*cl_debugMove;
@@ -2219,6 +2220,7 @@ static const cmdTableItem_t cl_cmds[] =
 static void ImGUI_Init()
 {
 	ImGui::CreateContext();
+	ImPlot::CreateContext();
 
 	ImGuiIO& io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
