@@ -96,6 +96,11 @@ void SMAA::Update()
 	const bool createPresetDep = justEnabled || (alwaysEnabled && presetChanged);
 	const bool destroyPresetDep = justDisabled || (alwaysEnabled && presetChanged);
 
+	if(destroyFixed || destroyResDep || destroyPresetDep)
+	{
+		WaitUntilDeviceIsIdle();
+	}
+
 	if(destroyFixed)
 	{
 		fixedLoaded = false;

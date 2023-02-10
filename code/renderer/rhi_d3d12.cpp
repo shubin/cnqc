@@ -1136,17 +1136,6 @@ namespace RHI
 		return NULL;
 	}
 
-	static void WaitUntilDeviceIsIdle()
-	{
-		rhi.mainFenceValues[rhi.frameIndex]++;
-#if DEBUG_FENCE
-		Sys_DebugPrintf("Signal: %d (WaitUntilDeviceIsIdle)\n", (int)rhi.mainFenceValues[rhi.frameIndex]);
-		Sys_DebugPrintf("Wait: %d (WaitUntilDeviceIsIdle)\n", (int)rhi.mainFenceValues[rhi.frameIndex]);
-#endif
-		rhi.mainFence.Signal(rhi.mainCommandQueue, rhi.mainFenceValues[rhi.frameIndex]);
-		rhi.mainFence.WaitOnCPU(rhi.mainFenceValues[rhi.frameIndex]);
-	}
-
 	static void Present()
 	{
 		UINT flags;
@@ -3961,6 +3950,17 @@ namespace RHI
 
 			rhi.upload.WaitToStartDrawing(rhi.computeCommandQueue);
 		}
+	}
+
+	void WaitUntilDeviceIsIdle()
+	{
+		rhi.mainFenceValues[rhi.frameIndex]++;
+#if DEBUG_FENCE
+		Sys_DebugPrintf("Signal: %d (WaitUntilDeviceIsIdle)\n", (int)rhi.mainFenceValues[rhi.frameIndex]);
+		Sys_DebugPrintf("Wait: %d (WaitUntilDeviceIsIdle)\n", (int)rhi.mainFenceValues[rhi.frameIndex]);
+#endif
+		rhi.mainFence.Signal(rhi.mainCommandQueue, rhi.mainFenceValues[rhi.frameIndex]);
+		rhi.mainFence.WaitOnCPU(rhi.mainFenceValues[rhi.frameIndex]);
 	}
 }
 
