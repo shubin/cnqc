@@ -25,6 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "qcommon.h"
 #include "common_help.h"
 #include <setjmp.h>
+#include <float.h>
 
 #ifndef INT64_MIN
 #	define INT64_MIN 0x8000000000000000LL
@@ -3625,4 +3626,66 @@ const char* Com_FormatBytes( uint64_t numBytes )
 	const float vf = (float)numBytes / dividers[unit];
 
 	return va( "%.3f %s", vf, units[unit] );
+}
+
+
+static int QDECL SortIntDescending( const void* a, const void* b )
+{
+	return *(const int*)b - *(const int*)a;
+}
+
+
+static int QDECL SortFloatDescending( const void* aPtr, const void* bPtr )
+{
+	const float a = *(const float*)aPtr;
+	const float b = *(const float*)bPtr;
+
+	return (a < b) - (a > b);
+}
+
+
+typedef int (QDECL* qsortCallback_t)( const void*, const void* );
+
+
+template<typename T>
+static void StatsFromArray( const T* samples, int numSamples, qsortCallback_t sortFunction, T* temp, stats_t* stats )
+{
+	memcpy( temp, samples, sizeof(T) * numSamples );
+	qsort( temp, numSamples, sizeof(T), sortFunction );
+	stats->median = temp[numSamples / 2];
+	stats->percentile99 = temp[numSamples / 100];
+
+	float sum = 0.0f;
+	float minimum =  FLT_MAX;
+	float maximum = -FLT_MAX;
+	for ( int i = 0; i < numSamples; ++i ) {
+		const float sample = (float)samples[i];
+		sum += sample;
+		minimum = min(minimum, sample);
+		maximum = max(maximum, sample);
+	}
+	const float average = sum / (float)numSamples;
+	stats->average = average;
+	stats->minimum = minimum;
+	stats->maximum = maximum;
+
+	float variance = 0.0f;
+	for ( int i = 0; i < numSamples; ++i ) {
+		const float delta = (float)samples[i] - average;
+		variance += delta * delta;
+	}
+	stats->variance = variance;
+	stats->stdDev = sqrtf( variance );
+}
+
+
+void Com_StatsFromArray( const int* input, int numSamples, int* temp, stats_t* stats )
+{
+	StatsFromArray<int>( input, numSamples, &SortIntDescending, temp, stats );
+}
+
+
+void Com_StatsFromArray( const float* input, int numSamples, float* temp, stats_t* stats )
+{
+	StatsFromArray<float>( input, numSamples, &SortFloatDescending, temp, stats );
 }

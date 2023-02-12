@@ -838,6 +838,17 @@ extern char cl_cdkey[34];
 // centralized and cleaned, that's the max string you can send to a Com_Printf / Com_DPrintf (above gets truncated)
 #define	MAXPRINTMSG	4096
 
+struct stats_t
+{
+	float minimum;
+	float maximum;
+	float average;
+	float median;
+	float variance;
+	float stdDev;
+	float percentile99;
+};
+
 char*		CopyString( const char *in );
 void		Info_Print( const char *s );
 
@@ -855,6 +866,8 @@ int			Com_FilterPath( const char* filter, const char* name );
 int			Com_RealTime(qtime_t *qtime);
 qbool		Com_SafeMode();
 const char	*Com_FormatBytes( uint64_t numBytes );
+void		Com_StatsFromArray( const int* input, int numSamples, int* temp, stats_t* stats );
+void		Com_StatsFromArray( const float* input, int numSamples, float* temp, stats_t* stats );
 
 void		Com_StartupVariable( const char *match );
 // checks for and removes command line "+set var arg" constructs

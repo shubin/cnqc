@@ -129,7 +129,7 @@ void FrameStats::EndFrame()
 {
 	frameCount = min(frameCount + 1, (int)MaxFrames);
 	frameIndex = (frameIndex + 1) % MaxFrames;
-	StatsFromSampleArray(p2pStats, temp, p2pMS, frameCount);
+	Com_StatsFromArray(p2pMS, frameCount, temp, &p2pStats);
 }
 
 
@@ -140,8 +140,8 @@ void RenderPassStats::EndFrame(uint32_t cpu, uint32_t gpu)
 	samplesGPU[index] = gpu;
 	count = min(count + 1, (uint32_t)MaxStatsFrameCount);
 	index = (index + 1) % MaxStatsFrameCount;
-	StatsFromSampleArray(statsCPU, tempSamples, samplesCPU, count);
-	StatsFromSampleArray(statsGPU, tempSamples, samplesGPU, count);
+	Com_StatsFromArray((const int*)samplesCPU, count, (int*)tempSamples, &statsCPU);
+	Com_StatsFromArray((const int*)samplesGPU, count, (int*)tempSamples, &statsGPU);
 }
 
 
@@ -565,7 +565,7 @@ void GRP::DrawGUI()
 			if(BeginTable("Frame stats", 2))
 			{
 				const FrameStats& fs = frameStats;
-				const Stats& s = fs.p2pStats;
+				const stats_t& s = fs.p2pStats;
 				TableRow2("Skipped frames", fs.skippedFrames);
 				TableRow2("Frame time target", rhie.targetFrameDurationMS);
 				TableRow2("Frame time average", s.average);
