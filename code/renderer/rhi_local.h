@@ -549,6 +549,11 @@ namespace RHI
 
 	struct DescriptorTableUpdate
 	{
+		// note that for our texture UAVs,
+		// we only allow 2 options:
+		// 1) "bind all mips" (mip chain)
+		// 2) "bind this single mip" (slide)
+
 		uint32_t firstIndex = 0;
 		uint32_t resourceCount = 0;
 		DescriptorType::Id type = DescriptorType::Count;
@@ -658,8 +663,6 @@ namespace RHI
 	void BeginFrame();
 	void EndFrame();
 
-	bool IsRendering();
-
 	uint32_t GetFrameIndex();
 	HTexture GetSwapChainTexture();
 
@@ -711,9 +714,10 @@ namespace RHI
 	void CmdEndDebugLabel();
 	void CmdSetStencilReference(uint8_t stencilRef);
 
-	// @TODO:
+#if 0
 	void CmdClearUAV(HTexture htexture, uint32_t mip);
 	void CmdNullUAVBarrier();
+#endif
 
 	// the duration at index 0 is for the entire frame
 	uint32_t GetDurationCount();

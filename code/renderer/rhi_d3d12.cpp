@@ -49,7 +49,6 @@ to do:
 	- buffers: create with CPU access, map the destination buffer directly
 	- textures: create with undefined layout and CPU access, upload data in 1 step with WriteToSubresource
 - defragment on partial inits with D3D12MA?
-- compiler switch for GPU validation
 - use ID3D12Device4::CreateCommandList1 to create closed command lists
 - IDXGISwapChain::SetFullScreenState(TRUE) with the borderless window taking up the entire screen
 	and ALLOW_TEARING set on both the flip mode swap chain and Present() flags
@@ -65,18 +64,14 @@ to do:
 - screenshot
 - video
 - roq video textures?
+- WaitUntilDeviceIsIdle: wait on the copy and compute queues as well!
+- Intel GPU: try storing only 6*2 samplers instead of 6*16: 1 set for no mip bias and 1 set for r_picmip
 
 rejected:
 - NvAPI_D3D_GetLatency to get (simulated) input to display latency
 	-> nope, it doesn't say when the frame gets displayed or even queued for display
 - NvAPI_D3D_IsGSyncCapable / NvAPI_D3D_IsGSyncActive for diagnostics
 	-> nope, that's for D3D9-11
-*/
-
-/*
-notes/plans:
-
-- for our views, we only allow "all mips" and "this single mip", no ranges
 */
 
 /*
@@ -2536,11 +2531,6 @@ namespace RHI
 		}
 	}
 
-	bool IsRendering()
-	{
-		return rhi.frameBegun;
-	}
-
 	uint32_t GetFrameIndex()
 	{
 		return rhi.frameIndex;
@@ -3659,6 +3649,7 @@ namespace RHI
 		}
 	}
 
+#if 0
 	void CmdNullUAVBarrier()
 	{
 		Q_assert(CanWriteCommands());
@@ -3669,6 +3660,7 @@ namespace RHI
 		barrier.UAV.pResource = NULL;
 		rhi.commandList->ResourceBarrier(1, &barrier);
 	}
+#endif
 
 	void CmdClearColorTarget(HTexture texture, const vec4_t clearColor, const Rect* rect)
 	{
@@ -3692,6 +3684,7 @@ namespace RHI
 		rhi.commandList->ClearRenderTargetView(rtvHandle, clearColor, rectCount, d3dRectPtr);
 	}
 
+#if 0
 	void CmdClearUAV(HTexture htexture, uint32_t mip)
 	{
 		const Texture& texture = rhi.textures.Get(htexture);
@@ -3702,6 +3695,7 @@ namespace RHI
 		const UINT values[4] = { 0, 255, 0, 255 };
 		rhi.commandList->ClearUnorderedAccessViewUint(gpuHandle, cpuHandle, texture.texture, values, 0, NULL);
 	}
+#endif
 
 	void CmdClearDepthStencilTarget(HTexture texture, bool clearDepth, float depth, bool clearStencil, uint8_t stencil, const Rect* rect)
 	{
