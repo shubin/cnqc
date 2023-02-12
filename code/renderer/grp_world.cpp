@@ -112,55 +112,6 @@ static void UpdateEntityData(int entityNum, double originalTime)
 	}
 }
 
-// @TODO: move
-#if 0
-static void R_CameraPositionFromMatrix(vec3_t cameraPos, const float* modelView)
-{
-	float modelViewT[16];
-	R_TransposeMatrix(modelView, modelViewT);
-
-	// plane normals 
-	vec3_t n1, n2, n3;
-	VectorCopy(modelViewT + 0 * 4, n1);
-	VectorCopy(modelViewT + 1 * 4, n2);
-	VectorCopy(modelViewT + 2 * 4, n3);
-
-	// plane distances
-	const float d1 = modelViewT[0 * 4 + 3];
-	const float d2 = modelViewT[1 * 4 + 3];
-	const float d3 = modelViewT[2 * 4 + 3];
-
-	// intersection of the 3 planes
-	vec3_t n2n3, n3n1, n1n2;
-	CrossProduct(n2, n3, n2n3);
-	CrossProduct(n3, n1, n3n1);
-	CrossProduct(n1, n2, n1n2);
-
-	// top = (n2n3 * d1) + (n3n1 * d2) + (n1n2 * d3)
-	vec3_t top;
-	VectorMA(vec3_origin, d1, n2n3, top);
-	VectorMA(top, d2, n3n1, top);
-	VectorMA(top, d3, n1n2, top);
-	const float denom = DotProduct(n1, n2n3);
-	VectorScale(top, -1.0f / denom, cameraPos);
-}
-
-static void R_CameraAxisVectorsFromMatrix(vec3_t axisX, vec3_t axisY, vec3_t axisZ, const float* modelView)
-{
-	axisX[0] = modelView[0];
-	axisX[1] = modelView[4];
-	axisX[2] = modelView[8];
-
-	axisY[0] = modelView[1];
-	axisY[1] = modelView[5];
-	axisY[2] = modelView[9];
-
-	axisZ[0] = modelView[ 2];
-	axisZ[1] = modelView[ 6];
-	axisZ[2] = modelView[10];
-}
-#endif
-
 
 void World::Init()
 {

@@ -1593,6 +1593,8 @@ void RE_TakeVideoFrame( int width, int height,
 void R_MultMatrix( const float *a, const float *b, float *out );
 void R_InvMatrix( const float* in, float* out );
 void R_TransposeMatrix( const float* in, float* out );
+void R_CameraPositionFromMatrix( const float* modelView, vec3_t cameraPos );
+void R_CameraAxisVectorsFromMatrix( const float* modelView, vec3_t axisX, vec3_t axisY, vec3_t axisZ );
 void R_MakeIdentityMatrix( float* m );
 void R_MakeOrthoProjectionMatrix( float* m, float w, float h );
 
