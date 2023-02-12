@@ -136,17 +136,61 @@ void PostProcess::Draw()
 	};
 	CmdBarrier(ARRAY_LEN(barriers), barriers);
 
-	// @TODO: r_blitMode support
+	float vsX = 1.0f; // vertex shader scale factors
+	float vsY = 1.0f;
+	float srX = 1.0f; // scissor rectangle scale factors
+	float srY = 1.0f;
+	if(r_fullscreen->integer == 1 && r_mode->integer == VIDEOMODE_UPSCALE)
+	{
+		if(r_blitMode->integer == BLITMODE_CENTERED)
+		{
+			vsX = (float)glConfig.vidWidth / (float)glInfo.winWidth;
+			vsY = (float)glConfig.vidHeight / (float)glInfo.winHeight;
+		}
+		else if(r_blitMode->integer == BLITMODE_ASPECT)
+		{
+			const float ars = (float)glConfig.vidWidth / (float)glConfig.vidHeight;
+			const float ard = (float)glInfo.winWidth / (float)glInfo.winHeight;
+			if(ard > ars)
+			{
+				vsX = ars / ard;
+				vsY = 1.0f;
+				srX = (float)glInfo.winHeight / (float)glConfig.vidHeight;
+				srY = srX;
+			}
+			else
+			{
+				vsX = 1.0f;
+				vsY = ard / ars;
+				srX = (float)glInfo.winWidth / (float)glConfig.vidWidth;
+				srY = srX;
+			}
+		}
+	}
+
+	if(vsX != 1.0f || vsY != 1.0f)
+	{
+		CmdClearColorTarget(swapChain, colorBlack);
+
+		const int x = (glInfo.winWidth - glInfo.winWidth * vsX) / 2.0f;
+		const int y = (glInfo.winHeight - glInfo.winHeight * vsY) / 2.0f;
+		CmdSetViewport(0, 0, glInfo.winWidth, glInfo.winHeight);
+		CmdSetScissor(x, y, glConfig.vidWidth * srX, glConfig.vidHeight * srY);
+	}
+	else
+	{
+		CmdSetViewportAndScissor(0, 0, glInfo.winWidth, glInfo.winHeight);
+	}
+
 	GammaVertexRC vertexRC = {};
-	vertexRC.scaleX = 1.0f;
-	vertexRC.scaleY = 1.0f;
+	vertexRC.scaleX = vsX;
+	vertexRC.scaleY = vsY;
 
 	GammaPixelRC pixelRC = {};
 	pixelRC.invGamma = 1.0f / r_gamma->value;
 	pixelRC.brightness = r_brightness->value;
 	pixelRC.greyscale = r_greyscale->value;
 
-	CmdSetViewportAndScissor(0, 0, glConfig.vidWidth, glConfig.vidHeight);
 	CmdBindRenderTargets(1, &swapChain, NULL);
 	CmdBindPipeline(toneMapPipeline);
 	CmdBindRootSignature(toneMapRootSignature);

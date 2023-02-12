@@ -29,7 +29,6 @@ to do:
 - working depth pre-pass (account for cull mode, generate buffers on demand)
 	!!! pre-compiled and run-time compiled shaders don't have bit-exact matching Z output
 - GPU resident vertex data for models: load on demand based on { surface, shader } pair
-- r_blitMode
 - r_depthFade
 - r_dynamiclight
 - CMAA 2 integration?
@@ -2043,8 +2042,8 @@ namespace RHI
 					DXGI_SWAP_CHAIN_DESC swapChainDesc = { 0 };
 					swapChainDesc.BufferCount = rhi.swapChainBufferCount;
 					swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-					swapChainDesc.BufferDesc.Width = glConfig.vidWidth;
-					swapChainDesc.BufferDesc.Height = glConfig.vidHeight;
+					swapChainDesc.BufferDesc.Width = glInfo.winWidth;
+					swapChainDesc.BufferDesc.Height = glInfo.winHeight;
 					swapChainDesc.BufferDesc.RefreshRate.Numerator = 0;
 					swapChainDesc.BufferDesc.RefreshRate.Denominator = 1;
 					swapChainDesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
@@ -2222,8 +2221,8 @@ namespace RHI
 			DXGI_SWAP_CHAIN_DESC swapChainDesc = { 0 };
 			swapChainDesc.BufferCount = rhi.swapChainBufferCount;
 			swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-			swapChainDesc.BufferDesc.Width = glConfig.vidWidth;
-			swapChainDesc.BufferDesc.Height = glConfig.vidHeight;
+			swapChainDesc.BufferDesc.Width = glInfo.winWidth;
+			swapChainDesc.BufferDesc.Height = glInfo.winHeight;
 			swapChainDesc.BufferDesc.RefreshRate.Numerator = 0;
 			swapChainDesc.BufferDesc.RefreshRate.Denominator = 1;
 			swapChainDesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
