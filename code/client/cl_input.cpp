@@ -23,7 +23,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "client.h"
 #include "client_help.h"
-#include "../imgui/imgui.h"
 
 
 static char LastKeyTooHigh[K_LAST_KEY < 256 ? 1 : -1];
@@ -297,9 +296,7 @@ void CL_MouseEvent( int dx, int dy, int time )
 		return;
 
 	if ( cls.keyCatchers & KEYCATCH_IMGUI ) {
-		ImGuiIO& io = ImGui::GetIO();
-		io.MouseDelta[0] += dx;
-		io.MouseDelta[1] += dy;
+		CL_IMGUI_MouseEvent( dx, dy );
 	} else if ( cls.keyCatchers & KEYCATCH_UI ) {
 		VM_Call( uivm, UI_MOUSE_EVENT, dx, dy );
 	} else if (cls.keyCatchers & KEYCATCH_CGAME) {

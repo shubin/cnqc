@@ -586,6 +586,16 @@ void CL_NDP_ReadUntil( int serverTime );
 void CL_NDP_HandleError();
 
 //
+// cl_imgui.cpp
+//
+void CL_IMGUI_Init();
+void CL_IMGUI_Frame();
+void CL_IMGUI_MouseEvent( int dx, int dy );
+void CL_IMGUI_KeyEvent( int key, qbool down );
+void CL_IMGUI_CharEvent( char key );
+void CL_IMGUI_Shutdown();
+
+//
 // OS-specific
 //
 typedef enum {

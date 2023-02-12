@@ -21,7 +21,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "client.h"
 #include "client_help.h"
-#include "../imgui/imgui.h"
 
 /*
 
@@ -1118,19 +1117,7 @@ void CL_KeyEvent( int key, qbool down, unsigned time )
 			Cvar_Set( "r_debugInput", "0" );
 			return;
 		}
-
-		ImGuiIO& io = ImGui::GetIO();
-		switch( key ) {
-			case K_MOUSE1: io.MouseDown[0] = !!down; break;
-			case K_MOUSE2: io.MouseDown[1] = !!down; break;
-			case K_MOUSE3: io.MouseDown[2] = !!down; break;
-			case K_MOUSE4: io.MouseDown[3] = !!down; break;
-			case K_MOUSE5: io.MouseDown[4] = !!down; break;
-			case K_MWHEELDOWN: io.MouseWheel -= 1.0f; break;
-			case K_MWHEELUP: io.MouseWheel += 1.0f; break;
-			default: io.KeysDown[key] = !!down; break;
-		}
-
+		CL_IMGUI_KeyEvent( key, down );
 		return;
 	}
 
@@ -1270,7 +1257,7 @@ void CL_CharEvent( int key ) {
 	}
 
 	if ( cls.keyCatchers & KEYCATCH_IMGUI ) {
-		ImGui::GetIO().AddInputCharacter( key );
+		CL_IMGUI_CharEvent( key );
 		return;
 	}
 

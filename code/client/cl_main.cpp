@@ -23,9 +23,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "client.h"
 #include "client_help.h"
-#include "../imgui/imgui.h"
-#include "../imgui/ProggyClean.h"
-#include "../implot/implot.h"
 
 
 cvar_t	*cl_debugMove;
@@ -1585,32 +1582,6 @@ static void CL_CheckUserinfo()
 }
 
 
-static void CL_UpdateImGUI()
-{
-	if ( Cvar_VariableIntegerValue( "r_debugInput" ) ) {
-		cls.keyCatchers |= KEYCATCH_IMGUI;
-	} else {
-		cls.keyCatchers &= ~KEYCATCH_IMGUI;
-	}
-
-	static int64_t prevUS = 0;
-	const int64_t currUS = Sys_Microseconds();
-	const int64_t elapsedUS = currUS - prevUS;
-	prevUS = currUS;
-
-	int x, y;
-	Sys_GetCursorPosition(&x, &y);
-
-	ImGuiIO& io = ImGui::GetIO();
-	io.DeltaTime = (float)((double)elapsedUS / 1000000.0);
-	io.MousePos[0] = x;
-	io.MousePos[1] = y;
-	io.KeyCtrl = io.KeysDown[K_CTRL];
-	io.KeyShift = io.KeysDown[K_SHIFT];
-	io.KeyAlt = io.KeysDown[K_ALT];
-}
-
-
 void CL_Frame( int msec )
 {
 	if ( !com_cl_running->integer ) {
@@ -1652,7 +1623,7 @@ void CL_Frame( int msec )
 	}
 
 	// update the client's own GUI
-	CL_UpdateImGUI();
+	CL_IMGUI_Frame();
 
 	// advance the current map download, if any
 	CL_MapDownload_Continue();
@@ -2217,142 +2188,6 @@ static const cmdTableItem_t cl_cmds[] =
 };
 
 
-// applies a modified version of Jan Bielak's Deep Dark theme
-static void ImGUI_ApplyTheme()
-{
-	ImVec4* colors = ImGui::GetStyle().Colors;
-	colors[ImGuiCol_Text] = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
-	colors[ImGuiCol_TextDisabled] = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
-	colors[ImGuiCol_WindowBg] = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
-	colors[ImGuiCol_ChildBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
-	colors[ImGuiCol_PopupBg] = ImVec4(0.19f, 0.19f, 0.19f, 0.92f);
-	colors[ImGuiCol_Border] = ImVec4(0.19f, 0.19f, 0.19f, 0.29f);
-	colors[ImGuiCol_BorderShadow] = ImVec4(0.00f, 0.00f, 0.00f, 0.24f);
-	colors[ImGuiCol_FrameBg] = ImVec4(0.05f, 0.05f, 0.05f, 0.54f);
-	colors[ImGuiCol_FrameBgHovered] = ImVec4(0.19f, 0.19f, 0.19f, 0.54f);
-	colors[ImGuiCol_FrameBgActive] = ImVec4(0.20f, 0.22f, 0.23f, 1.00f);
-	colors[ImGuiCol_TitleBg] = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
-	colors[ImGuiCol_TitleBgActive] = ImVec4(0.06f, 0.06f, 0.06f, 1.00f);
-	colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
-	colors[ImGuiCol_MenuBarBg] = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
-	colors[ImGuiCol_ScrollbarBg] = ImVec4(0.05f, 0.05f, 0.05f, 0.54f);
-	colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.34f, 0.34f, 0.34f, 0.54f);
-	colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.40f, 0.40f, 0.40f, 0.54f);
-	colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.56f, 0.56f, 0.56f, 0.54f);
-	colors[ImGuiCol_CheckMark] = ImVec4(0.33f, 0.67f, 0.86f, 1.00f);
-	colors[ImGuiCol_SliderGrab] = ImVec4(0.34f, 0.34f, 0.34f, 0.54f);
-	colors[ImGuiCol_SliderGrabActive] = ImVec4(0.56f, 0.56f, 0.56f, 0.54f);
-	colors[ImGuiCol_Button] = ImVec4(0.05f, 0.05f, 0.05f, 0.54f);
-	colors[ImGuiCol_ButtonHovered] = ImVec4(0.19f, 0.19f, 0.19f, 0.54f);
-	colors[ImGuiCol_ButtonActive] = ImVec4(0.20f, 0.22f, 0.23f, 1.00f);
-	colors[ImGuiCol_Header] = ImVec4(0.00f, 0.00f, 0.00f, 0.52f);
-	colors[ImGuiCol_HeaderHovered] = ImVec4(0.00f, 0.00f, 0.00f, 0.36f);
-	colors[ImGuiCol_HeaderActive] = ImVec4(0.20f, 0.22f, 0.23f, 0.33f);
-	colors[ImGuiCol_Separator] = ImVec4(0.28f, 0.28f, 0.28f, 0.29f);
-	colors[ImGuiCol_SeparatorHovered] = ImVec4(0.44f, 0.44f, 0.44f, 0.29f);
-	colors[ImGuiCol_SeparatorActive] = ImVec4(0.40f, 0.44f, 0.47f, 1.00f);
-	colors[ImGuiCol_ResizeGrip] = ImVec4(0.28f, 0.28f, 0.28f, 0.29f);
-	colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.44f, 0.44f, 0.44f, 0.29f);
-	colors[ImGuiCol_ResizeGripActive] = ImVec4(0.40f, 0.44f, 0.47f, 1.00f);
-	colors[ImGuiCol_Tab] = ImVec4(0.00f, 0.00f, 0.00f, 0.52f);
-	colors[ImGuiCol_TabHovered] = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
-	colors[ImGuiCol_TabActive] = ImVec4(0.20f, 0.20f, 0.20f, 0.36f);
-	colors[ImGuiCol_TabUnfocused] = ImVec4(0.00f, 0.00f, 0.00f, 0.52f);
-	colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
-	colors[ImGuiCol_PlotLines] = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
-	colors[ImGuiCol_PlotLinesHovered] = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
-	colors[ImGuiCol_PlotHistogram] = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
-	colors[ImGuiCol_PlotHistogramHovered] = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
-	colors[ImGuiCol_TableHeaderBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.52f);
-	colors[ImGuiCol_TableBorderStrong] = ImVec4(0.00f, 0.00f, 0.00f, 0.52f);
-	colors[ImGuiCol_TableBorderLight] = ImVec4(0.28f, 0.28f, 0.28f, 0.29f);
-	colors[ImGuiCol_TableRowBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
-	colors[ImGuiCol_TableRowBgAlt] = ImVec4(1.00f, 1.00f, 1.00f, 0.06f);
-	colors[ImGuiCol_TextSelectedBg] = ImVec4(0.20f, 0.22f, 0.23f, 1.00f);
-	colors[ImGuiCol_DragDropTarget] = ImVec4(0.33f, 0.67f, 0.86f, 1.00f);
-	colors[ImGuiCol_NavHighlight] = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
-	colors[ImGuiCol_NavWindowingHighlight] = ImVec4(1.00f, 0.00f, 0.00f, 0.70f);
-	colors[ImGuiCol_NavWindowingDimBg] = ImVec4(1.00f, 0.00f, 0.00f, 0.20f);
-	colors[ImGuiCol_ModalWindowDimBg] = ImVec4(1.00f, 0.00f, 0.00f, 0.35f);
-
-	const ImVec4 hover(0.26f, 0.59f, 0.98f, 0.4f);
-	const ImVec4 active(0.2f, 0.41f, 0.68f, 0.5f);
-	colors[ImGuiCol_HeaderHovered] = hover;
-	colors[ImGuiCol_HeaderActive] = active;
-	colors[ImGuiCol_TabHovered] = hover;
-	colors[ImGuiCol_TabActive] = active;
-
-	ImGuiStyle& style = ImGui::GetStyle();
-	style.WindowPadding = ImVec2(8.00f, 8.00f);
-	style.FramePadding = ImVec2(5.00f, 2.00f);
-	style.CellPadding = ImVec2(6.00f, 6.00f);
-	style.ItemSpacing = ImVec2(6.00f, 6.00f);
-	style.ItemInnerSpacing = ImVec2(6.00f, 6.00f);
-	style.TouchExtraPadding = ImVec2(0.00f, 0.00f);
-	style.IndentSpacing = 25;
-	style.ScrollbarSize = 15;
-	style.GrabMinSize = 10;
-	style.WindowBorderSize = 1;
-	style.ChildBorderSize = 1;
-	style.PopupBorderSize = 1;
-	style.FrameBorderSize = 1;
-	style.TabBorderSize = 1;
-	style.WindowRounding = 7;
-	style.ChildRounding = 4;
-	style.FrameRounding = 3;
-	style.PopupRounding = 4;
-	style.ScrollbarRounding = 9;
-	style.GrabRounding = 3;
-	style.LogSliderDeadzone = 4;
-	style.TabRounding = 4;
-}
-
-
-static void ImGUI_Init()
-{
-	ImGui::CreateContext();
-	ImPlot::CreateContext();
-
-	ImGuiIO& io = ImGui::GetIO();
-	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-	io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
-	io.IniFilename = "cnq3/imgui.ini";
-	//io.MouseDrawCursor = true; // just use the operating system's
-
-	ImFontConfig fontConfig;
-	fontConfig.FontDataOwnedByAtlas = false;
-	io.Fonts->AddFontFromMemoryCompressedTTF(
-		ProggyClean_compressed_data, ProggyClean_compressed_size, 13.0f, &fontConfig);
-
-	io.KeyMap[ImGuiKey_Tab] = K_TAB;
-	io.KeyMap[ImGuiKey_LeftArrow] = K_LEFTARROW;
-	io.KeyMap[ImGuiKey_RightArrow] = K_RIGHTARROW;
-	io.KeyMap[ImGuiKey_UpArrow] = K_UPARROW;
-	io.KeyMap[ImGuiKey_DownArrow] = K_DOWNARROW;
-	io.KeyMap[ImGuiKey_PageUp] = K_PGUP;
-	io.KeyMap[ImGuiKey_PageDown] = K_PGDN;
-	io.KeyMap[ImGuiKey_Home] = K_HOME;
-	io.KeyMap[ImGuiKey_End] = K_END;
-	io.KeyMap[ImGuiKey_Insert] = K_INS;
-	io.KeyMap[ImGuiKey_Delete] = K_DEL;
-	io.KeyMap[ImGuiKey_Backspace] = K_BACKSPACE;
-	io.KeyMap[ImGuiKey_Space] = K_SPACE;
-	io.KeyMap[ImGuiKey_Enter] = K_ENTER;
-	io.KeyMap[ImGuiKey_Escape] = K_ESCAPE;
-	io.KeyMap[ImGuiKey_KeyPadEnter] = K_KP_ENTER;
-	for(int i = 0; i < 26; ++i)
-	{
-		io.KeyMap[ImGuiKey_A + i] = 'a' + i;
-	}
-	for(int i = 0; i < 10; ++i)
-	{
-		io.KeyMap[ImGuiKey_0 + i] = '0' + i;
-	}
-	
-	ImGUI_ApplyTheme();
-}
-
-
 void CL_Init()
 {
 	//QSUBSYSTEM_INIT_START( "Client" );
@@ -2381,7 +2216,7 @@ void CL_Init()
 
 	CL_MapDownload_Init();
 
-	ImGUI_Init();
+	CL_IMGUI_Init();
 
 	//QSUBSYSTEM_INIT_DONE( "Client" );
 }
@@ -2420,7 +2255,7 @@ void CL_Shutdown()
 
 	CL_ConShutdown();
 
-	ImGui::DestroyContext();
+	CL_IMGUI_Shutdown();
 
 	Cvar_Set( "cl_running", "0" );
 
