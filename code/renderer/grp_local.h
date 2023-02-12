@@ -271,6 +271,32 @@ struct StaticGeometryChunk
 	uint32_t firstCPUIndex;
 };
 
+// @TODO: move to the qcommon folder?
+struct Stats
+{
+	float minimum;
+	float maximum;
+	float average;
+	float median;
+	float variance;
+	float stdDev;
+	float percentile99;
+};
+
+struct FrameStats
+{
+	enum { MaxFrames = 1024 };
+
+	void EndFrame();
+
+	float temp[MaxFrames];
+	float p2pMS[MaxFrames];
+	Stats p2pStats;
+	int frameCount;
+	int frameIndex;
+	int skippedFrames;
+};
+
 struct World
 {
 	void Init();
@@ -292,10 +318,6 @@ struct World
 
 	typedef uint32_t Index;
 	const IndexType::Id indexType = IndexType::UInt32;
-
-	// @TODO: in the future, once backEnd gets nuked
-	//trRefdef_t refdef;
-	//viewParms_t viewParms;
 
 	HTexture depthTexture;
 	uint32_t depthTextureIndex;
@@ -458,14 +480,33 @@ struct RenderMode
 struct RenderPassQueries
 {
 	char name[64];
+	uint32_t gpuDurationUS;
 	uint32_t cpuDurationUS;
 	int64_t cpuStartUS;
 	uint32_t queryIndex;
 };
 
+enum
+{
+	MaxRenderPasses = 16,
+	MaxStatsFrameCount = 64
+};
+
+struct RenderPassStats
+{
+	void EndFrame(uint32_t cpu, uint32_t gpu);
+
+	uint32_t samplesCPU[MaxStatsFrameCount];
+	uint32_t samplesGPU[MaxStatsFrameCount];
+	Stats statsCPU;
+	Stats statsGPU;
+	uint32_t count;
+	uint32_t index;
+};
+
 struct RenderPassFrame
 {
-	RenderPassQueries passes[16];
+	RenderPassQueries passes[MaxRenderPasses];
 	uint32_t count;
 };
 
@@ -585,6 +626,8 @@ struct GRP : IRenderPipeline
 
 	void EndUI();
 
+	void DrawGUI();
+
 	uint32_t CreatePSO(CachedPSO& cache, const char* name);
 
 	UI ui;
@@ -597,6 +640,9 @@ struct GRP : IRenderPipeline
 	RenderMode::Id renderMode;
 	float frameSeed;
 
+	// @TODO: what's up with rootSignature and uberRootSignature?
+	// probably need to nuke one of them...
+
 	HTexture renderTarget;
 	TextureFormat::Id renderTargetFormat;
 	RootSignatureDesc rootSignatureDesc;
@@ -606,10 +652,23 @@ struct GRP : IRenderPipeline
 	HSampler samplers[TW_COUNT * TextureFilter::Count * MaxTextureMips];
 
 	RenderPassFrame renderPasses[FrameCount];
+	//RenderPassFrame tempRenderPasses;
+	//Stats renderPassStats[MaxRenderPasses];
+	//uint32_t renderPassSamples[MaxRenderPasses][64];
+	//uint32_t renderPassFrameCount;
+	//Stats wholeFrameStats;
+	//uint32_t wholeFrameCPUSamples[MaxStatsFrameCount];
+	//uint32_t wholeFrameGPUSamples[MaxStatsFrameCount];
+	//uint32_t wholeFrameFrameCount;
+	RenderPassFrame tempRenderPasses;
+	RenderPassStats renderPassStats[MaxRenderPasses];
+	RenderPassStats wholeFrameStats;
+
+	FrameStats frameStats;
 
 	CachedPSO psos[1024];
 	uint32_t psoCount;
-	HRootSignature opaqueRootSignature;
+	HRootSignature uberRootSignature;
 };
 
 extern GRP grp;
@@ -645,3 +704,46 @@ inline void CmdSetViewportAndScissor(const viewParms_t& vp)
 const image_t* GetBundleImage(const textureBundle_t& bundle);
 uint32_t GetSamplerIndex(textureWrap_t wrap, TextureFilter::Id filter, uint32_t minLOD = 0);
 uint32_t GetSamplerIndex(const image_t* image);
+
+#include <float.h>
+
+// @TODO: move to the qcommon folder?
+template<typename T>
+static int QDECL CompareValuesT(const void* a, const void* b)
+{
+	return *(const T*)b - *(const T*)a;
+}
+
+// @TODO: move to the qcommon folder?
+template<typename T>
+void StatsFromSampleArray(Stats& stats, T* temp, const T* samples, uint32_t sampleCount)
+{
+	memcpy(temp, samples, sizeof(T) * sampleCount);
+	qsort(temp, sampleCount, sizeof(T), &CompareValuesT<T>);
+	stats.median = temp[sampleCount / 2];
+	stats.percentile99 = temp[sampleCount / 100];
+
+	float sum = 0.0f;
+	float minimum = FLT_MAX;
+	float maximum = -FLT_MAX;
+	for(int i = 0; i < sampleCount; ++i)
+	{
+		const float sample = samples[i];
+		sum += sample;
+		minimum = min(minimum, sample);
+		maximum = max(maximum, sample);
+	}
+	const float average = sum / (float)sampleCount;
+	stats.average = average;
+	stats.minimum = minimum;
+	stats.maximum = maximum;
+
+	float variance = 0.0f;
+	for(int i = 0; i < sampleCount; ++i)
+	{
+		const float delta = samples[i] - average;
+		variance += delta * delta;
+	}
+	stats.variance = variance;
+	stats.stdDev = sqrtf(variance);
+}

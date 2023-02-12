@@ -29,12 +29,17 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 GRP grp;
 
 
-template<typename T>
-static const void* SkipCommand(const void* data)
+static ImPlotPoint FrameTimeGetter(int index, void*)
 {
-	const T* const cmd = (const T*)data;
+	const FrameStats& fs = grp.frameStats;
+	const int realIndex = (fs.frameIndex + index) % fs.frameCount;
+	const float value = fs.p2pMS[realIndex];
 
-	return (const void*)(cmd + 1);
+	ImPlotPoint p;
+	p.x = index;
+	p.y = value;
+
+	return p;
 }
 
 static void UpdateAnimatedImage(image_t* image, int w, int h, const byte* data, qbool dirty)
@@ -120,6 +125,26 @@ static bool IsCommutativeBlendState(unsigned int stateBits)
 }
 
 
+void FrameStats::EndFrame()
+{
+	frameCount = min(frameCount + 1, (int)MaxFrames);
+	frameIndex = (frameIndex + 1) % MaxFrames;
+	StatsFromSampleArray(p2pStats, temp, p2pMS, frameCount);
+}
+
+
+void RenderPassStats::EndFrame(uint32_t cpu, uint32_t gpu)
+{
+	static uint32_t tempSamples[MaxStatsFrameCount];
+	samplesCPU[index] = cpu;
+	samplesGPU[index] = gpu;
+	count = min(count + 1, (uint32_t)MaxStatsFrameCount);
+	index = (index + 1) % MaxStatsFrameCount;
+	StatsFromSampleArray(statsCPU, tempSamples, samplesCPU, count);
+	StatsFromSampleArray(statsGPU, tempSamples, samplesGPU, count);
+}
+
+
 void GRP::Init()
 {
 	RHI::Init();
@@ -161,7 +186,7 @@ void GRP::Init()
 		desc.constants[ShaderStage::Pixel].byteCount = sizeof(WorldPixelRC);
 		desc.samplerVisibility = ShaderStages::PixelBit;
 		desc.genericVisibility = ShaderStages::VertexBit | ShaderStages::PixelBit;
-		opaqueRootSignature = CreateRootSignature(desc);
+		uberRootSignature = CreateRootSignature(desc);
 	}
 
 	textureIndex = 0;
@@ -235,37 +260,21 @@ void GRP::BeginFrame()
 
 void GRP::EndFrame()
 {
-	// @TODO: move
-#if DRAW_GUI
-	{
-		uint32_t durations[MaxDurationQueries];
-		GetDurations(durations);
-
-		if(BeginTable("GPU timings", 3))
-		{
-			TableHeader(3, "Pass", "GPU [us]", "CPU [us]");
-
-			TableRow(3, "Whole frame", va("%d", (int)durations[0]), "");
-
-			RenderPassFrame& f = renderPasses[(tr.frameCount % FrameCount) ^ 1];
-			for(uint32_t p = 0; p < f.count; ++p)
-			{
-				const uint32_t index = f.passes[p].queryIndex;
-				if(index < MaxDurationQueries)
-				{
-					TableRow(3, f.passes[p].name, va("%d", (int)durations[index]), va("%d", (int)f.passes[p].cpuDurationUS));
-				}
-			}
-
-			ImGui::EndTable();
-		}
-	}
-#endif
-
+	DrawGUI();
 	EndUI();
 	imgui.Draw();
 	post.Draw();
 	RHI::EndFrame();
+
+	if(rhie.presentToPresentUS > 0)
+	{
+		frameStats.p2pMS[frameStats.frameIndex] = (float)rhie.presentToPresentUS / 1000.0f;
+		frameStats.EndFrame();
+	}
+	else
+	{
+		frameStats.skippedFrames++;
+	}
 }
 
 void GRP::AddDrawSurface(const surfaceType_t* surface, const shader_t* shader)
@@ -456,6 +465,167 @@ void GRP::EndUI()
 	}
 }
 
+void GRP::DrawGUI()
+{
+	uint32_t durations[MaxDurationQueries];
+	GetDurations(durations);
+
+	wholeFrameStats.EndFrame(rhie.renderToPresentUS, durations[0]);
+
+	const RenderPassFrame& currFrame = renderPasses[(tr.frameCount % FrameCount) ^ 1];
+	RenderPassFrame& tempFrame = tempRenderPasses;
+
+	// see if the render pass list is the same as the previous frame's
+	bool sameRenderPass = true;
+	if(currFrame.count == tempRenderPasses.count)
+	{
+		for(uint32_t p = 0; p < currFrame.count; ++p)
+		{
+			if(Q_stricmp(currFrame.passes[p].name, tempRenderPasses.passes[p].name) != 0)
+			{
+				sameRenderPass = false;
+				break;
+			}
+		}
+	}
+	else
+	{
+		sameRenderPass = false;
+	}
+
+	// write out the displayed timings into the temp buffer
+	tempFrame.count = currFrame.count;
+	if(sameRenderPass)
+	{
+		for(uint32_t p = 0; p < currFrame.count; ++p)
+		{
+			const uint32_t index = currFrame.passes[p].queryIndex;
+			if(index < MaxDurationQueries)
+			{
+				renderPassStats[p].EndFrame(currFrame.passes[p].cpuDurationUS, durations[index]);
+				tempFrame.passes[p].gpuDurationUS = renderPassStats[p].statsGPU.median;
+				tempFrame.passes[p].cpuDurationUS = renderPassStats[p].statsCPU.median;
+			}
+		}
+	}
+	else
+	{
+		for(uint32_t p = 0; p < currFrame.count; ++p)
+		{
+			const uint32_t index = currFrame.passes[p].queryIndex;
+			if(index < MaxDurationQueries)
+			{
+				tempFrame.passes[p].gpuDurationUS = durations[index];
+				tempFrame.passes[p].cpuDurationUS = currFrame.passes[p].cpuDurationUS;
+			}
+		}
+	}
+
+	static bool breakdownActive = false;
+	ToggleBooleanWithShortcut(breakdownActive, ImGuiKey_F);
+	GUI_AddMainMenuItem(GUI_MainMenu::Perf, "Frame breakdown", "Ctrl+F", &breakdownActive);
+	if(breakdownActive)
+	{
+		if(ImGui::Begin("Frame breakdown", &breakdownActive, ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			if(BeginTable("Frame breakdown", 3))
+			{
+				TableHeader(3, "Pass", "GPU [us]", "CPU [us]");
+
+				TableRow(3, "Whole frame",
+					va("%d", (int)wholeFrameStats.statsGPU.median),
+					va("%d", (int)wholeFrameStats.statsCPU.median));
+
+				for(uint32_t p = 0; p < currFrame.count; ++p)
+				{
+					const RenderPassQueries& rp = tempFrame.passes[p];
+					if(rp.queryIndex < MaxDurationQueries)
+					{
+						TableRow(3, rp.name,
+							va("%d", (int)rp.gpuDurationUS),
+							va("%d", (int)rp.cpuDurationUS));
+					}
+				}
+
+				ImGui::EndTable();
+			}
+		}
+		ImGui::End();
+	}
+
+	// save the current render pass list in the temp buffer
+	memcpy(&tempFrame, &currFrame, sizeof(tempFrame));
+
+	static bool frameTimeActive = false;
+	GUI_AddMainMenuItem(GUI_MainMenu::Perf, "Frame stats", NULL, &frameTimeActive);
+	if(frameTimeActive)
+	{
+		if(ImGui::Begin("Frame stats", &frameTimeActive, ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			if(BeginTable("Frame stats", 2))
+			{
+				const FrameStats& fs = frameStats;
+				const Stats& s = fs.p2pStats;
+				TableRow2("Skipped frames", fs.skippedFrames);
+				TableRow2("Frame time target", rhie.targetFrameDurationMS);
+				TableRow2("Frame time average", s.average);
+				TableRow2("Frame time std dev.", s.stdDev);
+				TableRow2("Input to render", (float)rhie.inputToRenderUS / 1000.0f);
+				TableRow2("Input to present", (float)rhie.inputToPresentUS / 1000.0f);
+
+				ImGui::EndTable();
+			}
+		}
+		ImGui::End();
+	}
+
+	static bool graphsActive = false;
+	ToggleBooleanWithShortcut(graphsActive, ImGuiKey_G);
+	GUI_AddMainMenuItem(GUI_MainMenu::Perf, "Frame time graphs", "Ctrl+G", &graphsActive);
+	if(graphsActive)
+	{
+		const int windowFlags =
+			ImGuiWindowFlags_NoDecoration |
+			ImGuiWindowFlags_NoBackground |
+			ImGuiWindowFlags_NoMove;
+		ImGui::SetNextWindowSize(ImVec2(glConfig.vidWidth, glConfig.vidHeight / 2), ImGuiCond_Always);
+		ImGui::SetNextWindowPos(ImVec2(0, glConfig.vidHeight / 2), ImGuiCond_Always);
+		if(ImGui::Begin("Frame time graphs", &graphsActive, windowFlags))
+		{
+			const FrameStats& fs = frameStats;
+			const double target = (double)rhie.targetFrameDurationMS;
+
+			static bool autoFit = false;
+			ImGui::Checkbox("Auto-fit", &autoFit);
+
+			if(ImPlot::BeginPlot("Frame Times", ImVec2(-1, -1), ImPlotFlags_NoInputs))
+			{
+				const int axisFlags = 0; // ImPlotAxisFlags_NoTickLabels
+				const int axisFlagsY = axisFlags | (autoFit ? ImPlotAxisFlags_AutoFit : 0);
+				ImPlot::SetupAxes(NULL, NULL, axisFlags, axisFlagsY);
+				ImPlot::SetupAxisLimits(ImAxis_X1, 0, FrameStats::MaxFrames, ImGuiCond_Always);
+				if(!autoFit)
+				{
+					ImPlot::SetupAxisLimits(ImAxis_Y1, max(target - 2.0, 0.0), target + 2.0, ImGuiCond_Always);
+				}
+
+				ImPlot::SetNextFillStyle(IMPLOT_AUTO_COL, 1.0f);
+				ImPlot::SetNextLineStyle(IMPLOT_AUTO_COL, 1.0f);
+				ImPlot::PlotInfLines("Target", &target, 1, ImPlotInfLinesFlags_Horizontal);
+
+				ImPlot::SetNextFillStyle(IMPLOT_AUTO_COL, 1.0f);
+				ImPlot::SetNextLineStyle(IMPLOT_AUTO_COL, 1.0f);
+				ImPlot::PlotLineG("Frame Time", &FrameTimeGetter, NULL, fs.frameCount, ImPlotLineFlags_None);
+
+				ImPlot::EndPlot();
+			}
+		}
+		ImGui::End();
+	}
+
+	GUI_DrawMainMenu();
+}
+
 uint32_t GRP::CreatePSO(CachedPSO& cache, const char* name)
 {
 	for(uint32_t p = 1; p < psoCount; ++p)
@@ -495,7 +665,7 @@ uint32_t GRP::CreatePSO(CachedPSO& cache, const char* name)
 	Q_assert(macroCount <= ARRAY_LEN(macros));
 
 	uint32_t a = 0;
-	GraphicsPipelineDesc desc(name, opaqueRootSignature);
+	GraphicsPipelineDesc desc(name, uberRootSignature);
 	desc.shortLifeTime = true; // the PSO cache is only valid for this map!
 	desc.vertexShader = GetShaderByteCode(vertexShader);
 	desc.pixelShader = GetShaderByteCode(pixelShader);

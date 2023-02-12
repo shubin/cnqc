@@ -27,6 +27,9 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 #include "hlsl/imgui_ps.h"
 
 
+// @TODO: bake the mip level into the TextureId so we can inspect mips in the future image explorer
+
+
 #define MAX_VERTEX_COUNT (64 << 10)
 #define MAX_INDEX_COUNT  (MAX_VERTEX_COUNT << 3)
 

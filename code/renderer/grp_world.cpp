@@ -22,7 +22,7 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 
 
 #include "grp_local.h"
-#include "../imgui/imgui.h"
+#include "../client/cl_imgui.h"
 namespace zpp
 {
 #include "hlsl/depth_pre_pass_vs.h"
@@ -114,7 +114,7 @@ static void UpdateEntityData(int entityNum, double originalTime)
 
 // @TODO: move
 #if 0
-static void ExtractCameraPosition(vec3_t cameraPos, const float* modelView)
+static void R_CameraPositionFromMatrix(vec3_t cameraPos, const float* modelView)
 {
 	float modelViewT[16];
 	R_TransposeMatrix(modelView, modelViewT);
@@ -145,7 +145,7 @@ static void ExtractCameraPosition(vec3_t cameraPos, const float* modelView)
 	VectorScale(top, -1.0f / denom, cameraPos);
 }
 
-static void ExtractCameraAxisVectors(vec3_t axisX, vec3_t axisY, vec3_t axisZ, const float* modelView)
+static void R_CameraAxisVectorsFromMatrix(vec3_t axisX, vec3_t axisY, vec3_t axisZ, const float* modelView)
 {
 	axisX[0] = modelView[0];
 	axisX[1] = modelView[4];
@@ -524,7 +524,7 @@ void World::EndBatch()
 		memcpy(vertexRC.modelViewMatrix, backEnd.orient.modelMatrix, sizeof(vertexRC.modelViewMatrix));
 		memcpy(vertexRC.projectionMatrix, backEnd.viewParms.projectionMatrix, sizeof(vertexRC.projectionMatrix));
 		memcpy(vertexRC.clipPlane, clipPlane, sizeof(vertexRC.clipPlane));
-		CmdSetRootConstants(grp.opaqueRootSignature, ShaderStage::Vertex, &vertexRC);
+		CmdSetRootConstants(grp.uberRootSignature, ShaderStage::Vertex, &vertexRC);
 
 		WorldPixelRC pixelRC = {};
 		pixelRC.greyscale = tess.greyscale;
@@ -540,7 +540,7 @@ void World::EndBatch()
 			Q_assert(texIdx > 0);
 			pixelRC.stageIndices[s] = (sampIdx << 16) | (texIdx);
 		}
-		CmdSetRootConstants(grp.opaqueRootSignature, ShaderStage::Pixel, &pixelRC);
+		CmdSetRootConstants(grp.uberRootSignature, ShaderStage::Pixel, &pixelRC);
 
 		BindVertexBuffers(batchHasStaticGeo, pipeline.firstStage, pipeline.numStages);
 		
@@ -590,7 +590,9 @@ void World::RestartBatch()
 
 void World::DrawGUI()
 {
-	if(tr.world == NULL)
+	// ri.Cvar_Get("sv_cheats", "0", CVAR_ROM | CVAR_SYSTEMINFO)->integer == 0
+	if(tr.world == NULL ||
+		ri.Cvar_Get("sv_cheats", "0", 0)->integer == 0)
 	{
 		return;
 	}
@@ -605,39 +607,45 @@ void World::DrawGUI()
 	ImGui::End();
 #endif
 
-#if DRAW_GUI
-	if(ImGui::Begin("World"))
+	static bool active = false;
+	ToggleBooleanWithShortcut(active, ImGuiKey_W);
+	GUI_AddMainMenuItem(GUI_MainMenu::Info, "World rendering", "Ctrl+W", &active);
+	if(active)
 	{
-		ImGui::Checkbox("Depth Pre-Pass", &drawPrePass);
-		ImGui::Checkbox("Draw Dynamic", &drawDynamic);
-		ImGui::Checkbox("Draw Transparents", &drawTransparents);
-		ImGui::Checkbox("Draw Fog", &drawFog);
-		ImGui::Checkbox("Draw Sky", &drawSky);
-		ImGui::Checkbox("Draw Clouds", &drawClouds);
-		ImGui::Checkbox("Force Dynamic", &forceDynamic);
-
-		ImGui::Text("PSO count: %d", (int)grp.psoCount);
-		ImGui::Text("PSO changes: %d", psoChangeCount);
-
-		/*vec3_t axis[3];
-		ExtractCameraAxisVectors(axis[0], axis[1], axis[2], backEnd.viewParms.world.modelMatrix);
-		const char* axisNames[] = { "X", "Y", "Z", };
-		for(int a = 0; a < 3; ++a)
+		if(ImGui::Begin("World", &active, ImGuiWindowFlags_AlwaysAutoResize))
 		{
-			ImGui::Text("%s: %s", axisNames[a], v3tos(axis[a]));
-		}
+			ImGui::Checkbox("Depth Pre-Pass", &drawPrePass);
+			ImGui::Checkbox("Draw Dynamic", &drawDynamic);
+			ImGui::Checkbox("Draw Transparents", &drawTransparents);
+			ImGui::Checkbox("Draw Fog", &drawFog);
+			ImGui::Checkbox("Draw Sky", &drawSky);
+			ImGui::Checkbox("Draw Clouds", &drawClouds);
+			ImGui::Checkbox("Force Dynamic", &forceDynamic);
 
-		vec3_t cameraPos;
-		ExtractCameraPosition(cameraPos, backEnd.viewParms.world.modelMatrix);
-		ImGui::Text("Camera Position: %s", v3tos(cameraPos));
+			ImGui::Text("PSO count: %d", (int)grp.psoCount);
+			ImGui::Text("PSO changes: %d", psoChangeCount);
 
-		for(int f = 1; f < tr.world->numfogs; ++f)
-		{
-			ImGui::Text("Fog: %s", v4tos(tr.world->fogs[f].surface));
-		}*/
-	}
-	ImGui::End();
+#if 0
+			vec3_t axis[3];
+			R_CameraAxisVectorsFromMatrix(axis[0], axis[1], axis[2], backEnd.viewParms.world.modelMatrix);
+			const char* axisNames[] = { "X", "Y", "Z", };
+			for(int a = 0; a < 3; ++a)
+			{
+				ImGui::Text("%s: %s", axisNames[a], v3tos(axis[a]));
+			}
+
+			vec3_t cameraPos;
+			R_CameraPositionFromMatrix(cameraPos, backEnd.viewParms.world.modelMatrix);
+			ImGui::Text("Camera Position: %s", v3tos(cameraPos));
+
+			for(int f = 1; f < tr.world->numfogs; ++f)
+			{
+				ImGui::Text("Fog: %s", v4tos(tr.world->fogs[f].surface));
+			}
 #endif
+		}
+		ImGui::End();
+	}
 }
 
 void World::ProcessWorld(world_t& world)
@@ -830,8 +838,8 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 
 	SCOPED_RENDER_PASS("3D Scene View", 1.0f, 0.5f, 0.5f);
 
-	CmdBindRootSignature(grp.opaqueRootSignature);
-	CmdBindDescriptorTable(grp.opaqueRootSignature, grp.descriptorTable);
+	CmdBindRootSignature(grp.uberRootSignature);
+	CmdBindDescriptorTable(grp.uberRootSignature, grp.descriptorTable);
 	CmdBindRenderTargets(1, &grp.renderTarget, &depthTexture);
 	batchPSO = RHI_MAKE_NULL_HANDLE();
 
@@ -864,8 +872,8 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 
 			if(transpCount > 0)
 			{
-				CmdBindRootSignature(grp.opaqueRootSignature);
-				CmdBindDescriptorTable(grp.opaqueRootSignature, grp.descriptorTable);
+				CmdBindRootSignature(grp.uberRootSignature);
+				CmdBindDescriptorTable(grp.uberRootSignature, grp.descriptorTable);
 				CmdBindRenderTargets(1, &grp.renderTarget, &depthTexture);
 				batchPSO = RHI_MAKE_NULL_HANDLE();
 				boundVertexBuffers = BufferFamily::Invalid;

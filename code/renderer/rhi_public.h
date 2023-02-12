@@ -27,9 +27,6 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 #include <stdint.h>
 
 
-#define DRAW_GUI 1
-
-
 namespace RHI
 {
 	typedef uint32_t Handle;

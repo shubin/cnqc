@@ -25,9 +25,34 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 
 
 #include "../imgui/imgui.h"
+#include "../implot/implot.h"
 
 
 bool BeginTable(const char* name, int count);
 void TableHeader(int count, ...);
 void TableRow(int count, ...);
-void TableRow2Bool(const char* item0, bool item1);
+void TableRow2(const char* item0, bool item1);
+void TableRow2(const char* item0, int item1);
+void TableRow2(const char* item0, float item1, const char* format = "%g");
+bool IsShortcutPressed(ImGuiKey key);
+void ToggleBooleanWithShortcut(bool& value, ImGuiKey key);
+
+#define MAIN_MENU_LIST(M) \
+	M(Tools, "Tools") \
+	M(Info, "Information") \
+	M(Perf, "Performance")
+
+#define M(Enum, Desc) Enum,
+struct GUI_MainMenu
+{
+	enum Id
+	{
+		MAIN_MENU_LIST(M)
+		Count
+	};
+};
+#undef M
+
+typedef void (*GUI_MainMenuCallback)();
+void GUI_AddMainMenuItem(GUI_MainMenu::Id menu, const char* item, const char* shortcut, bool* selected, bool enabled = true);
+void GUI_DrawMainMenu();

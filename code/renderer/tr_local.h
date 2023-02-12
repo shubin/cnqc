@@ -1674,5 +1674,17 @@ struct IRenderPipeline
 
 extern IRenderPipeline* renderPipeline;
 
+struct RHIExport
+{
+	uint32_t renderToPresentUS;
+	uint32_t inputToRenderUS;
+	uint32_t inputToPresentUS;
+	uint32_t presentToPresentUS;
+	float monitorFrameDurationMS;
+	float targetFrameDurationMS;
+};
+
+extern RHIExport rhie;
+
 
 #endif //TR_LOCAL_H

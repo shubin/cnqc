@@ -45,7 +45,6 @@ to do:
 - don't do persistent mapping to help out RenderDoc?
 * implicit barrier & profiling API outside the RHI: Begin/EndRenderPass (specify inputs and outputs too?)
 * partial inits and shutdown
-* move as much GUI logic as possible out of the RHI (especially render pass timings)
 - evaluate the benefit of static samplers
 - leverage rhi.allocator->IsCacheCoherentUMA()
 	- buffers: create with CPU access, map the destination buffer directly
@@ -200,8 +199,6 @@ D3D(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&graphicsAnalysis)));
 #pragma comment(lib, "dwmapi")
 #define D3D12MA_D3D12_HEADERS_ALREADY_INCLUDED
 #include "D3D12MemAlloc.h"
-#include "../imgui/imgui.h"
-#include "../implot/implot.h"
 #include "../nvapi/nvapi.h"
 #pragma comment(lib, "nvapi64")
 #include "../pix/pix3.h"
@@ -212,6 +209,9 @@ D3D(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&graphicsAnalysis)));
 extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = D3D12_SDK_VERSION; }
 extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8".\\cnq3\\"; }
 #endif
+
+
+RHIExport rhie;
 
 
 namespace RHI
@@ -459,64 +459,6 @@ namespace RHI
 		bool canBeginAndEnd;
 	};
 
-	struct FrameStats
-	{
-		enum { MaxFrames = 1024 };
-
-		static int QDECL CompareFloats(const void* a, const void* b)
-		{
-			return *(const float*)b - *(const float*)a;
-		}
-
-		void EndFrame()
-		{
-			frameCount = min(frameCount + 1, MaxFrames);
-			frameIndex = (frameIndex + 1) % MaxFrames;
-
-			if(frameCount == MaxFrames)
-			{
-				memcpy(temp, p2pMS, sizeof(temp));
-				qsort(temp, frameCount, sizeof(float), &CompareFloats);
-				median = temp[frameCount / 2];
-				percentile99 = temp[frameCount / 100];
-
-				float sum = 0.0f;
-				minimum = FLT_MAX;
-				maximum = -FLT_MAX;
-				for(int i = 0; i < MaxFrames; ++i)
-				{
-					const float sample = p2pMS[i];
-					sum += sample;
-					minimum = min(minimum, sample);
-					maximum = max(maximum, sample);
-				}
-				average = sum / (float)MaxFrames;
-
-				variance = 0.0f;
-				for(int i = 0; i < MaxFrames; ++i)
-				{
-					const float delta = p2pMS[i] - average;
-					variance += delta * delta;
-				}
-
-				stdDev = sqrtf(variance);
-			}
-		}
-
-		float p2pMS[MaxFrames];
-		float temp[MaxFrames];
-		float minimum;
-		float maximum;
-		float average;
-		float median;
-		float variance;
-		float stdDev;
-		float percentile99;
-		int frameCount;
-		int frameIndex;
-		int skippedFrames;
-	};
-
 	struct RHIPrivate
 	{
 		bool initialized;
@@ -546,7 +488,6 @@ namespace RHI
 		uint32_t renderFrameCount;
 		HANDLE frameLatencyWaitableObject;
 		bool frameLatencyWaitNeeded;
-		int64_t inputSamplingTime;
 		UINT frameIndex;
 		UINT swapChainBufferIndex;
 		Fence mainFence;
@@ -599,9 +540,9 @@ namespace RHI
 		StaticUnorderedArray<HTexture, MAX_DRAWIMAGES> texturesToTransition;
 		FrameQueries frameQueries[FrameCount];
 		ResolvedQueries resolvedQueries;
-		FrameStats frameStats;
-		float monitorFrameTimeMS;
 		Pix pix;
+		int64_t beforeInputSamplingUS;
+		int64_t beforeRenderingUS;
 	};
 
 	static RHIPrivate rhi;
@@ -1716,11 +1657,26 @@ namespace RHI
 		info.cbSize = sizeof(info);
 		if(SUCCEEDED(DwmGetCompositionTimingInfo(NULL, &info)))
 		{
-			rhi.monitorFrameTimeMS = 1000.0f * ((float)(info.rateRefresh.uiDenominator) / (float)info.rateRefresh.uiNumerator);
+			rhie.monitorFrameDurationMS = 1000.0f * ((float)(info.rateRefresh.uiDenominator) / (float)info.rateRefresh.uiNumerator);
 		}
 		else
 		{
-			rhi.monitorFrameTimeMS = 0.0f;
+			rhie.monitorFrameDurationMS = 0.0f;
+		}
+
+		if(r_vsync->integer == 0)
+		{
+			const float maxFPS = ri.Cvar_Get("com_maxfps", "125", CVAR_ARCHIVE)->value;
+			rhie.targetFrameDurationMS = 1000.0f / maxFPS;
+			
+		}
+		else if(rhie.monitorFrameDurationMS  > 0.0f)
+		{
+			rhie.targetFrameDurationMS = rhie.monitorFrameDurationMS;
+		}
+		else
+		{
+			rhie.targetFrameDurationMS = 1.0f / 120.0f; // 120 Hz by default
 		}
 	}
 
@@ -1866,6 +1822,7 @@ namespace RHI
 			ImGui::EndTable();
 		}
 
+		ImGui::NewLine();
 		if(BeginTable("Descriptors", 3))
 		{
 			TableHeader(3, "Type", "Count", "Max");
@@ -1880,20 +1837,13 @@ namespace RHI
 			ImGui::EndTable();
 		}
 
+		ImGui::NewLine();
 		if(BeginTable("Memory", 2))
 		{
 			D3D12MA::Budget budget;
 			rhi.allocator->GetBudget(&budget, NULL);
-			NvU64 cvvTotal, cvvFree;
-			if(NvAPI_D3D12_QueryCpuVisibleVidmem(rhi.device, &cvvTotal, &cvvFree) != NvAPI_Status::NVAPI_OK)
-			{
-				cvvTotal = 0;
-				cvvFree = 0;
-			}
-			TableRow(2, "CPU Visible VRAM Total", Com_FormatBytes(cvvTotal));
-			TableRow(2, "CPU Visible VRAM Free", Com_FormatBytes(cvvFree));
-			TableRow2Bool("UMA", rhi.allocator->IsUMA());
-			TableRow2Bool("Cache coherent UMA", rhi.allocator->IsCacheCoherentUMA());
+			TableRow2("UMA", rhi.allocator->IsUMA());
+			TableRow2("Cache coherent UMA", rhi.allocator->IsCacheCoherentUMA());
 			TableRow(2, "Total", Com_FormatBytes(rhi.allocator->GetMemoryCapacity(DXGI_MEMORY_SEGMENT_GROUP_LOCAL)));
 			TableRow(2, "Budget", Com_FormatBytes(budget.BudgetBytes));
 			TableRow(2, "Usage", Com_FormatBytes(budget.UsageBytes));
@@ -1924,10 +1874,16 @@ namespace RHI
 				TableRow(2, "Resource binding tier", tier);
 			}
 
+			D3D12_FEATURE_DATA_D3D12_OPTIONS2 options2 = { 0 };
+			if(SUCCEEDED(rhi.device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS2, &options2, sizeof(options2))))
+			{
+				TableRow2("Depth bounds test", options2.DepthBoundsTestSupported ? "YES" : "NO");
+			}
+
 			D3D12_FEATURE_DATA_ARCHITECTURE arch0 = { 0 };
 			if(SUCCEEDED(rhi.device->CheckFeatureSupport(D3D12_FEATURE_ARCHITECTURE, &arch0, sizeof(arch0))))
 			{
-				TableRow2Bool("Tile-based renderer", arch0.TileBasedRenderer);
+				TableRow2("Tile-based renderer", arch0.TileBasedRenderer ? "YES" : "NO");
 			}
 
 			D3D12_FEATURE_DATA_ROOT_SIGNATURE root0 = {};
@@ -1965,6 +1921,18 @@ namespace RHI
 					default: break;
 				}
 				TableRow(2, "Raytracing tier (DXR)", tier);
+			}
+
+			NvU64 cvvTotal, cvvFree;
+			if(NvAPI_D3D12_QueryCpuVisibleVidmem(rhi.device, &cvvTotal, &cvvFree) == NvAPI_Status::NVAPI_OK &&
+				cvvTotal > 0)
+			{
+				TableRow(2, "CPU Visible VRAM Total", Com_FormatBytes(cvvTotal));
+				TableRow(2, "CPU Visible VRAM Free", Com_FormatBytes(cvvFree));
+			}
+			else
+			{
+				TableRow(2, "CPU Visible VRAM", "N/A");
 			}
 
 			ImGui::EndTable();
@@ -2012,80 +1980,23 @@ namespace RHI
 		}
 	}
 
-	static ImPlotPoint FrameTimeGetter(int index, void*)
-	{
-		const FrameStats& fs = rhi.frameStats;
-		const int realIndex = (fs.frameIndex + index) % fs.frameCount;
-		const float value = fs.p2pMS[realIndex];
-
-		ImPlotPoint p;
-		p.x = index;
-		p.y = value;
-
-		return p;
-	}
-
 	static void DrawGUI()
 	{
-		if(ImGui::Begin("Direct3D 12 RHI"))
+		static bool resourcesActive = false;
+		ToggleBooleanWithShortcut(resourcesActive, ImGuiKey_R);
+		GUI_AddMainMenuItem(GUI_MainMenu::Info, "RHI Resources", "Ctrl+R", &resourcesActive);
+		if(resourcesActive)
 		{
-			ImGui::BeginTabBar("Tabs#RHI");
-			DrawSection("Resources", &DrawResourceUsage);
-			DrawSection("Caps", &DrawCaps);
-			DrawSection("Textures", &DrawTextures);
-			ImGui::EndTabBar();
+			if(ImGui::Begin("Direct3D 12 RHI", &resourcesActive))
+			{
+				ImGui::BeginTabBar("Tabs#RHI");
+				DrawSection("Resources", &DrawResourceUsage);
+				DrawSection("Caps", &DrawCaps);
+				DrawSection("Textures", &DrawTextures);
+				ImGui::EndTabBar();
+			}
+			ImGui::End();
 		}
-		ImGui::End();
-
-		if(ImGui::Begin("D3D12 Perf. Graphs"))
-		{
-			const FrameStats& fs = rhi.frameStats;
-			double target = 8.0;
-			if(r_vsync->integer == 0)
-			{
-				const float maxFPS = ri.Cvar_Get("com_maxfps", "125", CVAR_ARCHIVE)->value;
-				target = 1000.0 / maxFPS;
-			}
-			else if(rhi.monitorFrameTimeMS > 0.0f)
-			{
-				target = (double)rhi.monitorFrameTimeMS;
-			}
-
-			ImGui::Text("Skipped : %d", fs.skippedFrames);
-			ImGui::Text("Average : %g", fs.average);
-			ImGui::Text("Median  : %g", fs.median);
-			ImGui::Text("Std Dev.: %g", fs.stdDev);
-			ImGui::Text("1%% Low  : %g", fs.percentile99);
-			ImGui::Text("Minimum : %g", fs.minimum);
-			ImGui::Text("Maximum : %g", fs.maximum);
-			ImGui::NewLine();
-
-			static bool autoFit = false;
-			ImGui::Checkbox("Auto-fit", &autoFit);
-
-			if(ImPlot::BeginPlot("Frame Times", ImVec2(-1, 0), ImPlotFlags_NoInputs))
-			{
-				const int flags = 0; // ImPlotAxisFlags_NoTickLabels
-				const int flagsY = flags | (autoFit ? ImPlotAxisFlags_AutoFit : 0);
-				ImPlot::SetupAxes(NULL, NULL, flags, flagsY);
-				ImPlot::SetupAxisLimits(ImAxis_X1, 0, FrameStats::MaxFrames, ImGuiCond_Always);
-				if(!autoFit)
-				{
-					ImPlot::SetupAxisLimits(ImAxis_Y1, max(target - 2.0, 0.0), target + 2.0, ImGuiCond_Always);
-				}
-
-				ImPlot::SetNextFillStyle(IMPLOT_AUTO_COL, 1.0f);
-				ImPlot::SetNextLineStyle(IMPLOT_AUTO_COL, 1.0f);
-				ImPlot::PlotInfLines("Target", &target, 1, ImPlotInfLinesFlags_Horizontal);
-
-				ImPlot::SetNextFillStyle(IMPLOT_AUTO_COL, 1.0f);
-				ImPlot::SetNextLineStyle(IMPLOT_AUTO_COL, 1.0f);
-				ImPlot::PlotLineG("Frame Time", &FrameTimeGetter, NULL, fs.frameCount, ImPlotLineFlags_None);
-
-				ImPlot::EndPlot();
-			}
-		}
-		ImGui::End();
 	}
 
 	void Init()
@@ -2114,7 +2025,7 @@ namespace RHI
 				}
 		
 				const UINT flags = GetSwapChainFlags();
-				if(vsync == rhi.vsync && false)
+				if(vsync == rhi.vsync && false) // @TODO: re-enable and validate!
 				{
 					D3D(rhi.swapChain->ResizeBuffers(desc.BufferCount, glConfig.vidWidth, glConfig.vidHeight, desc.BufferDesc.Format, flags));
 				}
@@ -2525,6 +2436,8 @@ namespace RHI
 		}
 		rhi.frameBegun = true;
 
+		rhi.beforeRenderingUS = Sys_Microseconds();
+
 		WaitForSwapChain();
 
 		{
@@ -2538,9 +2451,7 @@ namespace RHI
 			rhi.swapChainBufferIndex = rhi.swapChain->GetCurrentBackBufferIndex();
 		}
 
-#if DRAW_GUI
 		DrawGUI();
-#endif
 
 		Q_assert(rhi.commandList == rhi.mainCommandList);
 
@@ -2551,13 +2462,7 @@ namespace RHI
 		// wait for pending copies from the upload manager to be finished
 		rhi.upload.WaitToStartDrawing(rhi.mainCommandQueue);
 
-		// @TODO: move...
-#if DRAW_GUI
-		{
-			const int64_t us = Sys_Microseconds() - rhi.inputSamplingTime;
-			ImGui::Text("Input to render delay: %d us", (int)us);
-		}
-#endif
+		rhie.inputToRenderUS = (uint32_t)(Sys_Microseconds() - rhi.beforeInputSamplingUS);
 
 		// reclaim used memory and start recording
 		D3D(rhi.mainCommandAllocators[rhi.frameIndex]->Reset());
@@ -2610,25 +2515,26 @@ namespace RHI
 #endif
 		rhi.mainFence.Signal(rhi.mainCommandQueue, rhi.mainFenceValues[rhi.frameIndex]);
 
+		rhie.inputToPresentUS = (uint32_t)(Sys_Microseconds() - rhi.beforeInputSamplingUS);
+		rhie.renderToPresentUS = (uint32_t)(Sys_Microseconds() - rhi.beforeRenderingUS);
+
 		if(backEnd.renderFrame)
 		{
 			ID3D12CommandList* commandListArray[] = { rhi.commandList };
 			rhi.mainCommandQueue->ExecuteCommandLists(ARRAY_LEN(commandListArray), commandListArray);
 
-			static int64_t prevTS = 0;
 			Present();
+
+			static int64_t prevTS = 0;
 			const int64_t currTS = Sys_Microseconds();
 			const int64_t us = currTS - prevTS;
 			prevTS = currTS;
-			rhi.frameStats.p2pMS[rhi.frameStats.frameIndex] = (float)us / 1000.0f;
+			rhie.presentToPresentUS = us;
 		}
 		else
 		{
-			rhi.frameStats.p2pMS[rhi.frameStats.frameIndex] = -1.0f;
-			rhi.frameStats.skippedFrames++;
+			rhie.presentToPresentUS = 0;
 		}
-
-		rhi.frameStats.EndFrame();
 	}
 
 	bool IsRendering()
@@ -3966,10 +3872,6 @@ namespace RHI
 
 void R_WaitBeforeInputSampling()
 {
-	// @TODO: remove that dumb toggle...
-	if(r_dynamiclight->integer)
-	{
-		RHI::WaitForSwapChain();
-	}
-	RHI::rhi.inputSamplingTime = Sys_Microseconds();
+	RHI::WaitForSwapChain();
+	RHI::rhi.beforeInputSamplingUS = Sys_Microseconds();
 }
