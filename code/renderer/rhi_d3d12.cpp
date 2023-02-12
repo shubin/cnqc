@@ -3853,6 +3853,7 @@ namespace RHI
 
 	void WaitUntilDeviceIsIdle()
 	{
+		// direct queue
 		rhi.mainFenceValues[rhi.frameIndex]++;
 #if DEBUG_FENCE
 		Sys_DebugPrintf("Signal: %d (WaitUntilDeviceIsIdle)\n", (int)rhi.mainFenceValues[rhi.frameIndex]);
@@ -3860,6 +3861,12 @@ namespace RHI
 #endif
 		rhi.mainFence.Signal(rhi.mainCommandQueue, rhi.mainFenceValues[rhi.frameIndex]);
 		rhi.mainFence.WaitOnCPU(rhi.mainFenceValues[rhi.frameIndex]);
+
+		// compute queue
+		rhi.tempFence.WaitOnCPU(rhi.tempFenceValue);
+
+		// upload queue
+		rhi.upload.fence.WaitOnCPU(rhi.upload.fenceValue);
 	}
 }
 
