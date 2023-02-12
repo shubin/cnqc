@@ -559,12 +559,6 @@ static void RE_EndRegistration()
 }
 
 
-static int RE_GetCameraMatrixTime()
-{
-	return re_cameraMatrixTime;
-}
-
-
 static void RE_StretchRaw( int x, int y, int w, int h, int cols, int rows, const byte *data, int client, qbool dirty )
 {
 	if ( !tr.registered )
@@ -638,8 +632,6 @@ const refexport_t* GetRefAPI( const refimport_t* rimp )
 	re.inPVS = R_inPVS;
 
 	re.TakeVideoFrame = RE_TakeVideoFrame;
-
-	re.GetCameraMatrixTime = RE_GetCameraMatrixTime;
 
 	re.Registered = RE_Registered;
 

@@ -160,9 +160,6 @@ typedef struct {
 
 	void (*TakeVideoFrame)( int h, int w, byte* captureBuffer, byte *encodeBuffer, qbool motionJpeg );
 
-	// when the final model-view matrix is computed, for cl_drawMouseLag
-	int		(*GetCameraMatrixTime)();
-
 	// qtrue means it should be safe to call any other function
 	qbool	(*Registered)();
 

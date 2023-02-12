@@ -273,30 +273,6 @@ static void SCR_DrawStats( float x, float y, float w, float h, int value )
 }
 
 
-static void SCR_DrawInputStats( int stats, float x, float y, float w, float h, const char* header )
-{
-	SCR_DrawString( x, y, w, h, header, qfalse );
-	x += 5.0f * w;
-	SCR_DrawStats( x, y, w, h, stats );
-}
-
-
-static void SCR_DrawMouseInputLatencies()
-{
-	if ( !cls.cgameStarted || cls.state != CA_ACTIVE ||
-		 !Cvar_VariableIntegerValue( "cl_drawMouseLag" ) )
-		return;
-
-	float x = 10, y = 10, w = 16, h = 24;
-	SCR_AdjustFrom640( &x, &y, 0, 0 );
-	SCR_DrawString( x, y, w, h, "mouse lag [ms]", qfalse );
-	y += 30;
-	SCR_DrawInputStats( cl.userCmdTime - cl.mouseTime, x, y, w, h, "netw" );
-	y += 30;
-	SCR_DrawInputStats( re.GetCameraMatrixTime() - cl.mouseTime, x, y, w, h, "draw" );
-}
-
-
 // this will be called twice if rendering in stereo mode
 
 static void SCR_DrawScreenField( stereoFrame_t stereoFrame )
@@ -359,8 +335,6 @@ static void SCR_DrawScreenField( stereoFrame_t stereoFrame )
 	if ( cls.keyCatchers & KEYCATCH_UI && uivm ) {
 		VM_Call( uivm, UI_REFRESH, cls.realtime );
 	}
-
-	SCR_DrawMouseInputLatencies();
 
 	// console draws next
 	Con_DrawConsole();

@@ -97,7 +97,6 @@ typedef struct {
 
 	int			mouseDx[2], mouseDy[2];	// added to by mouse events
 	int			mouseIndex;
-	int			mouseTime;				// when the last mouse input was sampled, for cl_drawMouseLag
 	int			joystickAxis[MAX_JOYSTICK_AXIS];	// set by joystick events
 
 	// cgame communicates a few values to the client system
@@ -109,7 +108,6 @@ typedef struct {
 	usercmd_t	cmds[CMD_BACKUP];	// each mesage will send several old cmds
 	int			cmdNumber;			// incremented each frame, because multiple
 									// frames may need to be packed into a single packet
-	int			userCmdTime;		// when the last usercmd_t was generated, for cl_drawMouseLag
 
 	outPacket_t	outPackets[PACKET_BACKUP];	// information about each packet we have sent out
 

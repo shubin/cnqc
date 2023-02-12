@@ -306,7 +306,6 @@ void CL_MouseEvent( int dx, int dy, int time )
 			VM_Call( cgvm, CG_MOUSE_EVENT, dx, dy );
 		cl.mouseDx[cl.mouseIndex] += dx;
 		cl.mouseDy[cl.mouseIndex] += dy;
-		cl.mouseTime = time;
 	}
 }
 
@@ -495,7 +494,6 @@ static usercmd_t CL_CreateCmd()
 
 	// get basic movement from mouse
 	CL_MouseMove( &cmd );
-	cl.userCmdTime = Sys_Milliseconds();
 
 	// get basic movement from joystick
 	CL_JoystickMove( &cmd );
@@ -845,7 +843,6 @@ static void IN_Restart_f()
 
 static const cvarTableItem_t cl_cvars[] =
 {
-	{ NULL, "cl_drawMouseLag", "0", 0, CVART_BOOL, NULL, NULL, "draws sampling to display/upload delays" },
 	{ &m_speed, "m_speed", "2", CVAR_ARCHIVE, CVART_FLOAT, "0", "100", "mouse sensitivity" },
 	{ &m_accel, "m_accel", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", NULL, "mouse acceleration" },
 	{ &m_accelStyle, "m_accelStyle", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "1", help_m_accelStyle },

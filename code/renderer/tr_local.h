@@ -1640,8 +1640,6 @@ private:
 };
 
 
-extern int re_cameraMatrixTime;
-
 extern screenshotCommand_t	r_delayedScreenshot;
 extern qbool				r_delayedScreenshotPending;
 extern int					r_delayedScreenshotFrame;

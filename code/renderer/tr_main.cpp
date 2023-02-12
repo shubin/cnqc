@@ -1745,9 +1745,6 @@ static void R_GenerateDrawSurfs()
 }
 
 
-int re_cameraMatrixTime;
-
-
 // this function renders 1 scene, which has either 1 view or 2 views
 // a view may be either the actual camera view (last view drawn, always present)
 // or a mirror / remote location (first view drawn, only when a mirror/portal is present)
@@ -1766,7 +1763,6 @@ void R_RenderScene( const viewParms_t* parms )
 	const int firstLitSurf = tr.refdef.numLitSurfs;
 
 	// set viewParms.world
-	re_cameraMatrixTime = Sys_Milliseconds();
 	R_RotateForViewer();
 
 	R_SetupFrustum();
