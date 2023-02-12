@@ -64,7 +64,6 @@ to do:
 - screenshot
 - video
 - roq video textures?
-- WaitUntilDeviceIsIdle: wait on the copy and compute queues as well!
 - Intel GPU: try storing only 6*2 samplers instead of 6*16: 1 set for no mip bias and 1 set for r_picmip
 
 rejected:
