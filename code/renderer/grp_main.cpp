@@ -166,7 +166,7 @@ void GRP::Init()
 		}
 
 		RootSignatureDesc desc("main");
-		desc.usingVertexBuffers = qtrue;
+		desc.usingVertexBuffers = true;
 		desc.samplerCount = ARRAY_LEN(samplers);
 		desc.samplerVisibility = ShaderStages::PixelBit;
 		desc.genericVisibility = ShaderStages::PixelBit;

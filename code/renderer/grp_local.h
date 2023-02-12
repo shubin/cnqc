@@ -652,14 +652,6 @@ struct GRP : IRenderPipeline
 	HSampler samplers[TW_COUNT * TextureFilter::Count * MaxTextureMips];
 
 	RenderPassFrame renderPasses[FrameCount];
-	//RenderPassFrame tempRenderPasses;
-	//Stats renderPassStats[MaxRenderPasses];
-	//uint32_t renderPassSamples[MaxRenderPasses][64];
-	//uint32_t renderPassFrameCount;
-	//Stats wholeFrameStats;
-	//uint32_t wholeFrameCPUSamples[MaxStatsFrameCount];
-	//uint32_t wholeFrameGPUSamples[MaxStatsFrameCount];
-	//uint32_t wholeFrameFrameCount;
 	RenderPassFrame tempRenderPasses;
 	RenderPassStats renderPassStats[MaxRenderPasses];
 	RenderPassStats wholeFrameStats;
