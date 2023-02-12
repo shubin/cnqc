@@ -26,6 +26,9 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 #include "../imgui/ProggyClean.h"
 
 
+static int keyMap[256];
+
+
 bool BeginTable(const char* name, int count)
 {
 	ImGui::Text(name);
@@ -279,32 +282,58 @@ void CL_IMGUI_Init()
 	io.Fonts->AddFontFromMemoryCompressedTTF(
 		ProggyClean_compressed_data, ProggyClean_compressed_size, 13.0f, &fontConfig);
 
-	io.KeyMap[ImGuiKey_Tab] = K_TAB;
-	io.KeyMap[ImGuiKey_LeftArrow] = K_LEFTARROW;
-	io.KeyMap[ImGuiKey_RightArrow] = K_RIGHTARROW;
-	io.KeyMap[ImGuiKey_UpArrow] = K_UPARROW;
-	io.KeyMap[ImGuiKey_DownArrow] = K_DOWNARROW;
-	io.KeyMap[ImGuiKey_PageUp] = K_PGUP;
-	io.KeyMap[ImGuiKey_PageDown] = K_PGDN;
-	io.KeyMap[ImGuiKey_Home] = K_HOME;
-	io.KeyMap[ImGuiKey_End] = K_END;
-	io.KeyMap[ImGuiKey_Insert] = K_INS;
-	io.KeyMap[ImGuiKey_Delete] = K_DEL;
-	io.KeyMap[ImGuiKey_Backspace] = K_BACKSPACE;
-	io.KeyMap[ImGuiKey_Space] = K_SPACE;
-	io.KeyMap[ImGuiKey_Enter] = K_ENTER;
-	io.KeyMap[ImGuiKey_Escape] = K_ESCAPE;
-	io.KeyMap[ImGuiKey_KeyPadEnter] = K_KP_ENTER;
+	ImGUI_ApplyTheme();
+
+	memset(keyMap, 0xFF, sizeof(keyMap));
+	keyMap[K_CTRL] = ImGuiMod_Ctrl;
+	keyMap[K_ALT] = ImGuiMod_Alt;
+	keyMap[K_SHIFT] = ImGuiMod_Shift;
+	keyMap[K_TAB] = ImGuiKey_Tab;
+	keyMap[K_LEFTARROW] = ImGuiKey_LeftArrow;
+	keyMap[K_RIGHTARROW] = ImGuiKey_RightArrow;
+	keyMap[K_UPARROW] = ImGuiKey_UpArrow;
+	keyMap[K_DOWNARROW] = ImGuiKey_DownArrow;
+	keyMap[K_PGUP] = ImGuiKey_PageUp;
+	keyMap[K_PGDN] = ImGuiKey_PageDown;
+	keyMap[K_HOME] = ImGuiKey_Home;
+	keyMap[K_END] = ImGuiKey_End;
+	keyMap[K_INS] = ImGuiKey_Insert;
+	keyMap[K_DEL] = ImGuiKey_Delete;
+	keyMap[K_BACKSPACE] = ImGuiKey_Backspace;
+	keyMap[K_SPACE] = ImGuiKey_Space;
+	keyMap[K_ENTER] = ImGuiKey_Enter;
+	keyMap[K_ESCAPE] = ImGuiKey_Escape;
+	keyMap[K_CAPSLOCK] = ImGuiKey_CapsLock;
+	keyMap[K_PAUSE] = ImGuiKey_Pause;
+	keyMap[K_BACKSLASH] = ImGuiKey_Backslash;
+	keyMap[K_KP_INS] = ImGuiKey_Keypad0;
+	keyMap[K_KP_END] = ImGuiKey_Keypad1;
+	keyMap[K_KP_DOWNARROW] = ImGuiKey_Keypad2;
+	keyMap[K_KP_PGDN] = ImGuiKey_Keypad3;
+	keyMap[K_KP_LEFTARROW] = ImGuiKey_Keypad4;
+	keyMap[K_KP_5] = ImGuiKey_Keypad5;
+	keyMap[K_KP_RIGHTARROW] = ImGuiKey_Keypad6;
+	keyMap[K_KP_HOME] = ImGuiKey_Keypad7;
+	keyMap[K_KP_UPARROW] = ImGuiKey_Keypad8;
+	keyMap[K_KP_PGUP] = ImGuiKey_Keypad9;
+	keyMap[K_KP_ENTER] = ImGuiKey_KeyPadEnter;
+	keyMap[K_KP_SLASH] = ImGuiKey_KeypadDivide;
+	keyMap[K_KP_MINUS] = ImGuiKey_KeypadSubtract;
+	keyMap[K_KP_PLUS] = ImGuiKey_KeypadAdd;
+	keyMap[K_KP_STAR] = ImGuiKey_KeypadMultiply;
+	keyMap[K_KP_EQUALS] = ImGuiKey_KeypadEqual;
 	for(int i = 0; i < 26; ++i)
 	{
-		io.KeyMap[ImGuiKey_A + i] = 'a' + i;
+		keyMap['a' + i] = ImGuiKey_A + i;
 	}
 	for(int i = 0; i < 10; ++i)
 	{
-		io.KeyMap[ImGuiKey_0 + i] = '0' + i;
+		keyMap['0' + i] = ImGuiKey_0 + i;
 	}
-
-	ImGUI_ApplyTheme();
+	for(int i = 0; i < 12; ++i)
+	{
+		keyMap[K_F1 + i] = ImGuiKey_F1 + i;
+	}
 }
 
 void CL_IMGUI_Frame()
@@ -330,31 +359,38 @@ void CL_IMGUI_Frame()
 	io.DeltaTime = (float)((double)elapsedUS / 1000000.0);
 	io.MousePos[0] = x;
 	io.MousePos[1] = y;
-	io.KeyCtrl = io.KeysDown[K_CTRL];
-	io.KeyShift = io.KeysDown[K_SHIFT];
-	io.KeyAlt = io.KeysDown[K_ALT];
 }
 
 void CL_IMGUI_MouseEvent(int dx, int dy)
 {
-	ImGuiIO& io = ImGui::GetIO();
-	io.MouseDelta[0] += dx;
-	io.MouseDelta[1] += dy;
+	ImGui::GetIO().AddMousePosEvent(dx, dy);
 }
 
 void CL_IMGUI_KeyEvent(int key, qbool down)
 {
+	unsigned int imguiKey;
+
 	ImGuiIO& io = ImGui::GetIO();
 	switch(key)
 	{
-		case K_MOUSE1: io.MouseDown[0] = !!down; break;
-		case K_MOUSE2: io.MouseDown[1] = !!down; break;
-		case K_MOUSE3: io.MouseDown[2] = !!down; break;
-		case K_MOUSE4: io.MouseDown[3] = !!down; break;
-		case K_MOUSE5: io.MouseDown[4] = !!down; break;
-		case K_MWHEELDOWN: io.MouseWheel -= 1.0f; break;
-		case K_MWHEELUP: io.MouseWheel += 1.0f; break;
-		default: io.KeysDown[key] = !!down; break;
+		case K_MOUSE1:
+		case K_MOUSE2:
+		case K_MOUSE3:
+		case K_MOUSE4:
+		case K_MOUSE5:
+			io.AddMouseButtonEvent(key - K_MOUSE1, !!down);
+			break;
+		case K_MWHEELDOWN:
+		case K_MWHEELUP:
+			io.AddMouseWheelEvent(0.0f, key == K_MWHEELDOWN ? -1.0f : 1.0f);
+			break;
+		default:	
+			imguiKey = (unsigned int)keyMap[key];
+			if(imguiKey != 0xFFFFFFFF)
+			{
+				io.AddKeyEvent((ImGuiKey)imguiKey, !!down);
+			}
+			break;
 	}
 }
 
