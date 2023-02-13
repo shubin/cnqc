@@ -50,27 +50,6 @@ const vec4_t r_mipBlendColors[16] = {
 };
 
 
-// colors are not pre-multiplied
-static const byte mipBlendColors[16][4] = {
-	{ 0, 0, 0, 0 },
-	{ 255, 0, 0, 128 },
-	{ 0, 255, 0, 128 },
-	{ 0, 0, 255, 128 },
-	{ 255, 0, 0, 128 },
-	{ 0, 255, 0, 128 },
-	{ 0, 0, 255, 128 },
-	{ 255, 0, 0, 128 },
-	{ 0, 255, 0, 128 },
-	{ 0, 0, 255, 128 },
-	{ 255, 0, 0, 128 },
-	{ 0, 255, 0, 128 },
-	{ 0, 0, 255, 128 },
-	{ 255, 0, 0, 128 },
-	{ 0, 255, 0, 128 },
-	{ 0, 0, 255, 128 }
-};
-
-
 #define IMAGE_HASH_SIZE 1024
 static image_t* hashTable[IMAGE_HASH_SIZE];
 
