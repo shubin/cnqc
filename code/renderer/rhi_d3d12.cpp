@@ -37,6 +37,7 @@ to do:
 - entityMergeable support ("entityMergable" in the code)
 - speed up map loads with BeginGraphicsPipelineCreation() / WaitForAllPipelineCreations()
 	use for non-UI shaders and run PSO creation on worker threads
+	would need 1 instance of IDxcUtils/IDxcCompiler3 per thread because they're not thread safe
 - when creating the root signature, validate that neither of the tables have any gap
 - use root signature 1.1 to use the hints that help the drivers optimize out static resources
 - is it possible to force Resource Binding Tier 2 somehow? are we supposed to run on old HW to test? :(
@@ -59,7 +60,6 @@ to do:
 - share texture and sampler array sizes between HLSL and C++ with .hlsli files
 - what's the actual fog curve used by Q3?
 - not rendering creates issues with resources not getting transitioned
-- use the new dxc compiler library instead of the old one
 - depth pre-pass: world entities can reference world surfaces -> must ignore
 - screenshot
 - video
@@ -186,8 +186,7 @@ D3D(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&graphicsAnalysis)));
 #include <d3d12.h>
 #include <dxgi1_6.h>
 #include <dxgidebug.h>
-#include <d3dcompiler.h>
-#pragma comment(lib, "d3dcompiler")
+#include <dxcapi.h>
 #include <dwmapi.h>
 #pragma comment(lib, "dwmapi")
 #define D3D12MA_D3D12_HEADERS_ALREADY_INCLUDED
@@ -346,7 +345,7 @@ namespace RHI
 
 	struct Shader
 	{
-		ID3DBlob* blob = NULL;
+		IDxcBlob* blob = NULL;
 		bool shortLifeTime = false;
 	};
 
@@ -494,6 +493,11 @@ namespace RHI
 		bool isTearingSupported;
 		bool vsync;
 		bool frameBegun;
+
+		HMODULE dxcModule;
+		HMODULE dxilModule;
+		IDxcUtils* dxcUtils;
+		IDxcCompiler3* dxcCompiler;
 
 		uint16_t descriptorFreeListData[MaxCPUDescriptors];
 		DescriptorHeap descHeapGeneric;
@@ -2337,6 +2341,25 @@ namespace RHI
 			rhi.pix.canBeginAndEnd = rhi.pix.BeginEventOnCommandList != NULL && rhi.pix.EndEventOnCommandList != NULL;
 		}
 
+		rhi.dxilModule = LoadLibraryA("cnq3/dxil.dll");
+		if(rhi.dxilModule == NULL)
+		{
+			ri.Error(ERR_FATAL, "Failed to locate/open cnq3/dxil.dll\n");
+		}
+		rhi.dxcModule = LoadLibraryA("cnq3/dxcompiler.dll");
+		if(rhi.dxcModule == NULL)
+		{
+			ri.Error(ERR_FATAL, "Failed to locate/open cnq3/dxcompiler.dll\n");
+		}
+		typedef HRESULT (__stdcall* DxcCreateInstancePtr)(REFCLSID, REFIID, LPVOID*);
+		DxcCreateInstancePtr dxcCreateInstance = (DxcCreateInstancePtr)GetProcAddress(rhi.dxcModule, "DxcCreateInstance");
+		if(dxcCreateInstance == NULL)
+		{
+			ri.Error(ERR_FATAL, "Failed to locate DxcCreateInstance in cnq3/dxcompiler.dll\n");
+		}
+		D3D(dxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&rhi.dxcUtils)));
+		D3D(dxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&rhi.dxcCompiler)));
+
 		glInfo.maxTextureSize = MAX_TEXTURE_SIZE;
 		glInfo.maxAnisotropy = 16;
 		glInfo.depthFadeSupport = qfalse;
@@ -2387,6 +2410,8 @@ namespace RHI
 
 		DESTROY_POOL_LIST(DESTROY_POOL);
 
+		COM_RELEASE(rhi.dxcCompiler);
+		COM_RELEASE(rhi.dxcUtils);
 		COM_RELEASE_ARRAY(rhi.timeStampHeaps);
 		COM_RELEASE(rhi.mainCommandList);
 		COM_RELEASE_ARRAY(rhi.mainCommandAllocators);
@@ -2402,6 +2427,9 @@ namespace RHI
 		COM_RELEASE(rhi.factory);
 		COM_RELEASE(rhi.dxgiInfoQueue);
 		COM_RELEASE(rhi.debug);
+
+		FreeLibrary(rhi.dxilModule);
+		FreeLibrary(rhi.dxcModule);
 
 		NvAPI_Unload();
 		
@@ -3310,62 +3338,99 @@ namespace RHI
 
 	HShader CreateShader(const ShaderDesc& desc)
 	{
-		// extra entries: NULL terminator + VERTEX_SHADER + PIXEL_SHADER + COMPUTE_SHADER
-		D3D_SHADER_MACRO shaderMacros[16];
-		Q_assert(ARRAY_LEN(shaderMacros) >= desc.macroCount + 4);
+		IDxcBlobEncoding* blobEncoding;
+		D3D(rhi.dxcUtils->CreateBlob(desc.source, desc.sourceLength, CP_ACP, &blobEncoding));
 
-		const char* target = "???";
+		LPCWSTR targetW = L"???";
+		LPCSTR targetName = "???";
 		switch(desc.stage)
 		{
-			case ShaderStage::Vertex: target = "vs_5_1"; break;
-			case ShaderStage::Pixel: target = "ps_5_1"; break;
-			case ShaderStage::Compute: target = "cs_5_1"; break;
+			case ShaderStage::Vertex: targetW = L"vs_6_0"; targetName = "vs"; break;
+			case ShaderStage::Pixel: targetW = L"ps_6_0"; targetName = "ps"; break;
+			case ShaderStage::Compute: targetW = L"cs_6_0"; targetName = "cs"; break;
 			default: Q_assert(0); break;
 		}
 
-		// yup, this leaks memory but we don't care as it's for quick and dirty testing
-		// could write to a linear allocator instead...
-		ID3DBlob* blob;
-		ID3DBlob* error;
-#if defined(D3D_DEBUG)
-		const UINT flags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-#else
-		const UINT flags = D3DCOMPILE_OPTIMIZATION_LEVEL3;
-#endif
+		wchar_t entryPointW[256];
+		MultiByteToWideChar(CP_ACP, 0, desc.entryPoint, -1, entryPointW, ARRAY_LEN(entryPointW));
 
-		uint32_t md = 0;
-		shaderMacros[md].Name = "VERTEX_SHADER";
-		shaderMacros[md].Definition = desc.stage == ShaderStage::Vertex ? "1" : "0";
-		md++;
-		shaderMacros[md].Name = "PIXEL_SHADER";
-		shaderMacros[md].Definition = desc.stage == ShaderStage::Pixel ? "1" : "0";
-		md++;
-		shaderMacros[md].Name = "COMPUTE_SHADER";
-		shaderMacros[md].Definition = desc.stage == ShaderStage::Compute ? "1" : "0";
-		md++;
-		for(uint32_t ms = 0; ms < desc.macroCount; ++ms)
+		struct MacroW
 		{
-			shaderMacros[md].Name = desc.macros[ms].name;
-			shaderMacros[md].Definition = desc.macros[ms].value;
-			md++;
+			wchar_t macro[256];
+		};
+		MacroW macros[16];
+		Q_assert(desc.macroCount <= ARRAY_LEN(macros));
+
+		LPCWSTR arguments[64];
+		UINT32 argumentCount = 0;
+#define PushArg(Arg) arguments[argumentCount++] = Arg
+		PushArg(L"E");
+		PushArg(L"-E");
+		PushArg(entryPointW);
+		PushArg(L"-T");
+		PushArg(targetW);
+		PushArg(DXC_ARG_WARNINGS_ARE_ERRORS);
+#if defined(D3D_DEBUG)
+		PushArg(DXC_ARG_DEBUG);
+		PushArg(DXC_ARG_SKIP_OPTIMIZATIONS);
+#else
+		PushArg(L"-Qstrip_debug");
+		PushArg(L"-Qstrip_reflect");
+		PushArg(DXC_ARG_OPTIMIZATION_LEVEL3);
+#endif
+		PushArg(L"-D");
+		PushArg(desc.stage == ShaderStage::Vertex ? L"VERTEX_SHADER=1" : L"VERTEX_SHADER=0");
+		PushArg(L"-D");
+		PushArg(desc.stage == ShaderStage::Pixel ? L"PIXEL_SHADER=1" : L"PIXEL_SHADER=0");
+		PushArg(L"-D");
+		PushArg(desc.stage == ShaderStage::Compute ? L"COMPUTE_SHADER=1" : L"COMPUTE_SHADER=0");
+		for(uint32_t m = 0; m < desc.macroCount; ++m)
+		{
+			const char* input = va("%s=%s", desc.macros[m].name, desc.macros[m].value);
+			MacroW& output = macros[m];
+			MultiByteToWideChar(CP_ACP, 0, input, -1, output.macro, ARRAY_LEN(output.macro));
+			PushArg(L"-D");
+			PushArg(output.macro);
 		}
-		shaderMacros[md].Name = NULL;
-		shaderMacros[md].Definition = NULL;
-		if(FAILED(D3DCompile(desc.source, desc.sourceLength, NULL, shaderMacros, NULL, desc.entryPoint, target, flags, 0, &blob, &error)))
+#undef PushArg
+		Q_assert(argumentCount <= ARRAY_LEN(arguments));
+		
+		DxcBuffer sourceBuffer = {};
+		sourceBuffer.Ptr = blobEncoding->GetBufferPointer();
+		sourceBuffer.Size = blobEncoding->GetBufferSize();
+		sourceBuffer.Encoding = 0;
+
+		// @TODO: what's the point of result->GetStatus(NULL) ???
+		IDxcResult* result = NULL;
+		if(FAILED(rhi.dxcCompiler->Compile(&sourceBuffer, arguments, argumentCount, NULL, IID_PPV_ARGS(&result))))
 		{
-			ri.Error(ERR_FATAL, "Shader (%s) compilation failed:\n%s\n", target, (const char*)error->GetBufferPointer());
+			IDxcBlobUtf8* errors;
+			if(SUCCEEDED(result->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&errors), NULL)) &&
+				errors->GetStringLength() > 0)
+			{
+				ri.Error(ERR_FATAL, "Shader (%s) compilation failed:\n%s\n", targetName, (const char*)errors->GetBufferPointer());
+			}
+			else
+			{
+				ri.Error(ERR_FATAL, "Shader (%s) compilation failed:\n", targetName);
+			}
 			return RHI_MAKE_NULL_HANDLE();
 		}
 
+		IDxcBlob* shaderBlob;
+		D3D(result->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderBlob), NULL));
+		blobEncoding->Release();
+		result->Release();
+
 		Shader shader;
-		shader.blob = blob;
+		shader.blob = shaderBlob;
 
 		return rhi.shaders.Add(shader);
 	}
 
 	ShaderByteCode GetShaderByteCode(HShader shader)
 	{
-		ID3DBlob* const blob = rhi.shaders.Get(shader).blob;
+		IDxcBlob* const blob = rhi.shaders.Get(shader).blob;
 
 		ShaderByteCode byteCode;
 		byteCode.data = blob->GetBufferPointer();
