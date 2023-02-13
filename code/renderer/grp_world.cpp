@@ -80,8 +80,10 @@ static bool HasStaticGeo(const drawSurf_t* drawSurf)
 	return drawSurf->staticGeoChunk > 0 && drawSurf->staticGeoChunk < ARRAY_LEN(grp.world.statChunks);
 }
 
-static void UpdateEntityData(int entityNum, double originalTime)
+static void UpdateEntityData(bool& depthHack, int entityNum, double originalTime)
 {
+	depthHack = false;
+
 	if(entityNum != ENTITYNUM_WORLD)
 	{
 		backEnd.currentEntity = &backEnd.refdef.entities[entityNum];
@@ -96,10 +98,10 @@ static void UpdateEntityData(int entityNum, double originalTime)
 		// set up the transformation matrix
 		R_RotateForEntity(backEnd.currentEntity, &backEnd.viewParms, &backEnd.orient);
 
-		// @TODO: depth range
-		/*if(backEnd.currentEntity->e.renderfx & RF_DEPTHHACK)
+		if(backEnd.currentEntity->e.renderfx & RF_DEPTHHACK)
 		{
-		}*/
+			depthHack = true;
+		}
 	}
 	else
 	{
@@ -341,6 +343,8 @@ void World::Begin()
 	}
 
 	CmdSetViewportAndScissor(backEnd.viewParms);
+	batchOldDepthHack = false;
+	batchDepthHack = false;
 
 	TextureBarrier tb(depthTexture, ResourceStates::DepthWriteBit);
 	CmdBarrier(1, &tb);
@@ -460,6 +464,13 @@ void World::EndBatch()
 
 	BindIndexBuffer(false);
 
+	if(batchDepthHack != batchOldDepthHack)
+	{
+		const viewParms_t& vp = backEnd.viewParms;
+		CmdSetViewport(vp.viewportX, vp.viewportY, vp.viewportWidth, vp.viewportHeight, batchDepthHack ? 0.7f : 0.0f, 1.0f);
+		batchOldDepthHack = batchDepthHack;
+	}
+
 	for(int p = 0; p < shader->numPipelines; ++p)
 	{
 		const pipeline_t& pipeline = shader->pipelines[p];
@@ -531,6 +542,9 @@ void World::EndSkyBatch()
 	CmdSetViewport(vp.viewportX, vp.viewportY, vp.viewportWidth, vp.viewportHeight, 0.0f, 1.0f);
 	tess.numVertexes = 0;
 	tess.numIndexes = 0;
+
+	batchOldDepthHack = false;
+	batchDepthHack = false;
 }
 
 void World::RestartBatch()
@@ -877,7 +891,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 
 		if(entityChanged)
 		{
-			UpdateEntityData(entityNum, originalTime);
+			UpdateEntityData(batchDepthHack, entityNum, originalTime);
 		}
 
 		if(hasStaticGeo)
@@ -911,7 +925,10 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 	db.vertexBuffers.EndUpload();
 	db.indexBuffer.EndUpload();
 
-	// @TODO: go back to the world model-view matrix, restore depth range
+	// restores the potentially "hacked" depth range as well
+	CmdSetViewportAndScissor(backEnd.viewParms);
+	batchOldDepthHack = false;
+	batchDepthHack = false;
 }
 
 void World::BindVertexBuffers(bool staticGeo, uint32_t firstStage, uint32_t stageCount)

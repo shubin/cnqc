@@ -338,6 +338,8 @@ struct World
 	HPipeline batchPSO;
 	bool batchHasStaticGeo;
 	int psoChangeCount;
+	bool batchDepthHack;
+	bool batchOldDepthHack;
 
 	// dynamic
 	GeometryBuffers dynBuffers[FrameCount];
