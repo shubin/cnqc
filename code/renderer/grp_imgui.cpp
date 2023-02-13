@@ -44,6 +44,7 @@ struct PixelRC
 {
 	uint32_t texture;
 	uint32_t sampler;
+	float mip;
 };
 #pragma pack(pop)
 
@@ -232,8 +233,9 @@ void ImGUI::Draw()
 			}
 
 			PixelRC pixelRC = {};
-			pixelRC.texture = (uint32_t)cmd->TextureId;
+			pixelRC.texture = (uint32_t)cmd->TextureId & 0xFFFF;
 			pixelRC.sampler = GetSamplerIndex(TW_CLAMP_TO_EDGE, TextureFilter::Linear);
+			pixelRC.mip = (float)(((uint32_t)cmd->TextureId >> 16) & 0xFFFF);
 			CmdSetRootConstants(rootSignature, ShaderStage::Pixel, &pixelRC);
 
 			// Apply Scissor/clipping rectangle, Draw

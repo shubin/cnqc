@@ -62,6 +62,7 @@ cbuffer RootConstants
 {
 	uint textureIndex;
 	uint samplerIndex;
+	float mipIndex;
 };
 
 SamplerState samplers[12] : register(s0);
@@ -69,7 +70,7 @@ Texture2D textures[4096] : register(t0);
 
 float4 ps(VOut input) : SV_Target
 {
-	return input.col * textures[textureIndex].Sample(samplers[samplerIndex], input.uv);
+	return input.col * textures[textureIndex].SampleLevel(samplers[samplerIndex], input.uv, mipIndex);
 }
 
 #endif

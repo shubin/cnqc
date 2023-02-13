@@ -46,6 +46,7 @@
     <ClCompile Include="..\..\code\renderer\grp_imgui.cpp" />
     <ClCompile Include="..\..\code\renderer\grp_post.cpp" />
     <ClCompile Include="..\..\code\renderer\grp_smaa.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_gui.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\code\renderer\hlsl\smaa.hlsli">

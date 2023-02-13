@@ -1202,6 +1202,11 @@ void R_MipMap( byte** outD, const byte* inD, int inW, int inH, textureWrap_t tw 
 void R_RenderDoc_CaptureFrames( int numFrames );
 
 //
+// tr_gui.cpp
+//
+void R_DrawGUI();
+
+//
 // tr_shader.c
 //
 qhandle_t RE_RegisterShader( const char* name );

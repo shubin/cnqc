@@ -262,6 +262,7 @@ void GRP::EndFrame()
 {
 	DrawGUI();
 	EndUI();
+	R_DrawGUI();
 	imgui.Draw();
 	post.Draw();
 	RHI::EndFrame();
