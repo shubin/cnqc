@@ -25,6 +25,10 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 #include "../client/cl_imgui.h"
 
 
+#define IMAGE_WINDOW_NAME  "Image Details"
+#define SHADER_WINDOW_NAME "Shader Details"
+
+
 struct ImageWindow
 {
 	const image_t* image;
@@ -86,6 +90,8 @@ static void TitleText(const char* text)
 
 static void OpenImageDetails(const image_t* image)
 {
+	ImGui::SetWindowFocus(IMAGE_WINDOW_NAME);
+
 	imageWindow.active = true;
 	imageWindow.image = image;
 	imageWindow.mip = 0;
@@ -94,6 +100,8 @@ static void OpenImageDetails(const image_t* image)
 static void OpenShaderDetails(shader_t* shader)
 {
 #define Append(Text) Q_strcat(shaderWindow.formattedCode, sizeof(shaderWindow.formattedCode), Text)
+
+	ImGui::SetWindowFocus(SHADER_WINDOW_NAME);
 
 	shaderWindow.active = true;
 	shaderWindow.shader = shader;
@@ -183,7 +191,7 @@ static void DrawImageList()
 
 					ImGui::TableNextRow();
 					ImGui::TableSetColumnIndex(0);
-					if(ImGui::Selectable(image->name, false))
+					if(ImGui::Selectable(va("%s##%d", image->name, i), false))
 					{
 						OpenImageDetails(image);
 					}
@@ -206,7 +214,7 @@ static void DrawImageWindow()
 	ImageWindow& window = imageWindow;
 	if(window.active)
 	{
-		if(ImGui::Begin("Image Details", &window.active, ImGuiWindowFlags_AlwaysAutoResize))
+		if(ImGui::Begin(IMAGE_WINDOW_NAME, &window.active, ImGuiWindowFlags_AlwaysAutoResize))
 		{
 			TitleText(window.image->name);
 
@@ -243,10 +251,9 @@ static void DrawImageWindow()
 
 				const int s = (tr.imageShaders[is] >> 16) & 0xFFFF;
 				const shader_t* const shader = tr.shaders[s];
-				if(ImGui::Selectable(shader->name, false))
+				if(ImGui::Selectable(va("%s##%d", shader->name, is), false))
 				{
-					shaderWindow.active = true;
-					shaderWindow.shader = (shader_t*)shader;
+					OpenShaderDetails((shader_t*)shader);
 				}
 				else if(ImGui::IsItemHovered())
 				{
@@ -312,7 +319,7 @@ static void DrawShaderList()
 
 					ImGui::TableNextRow();
 					ImGui::TableSetColumnIndex(0);
-					if(ImGui::Selectable(shader->name, false))
+					if(ImGui::Selectable(va("%s##%d", shader->name, s), false))
 					{
 						OpenShaderDetails(shader);
 					}
@@ -331,7 +338,7 @@ static void DrawShaderWindow()
 	ShaderWindow& window = shaderWindow;
 	if(window.active)
 	{
-		if(ImGui::Begin("Shader Details", &window.active, ImGuiWindowFlags_AlwaysAutoResize))
+		if(ImGui::Begin(SHADER_WINDOW_NAME, &window.active, ImGuiWindowFlags_AlwaysAutoResize))
 		{
 			shader_t* shader = window.shader;
 			TitleText(shader->name);
@@ -351,7 +358,7 @@ static void DrawShaderWindow()
 				for(int i = 0; i < imageCount; ++i)
 				{
 					const image_t* image = bundle.image[i];
-					if(ImGui::Selectable(image->name, false))
+					if(ImGui::Selectable(va("%s##%d_%d", image->name, s, i), false))
 					{
 						OpenImageDetails(image);
 					}
