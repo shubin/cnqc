@@ -150,6 +150,24 @@ static void OpenShaderDetails(shader_t* shader)
 #undef Append
 }
 
+static void DrawFilter(char* filter, size_t filterSize)
+{
+	if(ImGui::Button("Clear filter"))
+	{
+		filter[0] = '\0';
+	}
+	ImGui::SameLine();
+	if(ImGui::IsWindowAppearing())
+	{
+		ImGui::SetKeyboardFocusHere();
+	}
+	ImGui::InputText(" ", filter, filterSize);
+	if(ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
+	{
+		ImGui::SetTooltip("Use * to match any character any amount of times.");
+	}
+}
+
 static void DrawImageToolTip(const image_t* image)
 {
 	const float scaleX = 128.0f / image->width;
@@ -172,12 +190,7 @@ static void DrawImageList()
 		if(ImGui::Begin("Image Explorer", &listActive))
 		{
 			static char filter[256];
-			if(ImGui::Button("Clear filter"))
-			{
-				filter[0] = '\0';
-			}
-			ImGui::SameLine();
-			ImGui::InputText(" ", filter, ARRAY_LEN(filter));
+			DrawFilter(filter, sizeof(filter));
 
 			if(BeginTable("Images", 1))
 			{
@@ -272,6 +285,10 @@ static void DrawImageWindow()
 			int height = window.image->height;
 			if((window.image->flags & IMG_NOMIPMAP) == 0)
 			{
+				if(ImGui::IsWindowAppearing())
+				{
+					ImGui::SetKeyboardFocusHere();
+				}
 				ImGui::Combo("Mip", &window.mip, mipNames, R_ComputeMipCount(width, height));
 			}
 			for(int m = 0; m < window.mip; ++m)
@@ -300,12 +317,7 @@ static void DrawShaderList()
 		if(ImGui::Begin("Shader Explorer", &listActive))
 		{
 			static char filter[256];
-			if(ImGui::Button("Clear filter"))
-			{
-				filter[0] = '\0';
-			}
-			ImGui::SameLine();
-			ImGui::InputText(" ", filter, ARRAY_LEN(filter));
+			DrawFilter(filter, sizeof(filter));
 
 			if(BeginTable("Shaders", 1))
 			{
