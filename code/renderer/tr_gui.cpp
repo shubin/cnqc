@@ -285,10 +285,6 @@ static void DrawImageWindow()
 			int height = window.image->height;
 			if((window.image->flags & IMG_NOMIPMAP) == 0)
 			{
-				if(ImGui::IsWindowAppearing())
-				{
-					ImGui::SetKeyboardFocusHere();
-				}
 				ImGui::Combo("Mip", &window.mip, mipNames, R_ComputeMipCount(width, height));
 			}
 			for(int m = 0; m < window.mip; ++m)

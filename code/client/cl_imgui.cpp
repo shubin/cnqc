@@ -240,6 +240,7 @@ static void ImGUI_ApplyTheme()
 	colors[ImGuiCol_HeaderActive] = active;
 	colors[ImGuiCol_TabHovered] = hover;
 	colors[ImGuiCol_TabActive] = active;
+	colors[ImGuiCol_NavHighlight] = hover;
 
 	ImGuiStyle& style = ImGui::GetStyle();
 	style.WindowPadding = ImVec2(8.00f, 8.00f);
