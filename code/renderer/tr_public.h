@@ -170,6 +170,9 @@ typedef struct {
 
 	// is depth clamping enabled?
 	qbool	(*DepthClamp)();
+
+	// qfalse will force drawing the entire map
+	void	(*SetPVSCulling)( qbool enable );
 } refexport_t;
 
 //

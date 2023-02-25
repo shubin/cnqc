@@ -936,6 +936,8 @@ typedef struct {
 	float		mipFilter[4]; // only used by the GPU generators
 
 	qbool		worldSurface; // is the currently added draw surface a world surface?
+
+	qbool		drawEntireMap;
 } trGlobals_t;
 
 extern backEndState_t	backEnd;

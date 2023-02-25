@@ -356,6 +356,7 @@ static qbool CL_CG_GetValue( char* value, int valueSize, const char* key )
 		{ "trap_CNQ3_NDP_StartVideo", CG_EXT_NDP_STARTVIDEO },
 		{ "trap_CNQ3_NDP_StopVideo", CG_EXT_NDP_STOPVIDEO },
 		{ "trap_CNQ3_R_RenderScene", CG_EXT_R_RENDERSCENE },
+		{ "trap_CNQ3_R_SetPVSCulling", CG_EXT_R_SETPVSCULLING },
 		// commands
 		{ "screenshotnc", 1 },
 		{ "screenshotncJPEG", 1 },
@@ -706,6 +707,10 @@ static intptr_t CL_CgameSystemCalls( intptr_t *args )
 
 	case CG_EXT_R_RENDERSCENE:
 		re.RenderScene( VMA(1), args[2] );
+		return 0;
+
+	case CG_EXT_R_SETPVSCULLING:
+		re.SetPVSCulling( (qbool)args[1] );
 		return 0;
 
 	default:
