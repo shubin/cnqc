@@ -57,6 +57,9 @@ add: /waitms <milliseconds> to delay command executions by the specified number 
 add: r_alphaToCoverageMipBoost <0.0 to 0.5> (default: 0.125) boosts the alpha value of higher mip levels
   with A2C enabled, it prevents alpha-tested surfaces from fading (too much) in the distance
 
+chg: the client can now read .wav files from the local file system when connected to a pure server
+  this allows e.g. cg_fragSound to load sounds from the local file system instead of .pk3 files
+
 chg: CVar sets will use all arguments instead of only the first one
   example: pressing n with `bind n "name x y z"` will rename to "x y z" instead of "x"
 

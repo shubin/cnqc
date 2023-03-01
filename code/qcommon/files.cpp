@@ -837,7 +837,7 @@ qbool FS_FilenameCompare( const char *s1, const char *s2 ) {
 
 static qbool FS_IsPureClientReadException( const char* filename )
 {
-	static const char* extensions[] =  { ".cfg", ".ttf", ".dat", ".jpg", ".jpeg", ".tga", ".png", ".shader" };
+	static const char* extensions[] =  { ".cfg", ".ttf", ".dat", ".jpg", ".jpeg", ".tga", ".png", ".shader", ".wav" };
 	const int shortestExtLength = 3;
 
 	const int nameLength = strlen(filename);
