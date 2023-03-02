@@ -100,6 +100,8 @@ chg: with r_backend GL3, depth fade with MSAA now requires GLSL 4.00 at a minimu
 
 chg: with r_backend GL3, alpha to coverage now requires GLSL 4.00 at a minimum
 
+fix: invalid skybox texture mip-mapping and filtering settings (e.g. cpm25 skybox seams)
+
 fix: in render batches with multiple shaders where the second or later surface had a shader using
   "rgbGen lightingDiffuse", the colors would be wrong and crashes could occur
 

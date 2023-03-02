@@ -506,9 +506,14 @@ static void ParseTriSurf( const dsurface_t* ds, const drawVert_t* verts, msurfac
 
 static void ParseFlare( const dsurface_t* ds, msurface_t* surf )
 {
+	// @NOTE: we don't support/render flares, so we shouldn't load shaders:
+	// 1. it could create resources that are never used to render the map
+	// 2. it could force loading images used elsewhere with the wrong settings
+	//    e.g. the cpm25 skybox would end up not being set up as clampMap
 	static surfaceType_t flare = SF_FLARE;
 	surf->fogIndex = LittleLong( ds->fogNum ) + 1;
-	surf->shader = ShaderForShaderNum( ds->shaderNum, LIGHTMAP_BY_VERTEX );
+	//surf->shader = ShaderForShaderNum( ds->shaderNum, LIGHTMAP_BY_VERTEX );
+	surf->shader = tr.defaultShader;
 	surf->data = &flare;
 }
 
