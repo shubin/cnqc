@@ -359,6 +359,26 @@ static void DrawShaderWindow()
 
 			ImGui::NewLine();
 			ImGui::Text("Images:");
+			if(shader->isSky)
+			{
+				for(int i = 0; i < 6; ++i)
+				{
+					const image_t* image = shader->sky.outerbox[i];
+					if(image == NULL)
+					{
+						continue;
+					}
+
+					if(ImGui::Selectable(va("%s##skybox_%d", image->name, i), false))
+					{
+						OpenImageDetails(image);
+					}
+					else if(ImGui::IsItemHovered())
+					{
+						DrawImageToolTip(image);
+					}
+				}
+			}
 			for(int s = 0; s < shader->numStages; ++s)
 			{
 				const textureBundle_t& bundle = shader->stages[s]->bundle;
