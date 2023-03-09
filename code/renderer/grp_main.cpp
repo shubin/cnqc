@@ -746,7 +746,7 @@ void GRP::ExecuteRenderCommands(const byte* data)
 				break;
 
 			default:
-				assert(!"Unsupported render command type");
+				Q_assert(!"Unsupported render command type");
 				return;
 		}
 

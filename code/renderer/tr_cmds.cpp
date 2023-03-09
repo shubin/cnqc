@@ -65,7 +65,7 @@ byte* R_FindRenderCommand( renderCommand_t type )
 			return NULL;
 
 		if ( commandId < 0 || commandId >= RC_COUNT ) {
-			assert( !"Invalid render command type" );
+			Q_assert( !"Invalid render command type" );
 			return NULL;
 		}
 
@@ -82,8 +82,8 @@ static void RemoveRenderCommand( byte* cmd, int cmdSize )
 	renderCommandList_t* cmdList = &backEndData->commands;
 	const int endOffset = (cmd + cmdSize) - cmdList->cmds;
 	const int endBytes = cmdList->used - endOffset;
-	assert( cmd >= cmdList->cmds );
-	assert( cmd + cmdSize <= cmdList->cmds + cmdList->used );
+	Q_assert( cmd >= cmdList->cmds );
+	Q_assert( cmd + cmdSize <= cmdList->cmds + cmdList->used );
 
 	memmove( cmd, cmd + cmdSize, endBytes );
 	cmdList->used -= cmdSize;
@@ -111,7 +111,7 @@ static qbool CanAllocateRenderCommand( qbool endFrame = qfalse )
 
 byte* R_AllocateRenderCommand( int bytes, int commandId, qbool endFrame )
 {
-	assert( bytes % 8 == 0 );
+	Q_assert( bytes % 8 == 0 );
 
 	const int endOffset = endFrame ? 0 : CmdListReservedBytes;
 	renderCommandList_t* const cmdList = &backEndData->commands;
@@ -142,6 +142,10 @@ byte* R_AllocateRenderCommand( int bytes, int commandId, qbool endFrame )
 template<typename T>
 static T* AllocateRenderCommand( int commandId, qbool endFrame = qfalse )
 {
+	Q_assert( commandId >= 0 );
+	Q_assert( commandId < RC_COUNT );
+	Q_assert( (int)sizeof(T) == renderCommandSizes[commandId] );
+
 	return (T*)R_AllocateRenderCommand( sizeof(T), commandId, endFrame );
 }
 
@@ -191,7 +195,7 @@ void R_AddDrawSurfCmd( drawSurf_t* drawSurfs, int numDrawSurfs, int numTranspSur
 	Begin3D();
 
 	drawSceneViewCommand_t* const cmd = AllocateRenderCommand<drawSceneViewCommand_t>(RC_DRAW_SCENE_VIEW);
-	assert( cmd );
+	Q_assert( cmd );
 
 	qbool shouldClearColor = qfalse;
 	vec4_t clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -231,7 +235,7 @@ void RE_SetColor( const float* rgba )
 	Begin2D();
 
 	uiSetColorCommand_t* const cmd = AllocateRenderCommand<uiSetColorCommand_t>(RC_UI_SET_COLOR);
-	assert( cmd );
+	Q_assert( cmd );
 
 	if ( !rgba )
 		rgba = colorWhite;
@@ -252,7 +256,7 @@ void RE_StretchPic( float x, float y, float w, float h, float s1, float t1, floa
 	Begin2D();
 
 	uiDrawQuadCommand_t* const cmd = AllocateRenderCommand<uiDrawQuadCommand_t>(RC_UI_DRAW_QUAD);
-	assert( cmd );
+	Q_assert( cmd );
 
 	cmd->shader = R_GetShaderByHandle( hShader );
 	cmd->x = x;
@@ -275,7 +279,7 @@ void RE_DrawTriangle( float x0, float y0, float x1, float y1, float x2, float y2
 	Begin2D();
 
 	uiDrawTriangleCommand_t* const cmd = AllocateRenderCommand<uiDrawTriangleCommand_t>(RC_UI_DRAW_TRIANGLE);
-	assert( cmd );
+	Q_assert( cmd );
 
 	cmd->shader = R_GetShaderByHandle( hShader );
 	cmd->x0 = x0;
@@ -392,7 +396,7 @@ void RE_TakeVideoFrame( int width, int height, byte *captureBuffer, byte *encode
 	End3D();
 
 	videoFrameCommand_t* const cmd = AllocateRenderCommand<videoFrameCommand_t>( RC_VIDEOFRAME );
-	assert( cmd );
+	Q_assert( cmd );
 
 	cmd->width = width;
 	cmd->height = height;
