@@ -951,9 +951,11 @@ static qbool SurfIsOffscreen( const drawSurf_t* drawSurf )
 
 	R_RotateForViewer();
 
+	// @TODO:
 	R_DecomposeSort( drawSurf->sort, &entityNum, &shader, &fogNum );
 	RB_BeginSurface( shader, fogNum );
 	R_TessellateSurface( drawSurf->surface );
+	//R_ComputeTessellatedSize( &tess.numVertexes, &tess.numIndexes, drawSurf->surface );
 
 	assert( tess.numVertexes < 128 );
 
@@ -1289,8 +1291,6 @@ void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int fo
 	drawSurf->shaderNum = shader->index;
 	drawSurf->greyscale = SurfGreyscaleAmount( shader );
 	drawSurf->staticGeoChunk = staticGeoChunk;
-
-	renderPipeline->AddDrawSurface(surface, shader);
 }
 
 

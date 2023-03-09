@@ -591,9 +591,6 @@ struct GRP : IRenderPipeline
 {
 	void Init() override;
 	void ShutDown(bool fullShutDown) override;
-	void BeginFrame() override;
-	void EndFrame() override;
-	void AddDrawSurface(const surfaceType_t* surface, const shader_t* shader) override;
 	void CreateTexture(image_t* image, int mipCount, int width, int height) override;
 	void UpoadTextureAndGenerateMipMaps(image_t* image, const byte* data) override;
 	void BeginTextureUpload(MappedTexture& mappedTexture, image_t* image) override;
@@ -612,6 +609,9 @@ struct GRP : IRenderPipeline
 	void TessellationOverflow() override { world.RestartBatch(); }
 	void DrawSkyBox() override { world.DrawSkyBox(); }
 	void DrawClouds() override { world.DrawClouds(); }
+
+	void BeginFrame();
+	void EndFrame();
 
 	uint32_t RegisterTexture(HTexture htexture);
 

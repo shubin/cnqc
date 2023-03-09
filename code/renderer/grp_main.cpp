@@ -239,6 +239,8 @@ void GRP::BeginFrame()
 {
 	renderPasses[tr.frameCount % FrameCount].count = 0;
 
+	R_SetColorMappings();
+
 	smaa.Update();
 
 	// have it be first to we can use ImGUI in the other components too
@@ -275,10 +277,11 @@ void GRP::EndFrame()
 	{
 		frameStats.skippedFrames++;
 	}
-}
 
-void GRP::AddDrawSurface(const surfaceType_t* surface, const shader_t* shader)
-{
+	if(backEnd.renderFrame)
+	{
+		Sys_V_EndFrame();
+	}
 }
 
 void GRP::CreateTexture(image_t* image, int mipCount, int width, int height)
@@ -721,10 +724,10 @@ void GRP::ExecuteRenderCommands(const byte* data)
 				DrawSceneView(*(const drawSceneViewCommand_t*)data);
 				break;
 			case RC_BEGIN_FRAME:
-				RB_BeginFrame(data);
+				BeginFrame();
 				break;
 			case RC_SWAP_BUFFERS:
-				RB_SwapBuffers(data);
+				EndFrame();
 				break;
 			case RC_BEGIN_UI:
 				ui.Begin();

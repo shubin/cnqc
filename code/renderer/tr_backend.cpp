@@ -28,6 +28,8 @@ backEndState_t	backEnd;
 static int64_t startTime;
 
 
+#if 0
+
 static void RB_Set2D()
 {
 	backEnd.projection2D = qtrue;
@@ -596,85 +598,6 @@ static const void* RB_DrawSurfs( const void* data )
 	return (const void*)(cmd + 1);
 }
 
-
-const void* RB_BeginFrame( const void* data )
-{
-	const beginFrameCommand_t* cmd = (const beginFrameCommand_t*)data;
-
-	R_SetColorMappings();
-	renderPipeline->BeginFrame();
-
-	return (const void*)(cmd + 1);
-}
-
-
-const void* RB_SwapBuffers( const void* data )
-{
-	// finish any 2D drawing if needed
-	if ( tess.numIndexes ) {
-		RB_EndSurface();
-	}
-
-	// This has been moved here to make sure the Present/SwapBuffer
-	// call gets ignored for CPU timing as V-Sync would mess it all up.
-	// We can't really "charge" 2D/3D properly, so it all counts as 3D.
-	const int64_t endTime = ri.Microseconds();
-	backEnd.pc3D[RB_USEC] = (int)( endTime - startTime );
-
-	const swapBuffersCommand_t* cmd = (const swapBuffersCommand_t*)data;
-	renderPipeline->EndFrame();
-	if ( backEnd.renderFrame ) {
-		Sys_V_EndFrame();
-	}
-	const int64_t swapTime = ri.Microseconds();
-	backEnd.pc3D[RB_USEC_END] = (int)( swapTime - endTime );
-	backEnd.projection2D = qfalse;
-	backEnd.pc = backEnd.pc3D;
-
-	return (const void*)(cmd + 1);
-}
-
-
-#if 0 // @TODO:
-void RB_ExecuteRenderCommands( const void *data )
-{
-	startTime = ri.Microseconds();
-
-	while ( 1 ) {
-		data = PADP(data, sizeof(void *));
-
-		switch ( *(const int *)data ) {
-		case RC_SET_COLOR:
-			data = RB_SetColor( data );
-			break;
-		case RC_STRETCH_PIC:
-			data = RB_StretchPic( data );
-			break;
-		case RC_TRIANGLE:
-			data = RB_Triangle( data );
-			break;
-		case RC_DRAW_SURFS:
-			data = RB_DrawSurfs( data );
-			break;
-		case RC_BEGIN_FRAME:
-			data = RB_BeginFrame( data );
-			break;
-		case RC_SWAP_BUFFERS:
-			data = RB_SwapBuffers( data );
-			break;
-		case RC_SCREENSHOT:
-			data = RB_TakeScreenshotCmd( (const screenshotCommand_t*)data );
-			break;
-		case RC_VIDEOFRAME:
-			data = RB_TakeVideoFrameCmd( data );
-			break;
-
-		case RC_END_OF_LIST:
-		default:
-			return;
-		}
-	}
-}
 #endif
 
 

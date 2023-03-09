@@ -1321,6 +1321,7 @@ struct shaderCommands_t
 
 extern shaderCommands_t tess;
 
+// @TODO: nuke all this
 void RB_BeginSurface( const shader_t* shader, int fogNum );
 void RB_EndSurface();
 void RB_CheckOverflow( int verts, int indexes );
@@ -1331,9 +1332,6 @@ void R_ComputeTexCoords( const shaderStage_t* pStage, stageVars_t& svars, int fi
 
 void RB_AddQuadStamp( vec3_t origin, vec3_t left, vec3_t up, byte *color );
 void RB_AddQuadStampExt( vec3_t origin, vec3_t left, vec3_t up, byte *color, float s1, float t1, float s2, float t2 );
-
-const void* RB_BeginFrame( const void* data );
-const void* RB_SwapBuffers( const void* data );
 
 
 /*
@@ -1583,7 +1581,6 @@ void GfxInfo_f( void );
 const byte* RB_TakeScreenshotCmd( const screenshotCommand_t* cmd );
 const byte* RB_TakeVideoFrameCmd( const videoFrameCommand_t* cmd );
 
-//void RB_ExecuteRenderCommands( const void *data ); // @TODO:
 void RB_PushSingleStageShader( int stateBits, cullType_t cullType );
 void RB_PopShader();
 
@@ -1669,10 +1666,7 @@ struct IRenderPipeline
 {
 	virtual void Init() = 0;
 	virtual void ShutDown(bool fullShutDown) = 0;
-	virtual void BeginFrame() = 0;
-	virtual void EndFrame() = 0;
 
-	virtual void AddDrawSurface(const surfaceType_t* surface, const shader_t* shader) = 0;
 	virtual void ProcessWorld(world_t& world) = 0;
 	virtual void ProcessModel(model_t& model) = 0;
 	virtual void ProcessShader(shader_t& shader) = 0;
