@@ -951,11 +951,12 @@ static qbool SurfIsOffscreen( const drawSurf_t* drawSurf )
 
 	R_RotateForViewer();
 
-	// @TODO:
 	R_DecomposeSort( drawSurf->sort, &entityNum, &shader, &fogNum );
-	RB_BeginSurface( shader, fogNum );
+	tess.numIndexes = 0;
+	tess.numVertexes = 0;
+	tess.shader = shader;
+	tess.xstages = (const shaderStage_t**)shader->stages;
 	R_TessellateSurface( drawSurf->surface );
-	//R_ComputeTessellatedSize( &tess.numVertexes, &tess.numIndexes, drawSurf->surface );
 
 	assert( tess.numVertexes < 128 );
 
@@ -1052,13 +1053,10 @@ static qbool R_MirrorViewBySurface( drawSurf_t* drawSurf, int entityNum )
 		return qfalse;
 	}
 
-#if 0
-	// @TODO:
 	// trivially reject portal/mirror
 	if ( SurfIsOffscreen( drawSurf ) ) {
 		return qfalse;
 	}
-#endif
 
 	// save old viewParms so we can return to it after the mirror view
 	oldParms = tr.viewParms;
