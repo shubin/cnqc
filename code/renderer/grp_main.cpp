@@ -689,59 +689,63 @@ uint32_t GRP::CreatePSO(CachedPSO& cache, const char* name)
 	return index;
 }
 
-void GRP::ExecuteRenderCommands(const void* data)
+void GRP::ExecuteRenderCommands(const byte* data)
 {
 	for(;;)
 	{
-		switch(*(const int*)data)
+		const renderCommandBase_t* const cmd = (const renderCommandBase_t*)data;
+
+		switch(cmd->commandId)
 		{
 			case RC_UI_SET_COLOR:
-				UISetColor(*(uiSetColorCommand_t*)data);
-				data = ((uiSetColorCommand_t*)data) + 1;
+				UISetColor(*(const uiSetColorCommand_t*)data);
+				data += sizeof(uiSetColorCommand_t);
 				break;
 			case RC_UI_DRAW_QUAD:
-				UIDrawQuad(*(uiDrawQuadCommand_t*)data);
-				data = ((uiDrawQuadCommand_t*)data) + 1;
+				UIDrawQuad(*(const uiDrawQuadCommand_t*)data);
+				data += sizeof(uiDrawQuadCommand_t);
 				break;
 			case RC_UI_DRAW_TRIANGLE:
-				UIDrawTriangle(*(uiDrawTriangleCommand_t*)data);
-				data = ((uiDrawTriangleCommand_t*)data) + 1;
+				UIDrawTriangle(*(const uiDrawTriangleCommand_t*)data);
+				data += sizeof(uiDrawTriangleCommand_t);
 				break;
 			case RC_DRAW_SCENE_VIEW:
-				DrawSceneView(*(drawSceneViewCommand_t*)data);
-				data = ((drawSceneViewCommand_t*)data) + 1;
+				DrawSceneView(*(const drawSceneViewCommand_t*)data);
+				data += sizeof(drawSceneViewCommand_t);
 				break;
 			case RC_BEGIN_FRAME:
-				data = RB_BeginFrame(data);
+				data = (const byte*)RB_BeginFrame(data);
 				break;
 			case RC_SWAP_BUFFERS:
-				data = RB_SwapBuffers(data);
+				data = (const byte*)RB_SwapBuffers(data);
 				break;
 			case RC_BEGIN_UI:
 				ui.Begin();
-				data = ((beginUICommand_t*)data) + 1;
+				data += sizeof(beginUICommand_t);
 				break;
 			case RC_END_UI:
 				ui.End();
-				data = ((endUICommand_t*)data) + 1;
+				data += sizeof(endUICommand_t);
 				break;
 			case RC_BEGIN_3D:
 				world.Begin();
-				data = ((begin3DCommand_t*)data) + 1;
+				data += sizeof(begin3DCommand_t);
 				break;
 			case RC_END_3D:
 				world.End();
-				data = ((end3DCommand_t*)data) + 1;
+				data += sizeof(end3DCommand_t);
 				break;
 			case RC_SCREENSHOT:
 				data = RB_TakeScreenshotCmd((const screenshotCommand_t*)data);
 				break;
 			case RC_VIDEOFRAME:
-				data = RB_TakeVideoFrameCmd(data);
+				data = RB_TakeVideoFrameCmd((const videoFrameCommand_t*)data);
 				break;
-
 			case RC_END_OF_LIST:
+				return;
+
 			default:
+				assert(!"Invalid render command type");
 				return;
 		}
 	}

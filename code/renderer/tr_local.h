@@ -1196,8 +1196,6 @@ void	R_DeleteTextures();
 void	R_InitSkins();
 const skin_t* R_GetSkinByHandle( qhandle_t hSkin );
 
-const void *RB_TakeVideoFrameCmd( const void *data );
-
 extern const vec4_t r_mipBlendColors[16];
 
 //
@@ -1527,7 +1525,6 @@ struct videoFrameCommand_t : renderCommandBase_t {
 #pragma pack(pop)
 
 typedef enum {
-	// @TODO: Begin2D, End2D, Begin3D, End3D
 	RC_END_OF_LIST,
 	RC_BEGIN_UI,
 	RC_END_UI,
@@ -1575,7 +1572,8 @@ extern	backEndData_t*		backEndData;
 
 void GfxInfo_f( void );
 
-const void* RB_TakeScreenshotCmd( const screenshotCommand_t* cmd );
+const byte* RB_TakeScreenshotCmd( const screenshotCommand_t* cmd );
+const byte* RB_TakeVideoFrameCmd( const videoFrameCommand_t* cmd );
 
 //void RB_ExecuteRenderCommands( const void *data ); // @TODO:
 void RB_PushSingleStageShader( int stateBits, cullType_t cullType );
@@ -1588,7 +1586,7 @@ void R_BuildCloudData();
 
 void R_IssueRenderCommands();
 byte* R_FindRenderCommand( renderCommand_t type );
-byte* R_AllocateRenderCommand( int bytes, qbool endFrame );
+byte* R_AllocateRenderCommand( int bytes, int commandId, qbool endFrame );
 
 void R_AddDrawSurfCmd(drawSurf_t* drawSurfs, int numDrawSurfs, int numTranspSurfs );
 
@@ -1676,7 +1674,7 @@ struct IRenderPipeline
 	virtual void BeginTextureUpload(RHI::MappedTexture& mappedTexture, image_t* image) = 0;
 	virtual void EndTextureUpload(image_t* image) = 0;
 
-	virtual void ExecuteRenderCommands(const void* data) = 0;
+	virtual void ExecuteRenderCommands(const byte* data) = 0;
 
 	virtual void UISetColor(const uiSetColorCommand_t& cmd) = 0;
 	virtual void UIDrawQuad(const uiDrawQuadCommand_t& cmd) = 0;

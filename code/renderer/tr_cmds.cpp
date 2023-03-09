@@ -31,74 +31,87 @@ void R_IssueRenderCommands()
 	renderCommandList_t* cmdList = &backEndData->commands;
 
 	// add an end-of-list command
-	*(int *)(cmdList->cmds + cmdList->used) = RC_END_OF_LIST;
+	((renderCommandBase_t*)(cmdList->cmds + cmdList->used))->commandId = RC_END_OF_LIST;
 
 	// clear it out, in case this is a sync and not a buffer flip
 	cmdList->used = 0;
 
-	//RB_ExecuteRenderCommands( cmdList->cmds ); // @TODO:
 	renderPipeline->ExecuteRenderCommands( cmdList->cmds );
 }
 
 
-// @TODO: fix void*/byte usage
 byte* R_FindRenderCommand( renderCommand_t type )
 {
 	renderCommandList_t* cmdList = &backEndData->commands;
-	void* data = cmdList->cmds;
-	void* end = cmdList->cmds + cmdList->used;
+	byte* data = cmdList->cmds;
+	byte* end = cmdList->cmds + cmdList->used;
 
-	while ( 1 ) {
-		data = PADP(data, sizeof(void*));
+	for ( ;; ) {
+		const renderCommandBase_t* const cmd = (const renderCommandBase_t*)data;
 
-		if( *(int*)data == type )
+		if( cmd->commandId == type )
 			return (byte*)data;
 
 		if ( data >= end )
 			return NULL;
 
-		switch ( *(const int *)data ) {
+		switch ( cmd->commandId ) {
+		case RC_BEGIN_UI:
+			data += sizeof(beginUICommand_t);
+			break;
+		case RC_END_UI:
+			data += sizeof(endUICommand_t);
+			break;
+		case RC_BEGIN_3D:
+			data += sizeof(begin3DCommand_t);
+			break;
+		case RC_END_3D:
+			data += sizeof(end3DCommand_t);
+			break;
 		case RC_UI_SET_COLOR:
-			data = (char*)data + sizeof(uiSetColorCommand_t);
+			data += sizeof(uiSetColorCommand_t);
 			break;
 		case RC_UI_DRAW_QUAD:
-			data = (char*)data + sizeof(uiDrawQuadCommand_t);
+			data += sizeof(uiDrawQuadCommand_t);
 			break;
 		case RC_UI_DRAW_TRIANGLE:
-			data = (char*)data + sizeof(uiDrawTriangleCommand_t);
+			data += sizeof(uiDrawTriangleCommand_t);
 			break;
 		case RC_DRAW_SCENE_VIEW:
-			data = (char*)data + sizeof(drawSceneViewCommand_t);
+			data += sizeof(drawSceneViewCommand_t);
 			break;
 		case RC_BEGIN_FRAME:
-			data = (char*)data + sizeof(beginFrameCommand_t);
+			data += sizeof(beginFrameCommand_t);
 			break;
 		case RC_SWAP_BUFFERS:
-			data = (char*)data + sizeof(swapBuffersCommand_t);
+			data += sizeof(swapBuffersCommand_t);
 			break;
 		case RC_SCREENSHOT:
-			data = (char*)data + sizeof(screenshotCommand_t);
+			data += sizeof(screenshotCommand_t);
 			break;
 		case RC_VIDEOFRAME:
-			data = (char*)data + sizeof(videoFrameCommand_t);
+			data += sizeof(videoFrameCommand_t);
 			break;
-
 		case RC_END_OF_LIST:
+			return NULL;
+
 		default:
+			assert( !"Invalid render command type" );
 			return NULL;
 		}
 	}
 }
 
 
-static void RemoveRenderCommand( void* cmd, int cmdSize )
+static void RemoveRenderCommand( byte* cmd, int cmdSize )
 {
 	renderCommandList_t* cmdList = &backEndData->commands;
-	const int endOffset = ((char*)cmd + cmdSize) - (char*)cmdList->cmds;
+	const int endOffset = (cmd + cmdSize) - cmdList->cmds;
 	const int endBytes = cmdList->used - endOffset;
-	assert( cmd >= cmdList->cmds && ((char*)cmd + cmdSize) <= ((char*)cmdList->cmds + cmdList->used) );
+	assert( cmd >= cmdList->cmds );
+	assert( cmd + cmdSize <= cmdList->cmds + cmdList->used );
 
-	memmove( cmd, (char*)cmd + cmdSize, endBytes );
+	memmove( cmd, cmd + cmdSize, endBytes );
 	cmdList->used -= cmdSize;
 }
 
@@ -122,7 +135,7 @@ static qbool CanAllocateRenderCommand( qbool endFrame = qfalse )
 }
 
 
-byte* R_AllocateRenderCommand( int bytes, qbool endFrame )
+byte* R_AllocateRenderCommand( int bytes, int commandId, qbool endFrame )
 {
 	assert( bytes % 8 == 0 );
 
@@ -145,53 +158,52 @@ byte* R_AllocateRenderCommand( int bytes, qbool endFrame )
 
 	cmdList->used += bytes;
 
-	return cmdList->cmds + cmdList->used - bytes;
+	byte* const cmd = cmdList->cmds + cmdList->used - bytes;
+	((renderCommandBase_t*)cmd)->commandId = commandId;
+
+	return cmd;
 }
 
 
 template<typename T>
-static T* AllocateRenderCommand( qbool endFrame = qfalse )
+static T* AllocateRenderCommand( int commandId, qbool endFrame = qfalse )
 {
-	return (T*)R_AllocateRenderCommand( sizeof(T), endFrame );
+	return (T*)R_AllocateRenderCommand( sizeof(T), commandId, endFrame );
 }
 
 
 static void Begin2D()
 {
-	if(tr.renderMode != RM_UI)
-	{
+	if ( tr.renderMode != RM_UI ) {
 		tr.renderMode = RM_UI;
-		AllocateRenderCommand<beginUICommand_t>()->commandId = RC_BEGIN_UI;
+		AllocateRenderCommand<beginUICommand_t>( RC_BEGIN_UI );
 	}
 }
 
 
 static void End2D( qbool endFrame = qfalse )
 {
-	if(tr.renderMode == RM_UI)
-	{
+	if ( tr.renderMode == RM_UI ) {
 		tr.renderMode = RM_NONE;
-		AllocateRenderCommand<endUICommand_t>(endFrame)->commandId = RC_END_UI;
+		AllocateRenderCommand<endUICommand_t>( RC_END_UI, endFrame );
 	}
 }
 
 
 static void Begin3D()
 {
-	if(tr.renderMode != RM_3D)
-	{
+	if ( tr.renderMode != RM_3D ) {
 		tr.renderMode = RM_3D;
-		AllocateRenderCommand<begin3DCommand_t>()->commandId = RC_BEGIN_3D;
+		AllocateRenderCommand<begin3DCommand_t>( RC_BEGIN_3D );
 	}
 }
 
 
 static void End3D( qbool endFrame = qfalse )
 {
-	if(tr.renderMode == RM_3D)
-	{
+	if ( tr.renderMode == RM_3D ) {
 		tr.renderMode = RM_NONE;
-		AllocateRenderCommand<end3DCommand_t>(endFrame)->commandId = RC_END_3D;
+		AllocateRenderCommand<end3DCommand_t>( RC_END_3D, endFrame );
 	}
 }
 
@@ -204,7 +216,7 @@ void R_AddDrawSurfCmd( drawSurf_t* drawSurfs, int numDrawSurfs, int numTranspSur
 	End2D();
 	Begin3D();
 
-	drawSceneViewCommand_t* const cmd = AllocateRenderCommand<drawSceneViewCommand_t>();
+	drawSceneViewCommand_t* const cmd = AllocateRenderCommand<drawSceneViewCommand_t>(RC_DRAW_SCENE_VIEW);
 	assert( cmd );
 
 	qbool shouldClearColor = qfalse;
@@ -224,7 +236,6 @@ void R_AddDrawSurfCmd( drawSurf_t* drawSurfs, int numDrawSurfs, int numTranspSur
 		shouldClearColor = qtrue;
 	}
 
-	cmd->commandId = RC_DRAW_SCENE_VIEW;
 	cmd->drawSurfs = drawSurfs;
 	cmd->numDrawSurfs = numDrawSurfs;
 	cmd->numTranspSurfs = numTranspSurfs;
@@ -245,13 +256,12 @@ void RE_SetColor( const float* rgba )
 	End3D();
 	Begin2D();
 
-	uiSetColorCommand_t* const cmd = AllocateRenderCommand<uiSetColorCommand_t>();
+	uiSetColorCommand_t* const cmd = AllocateRenderCommand<uiSetColorCommand_t>(RC_UI_SET_COLOR);
 	assert( cmd );
 
 	if ( !rgba )
 		rgba = colorWhite;
 
-	cmd->commandId = RC_UI_SET_COLOR;
 	cmd->color[0] = rgba[0];
 	cmd->color[1] = rgba[1];
 	cmd->color[2] = rgba[2];
@@ -267,10 +277,9 @@ void RE_StretchPic( float x, float y, float w, float h, float s1, float t1, floa
 	End3D();
 	Begin2D();
 
-	uiDrawQuadCommand_t* const cmd = AllocateRenderCommand<uiDrawQuadCommand_t>();
+	uiDrawQuadCommand_t* const cmd = AllocateRenderCommand<uiDrawQuadCommand_t>(RC_UI_DRAW_QUAD);
 	assert( cmd );
 
-	cmd->commandId = RC_UI_DRAW_QUAD;
 	cmd->shader = R_GetShaderByHandle( hShader );
 	cmd->x = x;
 	cmd->y = y;
@@ -291,10 +300,9 @@ void RE_DrawTriangle( float x0, float y0, float x1, float y1, float x2, float y2
 	End3D();
 	Begin2D();
 
-	uiDrawTriangleCommand_t* const cmd = AllocateRenderCommand<uiDrawTriangleCommand_t>();
+	uiDrawTriangleCommand_t* const cmd = AllocateRenderCommand<uiDrawTriangleCommand_t>(RC_UI_DRAW_TRIANGLE);
 	assert( cmd );
 
-	cmd->commandId = RC_UI_DRAW_TRIANGLE;
 	cmd->shader = R_GetShaderByHandle( hShader );
 	cmd->x0 = x0;
 	cmd->y0 = y0;
@@ -326,7 +334,7 @@ void RE_BeginFrame( stereoFrame_t stereoFrame )
 	if ( r_delayedScreenshotPending ) {
 		r_delayedScreenshotFrame++;
 		if ( r_delayedScreenshotFrame >= 2 ) {
-			screenshotCommand_t* const cmd = AllocateRenderCommand<screenshotCommand_t>();
+			screenshotCommand_t* const cmd = AllocateRenderCommand<screenshotCommand_t>( RC_SCREENSHOT );
 			if ( cmd ) {
 				*cmd = r_delayedScreenshot;
 				r_delayedScreenshotPending = qfalse;
@@ -338,7 +346,7 @@ void RE_BeginFrame( stereoFrame_t stereoFrame )
 	//
 	// draw buffer stuff
 	//
-	AllocateRenderCommand<beginFrameCommand_t>()->commandId = RC_BEGIN_FRAME;
+	AllocateRenderCommand<beginFrameCommand_t>( RC_BEGIN_FRAME );
 }
 
 
@@ -361,7 +369,7 @@ void RE_EndFrame( int* pcFE, int* pc2D, int* pc3D, qbool render )
 			// save and remove the command so we can push it back after the frame's done
 			r_delayedScreenshot = *ssCmd;
 			r_delayedScreenshot.delayed = qtrue;
-			RemoveRenderCommand( ssCmd, sizeof(screenshotCommand_t) );
+			RemoveRenderCommand( (byte*)ssCmd, sizeof(screenshotCommand_t) );
 			delayScreenshot = qtrue;
 		}
 	}
@@ -373,9 +381,9 @@ void RE_EndFrame( int* pcFE, int* pc2D, int* pc3D, qbool render )
 	End3D( qtrue );
 
 	if ( render ) {
-		AllocateRenderCommand<swapBuffersCommand_t>( qtrue )->commandId = RC_SWAP_BUFFERS;
+		AllocateRenderCommand<swapBuffersCommand_t>( RC_SWAP_BUFFERS, qtrue );
 		if ( delayScreenshot ) {
-			screenshotCommand_t* const cmd = AllocateRenderCommand<screenshotCommand_t>( qtrue );
+			screenshotCommand_t* const cmd = AllocateRenderCommand<screenshotCommand_t>( RC_SCREENSHOT, qtrue );
 			*cmd = r_delayedScreenshot;
 		}
 	} else {
@@ -409,10 +417,9 @@ void RE_TakeVideoFrame( int width, int height, byte *captureBuffer, byte *encode
 	End2D();
 	End3D();
 
-	videoFrameCommand_t* const cmd = AllocateRenderCommand<videoFrameCommand_t>();
+	videoFrameCommand_t* const cmd = AllocateRenderCommand<videoFrameCommand_t>( RC_VIDEOFRAME );
 	assert( cmd );
 
-	cmd->commandId = RC_VIDEOFRAME;
 	cmd->width = width;
 	cmd->height = height;
 	cmd->captureBuffer = captureBuffer;

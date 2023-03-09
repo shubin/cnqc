@@ -185,7 +185,7 @@ static void RB_TakeScreenshotJPG( int x, int y, int width, int height, const cha
 }
 
 
-const void* RB_TakeScreenshotCmd( const screenshotCommand_t* cmd )
+const byte* RB_TakeScreenshotCmd( const screenshotCommand_t* cmd )
 {
 	// NOTE: the current read buffer is the last FBO color attachment texture that was written to
 	// therefore, ReadPixels will get the latest data even with double/triple buffering enabled
@@ -207,7 +207,7 @@ const void* RB_TakeScreenshotCmd( const screenshotCommand_t* cmd )
 		r_delayedScreenshotFrame = 0;
 	}
 
-	return (const void*)(cmd + 1);
+	return (const byte*)(cmd + 1);
 }
 
 
@@ -228,7 +228,7 @@ static void R_TakeScreenshot( const char* ext, screenshotCommand_t::ss_type type
 	} else {
 		if ( R_FindRenderCommand( RC_SCREENSHOT ) )
 			return;
-		cmd = (screenshotCommand_t*)R_AllocateRenderCommand( sizeof(screenshotCommand_t), qfalse );
+		cmd = (screenshotCommand_t*)R_AllocateRenderCommand( sizeof(screenshotCommand_t), RC_SCREENSHOT, qfalse );
 		if ( !cmd )
 			return;
 		cmd->delayed = qfalse;
@@ -282,10 +282,8 @@ static void R_ScreenShotNoConJPG_f()
 //============================================================================
 
 
-const void *RB_TakeVideoFrameCmd( const void *data )
+const byte *RB_TakeVideoFrameCmd( const videoFrameCommand_t *cmd )
 {
-	const videoFrameCommand_t* cmd = (const videoFrameCommand_t*)data;
-
 	if( cmd->motionJpeg )
 	{
 		//@TODO: gal.ReadPixels( 0, 0, cmd->width, cmd->height, 1, CS_RGBA, cmd->captureBuffer );
@@ -299,7 +297,7 @@ const void *RB_TakeVideoFrameCmd( const void *data )
 		ri.CL_WriteAVIVideoFrame( cmd->captureBuffer, frameSize );
 	}
 
-	return (const void *)(cmd + 1);
+	return (const byte *)(cmd + 1);
 }
 
 
