@@ -308,6 +308,8 @@ void World::BeginFrame()
 
 void World::Begin()
 {
+	grp.renderMode = RenderMode::World;
+
 	if(backEnd.viewParms.isPortal)
 	{
 		float plane[4];
@@ -337,19 +339,19 @@ void World::Begin()
 		memset(clipPlane, 0, sizeof(clipPlane));
 	}
 
-	if(grp.renderMode == RenderMode::World)
-	{
-		return;
-	}
-
 	CmdSetViewportAndScissor(backEnd.viewParms);
 	batchOldDepthHack = false;
 	batchDepthHack = false;
 
 	TextureBarrier tb(depthTexture, ResourceStates::DepthWriteBit);
 	CmdBarrier(1, &tb);
+}
 
-	grp.renderMode = RenderMode::World;
+void World::End()
+{
+	EndBatch();
+
+	grp.renderMode = RenderMode::None;
 }
 
 void World::DrawPrePass()

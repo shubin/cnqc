@@ -27,9 +27,6 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 #include "hlsl/imgui_ps.h"
 
 
-// @TODO: bake the mip level into the TextureId so we can inspect mips in the future image explorer
-
-
 #define MAX_VERTEX_COUNT (64 << 10)
 #define MAX_INDEX_COUNT  (MAX_VERTEX_COUNT << 3)
 
@@ -154,6 +151,7 @@ void ImGUI::Draw()
 	// avoid rendering when minimized
 	if(drawData->DisplaySize.x <= 0.0f || drawData->DisplaySize.y <= 0.0f)
 	{
+		grp.renderMode = RenderMode::None;
 		return;
 	}
 
@@ -246,6 +244,8 @@ void ImGUI::Draw()
 		globalIdxOffset += cmdList->IdxBuffer.Size;
 		globalVtxOffset += cmdList->VtxBuffer.Size;
 	}
+
+	grp.renderMode = RenderMode::None;
 }
 
 void ImGUI::SafeBeginFrame()

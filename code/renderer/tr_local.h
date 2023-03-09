@@ -867,6 +867,14 @@ typedef struct {
 #define FOG_TABLE_SIZE		256
 
 
+enum renderMode_t
+{
+	RM_NONE,
+	RM_UI,
+	RM_3D
+};
+
+
 /*
 ** trGlobals_t
 **
@@ -952,6 +960,8 @@ typedef struct {
 	float		mipFilter[4]; // only used by the GPU generators
 
 	qbool		worldSurface; // is the currently added draw surface a world surface?
+
+	renderMode_t	renderMode;
 } trGlobals_t;
 
 extern backEndState_t	backEnd;
@@ -1443,43 +1453,37 @@ typedef struct {
 	int		used;
 } renderCommandList_t;
 
-typedef struct {
+#pragma pack(push, 8)
+
+struct renderCommandBase_t {
 	int		commandId;
+	int		padding;
+};
+
+typedef renderCommandBase_t beginFrameCommand_t;
+typedef renderCommandBase_t swapBuffersCommand_t;
+typedef renderCommandBase_t beginUICommand_t;
+typedef renderCommandBase_t endUICommand_t;
+typedef renderCommandBase_t begin3DCommand_t;
+typedef renderCommandBase_t end3DCommand_t;
+
+struct uiSetColorCommand_t : renderCommandBase_t {
 	float	color[4];
-} uiSetColorCommand_t;
+};
 
-typedef struct {
-	int		commandId;
-} beginFrameCommand_t;
-
-typedef struct {
-	int		commandId;
-	image_t	*image;
-	int		width;
-	int		height;
-	void	*data;
-} subImageCommand_t;
-
-typedef struct {
-	int		commandId;
-} swapBuffersCommand_t;
-
-typedef struct {
-	int		commandId;
+struct endFrameCommand_t : renderCommandBase_t {
 	int		buffer;
-} endFrameCommand_t;
+};
 
-typedef struct {
-	int		commandId;
+struct uiDrawQuadCommand_t : renderCommandBase_t {
 	const shader_t* shader;
 	float	x, y;
 	float	w, h;
 	float	s1, t1;
 	float	s2, t2;
-} uiDrawQuadCommand_t;
+};
 
-typedef struct {
-	int		commandId;
+struct uiDrawTriangleCommand_t : renderCommandBase_t {
 	const shader_t* shader;
 	float	x0, y0;
 	float	x1, y1;
@@ -1487,10 +1491,9 @@ typedef struct {
 	float	s0, t0;
 	float	s1, t1;
 	float	s2, t2;
-} uiDrawTriangleCommand_t;
+};
 
-typedef struct {
-	int		commandId;
+struct drawSceneViewCommand_t : renderCommandBase_t {
 	trRefdef_t	refdef;
 	viewParms_t	viewParms;
 	int numDrawSurfs;
@@ -1498,10 +1501,9 @@ typedef struct {
 	drawSurf_t* drawSurfs;
 	qbool shouldClearColor;
 	vec4_t clearColor;
-} drawSceneViewCommand_t;
+};
 
-typedef struct {
-	int commandId;
+struct screenshotCommand_t : renderCommandBase_t {
 	int x;
 	int y;
 	int width;
@@ -1511,25 +1513,29 @@ typedef struct {
 	float conVis;	// if > 0, this is a delayed screenshot and we need to 
 					// restore the console visibility to that value
 	qbool delayed;
-} screenshotCommand_t;
+};
 
-const void* RB_TakeScreenshotCmd( const screenshotCommand_t* cmd );
+struct videoFrameCommand_t : renderCommandBase_t {
+	int		commandId;
+	int		width;
+	int		height;
+	byte	*captureBuffer;
+	byte	*encodeBuffer;
+	qbool	motionJpeg;
+};
 
-typedef struct {
-	int						commandId;
-	int						width;
-	int						height;
-	byte					*captureBuffer;
-	byte					*encodeBuffer;
-	qbool			motionJpeg;
-} videoFrameCommand_t;
+#pragma pack(pop)
 
 typedef enum {
 	// @TODO: Begin2D, End2D, Begin3D, End3D
 	RC_END_OF_LIST,
+	RC_BEGIN_UI,
+	RC_END_UI,
 	RC_UI_SET_COLOR,
 	RC_UI_DRAW_QUAD,
 	RC_UI_DRAW_TRIANGLE,
+	RC_BEGIN_3D,
+	RC_END_3D,
 	RC_DRAW_SCENE_VIEW,
 	RC_BEGIN_FRAME,
 	RC_SWAP_BUFFERS,
@@ -1569,6 +1575,8 @@ extern	backEndData_t*		backEndData;
 
 void GfxInfo_f( void );
 
+const void* RB_TakeScreenshotCmd( const screenshotCommand_t* cmd );
+
 //void RB_ExecuteRenderCommands( const void *data ); // @TODO:
 void RB_PushSingleStageShader( int stateBits, cullType_t cullType );
 void RB_PopShader();
@@ -1579,8 +1587,8 @@ void RB_DrawSky();
 void R_BuildCloudData();
 
 void R_IssueRenderCommands();
-void* R_FindRenderCommand( renderCommand_t type );
-void *R_GetCommandBuffer( int bytes, qbool endFrame );
+byte* R_FindRenderCommand( renderCommand_t type );
+byte* R_AllocateRenderCommand( int bytes, qbool endFrame );
 
 void R_AddDrawSurfCmd(drawSurf_t* drawSurfs, int numDrawSurfs, int numTranspSurfs );
 

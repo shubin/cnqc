@@ -290,6 +290,7 @@ struct World
 	void Init();
 	void BeginFrame();
 	void Begin();
+	void End();
 	void DrawPrePass();
 	void BeginBatch(const shader_t* shader, bool hasStaticGeo);
 	void EndBatch();
@@ -365,6 +366,7 @@ struct UI
 	void Init();
 	void BeginFrame();
 	void Begin();
+	void End();
 	void DrawBatch();
 	void UISetColor(const uiSetColorCommand_t& cmd);
 	void UIDrawQuad(const uiDrawQuadCommand_t& cmd);
@@ -605,7 +607,7 @@ struct GRP : IRenderPipeline
 	void UISetColor(const uiSetColorCommand_t& cmd) override { ui.UISetColor(cmd); }
 	void UIDrawQuad(const uiDrawQuadCommand_t& cmd) override { ui.UIDrawQuad(cmd); }
 	void UIDrawTriangle(const uiDrawTriangleCommand_t& cmd) override { ui.UIDrawTriangle(cmd); }
-	void DrawSceneView(const drawSceneViewCommand_t& cmd) override { EndUI(); world.DrawSceneView(cmd); }
+	void DrawSceneView(const drawSceneViewCommand_t& cmd) override { world.DrawSceneView(cmd); }
 	void EndScene(const viewParms_t& parms) override { smaa.Draw(parms); }
 	void TessellationOverflow() override { world.RestartBatch(); }
 	void DrawSkyBox() override { world.DrawSkyBox(); }
@@ -615,8 +617,6 @@ struct GRP : IRenderPipeline
 
 	uint32_t BeginRenderPass(const char* name, float r, float g, float b);
 	void EndRenderPass(uint32_t index);
-
-	void EndUI();
 
 	void DrawGUI();
 
@@ -629,7 +629,7 @@ struct GRP : IRenderPipeline
 	PostProcess post;
 	SMAA smaa;
 	bool firstInit = true;
-	RenderMode::Id renderMode;
+	RenderMode::Id renderMode; // necessary for sampler selection, useful for debugging
 	float frameSeed;
 
 	// @TODO: what's up with rootSignature and uberRootSignature?

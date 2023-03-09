@@ -261,7 +261,6 @@ void GRP::BeginFrame()
 void GRP::EndFrame()
 {
 	DrawGUI();
-	EndUI();
 	R_DrawGUI();
 	imgui.Draw();
 	post.Draw();
@@ -455,15 +454,6 @@ void GRP::EndRenderPass(uint32_t index)
 	RenderPassQueries& q = f.passes[index];
 	q.cpuDurationUS = (uint32_t)(Sys_Microseconds() - q.cpuStartUS);
 	CmdEndDurationQuery(q.queryIndex);
-}
-
-void GRP::EndUI()
-{
-	ui.DrawBatch();
-	if(renderMode == RenderMode::UI)
-	{
-		EndRenderPass(ui.renderPassIndex);
-	}
 }
 
 void GRP::DrawGUI()
@@ -703,8 +693,6 @@ void GRP::ExecuteRenderCommands(const void* data)
 {
 	for(;;)
 	{
-		data = PADP(data, sizeof(void*));
-
 		switch(*(const int*)data)
 		{
 			case RC_UI_SET_COLOR:
@@ -728,6 +716,22 @@ void GRP::ExecuteRenderCommands(const void* data)
 				break;
 			case RC_SWAP_BUFFERS:
 				data = RB_SwapBuffers(data);
+				break;
+			case RC_BEGIN_UI:
+				ui.Begin();
+				data = ((beginUICommand_t*)data) + 1;
+				break;
+			case RC_END_UI:
+				ui.End();
+				data = ((endUICommand_t*)data) + 1;
+				break;
+			case RC_BEGIN_3D:
+				world.Begin();
+				data = ((begin3DCommand_t*)data) + 1;
+				break;
+			case RC_END_3D:
+				world.End();
+				data = ((end3DCommand_t*)data) + 1;
 				break;
 			case RC_SCREENSHOT:
 				data = RB_TakeScreenshotCmd((const screenshotCommand_t*)data);

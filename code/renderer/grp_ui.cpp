@@ -101,10 +101,7 @@ void UI::BeginFrame()
 
 void UI::Begin()
 {
-	if(grp.renderMode == RenderMode::UI)
-	{
-		return;
-	}
+	grp.renderMode = RenderMode::UI;
 
 	renderPassIndex = grp.BeginRenderPass("UI", 0.0f, 0.85f, 1.0f);
 
@@ -124,8 +121,15 @@ void UI::Begin()
 	vertexRC.scale[0] = 2.0f / glConfig.vidWidth;
 	vertexRC.scale[1] = 2.0f / glConfig.vidHeight;
 	CmdSetRootConstants(rootSignature, ShaderStage::Vertex, &vertexRC);
+}
 
-	grp.renderMode = RenderMode::UI;
+void UI::End()
+{
+	DrawBatch();
+
+	grp.EndRenderPass(renderPassIndex);
+
+	grp.renderMode = RenderMode::None;
 }
 
 void UI::DrawBatch()
@@ -134,8 +138,6 @@ void UI::DrawBatch()
 	{
 		return;
 	}
-
-	Begin();
 
 	// @TODO: support for custom shaders?
 	PixelRC pixelRC = {};
@@ -167,8 +169,6 @@ void UI::UIDrawQuad(const uiDrawQuadCommand_t& cmd)
 	{
 		return;
 	}
-
-	Begin();
 
 	if(shader != cmd.shader)
 	{
@@ -221,8 +221,6 @@ void UI::UIDrawTriangle(const uiDrawTriangleCommand_t& cmd)
 	{
 		return;
 	}
-
-	Begin();
 
 	if(shader != cmd.shader)
 	{
