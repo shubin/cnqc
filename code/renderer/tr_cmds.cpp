@@ -22,6 +22,15 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_local.h"
 
 
+#define RC(Enum, Type) (int)sizeof(Type),
+const int renderCommandSizes[RC_COUNT + 1] =
+{
+	RENDER_COMMAND_LIST(RC)
+	0
+};
+#undef RC
+
+
 // we reserve space for frame ending commands as well as transition commands (begin/end 2D/3D rendering)
 static const int CmdListReservedBytes = (int)(sizeof(swapBuffersCommand_t) + sizeof(screenshotCommand_t) + 16 * sizeof(void*));
 
@@ -47,58 +56,23 @@ byte* R_FindRenderCommand( renderCommand_t type )
 	byte* end = cmdList->cmds + cmdList->used;
 
 	for ( ;; ) {
-		const renderCommandBase_t* const cmd = (const renderCommandBase_t*)data;
+		const int commandId = ((const renderCommandBase_t*)data)->commandId;
 
-		if( cmd->commandId == type )
+		if( commandId == type )
 			return (byte*)data;
 
 		if ( data >= end )
 			return NULL;
 
-		switch ( cmd->commandId ) {
-		case RC_BEGIN_UI:
-			data += sizeof(beginUICommand_t);
-			break;
-		case RC_END_UI:
-			data += sizeof(endUICommand_t);
-			break;
-		case RC_BEGIN_3D:
-			data += sizeof(begin3DCommand_t);
-			break;
-		case RC_END_3D:
-			data += sizeof(end3DCommand_t);
-			break;
-		case RC_UI_SET_COLOR:
-			data += sizeof(uiSetColorCommand_t);
-			break;
-		case RC_UI_DRAW_QUAD:
-			data += sizeof(uiDrawQuadCommand_t);
-			break;
-		case RC_UI_DRAW_TRIANGLE:
-			data += sizeof(uiDrawTriangleCommand_t);
-			break;
-		case RC_DRAW_SCENE_VIEW:
-			data += sizeof(drawSceneViewCommand_t);
-			break;
-		case RC_BEGIN_FRAME:
-			data += sizeof(beginFrameCommand_t);
-			break;
-		case RC_SWAP_BUFFERS:
-			data += sizeof(swapBuffersCommand_t);
-			break;
-		case RC_SCREENSHOT:
-			data += sizeof(screenshotCommand_t);
-			break;
-		case RC_VIDEOFRAME:
-			data += sizeof(videoFrameCommand_t);
-			break;
-		case RC_END_OF_LIST:
-			return NULL;
-
-		default:
+		if ( commandId < 0 || commandId >= RC_COUNT ) {
 			assert( !"Invalid render command type" );
 			return NULL;
 		}
+
+		if ( commandId == RC_END_OF_LIST )
+			return NULL;
+
+		data += renderCommandSizes[commandId];
 	}
 }
 

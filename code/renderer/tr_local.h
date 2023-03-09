@@ -1524,21 +1524,29 @@ struct videoFrameCommand_t : renderCommandBase_t {
 
 #pragma pack(pop)
 
-typedef enum {
-	RC_END_OF_LIST,
-	RC_BEGIN_UI,
-	RC_END_UI,
-	RC_UI_SET_COLOR,
-	RC_UI_DRAW_QUAD,
-	RC_UI_DRAW_TRIANGLE,
-	RC_BEGIN_3D,
-	RC_END_3D,
-	RC_DRAW_SCENE_VIEW,
-	RC_BEGIN_FRAME,
-	RC_SWAP_BUFFERS,
-	RC_SCREENSHOT,
-	RC_VIDEOFRAME
-} renderCommand_t;
+#define RENDER_COMMAND_LIST(Cmd) \
+	Cmd(RC_END_OF_LIST, renderCommandBase_t) \
+	Cmd(RC_BEGIN_UI, beginUICommand_t) \
+	Cmd(RC_END_UI, endUICommand_t) \
+	Cmd(RC_UI_SET_COLOR, uiSetColorCommand_t) \
+	Cmd(RC_UI_DRAW_QUAD, uiDrawQuadCommand_t) \
+	Cmd(RC_UI_DRAW_TRIANGLE, uiDrawTriangleCommand_t) \
+	Cmd(RC_BEGIN_3D, begin3DCommand_t) \
+	Cmd(RC_END_3D, end3DCommand_t) \
+	Cmd(RC_DRAW_SCENE_VIEW, drawSceneViewCommand_t) \
+	Cmd(RC_BEGIN_FRAME, beginFrameCommand_t) \
+	Cmd(RC_SWAP_BUFFERS, swapBuffersCommand_t) \
+	Cmd(RC_SCREENSHOT, screenshotCommand_t) \
+	Cmd(RC_VIDEOFRAME, videoFrameCommand_t)
+
+#define RC(Enum, Type) Enum,
+enum renderCommand_t {
+	RENDER_COMMAND_LIST(RC)
+	RC_COUNT
+};
+#undef RC
+
+extern const int renderCommandSizes[RC_COUNT + 1];
 
 
 #define MAX_DLIGHTS		32			// completely arbitrary now  :D

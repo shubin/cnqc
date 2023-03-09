@@ -693,61 +693,64 @@ void GRP::ExecuteRenderCommands(const byte* data)
 {
 	for(;;)
 	{
-		const renderCommandBase_t* const cmd = (const renderCommandBase_t*)data;
+		const int commandId = ((const renderCommandBase_t*)data)->commandId;
 
-		switch(cmd->commandId)
+		if(commandId < 0 || commandId >= RC_COUNT)
+		{
+			assert(!"Invalid render command type");
+			return;
+		}
+
+		if(commandId == RC_END_OF_LIST)
+		{
+			return;
+		}
+
+		switch(commandId)
 		{
 			case RC_UI_SET_COLOR:
 				UISetColor(*(const uiSetColorCommand_t*)data);
-				data += sizeof(uiSetColorCommand_t);
 				break;
 			case RC_UI_DRAW_QUAD:
 				UIDrawQuad(*(const uiDrawQuadCommand_t*)data);
-				data += sizeof(uiDrawQuadCommand_t);
 				break;
 			case RC_UI_DRAW_TRIANGLE:
 				UIDrawTriangle(*(const uiDrawTriangleCommand_t*)data);
-				data += sizeof(uiDrawTriangleCommand_t);
 				break;
 			case RC_DRAW_SCENE_VIEW:
 				DrawSceneView(*(const drawSceneViewCommand_t*)data);
-				data += sizeof(drawSceneViewCommand_t);
 				break;
 			case RC_BEGIN_FRAME:
-				data = (const byte*)RB_BeginFrame(data);
+				RB_BeginFrame(data);
 				break;
 			case RC_SWAP_BUFFERS:
-				data = (const byte*)RB_SwapBuffers(data);
+				RB_SwapBuffers(data);
 				break;
 			case RC_BEGIN_UI:
 				ui.Begin();
-				data += sizeof(beginUICommand_t);
 				break;
 			case RC_END_UI:
 				ui.End();
-				data += sizeof(endUICommand_t);
 				break;
 			case RC_BEGIN_3D:
 				world.Begin();
-				data += sizeof(begin3DCommand_t);
 				break;
 			case RC_END_3D:
 				world.End();
-				data += sizeof(end3DCommand_t);
 				break;
 			case RC_SCREENSHOT:
-				data = RB_TakeScreenshotCmd((const screenshotCommand_t*)data);
+				RB_TakeScreenshotCmd((const screenshotCommand_t*)data);
 				break;
 			case RC_VIDEOFRAME:
-				data = RB_TakeVideoFrameCmd((const videoFrameCommand_t*)data);
+				RB_TakeVideoFrameCmd((const videoFrameCommand_t*)data);
 				break;
-			case RC_END_OF_LIST:
-				return;
 
 			default:
-				assert(!"Invalid render command type");
+				assert(!"Unsupported render command type");
 				return;
 		}
+
+		data += renderCommandSizes[commandId];
 	}
 }
 
