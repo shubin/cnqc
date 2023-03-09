@@ -1085,32 +1085,23 @@ void CL_KeyEvent( int key, qbool down, unsigned time )
 	}
 #endif
 
-#if defined(_DEBUG) || 1
-	// @TODO: CVars to remap the keys?
-	if ( down && key == K_F1 ) {
-		if ( Cvar_VariableIntegerValue( "r_debugUI" ) ) {
-			Cvar_Set( "r_debugUI", "0" );
-			Cvar_Set( "r_debugInput", "0" );
-		} else {
-			Cvar_Set( "r_debugUI", "1" );
-			Cvar_Set( "r_debugInput", "1" );
+	// @TODO: move to cl_imgui.cpp
+	if(down)
+	{
+		const char* const cmd = keys[key].binding;
+		if(cmd != NULL)
+		{
+			if(!Q_stricmp(cmd, "togglegui") ||
+				!Q_stricmp(cmd, "toggleguiinput"))
+			{
+				Cbuf_AddText(cmd);
+				Cbuf_AddText("\n");
+				return;
+			}
 		}
-		return;
 	}
-	if ( down && key == K_F2 ) {
-		if ( Cvar_VariableIntegerValue( "r_debugInput" ) ) {
-			Cvar_Set( "r_debugInput", "0" );
-		} else {
-			Cvar_Set( "r_debugInput", "1" );
-		}
-		return;
-	}
-	if ( down && key == K_F3 ) {
-		Cbuf_AddText( "vid_restart\n" );
-		return;
-	}
-#endif
 
+	// @TODO: move to cl_imgui.cpp
 	if ( cls.keyCatchers & KEYCATCH_IMGUI ) {
 		if ( down && (key == '`' || key == '~') ) {
 			Cvar_Set( "r_debugUI", "0" );

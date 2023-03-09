@@ -267,8 +267,29 @@ static void ImGUI_ApplyTheme()
 	style.TabRounding = 4;
 }
 
+static void ToggleGui_f()
+{
+	const bool guiActive = Cvar_VariableIntegerValue("r_debugUI") != 0;
+	const char* const newValue = guiActive ? "0" : "1";
+	Cvar_Set("r_debugUI", newValue);
+	Cvar_Set("r_debugInput", newValue);
+}
+
+static void ToggleGuiInput_f()
+{
+	Cvar_Set("r_debugInput", Cvar_VariableIntegerValue("r_debugInput") ? "0" : "1");
+}
+
+static const cmdTableItem_t imgui_cmds[] =
+{
+	{ "togglegui", &ToggleGui_f, NULL, "toggles the CNQ3 GUI" },
+	{ "toggleguiinput", &ToggleGuiInput_f, NULL, "toggles CNQ3 GUI input capture" }
+};
+
 void CL_IMGUI_Init()
 {
+	Cmd_RegisterArray(imgui_cmds, MODULE_CLIENT);
+
 	ImGui::CreateContext();
 	ImPlot::CreateContext();
 
@@ -404,4 +425,6 @@ void CL_IMGUI_Shutdown()
 {
 	ImPlot::DestroyContext();
 	ImGui::DestroyContext();
+
+	Cmd_UnregisterArray(imgui_cmds);
 }
