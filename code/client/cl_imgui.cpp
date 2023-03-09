@@ -388,32 +388,58 @@ void CL_IMGUI_MouseEvent(int dx, int dy)
 	ImGui::GetIO().AddMousePosEvent(dx, dy);
 }
 
-void CL_IMGUI_KeyEvent(int key, qbool down)
+qbool CL_IMGUI_KeyEvent(int key, qbool down, const char* cmd)
 {
-	unsigned int imguiKey;
-
-	ImGuiIO& io = ImGui::GetIO();
-	switch(key)
+	if(down)
 	{
-		case K_MOUSE1:
-		case K_MOUSE2:
-		case K_MOUSE3:
-		case K_MOUSE4:
-		case K_MOUSE5:
-			io.AddMouseButtonEvent(key - K_MOUSE1, !!down);
-			break;
-		case K_MWHEELDOWN:
-		case K_MWHEELUP:
-			io.AddMouseWheelEvent(0.0f, key == K_MWHEELDOWN ? -1.0f : 1.0f);
-			break;
-		default:	
-			imguiKey = (unsigned int)keyMap[key];
-			if(imguiKey != 0xFFFFFFFF)
+		if(cmd != NULL)
+		{
+			if(!Q_stricmp(cmd, "togglegui") || !Q_stricmp(cmd, "toggleguiinput"))
 			{
-				io.AddKeyEvent((ImGuiKey)imguiKey, !!down);
+				Cbuf_AddText(cmd);
+				Cbuf_AddText("\n");
+				return qtrue;
 			}
-			break;
+		}
 	}
+
+	if(cls.keyCatchers & KEYCATCH_IMGUI)
+	{
+		if(down && (key == '`' || key == '~'))
+		{
+			Cvar_Set("r_debugUI", "0");
+			Cvar_Set("r_debugInput", "0");
+			return qtrue;
+		}
+
+		unsigned int imguiKey;
+		ImGuiIO& io = ImGui::GetIO();
+		switch(key)
+		{
+			case K_MOUSE1:
+			case K_MOUSE2:
+			case K_MOUSE3:
+			case K_MOUSE4:
+			case K_MOUSE5:
+				io.AddMouseButtonEvent(key - K_MOUSE1, !!down);
+				break;
+			case K_MWHEELDOWN:
+			case K_MWHEELUP:
+				io.AddMouseWheelEvent(0.0f, key == K_MWHEELDOWN ? -1.0f : 1.0f);
+				break;
+			default:
+				imguiKey = (unsigned int)keyMap[key];
+				if(imguiKey != 0xFFFFFFFF)
+				{
+					io.AddKeyEvent((ImGuiKey)imguiKey, !!down);
+				}
+				break;
+		}
+		
+		return qtrue;
+	}
+
+	return qfalse;
 }
 
 void CL_IMGUI_CharEvent(char key)

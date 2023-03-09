@@ -1085,30 +1085,7 @@ void CL_KeyEvent( int key, qbool down, unsigned time )
 	}
 #endif
 
-	// @TODO: move to cl_imgui.cpp
-	if(down)
-	{
-		const char* const cmd = keys[key].binding;
-		if(cmd != NULL)
-		{
-			if(!Q_stricmp(cmd, "togglegui") ||
-				!Q_stricmp(cmd, "toggleguiinput"))
-			{
-				Cbuf_AddText(cmd);
-				Cbuf_AddText("\n");
-				return;
-			}
-		}
-	}
-
-	// @TODO: move to cl_imgui.cpp
-	if ( cls.keyCatchers & KEYCATCH_IMGUI ) {
-		if ( down && (key == '`' || key == '~') ) {
-			Cvar_Set( "r_debugUI", "0" );
-			Cvar_Set( "r_debugInput", "0" );
-			return;
-		}
-		CL_IMGUI_KeyEvent( key, down );
+	if (CL_IMGUI_KeyEvent( key, down, keys[key].binding )) {
 		return;
 	}
 

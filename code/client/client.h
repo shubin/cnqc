@@ -589,7 +589,7 @@ void CL_NDP_HandleError();
 void CL_IMGUI_Init();
 void CL_IMGUI_Frame();
 void CL_IMGUI_MouseEvent( int dx, int dy );
-void CL_IMGUI_KeyEvent( int key, qbool down );
+qbool CL_IMGUI_KeyEvent( int key, qbool down, const char* cmd ); // returns qtrue when handled
 void CL_IMGUI_CharEvent( char key );
 void CL_IMGUI_Shutdown();
 
