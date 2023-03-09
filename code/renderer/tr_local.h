@@ -1500,8 +1500,6 @@ struct drawSceneViewCommand_t : renderCommandBase_t {
 };
 
 struct screenshotCommand_t : renderCommandBase_t {
-	int x;
-	int y;
 	int width;
 	int height;
 	const char* fileName;
@@ -1686,6 +1684,8 @@ struct IRenderPipeline
 	virtual void TessellationOverflow() = 0;
 	virtual void DrawSkyBox() = 0;
 	virtual void DrawClouds() = 0;
+
+	virtual void ReadPixels(int w, int h, int alignment, colorSpace_t colorSpace, void* out) = 0;
 };
 
 extern IRenderPipeline* renderPipeline;

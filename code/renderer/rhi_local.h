@@ -733,7 +733,10 @@ namespace RHI
 	void BeginTempCommandList();
 	void EndTempCommandList();
 
-	void FinalizeTexture(HTexture texture);
+	void BeginTextureReadback(MappedTexture& mappedTexture, HTexture texture);
+	void EndTextureReadback(HTexture texture);
+
+	void FinalizeTexture(HTexture texture); // @TODO: nuke
 
 	void WaitUntilDeviceIsIdle();
 

@@ -610,6 +610,8 @@ struct GRP : IRenderPipeline
 	void DrawSkyBox() override { world.DrawSkyBox(); }
 	void DrawClouds() override { world.DrawClouds(); }
 
+	void ReadPixels(int w, int h, int alignment, colorSpace_t colorSpace, void* out) override;
+
 	void BeginFrame();
 	void EndFrame();
 

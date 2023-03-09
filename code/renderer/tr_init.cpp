@@ -158,7 +158,7 @@ void R_ConfigureVideoMode( int desktopWidth, int desktopHeight )
 ///////////////////////////////////////////////////////////////
 
 
-static void RB_TakeScreenshotTGA( int x, int y, int width, int height, const char* fileName )
+static void RB_TakeScreenshotTGA( int width, int height, const char* fileName )
 {
 	int c = (width * height * 3);
 	RI_AutoPtr p( sizeof(TargaHeader) + c );
@@ -169,15 +169,15 @@ static void RB_TakeScreenshotTGA( int x, int y, int width, int height, const cha
 	tga->width = LittleShort( width );
 	tga->height = LittleShort( height );
 	tga->pixel_size = 24;
-	//@TODO: gal.ReadPixels( x, y, width, height, 1, CS_BGR, p + sizeof(TargaHeader) );
+	renderPipeline->ReadPixels( width, height, 1, CS_BGR, p + sizeof(TargaHeader) );
 	ri.FS_WriteFile( fileName, p, sizeof(TargaHeader) + c );
 }
 
 
-static void RB_TakeScreenshotJPG( int x, int y, int width, int height, const char* fileName )
+static void RB_TakeScreenshotJPG( int width, int height, const char* fileName )
 {
 	RI_AutoPtr p( width * height * 4 );
-	//@TODO: gal.ReadPixels( x, y, width, height, 1, CS_RGBA, p );
+	renderPipeline->ReadPixels( width, height, 1, CS_RGBA, p );
 
 	RI_AutoPtr out( width * height * 4 );
 	int n = SaveJPGToBuffer( out, 95, width, height, p );
@@ -187,16 +187,13 @@ static void RB_TakeScreenshotJPG( int x, int y, int width, int height, const cha
 
 const byte* RB_TakeScreenshotCmd( const screenshotCommand_t* cmd )
 {
-	// NOTE: the current read buffer is the last FBO color attachment texture that was written to
-	// therefore, ReadPixels will get the latest data even with double/triple buffering enabled
-
 	switch (cmd->type) {
 		case screenshotCommand_t::SS_JPG:
-			RB_TakeScreenshotJPG( cmd->x, cmd->y, cmd->width, cmd->height, cmd->fileName );
+			RB_TakeScreenshotJPG( cmd->width, cmd->height, cmd->fileName );
 			ri.Printf( PRINT_ALL, "Wrote %s\n", cmd->fileName );
 			break;
 		case screenshotCommand_t::SS_TGA:
-			RB_TakeScreenshotTGA( cmd->x, cmd->y, cmd->width, cmd->height, cmd->fileName );
+			RB_TakeScreenshotTGA( cmd->width, cmd->height, cmd->fileName );
 			ri.Printf( PRINT_ALL, "Wrote %s\n", cmd->fileName );
 			break;
 	}
@@ -245,8 +242,6 @@ static void R_TakeScreenshot( const char* ext, screenshotCommand_t::ss_type type
 	}
 
 	cmd->commandId = RC_SCREENSHOT;
-	cmd->x = 0;
-	cmd->y = 0;
 	cmd->width = glConfig.vidWidth;
 	cmd->height = glConfig.vidHeight;
 	cmd->fileName = s;
@@ -286,13 +281,13 @@ const byte *RB_TakeVideoFrameCmd( const videoFrameCommand_t *cmd )
 {
 	if( cmd->motionJpeg )
 	{
-		//@TODO: gal.ReadPixels( 0, 0, cmd->width, cmd->height, 1, CS_RGBA, cmd->captureBuffer );
+		renderPipeline->ReadPixels( cmd->width, cmd->height, 1, CS_RGBA, cmd->captureBuffer );
 		const int frameSize = SaveJPGToBuffer( cmd->encodeBuffer, 95, cmd->width, cmd->height, cmd->captureBuffer );
 		ri.CL_WriteAVIVideoFrame( cmd->encodeBuffer, frameSize );
 	}
 	else
 	{
-		//@TODO: gal.ReadPixels( 0, 0, cmd->width, cmd->height, 4, CS_BGR, cmd->captureBuffer );
+		renderPipeline->ReadPixels( cmd->width, cmd->height, 4, CS_BGR, cmd->captureBuffer );
 		const int frameSize = PAD( cmd->width, 4 ) * cmd->height * 3;
 		ri.CL_WriteAVIVideoFrame( cmd->captureBuffer, frameSize );
 	}

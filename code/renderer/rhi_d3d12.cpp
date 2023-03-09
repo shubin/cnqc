@@ -494,6 +494,12 @@ namespace RHI
 		bool vsync;
 		bool frameBegun;
 
+		ID3D12CommandAllocator* readbackCommandAllocator;
+		ID3D12GraphicsCommandList* readbackCommandList;
+		HBuffer readbackBuffer;
+		Fence readbackFence;
+		UINT64 readbackFenceValue;
+
 		HMODULE dxcModule;
 		HMODULE dxilModule;
 		IDxcUtils* dxcUtils;
@@ -2298,6 +2304,23 @@ namespace RHI
 
 		CreateNullResources();
 
+		D3D(rhi.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&rhi.readbackCommandAllocator)));
+		SetDebugName(rhi.readbackCommandAllocator, "readback", D3DResourceType::CommandAllocator);
+
+		D3D(rhi.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, rhi.readbackCommandAllocator, NULL, IID_PPV_ARGS(&rhi.readbackCommandList)));
+		SetDebugName(rhi.readbackCommandList, "readback", D3DResourceType::CommandList);
+		D3D(rhi.readbackCommandList->Close());
+
+		{
+			// @TODO: fix buffer size to handle 4K renders
+			BufferDesc desc("readback", MAX_TEXTURE_SIZE * MAX_TEXTURE_SIZE * 4, ResourceStates::CopyDestinationBit);
+			desc.initialState = ResourceStates::CopyDestinationBit;
+			desc.memoryUsage = MemoryUsage::Readback;
+			rhi.readbackBuffer = CreateBuffer(desc);
+		}
+
+		rhi.readbackFence.Create(rhi.readbackFenceValue, "readback");
+
 		// queue some actual work...
 
 		D3D(rhi.commandList->Close());
@@ -2400,6 +2423,7 @@ namespace RHI
 			CloseHandle(rhi.frameLatencyWaitableObject);
 		}
 
+		rhi.readbackFence.Release();
 		rhi.upload.Release();
 		rhi.mainFence.Release();
 		rhi.tempFence.Release();
@@ -2410,6 +2434,8 @@ namespace RHI
 
 		DESTROY_POOL_LIST(DESTROY_POOL);
 
+		COM_RELEASE(rhi.readbackCommandList);
+		COM_RELEASE(rhi.readbackCommandAllocator);
 		COM_RELEASE(rhi.dxcCompiler);
 		COM_RELEASE(rhi.dxcUtils);
 		COM_RELEASE_ARRAY(rhi.timeStampHeaps);
@@ -3879,6 +3905,7 @@ namespace RHI
 
 	void BeginTempCommandList()
 	{
+		Q_assert(!rhi.frameBegun);
 		Q_assert(rhi.commandList == rhi.mainCommandList);
 		rhi.commandList = rhi.tempCommandList;
 
@@ -3891,6 +3918,7 @@ namespace RHI
 
 	void EndTempCommandList()
 	{
+		Q_assert(!rhi.frameBegun);
 		Q_assert(rhi.commandList == rhi.tempCommandList);
 		rhi.commandList = rhi.mainCommandList;
 
@@ -3904,6 +3932,68 @@ namespace RHI
 		rhi.tempCommandListOpen = false;
 	}
 
+	void BeginTextureReadback(MappedTexture& mappedTexture, HTexture htexture)
+	{
+		// @TODO: ensure we haven't started a readback already
+
+		D3D(rhi.readbackCommandAllocator->Reset());
+		D3D(rhi.readbackCommandList->Reset(rhi.readbackCommandAllocator, NULL));
+
+		Texture& texture = rhi.textures.Get(htexture);
+		const D3D12_RESOURCE_DESC textureDesc = texture.texture->GetDesc();
+		D3D12_PLACED_SUBRESOURCE_FOOTPRINT layout;
+		rhi.device->GetCopyableFootprints(&textureDesc, 0, 1, 0, &layout, NULL, NULL, NULL);
+
+		Buffer& buffer = rhi.buffers.Get(rhi.readbackBuffer);
+		D3D12_TEXTURE_COPY_LOCATION dstLoc = { 0 };
+		D3D12_TEXTURE_COPY_LOCATION srcLoc = { 0 };
+		dstLoc.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+		dstLoc.pResource = buffer.buffer;
+		dstLoc.PlacedFootprint = layout;
+		dstLoc.PlacedFootprint.Offset = 0;
+		srcLoc.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+		srcLoc.pResource = texture.texture;
+		srcLoc.SubresourceIndex = 0;
+		D3D12_BOX srcBox = { 0 };
+		srcBox.left = 0;
+		srcBox.top = 0;
+		srcBox.front = 0;
+		srcBox.right = textureDesc.Width;
+		srcBox.bottom = textureDesc.Height;
+		srcBox.back = 1;
+
+		D3D12_RESOURCE_BARRIER barrier = {};
+		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		barrier.Transition.pResource = texture.texture;
+		barrier.Transition.StateBefore = texture.currentState;
+		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
+		rhi.readbackCommandList->ResourceBarrier(1, &barrier);
+		rhi.readbackCommandList->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, &srcBox);
+		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
+		barrier.Transition.StateAfter = texture.currentState;
+		rhi.readbackCommandList->ResourceBarrier(1, &barrier);
+
+		D3D(rhi.readbackCommandList->Close());
+		ID3D12CommandList* commandListArray[] = { rhi.readbackCommandList };
+		rhi.mainCommandQueue->ExecuteCommandLists(ARRAY_LEN(commandListArray), commandListArray);
+
+		rhi.readbackFenceValue++;
+		rhi.readbackFence.Signal(rhi.mainCommandQueue, rhi.readbackFenceValue);
+		rhi.readbackFence.WaitOnCPU(rhi.readbackFenceValue);
+
+		//mappedTexture.mappedData = MapBuffer(rhi.readbackBuffer);
+		//mappedTexture.rowCount = ;
+		//mappedTexture.srcRowByteCount = ;
+	}
+
+	void EndTextureReadback(HTexture texture)
+	{
+		// @TODO: ensure a readback was already started on the specified texture
+
+		//UnmapBuffer(rhi.readbackBuffer);
+	}
+
+	// @TODO: nuke
 	void FinalizeTexture(HTexture texture)
 	{
 		if(rhi.frameBegun)

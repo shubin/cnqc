@@ -757,5 +757,12 @@ void GRP::ExecuteRenderCommands(const byte* data)
 	}
 }
 
+void GRP::ReadPixels(int w, int h, int alignment, colorSpace_t colorSpace, void* out)
+{
+	MappedTexture texture;
+	BeginTextureReadback(texture, renderTarget);
+	EndTextureReadback(renderTarget);
+}
+
 // @TODO: move out once the cinematic render pipeline is added
 IRenderPipeline* renderPipeline = &grp;
