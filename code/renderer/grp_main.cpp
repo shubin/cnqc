@@ -699,5 +699,49 @@ uint32_t GRP::CreatePSO(CachedPSO& cache, const char* name)
 	return index;
 }
 
-// @TODO: move out
+void GRP::ExecuteRenderCommands(const void* data)
+{
+	for(;;)
+	{
+		data = PADP(data, sizeof(void*));
+
+		switch(*(const int*)data)
+		{
+			case RC_UI_SET_COLOR:
+				UISetColor(*(uiSetColorCommand_t*)data);
+				data = ((uiSetColorCommand_t*)data) + 1;
+				break;
+			case RC_UI_DRAW_QUAD:
+				UIDrawQuad(*(uiDrawQuadCommand_t*)data);
+				data = ((uiDrawQuadCommand_t*)data) + 1;
+				break;
+			case RC_UI_DRAW_TRIANGLE:
+				UIDrawTriangle(*(uiDrawTriangleCommand_t*)data);
+				data = ((uiDrawTriangleCommand_t*)data) + 1;
+				break;
+			case RC_DRAW_SCENE_VIEW:
+				DrawSceneView(*(drawSceneViewCommand_t*)data);
+				data = ((drawSceneViewCommand_t*)data) + 1;
+				break;
+			case RC_BEGIN_FRAME:
+				data = RB_BeginFrame(data);
+				break;
+			case RC_SWAP_BUFFERS:
+				data = RB_SwapBuffers(data);
+				break;
+			case RC_SCREENSHOT:
+				data = RB_TakeScreenshotCmd((const screenshotCommand_t*)data);
+				break;
+			case RC_VIDEOFRAME:
+				data = RB_TakeVideoFrameCmd(data);
+				break;
+
+			case RC_END_OF_LIST:
+			default:
+				return;
+		}
+	}
+}
+
+// @TODO: move out once the cinematic render pipeline is added
 IRenderPipeline* renderPipeline = &grp;

@@ -1525,11 +1525,12 @@ typedef struct {
 } videoFrameCommand_t;
 
 typedef enum {
+	// @TODO: Begin2D, End2D, Begin3D, End3D
 	RC_END_OF_LIST,
-	RC_SET_COLOR,
-	RC_STRETCH_PIC,
-	RC_TRIANGLE,
-	RC_DRAW_SURFS,
+	RC_UI_SET_COLOR,
+	RC_UI_DRAW_QUAD,
+	RC_UI_DRAW_TRIANGLE,
+	RC_DRAW_SCENE_VIEW,
 	RC_BEGIN_FRAME,
 	RC_SWAP_BUFFERS,
 	RC_SCREENSHOT,
@@ -1568,7 +1569,7 @@ extern	backEndData_t*		backEndData;
 
 void GfxInfo_f( void );
 
-void RB_ExecuteRenderCommands( const void *data );
+//void RB_ExecuteRenderCommands( const void *data ); // @TODO:
 void RB_PushSingleStageShader( int stateBits, cullType_t cullType );
 void RB_PopShader();
 
@@ -1666,6 +1667,8 @@ struct IRenderPipeline
 	virtual void UpoadTextureAndGenerateMipMaps(image_t* image, const byte* data) = 0;
 	virtual void BeginTextureUpload(RHI::MappedTexture& mappedTexture, image_t* image) = 0;
 	virtual void EndTextureUpload(image_t* image) = 0;
+
+	virtual void ExecuteRenderCommands(const void* data) = 0;
 
 	virtual void UISetColor(const uiSetColorCommand_t& cmd) = 0;
 	virtual void UIDrawQuad(const uiDrawQuadCommand_t& cmd) = 0;

@@ -635,6 +635,7 @@ const void* RB_SwapBuffers( const void* data )
 }
 
 
+#if 0 // @TODO:
 void RB_ExecuteRenderCommands( const void *data )
 {
 	startTime = ri.Microseconds();
@@ -674,6 +675,7 @@ void RB_ExecuteRenderCommands( const void *data )
 		}
 	}
 }
+#endif
 
 
 static const shader_t* prevShader = NULL;
