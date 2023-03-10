@@ -480,7 +480,7 @@ struct RenderPassQueries
 
 enum
 {
-	MaxRenderPasses = 16,
+	MaxRenderPasses = 64, // cg_draw3dIcons forces tons of 2D/3D transitions...
 	MaxStatsFrameCount = 64
 };
 
