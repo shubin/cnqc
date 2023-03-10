@@ -1769,7 +1769,7 @@ void R_RenderScene( const viewParms_t* parms )
 
 	R_SortDrawSurfs( firstDrawSurf, firstLitSurf );
 
-	renderPipeline->EndScene( *parms );
+	R_EndScene( parms );
 }
 
 

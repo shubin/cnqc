@@ -1490,13 +1490,18 @@ struct uiDrawTriangleCommand_t : renderCommandBase_t {
 };
 
 struct drawSceneViewCommand_t : renderCommandBase_t {
-	trRefdef_t	refdef;
+	trRefdef_t refdef;
 	viewParms_t	viewParms;
 	int numDrawSurfs;
 	int numTranspSurfs;
 	drawSurf_t* drawSurfs;
 	qbool shouldClearColor;
 	vec4_t clearColor;
+};
+
+struct endSceneCommand_t : renderCommandBase_t {
+	viewParms_t viewParms;
+	uint32_t padding2; // @TODO: should be done differently
 };
 
 struct screenshotCommand_t : renderCommandBase_t {
@@ -1530,6 +1535,7 @@ struct videoFrameCommand_t : renderCommandBase_t {
 	Cmd(RC_BEGIN_3D, begin3DCommand_t) \
 	Cmd(RC_END_3D, end3DCommand_t) \
 	Cmd(RC_DRAW_SCENE_VIEW, drawSceneViewCommand_t) \
+	Cmd(RC_END_SCENE, endSceneCommand_t) \
 	Cmd(RC_BEGIN_FRAME, beginFrameCommand_t) \
 	Cmd(RC_SWAP_BUFFERS, swapBuffersCommand_t) \
 	Cmd(RC_SCREENSHOT, screenshotCommand_t) \
@@ -1591,7 +1597,7 @@ void R_IssueRenderCommands();
 byte* R_FindRenderCommand( renderCommand_t type );
 byte* R_AllocateRenderCommand( int bytes, int commandId, qbool endFrame );
 
-void R_AddDrawSurfCmd(drawSurf_t* drawSurfs, int numDrawSurfs, int numTranspSurfs );
+void R_AddDrawSurfCmd( drawSurf_t* drawSurfs, int numDrawSurfs, int numTranspSurfs );
 
 void RE_BeginFrame( stereoFrame_t stereoFrame );
 void RE_EndFrame( int* pcFE, int* pc2D, int* pc3D, qbool render );
@@ -1604,6 +1610,8 @@ void RE_DrawTriangle( float x0, float y0, float x1, float y1, float x2, float y2
 int SaveJPGToBuffer( byte* out, int quality, int image_width, int image_height, byte* image_buffer );
 void RE_TakeVideoFrame( int width, int height,
 		byte *captureBuffer, byte *encodeBuffer, qbool motionJpeg );
+
+void R_EndScene( const viewParms_t* viewParms );
 
 void R_MultMatrix( const float *a, const float *b, float *out );
 void R_InvMatrix( const float* in, float* out );
@@ -1680,7 +1688,6 @@ struct IRenderPipeline
 	virtual void UIDrawQuad(const uiDrawQuadCommand_t& cmd) = 0;
 	virtual void UIDrawTriangle(const uiDrawTriangleCommand_t& cmd) = 0;
 	virtual void DrawSceneView(const drawSceneViewCommand_t& cmd) = 0;
-	virtual void EndScene(const viewParms_t& parms) = 0;
 	virtual void TessellationOverflow() = 0;
 	virtual void DrawSkyBox() = 0;
 	virtual void DrawClouds() = 0;

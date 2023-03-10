@@ -401,3 +401,17 @@ void RE_TakeVideoFrame( int width, int height, byte *captureBuffer, byte *encode
 	cmd->encodeBuffer = encodeBuffer;
 	cmd->motionJpeg = motionJpeg;
 }
+
+
+void R_EndScene( const viewParms_t* viewParms )
+{
+	if ( !CanAllocateRenderCommand<videoFrameCommand_t>() )
+		return;
+
+	Q_assert( tr.renderMode == RM_3D );
+
+	endSceneCommand_t* const cmd = AllocateRenderCommand<endSceneCommand_t>( RC_END_SCENE );
+	Q_assert( cmd );
+
+	cmd->viewParms = *viewParms;
+}

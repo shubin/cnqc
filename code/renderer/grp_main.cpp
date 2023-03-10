@@ -741,6 +741,9 @@ void GRP::ExecuteRenderCommands(const byte* data)
 			case RC_END_3D:
 				world.End();
 				break;
+			case RC_END_SCENE:
+				smaa.Draw(((const endSceneCommand_t*)data)->viewParms);
+				break;
 			case RC_SCREENSHOT:
 				RB_TakeScreenshotCmd((const screenshotCommand_t*)data);
 				break;

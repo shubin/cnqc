@@ -605,7 +605,6 @@ struct GRP : IRenderPipeline
 	void UIDrawQuad(const uiDrawQuadCommand_t& cmd) override { ui.UIDrawQuad(cmd); }
 	void UIDrawTriangle(const uiDrawTriangleCommand_t& cmd) override { ui.UIDrawTriangle(cmd); }
 	void DrawSceneView(const drawSceneViewCommand_t& cmd) override { world.DrawSceneView(cmd); }
-	void EndScene(const viewParms_t& parms) override { smaa.Draw(parms); }
 	void TessellationOverflow() override { world.RestartBatch(); }
 	void DrawSkyBox() override { world.DrawSkyBox(); }
 	void DrawClouds() override { world.DrawClouds(); }
