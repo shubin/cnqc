@@ -231,9 +231,6 @@ void RE_SetColor( const float* rgba )
 	if ( !CanAllocateRenderCommand<uiSetColorCommand_t>() )
 		return;
 
-	End3D();
-	Begin2D();
-
 	uiSetColorCommand_t* const cmd = AllocateRenderCommand<uiSetColorCommand_t>(RC_UI_SET_COLOR);
 	Q_assert( cmd );
 
