@@ -757,11 +757,65 @@ void GRP::ExecuteRenderCommands(const byte* data)
 	}
 }
 
-void GRP::ReadPixels(int w, int h, int alignment, colorSpace_t colorSpace, void* out)
+// @TODO: move
+static uint32_t IsPowerOfTwo(uint32_t x)
 {
-	MappedTexture texture;
-	BeginTextureReadback(texture, renderTarget);
-	EndTextureReadback(renderTarget);
+	return x > 0 && (x & (x - 1)) == 0;
+}
+
+// @TODO: move
+static uint32_t AlignUp(uint32_t value, uint32_t alignment)
+{
+	Q_assert(IsPowerOfTwo(alignment));
+
+	const uint32_t mask = alignment - 1;
+
+	return (value + mask) & (~mask);
+}
+
+void GRP::ReadPixels(int w, int h, int alignment, colorSpace_t colorSpace, void* outPixels)
+{
+	const HTexture sourceTexture = GetSwapChainTexture();
+
+	MappedTexture mapped;
+	BeginTextureReadback(mapped, sourceTexture);
+
+	byte* const out0 = (byte*)outPixels;
+	const byte* const in0 = mapped.mappedData;
+
+	if(colorSpace == CS_RGBA)
+	{
+		mapped.dstRowByteCount = AlignUp(w * 4, alignment);
+
+		for(int y = 0; y < mapped.rowCount; ++y)
+		{
+			memcpy(out0 + y * mapped.dstRowByteCount, in0 + y * mapped.srcRowByteCount, w * 4);
+		}
+	}
+	else if(colorSpace == CS_BGR)
+	{
+		mapped.dstRowByteCount = AlignUp(w * 3, alignment);
+
+		for(int y = 0; y < mapped.rowCount; ++y)
+		{
+			byte* out = out0 + (mapped.rowCount - 1 - y) * mapped.dstRowByteCount;
+			const byte* in = in0 + y * mapped.srcRowByteCount;
+			for(int x = 0; x < mapped.columnCount; ++x)
+			{
+				out[2] = in[0];
+				out[1] = in[1];
+				out[0] = in[2];
+				out += 3;
+				in += 4;
+			}
+		}
+	}
+	else
+	{
+		Q_assert(!"Unsupported color space");
+	}
+
+	EndTextureReadback(sourceTexture);
 }
 
 // @TODO: move out once the cinematic render pipeline is added

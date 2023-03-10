@@ -47,6 +47,7 @@ namespace RHI
 	{
 		uint8_t* mappedData;
 		uint32_t rowCount;
+		uint32_t columnCount;
 		uint32_t srcRowByteCount;
 		uint32_t dstRowByteCount;
 	};

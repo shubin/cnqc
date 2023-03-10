@@ -831,6 +831,7 @@ namespace RHI
 		const UINT sourcePitch = (UINT)(texture.desc.width * GetBytesPerPixel(texture.desc.format));
 		mappedTexture.mappedData = mappedBuffer + bufferByteOffset;
 		mappedTexture.rowCount = texture.desc.height;
+		mappedTexture.columnCount = texture.desc.width;
 		mappedTexture.srcRowByteCount = sourcePitch;
 		mappedTexture.dstRowByteCount = AlignUp(layout.Footprint.RowPitch, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
 
@@ -3940,9 +3941,13 @@ namespace RHI
 		D3D(rhi.readbackCommandList->Reset(rhi.readbackCommandAllocator, NULL));
 
 		Texture& texture = rhi.textures.Get(htexture);
+		Q_assert(texture.desc.format == TextureFormat::RGBA32_UNorm);
 		const D3D12_RESOURCE_DESC textureDesc = texture.texture->GetDesc();
 		D3D12_PLACED_SUBRESOURCE_FOOTPRINT layout;
 		rhi.device->GetCopyableFootprints(&textureDesc, 0, 1, 0, &layout, NULL, NULL, NULL);
+		Q_assert(layout.Footprint.Format == DXGI_FORMAT_R8G8B8A8_UNORM);
+		Q_assert(layout.Footprint.Width == texture.desc.width);
+		Q_assert(layout.Footprint.Height == texture.desc.height);
 
 		Buffer& buffer = rhi.buffers.Get(rhi.readbackBuffer);
 		D3D12_TEXTURE_COPY_LOCATION dstLoc = { 0 };
@@ -3981,16 +3986,18 @@ namespace RHI
 		rhi.readbackFence.Signal(rhi.mainCommandQueue, rhi.readbackFenceValue);
 		rhi.readbackFence.WaitOnCPU(rhi.readbackFenceValue);
 
-		//mappedTexture.mappedData = MapBuffer(rhi.readbackBuffer);
-		//mappedTexture.rowCount = ;
-		//mappedTexture.srcRowByteCount = ;
+		mappedTexture.mappedData = MapBuffer(rhi.readbackBuffer);
+		mappedTexture.rowCount = layout.Footprint.Height;
+		mappedTexture.columnCount = layout.Footprint.Width;
+		mappedTexture.srcRowByteCount = layout.Footprint.RowPitch;
+		mappedTexture.dstRowByteCount = 0;
 	}
 
 	void EndTextureReadback(HTexture texture)
 	{
 		// @TODO: ensure a readback was already started on the specified texture
 
-		//UnmapBuffer(rhi.readbackBuffer);
+		UnmapBuffer(rhi.readbackBuffer);
 	}
 
 	// @TODO: nuke
