@@ -3990,18 +3990,6 @@ namespace RHI
 		UnmapBuffer(rhi.readbackBuffer);
 	}
 
-	// @TODO: nuke
-	void FinalizeTexture(HTexture texture)
-	{
-		if(rhi.frameBegun)
-		{
-			TextureBarrier barrier(texture, ResourceStates::PixelShaderAccessBit);
-			CmdBarrier(1, &barrier);
-
-			rhi.upload.WaitToStartDrawing(rhi.computeCommandQueue);
-		}
-	}
-
 	void WaitUntilDeviceIsIdle()
 	{
 		// direct queue

@@ -736,8 +736,6 @@ namespace RHI
 	void BeginTextureReadback(MappedTexture& mappedTexture, HTexture texture);
 	void EndTextureReadback(HTexture texture);
 
-	void FinalizeTexture(HTexture texture); // @TODO: nuke
-
 	void WaitUntilDeviceIsIdle();
 
 	const Handle HandleIndexBitCount = 16;

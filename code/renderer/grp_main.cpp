@@ -308,8 +308,6 @@ void GRP::UpoadTextureAndGenerateMipMaps(image_t* image, const byte* data)
 	RHI::EndTextureUpload(image->texture);
 
 	mipMapGen.GenerateMipMaps(image->texture);
-
-	FinalizeTexture(image->texture);
 }
 
 void GRP::BeginTextureUpload(MappedTexture& mappedTexture, image_t* image)
