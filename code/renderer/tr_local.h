@@ -1501,7 +1501,7 @@ struct drawSceneViewCommand_t : renderCommandBase_t {
 
 struct endSceneCommand_t : renderCommandBase_t {
 	viewParms_t viewParms;
-	uint32_t padding2; // @TODO: should be done differently
+	uint32_t padding2;
 };
 
 struct screenshotCommand_t : renderCommandBase_t {
