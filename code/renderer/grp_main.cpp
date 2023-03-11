@@ -760,22 +760,6 @@ void GRP::ExecuteRenderCommands(const byte* data)
 	}
 }
 
-// @TODO: move
-static uint32_t IsPowerOfTwo(uint32_t x)
-{
-	return x > 0 && (x & (x - 1)) == 0;
-}
-
-// @TODO: move
-static uint32_t AlignUp(uint32_t value, uint32_t alignment)
-{
-	Q_assert(IsPowerOfTwo(alignment));
-
-	const uint32_t mask = alignment - 1;
-
-	return (value + mask) & (~mask);
-}
-
 void GRP::ReadPixels(int w, int h, int alignment, colorSpace_t colorSpace, void* outPixels)
 {
 	const HTexture sourceTexture = GetSwapChainTexture();

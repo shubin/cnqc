@@ -1232,4 +1232,40 @@ printHelpResult_t Com_PrintHelp( const char* name, printf_t print, qbool printNo
 #endif
 
 
+// the smallest power of 2 accepted is 1
+template<typename T>
+static T IsPowerOfTwo( T x )
+{
+	return x > 0 && (x & (x - 1)) == 0;
+}
+
+
+// returns the original value if the alignment is already respected
+// AlignUp(7, 4) -> 8
+// AlignUp(8, 4) -> 8
+template<typename T>
+static T AlignUp( T value, T alignment )
+{
+	Q_assert(IsPowerOfTwo(alignment));
+
+	const T mask = alignment - 1;
+
+	return (value + mask) & (~mask);
+}
+
+
+// returns the original value if the alignment is already respected
+// AlignDown(7, 4) -> 4
+// AlignDown(8, 4) -> 8
+template<typename T>
+static T AlignDown( T value, T alignment )
+{
+	Q_assert(IsPowerOfTwo(alignment));
+
+	const T mask = alignment - 1;
+
+	return value & (~mask);
+}
+
+
 #endif // _QCOMMON_H_

@@ -629,20 +629,6 @@ namespace RHI
 		resource->SetPrivateData(WKPDID_D3DDebugObjectName, strlen(name), name);
 	}
 
-	static UINT IsPowerOfTwo(UINT x)
-	{
-		return x > 0 && (x & (x - 1)) == 0;
-	}
-
-	static UINT AlignUp(UINT value, UINT alignment)
-	{
-		Q_assert(IsPowerOfTwo(alignment));
-
-		const UINT mask = alignment - 1;
-
-		return (value + mask) & (~mask);
-	}
-
 	static uint32_t GetBytesPerPixel(TextureFormat::Id format)
 	{
 		switch(format)
@@ -778,7 +764,7 @@ namespace RHI
 			mapped = mappedBuffer + bufferByteOffset;
 			userBuffer.uploadByteOffset = bufferByteOffset;
 
-			bufferByteOffset = AlignUp(bufferByteOffset + uploadByteCount, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+			bufferByteOffset = AlignUp<uint32_t>(bufferByteOffset + uploadByteCount, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 		}
 		else
 		{
@@ -834,11 +820,11 @@ namespace RHI
 		mappedTexture.rowCount = texture.desc.height;
 		mappedTexture.columnCount = texture.desc.width;
 		mappedTexture.srcRowByteCount = sourcePitch;
-		mappedTexture.dstRowByteCount = AlignUp(layout.Footprint.RowPitch, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
+		mappedTexture.dstRowByteCount = AlignUp<uint32_t>(layout.Footprint.RowPitch, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
 
 		texture.uploadByteOffset = bufferByteOffset;
 		texture.uploading = true;
-		bufferByteOffset = AlignUp(bufferByteOffset + uploadByteCount, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+		bufferByteOffset = AlignUp<uint32_t>(bufferByteOffset + uploadByteCount, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
 	}
 
 	void UploadManager::EndTextureUpload(HTexture htexture)
@@ -3007,7 +2993,7 @@ namespace RHI
 
 				D3D12_ROOT_PARAMETER& p = parameters[parameterCount];
 				p.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-				p.Constants.Num32BitValues = AlignUp(rhiDesc.constants[s].byteCount, 4) / 4;
+				p.Constants.Num32BitValues = AlignUp<UINT>(rhiDesc.constants[s].byteCount, 4) / 4;
 				p.Constants.RegisterSpace = 0;
 				p.Constants.ShaderRegister = 0;
 				p.ShaderVisibility = GetD3DVisibility((ShaderStage::Id)s);
