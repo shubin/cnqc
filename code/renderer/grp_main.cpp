@@ -770,11 +770,14 @@ void GRP::ReadPixels(int w, int h, int alignment, colorSpace_t colorSpace, void*
 
 	if(colorSpace == CS_RGBA)
 	{
-		mapped.dstRowByteCount = AlignUp(w * 4, alignment);
+		const int dstRowSizeNoPadding = w * 4;
+		mapped.dstRowByteCount = AlignUp(dstRowSizeNoPadding, alignment);
 
 		for(int y = 0; y < mapped.rowCount; ++y)
 		{
-			memcpy(out0 + y * mapped.dstRowByteCount, in0 + y * mapped.srcRowByteCount, w * 4);
+			byte* out = out0 + (mapped.rowCount - 1 - y) * mapped.dstRowByteCount;
+			const byte* in = in0 + y * mapped.srcRowByteCount;
+			memcpy(out, in, dstRowSizeNoPadding);
 		}
 	}
 	else if(colorSpace == CS_BGR)
