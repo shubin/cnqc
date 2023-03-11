@@ -800,7 +800,7 @@ void GRP::ReadPixels(int w, int h, int alignment, colorSpace_t colorSpace, void*
 		Q_assert(!"Unsupported color space");
 	}
 
-	EndTextureReadback(sourceTexture);
+	EndTextureReadback();
 }
 
 // @TODO: move out once the cinematic render pipeline is added

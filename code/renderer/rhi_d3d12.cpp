@@ -307,7 +307,6 @@ namespace RHI
 		}
 		mips[MaxTextureMips];
 		bool uploading;
-		bool downloading;
 		uint32_t uploadByteOffset;
 		bool shortLifeTime = false;
 	};
@@ -3926,8 +3925,6 @@ namespace RHI
 		D3D(rhi.readbackCommandList->Reset(rhi.readbackCommandAllocator, NULL));
 
 		Texture& texture = rhi.textures.Get(htexture);
-		Q_assert(!texture.downloading);
-		texture.downloading = true;
 		Q_assert(texture.desc.format == TextureFormat::RGBA32_UNorm);
 		const D3D12_RESOURCE_DESC textureDesc = texture.texture->GetDesc();
 		D3D12_PLACED_SUBRESOURCE_FOOTPRINT layout;
@@ -3981,12 +3978,8 @@ namespace RHI
 		mappedTexture.dstRowByteCount = 0;
 	}
 
-	void EndTextureReadback(HTexture htexture)
+	void EndTextureReadback()
 	{
-		Texture& texture = rhi.textures.Get(htexture);
-		Q_assert(texture.downloading);
-		texture.downloading = false;
-
 		UnmapBuffer(rhi.readbackBuffer);
 	}
 

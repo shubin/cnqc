@@ -734,7 +734,7 @@ namespace RHI
 	void EndTempCommandList();
 
 	void BeginTextureReadback(MappedTexture& mappedTexture, HTexture texture);
-	void EndTextureReadback(HTexture texture);
+	void EndTextureReadback();
 
 	void WaitUntilDeviceIsIdle();
 
