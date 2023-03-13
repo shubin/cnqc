@@ -3494,12 +3494,14 @@ namespace RHI
 		sourceBuffer.Size = blobEncoding->GetBufferSize();
 		sourceBuffer.Encoding = 0;
 
-		// @TODO: what's the point of result->GetStatus(NULL) ???
 		IDxcResult* result = NULL;
-		if(FAILED(rhi.dxcCompiler->Compile(&sourceBuffer, arguments, argumentCount, NULL, IID_PPV_ARGS(&result))))
+		HRESULT hr = S_OK;
+		if(FAILED(rhi.dxcCompiler->Compile(&sourceBuffer, arguments, argumentCount, NULL, IID_PPV_ARGS(&result))) ||
+			FAILED(result->GetStatus(&hr)) ||
+			FAILED(hr))
 		{
 			IDxcBlobUtf8* errors;
-			if(SUCCEEDED(result->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&errors), NULL)) &&
+			if(result != NULL && SUCCEEDED(result->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&errors), NULL)) &&
 				errors->GetStringLength() > 0)
 			{
 				ri.Error(ERR_FATAL, "Shader (%s) compilation failed:\n%s\n", targetName, (const char*)errors->GetBufferPointer());
