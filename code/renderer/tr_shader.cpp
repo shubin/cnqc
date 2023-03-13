@@ -2461,6 +2461,30 @@ static void FixRedundantAlphaTesting()
 }
 
 
+// we don't want to allow multiple strictly equivalent states that have different bit patterns
+// this leads to more pixel shaders, more PSOs, more PSO switches...
+static void FixUnusedBlendModes()
+{
+	for(int s = 0; s < MAX_SHADER_STAGES; ++s)
+	{
+		const unsigned int oldBlendBits = stages[s].stateBits & GLS_BLEND_BITS;
+
+		int newBlendBits = oldBlendBits;
+		if(oldBlendBits == (GLS_SRCBLEND_ZERO | GLS_DSTBLEND_SRC_COLOR))
+		{
+			newBlendBits = GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO;
+		}
+		else if(oldBlendBits == (GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO))
+		{
+			newBlendBits = 0;
+		}
+
+		stages[s].stateBits &= ~GLS_BLEND_BITS;
+		stages[s].stateBits |= newBlendBits;
+	}
+}
+
+
 static qbool UsesInternalLightmap( const shaderStage_t* stage )
 {
 	return
@@ -2759,6 +2783,8 @@ static shader_t* FinishShader()
 	ProcessGreyscale();
 
 	FixRedundantAlphaTesting();
+
+	FixUnusedBlendModes();
 
 	shader_t* const newShader = GeneratePermanentShader();
 

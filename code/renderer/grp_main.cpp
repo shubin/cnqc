@@ -22,11 +22,46 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 
 
 #include "grp_local.h"
+#include "uber_shaders.h"
 #include "hlsl/uber_shader.h"
+#include "hlsl/complete_uber_vs.h"
+#include "hlsl/complete_uber_ps.h"
 #include "../client/cl_imgui.h"
 
 
 GRP grp;
+
+static const ShaderByteCode vertexShaderByteCodes[8] =
+{
+	ShaderByteCode(g_vs_1),
+	ShaderByteCode(g_vs_2),
+	ShaderByteCode(g_vs_3),
+	ShaderByteCode(g_vs_4),
+	ShaderByteCode(g_vs_5),
+	ShaderByteCode(g_vs_6),
+	ShaderByteCode(g_vs_7),
+	ShaderByteCode(g_vs_8)
+};
+
+#define PS(Data) #Data,
+static const char* uberPixelShaderStateStrings[] =
+{
+	UBER_SHADER_PS_LIST(PS)
+};
+#undef PS
+
+#define PS(Data) ShaderByteCode(g_ps_##Data),
+static const ShaderByteCode uberPixelShaderByteCodes[] =
+{
+	UBER_SHADER_PS_LIST(PS)
+};
+#undef PS
+
+#define PS(Data) 1 +
+static const uint32_t uberPixelShaderCacheSize = UBER_SHADER_PS_LIST(PS) 0;
+#undef PS
+
+static UberPixelShaderState uberPixelShaderStates[uberPixelShaderCacheSize];
 
 
 static ImPlotPoint FrameTimeGetter(int index, void*)
@@ -187,6 +222,14 @@ void GRP::Init()
 		desc.samplerVisibility = ShaderStages::PixelBit;
 		desc.genericVisibility = ShaderStages::VertexBit | ShaderStages::PixelBit;
 		uberRootSignature = CreateRootSignature(desc);
+
+		for(uint32_t i = 0; i < uberPixelShaderCacheSize; ++i)
+		{
+			if(!ParseUberPixelShaderState(uberPixelShaderStates[i], uberPixelShaderStateStrings[i]))
+			{
+				Q_assert(!"ParseUberPixelShaderState failed!");
+			}
+		}
 	}
 
 	textureIndex = 0;
@@ -620,6 +663,8 @@ void GRP::DrawGUI()
 
 uint32_t GRP::CreatePSO(CachedPSO& cache, const char* name)
 {
+	const uint32_t pixelShaderStateBits = GLS_BLEND_BITS | GLS_ATEST_BITS;
+
 	for(uint32_t p = 1; p < psoCount; ++p)
 	{
 		if(cache.stageCount == psos[p].stageCount &&
@@ -632,35 +677,80 @@ uint32_t GRP::CreatePSO(CachedPSO& cache, const char* name)
 
 	Q_assert(psoCount < ARRAY_LEN(psos));
 
-	uint32_t macroCount = 0;
-	ShaderMacro macros[64];
+	int uberPixelShaderIndex = -1;
+	for(uint32_t i = 0; i < uberPixelShaderCacheSize; ++i)
+	{
+		const UberPixelShaderState& state = uberPixelShaderStates[i];
+		if(cache.stageCount != (uint32_t)state.stageCount ||
+			r_dither->integer != (state.globalState & 1))
+		{
+			continue;
+		}
 
-	macros[macroCount].name = "STAGE_COUNT";
-	macros[macroCount].value = va("%d", cache.stageCount);
-	macroCount++;
-	const HShader vertexShader = CreateShader(ShaderDesc(ShaderStage::Vertex, sizeof(uber_shader_string), uber_shader_string, "main", macroCount, macros));
+		bool found = true;
+		for(uint32_t s = 0; s < cache.stageCount; ++s)
+		{
+			const uint32_t psoCacheState = cache.stageStateBits[s] & pixelShaderStateBits;
+			const uint32_t psCacheState = (uint32_t)state.stageStates[s] & pixelShaderStateBits;
+			if(psoCacheState != psCacheState)
+			{
+				found = false;
+				break;
+			}
+		}
 
+		if(found)
+		{
+			uberPixelShaderIndex = (int)i;
+			break;
+		}
+	}
+
+	HShader pixelShader = RHI_MAKE_NULL_HANDLE();
+	ShaderByteCode pixelShaderByteCode;
+	if(uberPixelShaderIndex < 0)
+	{
+		uint32_t macroCount = 0;
+		ShaderMacro macros[64];
+		macros[macroCount].name = "STAGE_COUNT";
+		macros[macroCount].value = va("%d", cache.stageCount);
+		macroCount++;
+		if(r_dither->integer)
+		{
+			macros[macroCount].name = "DITHER";
+			macros[macroCount].value = "1";
+			macroCount++;
+		}
+		for(int s = 0; s < cache.stageCount; ++s)
+		{
+			macros[macroCount].name = va("STAGE%d_BITS", s);
+			macros[macroCount].value = va("%d", (int)cache.stageStateBits[s] & pixelShaderStateBits);
+			macroCount++;
+		}
+		Q_assert(macroCount <= ARRAY_LEN(macros));
+
+		pixelShader = CreateShader(ShaderDesc(ShaderStage::Pixel, sizeof(uber_shader_string), uber_shader_string, "ps", macroCount, macros));
+		pixelShaderByteCode = GetShaderByteCode(pixelShader);
+	}
+	else
+	{
+		pixelShaderByteCode = uberPixelShaderByteCodes[uberPixelShaderIndex];
+	}
+
+#if 0
+	Sys_DebugPrintf("PS: ");
 	for(int s = 0; s < cache.stageCount; ++s)
 	{
-		macros[macroCount].name = va("STAGE%d_BITS", s);
-		macros[macroCount].value = va("%d", (int)cache.stageStateBits[s]);
-		macroCount++;
+		Sys_DebugPrintf(va("%X ", (int)cache.stageStateBits[s] & pixelShaderStateBits));
 	}
-	if(r_dither->integer)
-	{
-		macros[macroCount].name = "DITHER";
-		macros[macroCount].value = "1";
-		macroCount++;
-	}
-	const HShader pixelShader = CreateShader(ShaderDesc(ShaderStage::Pixel, sizeof(uber_shader_string), uber_shader_string, "main", macroCount, macros));
-
-	Q_assert(macroCount <= ARRAY_LEN(macros));
+	Sys_DebugPrintf("\n");
+#endif
 
 	uint32_t a = 0;
 	GraphicsPipelineDesc desc(name, uberRootSignature);
 	desc.shortLifeTime = true; // the PSO cache is only valid for this map!
-	desc.vertexShader = GetShaderByteCode(vertexShader);
-	desc.pixelShader = GetShaderByteCode(pixelShader);
+	desc.vertexShader = vertexShaderByteCodes[cache.stageCount - 1];
+	desc.pixelShader = pixelShaderByteCode;
 	desc.vertexLayout.AddAttribute(a++, ShaderSemantic::Position, DataType::Float32, 3, 0);
 	desc.vertexLayout.AddAttribute(a++, ShaderSemantic::Normal, DataType::Float32, 2, 0);
 	for(int s = 0; s < cache.stageCount; ++s)
@@ -681,8 +771,10 @@ uint32_t GRP::CreatePSO(CachedPSO& cache, const char* name)
 	desc.AddRenderTarget(cache.stageStateBits[0] & GLS_BLEND_BITS, renderTargetFormat);
 	cache.pipeline = CreateGraphicsPipeline(desc);
 
-	DestroyShader(vertexShader);
-	DestroyShader(pixelShader);
+	if(uberPixelShaderIndex < 0)
+	{
+		DestroyShader(pixelShader);
+	}
 
 	const uint32_t index = psoCount++;
 	psos[index] = cache;
