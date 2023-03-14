@@ -305,7 +305,7 @@ static shader_t* ShaderForShaderNum( int shaderNum, int lightmapNum )
 		flags |= FINDSHADER_VERTEXLIGHT_BIT;
 	shader_t* shader = R_FindShader( dsh->shader, lightmapNum, flags );
 
-	if ( r_singleShader->integer && (shader->sort != SS_ENVIRONMENT) )
+	if ( r_singleShader->integer && !shader->isSky )
 		return tr.defaultShader;
 
 	// if the shader had errors, just use default shader

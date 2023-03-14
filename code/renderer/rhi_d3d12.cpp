@@ -53,7 +53,6 @@ to do:
 - use Application Verifier to catch issues
 - tone mapping: look at https://github.com/h3r2tic/tony-mc-mapface
 - ubershader PS: run-time alpha test evaluation to reduce PSO count?
-- use isSky instead of sort == SS_ENVIRONMENT
 - mip-map generation: figure out whether out of bounds texture UAV writes are OK or not
 - fix the uploader (overlapped Begin*Upload calls -> sync fails on overflow)
 - working depth pre-pass (account for cull mode, generate buffers on demand)

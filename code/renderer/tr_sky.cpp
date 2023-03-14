@@ -423,7 +423,7 @@ static void FillCloudBox( const shader_t* shader, int stage )
 
 void R_BuildCloudData()
 {
-	assert( tess.shader->sort == SS_ENVIRONMENT );
+	Q_assert( tess.shader->isSky );
 
 	// set up for drawing
 	tess.numIndexes = 0;

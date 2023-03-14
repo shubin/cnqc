@@ -2865,7 +2865,7 @@ void R_ShaderList_f( void )
 			ri.Printf( PRINT_ALL, "  " );
 		}
 
-		if ( sh->sort == SS_ENVIRONMENT ) {
+		if ( sh->isSky ) {
 			ri.Printf( PRINT_ALL, "sky " );
 		} else {
 			ri.Printf( PRINT_ALL, "    " );

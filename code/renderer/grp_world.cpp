@@ -526,7 +526,7 @@ void World::EndSkyBatch()
 	// we don't have to deal with recursion (through the call to RB_DrawSky)
 
 	if(tess.shader == NULL ||
-		tess.shader->sort != SS_ENVIRONMENT ||
+		!tess.shader->isSky ||
 		(!drawSky && !drawClouds) ||
 		tess.numVertexes <= 0 ||
 		tess.numIndexes <= 0)
@@ -854,7 +854,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 		R_DecomposeSort(drawSurf->sort, &entityNum, &shader);
 
 		// sky shaders can have no stages and be valid (box drawn with no clouds)
-		if(shader->sort != SS_ENVIRONMENT)
+		if(!shader->isSky)
 		{
 			if(shader->numPipelines == 0 ||
 				shader->pipelines[0].pipeline <= 0 ||
