@@ -2200,7 +2200,7 @@ namespace RHI
 				}
 		
 				const UINT flags = GetSwapChainFlags();
-				if(vsync == rhi.vsync && false) // @TODO: re-enable and validate!
+				if(vsync == rhi.vsync)
 				{
 					D3D(rhi.swapChain->ResizeBuffers(desc.BufferCount, glConfig.vidWidth, glConfig.vidHeight, desc.BufferDesc.Format, flags));
 				}
