@@ -2246,6 +2246,17 @@ namespace RHI
 #endif
 
 		rhi.adapter = FindMostSuitableAdapter(rhi.factory, r_gpuPreference->integer);
+		{
+			char adapterName[256];
+			const char* adapterNamePtr = "unknown";
+			DXGI_ADAPTER_DESC1 desc;
+			if(SUCCEEDED(rhi.adapter->GetDesc1(&desc)) &&
+				WideCharToMultiByte(CP_UTF8, 0, desc.Description, -1, adapterName, sizeof(adapterName), NULL, NULL) > 0)
+			{
+				adapterNamePtr = adapterName;
+			}
+			ri.Printf(PRINT_ALL, "Selected graphics adapter: %s\n", adapterName);
+		}
 
 		D3D(D3D12CreateDevice(rhi.adapter, FeatureLevel, IID_PPV_ARGS(&rhi.device)));
 
