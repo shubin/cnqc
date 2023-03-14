@@ -35,7 +35,7 @@ to do:
 	- use SetThreadSelectedCpuSets
 - CG_INIT sets r_swapinterval to speed up the load, but it doesn't work anymore
 - https://asawicki.info/news_1758_an_idea_for_visualization_of_frame_times
-- add { md3 surface, static shader } pairs to the chunk list on demand
+- GPU resident vertex data for models: load on demand based on submitted { surface, shader } pairs
 - tool: can replace image with default to help locate in the map
 - tool: can replace shader with default to help locate in the map
 - tool: live shader override editing
@@ -60,7 +60,6 @@ to do:
 	full depth pre-pass -> Z-buffer is complete and won't get updated by opaque drawing
 	1 full-screen pass per dynamic light, culled early with the depth bounds test -> write out to a light buffer
 	draw opaques, locate the light stage and add the light buffer data to the light stage result
-- GPU resident vertex data for models: load on demand based on { surface, shader } pair
 - r_depthFade
 - r_dynamiclight
 - CMAA 2 integration?
@@ -73,14 +72,8 @@ to do:
 - don't do persistent mapping to help out RenderDoc?
 - Intel GPU: try storing only 6*2 samplers instead of 6*16: 1 set for no mip bias and 1 set for r_picmip
 - Intel GPU: evaluate the benefit of static samplers
-- leverage rhi.allocator->IsCacheCoherentUMA()
-	- buffers: create with CPU access, map the destination buffer directly
-	- textures: create with undefined layout and CPU access, upload data in 1 step with WriteToSubresource
 - defragment on partial inits with D3D12MA?
 - use ID3D12Device4::CreateCommandList1 to create closed command lists
-- IDXGISwapChain::SetFullScreenState(TRUE) with the borderless window taking up the entire screen
-	and ALLOW_TEARING set on both the flip mode swap chain and Present() flags
-	will enable true immediate independent flip mode and give us the lowest latency possible
 - resources that should be committed: depth buffer, render targets, static geometry - optional: large textures
 - move UI to the uber shader system, tessellate to generate proper data
 - share structs between HLSL and C++ with .hlsli files -> change cbuffer to ConstantBuffer<MyStruct>
@@ -89,8 +82,6 @@ to do:
 - not rendering creates issues with resources not getting transitioned
 - depth pre-pass: world entities can reference world surfaces -> must ignore
 - roq video textures?
-X rework: simplify by using the direct queue for everything -> nah
-	it makes almost no difference to either the code or map load performance on the GTX 1070
 X figure out brightness/gamma differences between D3D12 & D3D11
 	-> UI uses CGEN_VERTEX / AGEN_VERTEX
 	-> tr.identityLight usage is missing
@@ -100,6 +91,16 @@ rejected:
 	-> nope, it doesn't say when the frame gets displayed or even queued for display
 - NvAPI_D3D_IsGSyncCapable / NvAPI_D3D_IsGSyncActive for diagnostics
 	-> nope, that's for D3D9-11
+- textures on cache-coherent UMA:
+	1. create with undefined layout and CPU access (custom heap)
+	2. upload data in 1 step with WriteToSubresource
+	-> nope, render times are worse (map loads were faster, but the render time hit was not small)
+- simplify by using the direct queue for everything
+	-> it makes almost no difference to either the code or map load performance
+- IDXGISwapChain::SetFullScreenState(TRUE) with the borderless window taking up the entire screen
+	and ALLOW_TEARING set on both the flip mode swap chain and Present() flags
+	will enable true immediate independent flip mode and give us the lowest latency possible
+	-> not using SetFullScreenState is perfectly fine
 */
 
 /*
@@ -509,6 +510,7 @@ namespace RHI
 		IDXGIAdapter1* adapter;
 		ID3D12Device* device;
 		D3D12MA::Allocator* allocator;
+		D3D12MA::Pool* umaPool; // only non-NULL when using a cache-coherent UMA adapter
 		ID3D12CommandQueue* mainCommandQueue;
 		ID3D12CommandQueue* computeCommandQueue;
 		IDXGISwapChain3* swapChain;
@@ -793,7 +795,8 @@ namespace RHI
 
 		uint8_t* mapped = NULL;
 		Q_assert(userBuffer.desc.memoryUsage != MemoryUsage::Readback);
-		if(userBuffer.desc.memoryUsage == MemoryUsage::GPU)
+		if(userBuffer.desc.memoryUsage == MemoryUsage::GPU &&
+			rhi.umaPool == NULL)
 		{
 			const uint32_t uploadByteCount = userBuffer.desc.byteCount;
 			WaitToStartUploading(uploadByteCount);
@@ -1579,6 +1582,30 @@ namespace RHI
 		}
 	}
 
+	static const char* GetHeapTypeName(D3D12_HEAP_TYPE type)
+	{
+		switch(type)
+		{
+			case D3D12_HEAP_TYPE_DEFAULT: return "GPU";
+			case D3D12_HEAP_TYPE_UPLOAD: return "upload";
+			case D3D12_HEAP_TYPE_READBACK: return "readback";
+			case D3D12_HEAP_TYPE_CUSTOM: return "UMA";
+			default: Q_assert(!"Unsupported heap type"); return "unknown";
+		}
+	}
+
+	static const char* GetResourceHeapName(ID3D12Resource* resource)
+	{
+		D3D12_HEAP_PROPERTIES props;
+		D3D12_HEAP_FLAGS flags;
+		if(SUCCEEDED(resource->GetHeapProperties(&props, &flags)))
+		{
+			return GetHeapTypeName(props.Type);
+		}
+
+		return "unknown";
+	}
+
 	static void ValidateResourceStateForBarrier(D3D12_RESOURCE_STATES state)
 	{
 		if(state == D3D12_RESOURCE_STATE_UNORDERED_ACCESS ||
@@ -2086,6 +2113,36 @@ namespace RHI
 		}
 	}
 
+	static void DrawBuffers()
+	{
+		static char filter[256];
+		if(ImGui::Button("Clear filter"))
+		{
+			filter[0] = '\0';
+		}
+		ImGui::SameLine();
+		ImGui::InputText(" ", filter, ARRAY_LEN(filter));
+
+		if(BeginTable("Buffers", 3))
+		{
+			TableHeader(3, "Buffer", "State", "Heap");
+
+			int i = 0;
+			Buffer* buffer;
+			HBuffer hbuffer;
+			while(rhi.buffers.FindNext(&buffer, &hbuffer, &i))
+			{
+				if(filter[0] != '\0' && !Com_Filter(filter, buffer->desc.name))
+				{
+					continue;
+				}
+				TableRow(3, buffer->desc.name, GetNameForD3DResourceStates(buffer->currentState), GetResourceHeapName(buffer->buffer));
+			}
+
+			ImGui::EndTable();
+		}
+	}
+
 	typedef void (*UICallback)();
 
 	static void DrawSection(const char* name, UICallback callback)
@@ -2110,6 +2167,7 @@ namespace RHI
 				DrawSection("Resources", &DrawResourceUsage);
 				DrawSection("Caps", &DrawCaps);
 				DrawSection("Textures", &DrawTextures);
+				DrawSection("Buffers", &DrawBuffers);
 				ImGui::EndTabBar();
 			}
 			ImGui::End();
@@ -2266,6 +2324,24 @@ namespace RHI
 			desc.pAdapter = rhi.adapter;
 			desc.Flags = D3D12MA::ALLOCATOR_FLAG_SINGLETHREADED;
 			D3D(D3D12MA::CreateAllocator(&desc, &rhi.allocator));
+		}
+
+		if(rhi.allocator->IsCacheCoherentUMA())
+		{
+			D3D12MA::POOL_DESC poolDesc = {};
+			poolDesc.HeapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_WRITE_COMBINE;
+			poolDesc.HeapProperties.CreationNodeMask = 0;
+			poolDesc.HeapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_L0; // system
+			poolDesc.HeapProperties.Type = D3D12_HEAP_TYPE_CUSTOM;
+			poolDesc.HeapProperties.VisibleNodeMask = 0;
+			poolDesc.HeapFlags = D3D12_HEAP_FLAG_NONE;
+			poolDesc.Flags = D3D12MA::POOL_FLAG_NONE;
+
+			D3D12MA::Pool* pool;
+			if(SUCCEEDED(rhi.allocator->CreatePool(&poolDesc, &pool)))
+			{
+				rhi.umaPool = pool;
+			}
 		}
 
 #if defined(D3D_DEBUG)
@@ -2555,6 +2631,7 @@ namespace RHI
 		COM_RELEASE(rhi.computeCommandQueue);
 		COM_RELEASE(rhi.mainCommandQueue);
 		COM_RELEASE(rhi.infoQueue);
+		COM_RELEASE(rhi.umaPool);
 		COM_RELEASE(rhi.allocator);
 		COM_RELEASE(rhi.device);
 		COM_RELEASE(rhi.adapter);
@@ -2737,6 +2814,12 @@ namespace RHI
 			resourceState = D3D12_RESOURCE_STATE_COPY_DEST; // mandated
 			desc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 		}
+		if(rhiDesc.memoryUsage == MemoryUsage::GPU && rhi.umaPool != NULL)
+		{
+			// we only use the custom heap for buffers that are not supposed to be CPU-visible
+			allocDesc.HeapType = D3D12_HEAP_TYPE_CUSTOM;
+			allocDesc.CustomPool = rhi.umaPool;
+		}
 		allocDesc.Flags = D3D12MA::ALLOCATION_FLAG_STRATEGY_MIN_MEMORY;
 		if(rhiDesc.committedResource)
 		{
@@ -2881,9 +2964,9 @@ namespace RHI
 			desc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 		}
 
-		// @TODO: leverage D3D12_HEAP_TYPE_CUSTOM for a UMA architecture?
 		D3D12MA::ALLOCATION_DESC allocDesc = { 0 };
 		allocDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+		allocDesc.ExtraHeapFlags = D3D12_HEAP_FLAG_NONE;
 		allocDesc.Flags = D3D12MA::ALLOCATION_FLAG_STRATEGY_MIN_MEMORY;
 		if(rhiDesc.committedResource)
 		{
