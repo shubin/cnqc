@@ -2813,6 +2813,10 @@ namespace RHI
 			resourceState = D3D12_RESOURCE_STATE_COPY_DEST; // mandated
 			desc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 		}
+		else
+		{
+			resourceState = GetD3DResourceStates(rhiDesc.initialState);
+		}
 		if(rhiDesc.memoryUsage == MemoryUsage::GPU && rhi.umaPool != NULL)
 		{
 			// we only use the custom heap for buffers that are not supposed to be CPU-visible
