@@ -16,12 +16,12 @@
     <LocalDebuggerCommand>$(QUAKE3DIR)\cnq3-x64.exe</LocalDebuggerCommand>
     <LocalDebuggerWorkingDirectory>$(QUAKE3DIR)</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
-    <LocalDebuggerCommandArguments>+set fs_game $(CPMADIR) +set sv_pure 0 +set r_fullscreen 0</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>+set fs_game $(CPMADIR) +set sv_pure 0 +set r_fullscreen 0 +set r_gpuPreference 1</LocalDebuggerCommandArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='release|Win32'">
     <LocalDebuggerCommand>$(QUAKE3DIR)\cnq3-x86.exe</LocalDebuggerCommand>
     <LocalDebuggerWorkingDirectory>$(QUAKE3DIR)</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
-    <LocalDebuggerCommandArguments>+set fs_game $(CPMADIR) +set sv_pure 0 +set r_fullscreen 0</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>+set fs_game $(CPMADIR) +set sv_pure 0 +set r_fullscreen 0 +set r_gpuPreference 1</LocalDebuggerCommandArguments>
   </PropertyGroup>
 </Project>
