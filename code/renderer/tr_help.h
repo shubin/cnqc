@@ -123,7 +123,7 @@ S_COLOR_VAL "    2 " S_COLOR_HELP "= R16G16B16A16"
 "Because depth values are clamped, improper depth ordering can occur."
 
 #define help_r_gpuPreference \
-"sets the GPU selection preference" \
+"sets the GPU selection preference\n" \
 S_COLOR_VAL "    0 " S_COLOR_HELP "= High performance\n" \
 S_COLOR_VAL "    1 " S_COLOR_HELP "= Low power\n" \
 S_COLOR_VAL "    2 " S_COLOR_HELP "= None"
