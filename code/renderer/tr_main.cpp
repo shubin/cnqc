@@ -944,14 +944,13 @@ static qbool SurfIsOffscreen( const drawSurf_t* drawSurf )
 	int entityNum;
 	int numTriangles;
 	const shader_t *shader;
-	int		fogNum;
 	vec4_t clip, eye;
 	int i;
 	unsigned int pointAnd = (unsigned int)~0;
 
 	R_RotateForViewer();
 
-	R_DecomposeSort( drawSurf->sort, &entityNum, &shader, &fogNum );
+	R_DecomposeSort( drawSurf->sort, &entityNum, &shader );
 	tess.numIndexes = 0;
 	tess.numVertexes = 0;
 	tess.shader = shader;
@@ -1168,7 +1167,11 @@ static void R_RadixSort( drawSurf_t *source, int size )
   R_Radix( 1, size, scratch, source );
   R_Radix( 2, size, source, scratch );
   R_Radix( 3, size, scratch, source );
+  R_Radix( 4, size, source, scratch );
+  R_Radix( 5, size, scratch, source );
 #else
+  R_Radix( 5, size, source, scratch );
+  R_Radix( 4, size, scratch, source );
   R_Radix( 3, size, source, scratch );
   R_Radix( 2, size, scratch, source );
   R_Radix( 1, size, source, scratch );
@@ -1315,20 +1318,25 @@ void R_AddLitSurf( const surfaceType_t* surface, const shader_t* shader, int fog
 }
 
 
-unsigned int R_ComposeSort( int entityNum, const shader_t *shader, int fogNum )
+uint64_t R_ComposeSort( int entityNum, const shader_t* shader, int staticGeoChunk )
 {
 	return
-		(entityNum << QSORT_ENTITYNUM_SHIFT) |
-		(shader->sortedIndex << QSORT_SHADERNUM_SHIFT) |
-		(fogNum << QSORT_FOGNUM_SHIFT);
+		( (uint64_t)entityNum << DRAWSORT_ENTITY_INDEX ) |
+		( (uint64_t)shader->sortedIndex << DRAWSORT_SHADER_INDEX ) |
+		( (uint64_t)( staticGeoChunk > 0 ? 0 : 1 ) << DRAWSORT_STATICGEO_INDEX ) |
+		( (uint64_t)( shader->pipelines[0].pipeline ) << DRAWSORT_PSO_INDEX ) |
+		( (uint64_t)( shader->isSky ? 1 : 0 ) << DRAWSORT_SKY_INDEX ) |
+		( (uint64_t)( shader->isAlphaTestedOpaque ? 1 : 0 ) << DRAWSORT_ALPHATEST_INDEX ) |
+		( (uint64_t)( shader->isOpaque ? 0 : 1 ) << DRAWSORT_OPAQUE_INDEX ) |
+		( (uint64_t)( shader->sort == SS_PORTAL ? 0 : 1 ) << DRAWSORT_PORTAL_INDEX );
 }
 
 
-void R_DecomposeSort( unsigned sort, int *entityNum, const shader_t **shader, int *fogNum )
+void R_DecomposeSort( uint64_t sort, int* entityNum, const shader_t** shader )
 {
-	*fogNum = ( sort >> QSORT_FOGNUM_SHIFT ) & 31;
-	*shader = tr.sortedShaders[ ( sort >> QSORT_SHADERNUM_SHIFT ) & (MAX_SHADERS-1) ];
-	*entityNum = ( sort >> QSORT_ENTITYNUM_SHIFT ) & MAX_REFENTITIES;
+	*entityNum = ( sort >> DRAWSORT_ENTITY_INDEX ) & MAX_REFENTITIES;
+	*shader = tr.sortedShaders[ ( sort >> DRAWSORT_SHADER_INDEX ) & (MAX_SHADERS-1) ];
+	
 }
 
 
@@ -1465,83 +1473,6 @@ static int R_CompareDrawSurfNoKey( const void* aPtr, const void* bPtr )
 }
 
 
-static bool HasStaticGeo(const drawSurf_t* drawSurf)
-{
-	return drawSurf->staticGeoChunk > 0;
-}
-
-
-static int CompareDrawSurfGeneric(const void* aPtr, const void* bPtr)
-{
-	const drawSurf_t* a = (const drawSurf_t*)aPtr;
-	const drawSurf_t* b = (const drawSurf_t*)bPtr;
-
-	// portals first
-	const int portalA = tr.shaders[a->shaderNum]->sort == SS_PORTAL;
-	const int portalB = tr.shaders[b->shaderNum]->sort == SS_PORTAL;
-	if(portalA != portalB)
-	{
-		return portalB - portalA;
-	}
-
-	// opaque first
-	const int opaqueA = tr.shaders[a->shaderNum]->sort <= SS_OPAQUE;
-	const int opaqueB = tr.shaders[b->shaderNum]->sort <= SS_OPAQUE;
-	if(opaqueA != opaqueB)
-	{
-		return opaqueB - opaqueA;
-	}
-
-	// sky last opaque
-	const int skyA = tr.shaders[a->shaderNum]->sort == SS_ENVIRONMENT;
-	const int skyB = tr.shaders[b->shaderNum]->sort == SS_ENVIRONMENT;
-	if(skyA && opaqueB)
-	{
-		return 1;
-	}
-	if(skyB && opaqueA)
-	{
-		return -1;
-	}
-
-	// PSO
-	const int psoA = tr.shaders[a->shaderNum]->pipelines[0].pipeline;
-	const int psoB = tr.shaders[b->shaderNum]->pipelines[0].pipeline;
-	if(psoA != psoB)
-	{
-		return psoA - psoB;
-	}
-
-	// static first
-	const bool staticGeoA = HasStaticGeo(a);
-	const bool staticGeoB = HasStaticGeo(b);
-	if(staticGeoA != staticGeoB)
-	{
-		return (int)staticGeoB - (int)staticGeoA;
-	}
-
-	// shader
-	if(a->shaderNum != b->shaderNum)
-	{
-		return a->shaderNum - b->shaderNum;
-	}
-
-	// entity number
-	int entityNumA, entityNumB;
-	const shader_t* shaderA;
-	const shader_t* shaderB;
-	int fogNumA, fogNumB;
-	R_DecomposeSort(a->sort, &entityNumA, &shaderA, &fogNumA);
-	R_DecomposeSort(b->sort, &entityNumB, &shaderB, &fogNumB);
-	if(entityNumA != entityNumB)
-	{
-		return entityNumA - entityNumB;
-	}
-
-	return 0;
-}
-
-
 static void R_SortDrawSurfs( int firstDrawSurf, int firstLitSurf )
 {
 	const int numDrawSurfs = tr.refdef.numDrawSurfs - firstDrawSurf;
@@ -1554,61 +1485,28 @@ static void R_SortDrawSurfs( int firstDrawSurf, int firstLitSurf )
 		return;
 	}
 
-	const shader_t* shader;
-	int fogNum, entityNum;
-
-#if 0
-	// sort the drawsurfs by sort type, then shader, then entity, etc
 	R_RadixSort( drawSurfs, numDrawSurfs );
 
 	// check for any pass through drawing,
 	// which may cause another view to be rendered first
-	for ( int i = 0 ; i < numDrawSurfs ; i++ ) {
-		R_DecomposeSort( (drawSurfs+i)->sort, &entityNum, &shader, &fogNum );
-
-		if ( shader->sort > SS_PORTAL ) {
-			break;
-		}
-
-		// no shader should ever have this sort type
-		if ( shader->sort == SS_BAD ) {
-			ri.Error( ERR_DROP, "Shader '%s' with sort == SS_BAD", shader->name );
-		}
+	const shader_t* shader;
+	int entityNum;
+	for ( int i = 0; i < numDrawSurfs; i++ ) {
+		R_DecomposeSort( (drawSurfs + i)->sort, &entityNum, &shader );
 
 		// if the mirror was completely clipped away, we may need to check another surface
-		if ( R_MirrorViewBySurface( (drawSurfs+i), entityNum) ) {
+		if ( shader->sort == SS_PORTAL && R_MirrorViewBySurface( (drawSurfs + i), entityNum ) ) {
 			// this is a debug option to see exactly what is being mirrored
 			if ( r_portalOnly->integer ) {
 				return;
 			}
-			break;		// only one mirror view at a time
 		}
 	}
-#else
-	qsort(drawSurfs, numDrawSurfs, sizeof(drawSurf_t), &CompareDrawSurfGeneric);
-
-	// check for any pass through drawing,
-	// which may cause another view to be rendered first
-	for(int i = 0; i < numDrawSurfs; i++)
-	{
-		R_DecomposeSort((drawSurfs + i)->sort, &entityNum, &shader, &fogNum);
-
-		// if the mirror was completely clipped away, we may need to check another surface
-		if(shader->sort == SS_PORTAL && R_MirrorViewBySurface((drawSurfs + i), entityNum))
-		{
-			// this is a debug option to see exactly what is being mirrored
-			if(r_portalOnly->integer)
-			{
-				return;
-			}
-		}
-	}
-#endif
 
 	// compute the average camera depth of all transparent surfaces
 	int numTranspSurfs = 0;
 	for ( int i = numDrawSurfs - 1; i >= 0; --i ) {
-		R_DecomposeSort( (drawSurfs+i)->sort, &entityNum, &shader, &fogNum );
+		R_DecomposeSort( (drawSurfs+i)->sort, &entityNum, &shader );
 
 		if ( shader->sort <= SS_OPAQUE ) {
 			numTranspSurfs = numDrawSurfs - i - 1;

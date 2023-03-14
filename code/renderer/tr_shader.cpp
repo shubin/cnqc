@@ -1761,21 +1761,21 @@ static void SortNewShader()
 	// The extra CPU cost for the fix-up is nothing compared to loading new textures mid-frame.
 	//
 
-	int entityNum, fogNum;
+	int entityNum;
 	const shader_t* wrongShader;
 
 	const int numDrawSurfs = tr.refdef.numDrawSurfs;
 	drawSurf_t* drawSurfs = tr.refdef.drawSurfs;
 	for( i = 0; i < numDrawSurfs; ++i, ++drawSurfs ) {
-		R_DecomposeSort( drawSurfs->sort, &entityNum, &wrongShader, &fogNum );
-		drawSurfs->sort = R_ComposeSort( entityNum, tr.shaders[drawSurfs->shaderNum], fogNum );
+		R_DecomposeSort( drawSurfs->sort, &entityNum, &wrongShader );
+		drawSurfs->sort = R_ComposeSort( entityNum, tr.shaders[drawSurfs->shaderNum], drawSurfs->staticGeoChunk );
 	}
 
 	const int numLitSurfs = tr.refdef.numLitSurfs;
 	litSurf_t* litSurfs = tr.refdef.litSurfs;
 	for ( i = 0; i < numLitSurfs; ++i, ++litSurfs ) {
-		R_DecomposeSort( litSurfs->sort, &entityNum, &wrongShader, &fogNum );
-		litSurfs->sort = R_ComposeSort( entityNum, tr.shaders[litSurfs->shaderNum], fogNum );
+		R_DecomposeSort( litSurfs->sort, &entityNum, &wrongShader );
+		litSurfs->sort = R_ComposeSort( entityNum, tr.shaders[litSurfs->shaderNum], drawSurfs->staticGeoChunk );
 	}
 }
 

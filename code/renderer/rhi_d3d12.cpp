@@ -24,6 +24,7 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 /*
 to do:
 
+- use isSky instead of sort == SS_ENVIRONMENT
 - mip-map generation: figure out whether out of bounds texture UAV writes are OK or not
 - fix the uploader (overlapped Begin*Upload calls -> sync fails on overflow)
 - working depth pre-pass (account for cull mode, generate buffers on demand)

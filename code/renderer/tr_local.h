@@ -530,9 +530,9 @@ struct msurface_t;
 struct drawSurf_t {
 	// we keep the sort key at the top instead of the pointer
 	// to allow for slightly cleaner code gen in the radix sort code
-	unsigned				sort;		// bit combination for fast compares
-	float					depth;		// transparent surface's midpoint's depth
+	uint64_t				sort;		// sort key for scene rendering
 	const surfaceType_t*	surface;	// any of surface*_t
+	float					depth;		// transparent surface's midpoint's depth
 	qhandle_t				model;		// MD3 model handle, can be 0
 	int						index;		// transparent surface's registration order
 	float					shaderSort;	// transparent surface's shader sort
@@ -809,27 +809,29 @@ extern	refimport_t		ri;
 #define	MAX_DRAWIMAGES			2048
 #define	MAX_LIGHTMAPS			256
 #define	MAX_SKINS				1024
-
 #define	MAX_DRAWSURFS			0x10000
-
-/*
-the drawsurf sort data is packed into a single 32 bit value so it can be
-compared quickly during the qsorting process
-
-the bits are allocated as follows:
-
-29-31 : zero (3 bits)
-15-28 : sorted shader index (14 bits)
- 5-14 : entity index (10 bits)
- 0- 4 : fog index (5 bits)
-*/
-#define QSORT_SHADERNUM_SHIFT	15
-#define QSORT_ENTITYNUM_SHIFT	5
-#define QSORT_FOGNUM_SHIFT		0
-
-#define QSORT_ENTITYNUM_MASK	0x00007FE0
-
 #define MAX_SHADERS				16384	// 14 bits, must match the length in the sort key above
+
+enum drawSurfGeneralSort_t {
+	// dimensions - the sum should stay within 48 bits
+	DRAWSORT_ENTITY_BITS = 10, // GENTITYNUM_BITS
+	DRAWSORT_SHADER_BITS = 14, // log2 MAX_SHADERS
+	DRAWSORT_STATICGEO_BITS = 1,
+	DRAWSORT_PSO_BITS = 19,
+	DRAWSORT_SKY_BITS = 1,
+	DRAWSORT_ALPHATEST_BITS = 1,
+	DRAWSORT_OPAQUE_BITS = 1,
+	DRAWSORT_PORTAL_BITS = 1,
+	// offsets
+	DRAWSORT_ENTITY_INDEX = 0,
+	DRAWSORT_SHADER_INDEX = DRAWSORT_ENTITY_INDEX + DRAWSORT_ENTITY_BITS,
+	DRAWSORT_STATICGEO_INDEX = DRAWSORT_SHADER_INDEX + DRAWSORT_SHADER_BITS,
+	DRAWSORT_PSO_INDEX = DRAWSORT_STATICGEO_INDEX + DRAWSORT_STATICGEO_BITS,
+	DRAWSORT_SKY_INDEX = DRAWSORT_PSO_INDEX + DRAWSORT_PSO_BITS,
+	DRAWSORT_ALPHATEST_INDEX = DRAWSORT_SKY_INDEX + DRAWSORT_SKY_BITS,
+	DRAWSORT_OPAQUE_INDEX = DRAWSORT_ALPHATEST_INDEX + DRAWSORT_ALPHATEST_BITS,
+	DRAWSORT_PORTAL_INDEX = DRAWSORT_OPAQUE_INDEX + DRAWSORT_OPAQUE_BITS
+};
 
 
 #define MAX_TMUS 4
@@ -1097,8 +1099,8 @@ void R_AddPolygonSurfaces();
 
 void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int fogIndex, int staticGeoChunk = 0 );
 void R_AddLitSurf( const surfaceType_t* surface, const shader_t* shader, int fogIndex );
-unsigned int R_ComposeSort( int entityNum, const shader_t *shader, int fogNum );
-void R_DecomposeSort( unsigned sort, int *entityNum, const shader_t **shader, int *fogNum );
+uint64_t R_ComposeSort( int entityNum, const shader_t* shader, int staticGeoChunk );
+void R_DecomposeSort( uint64_t sort, int* entityNum, const shader_t** shader );
 
 
 #define	CULL_IN		0		// completely unclipped
