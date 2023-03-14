@@ -201,11 +201,10 @@ static void R_LoadLightmaps( const lump_t* l )
 			const int offX = (t % countX) * LMPhysPageSize;
 			const int offY = (t / countX) * LMPhysPageSize;
 			const int srcRowByteCount = LMPhysPageSize * 4;
-			for(int r = 0; r < LMPhysPageSize; ++r)
-			{
+			for ( int r = 0; r < LMPhysPageSize; ++r ) {
 				const byte* src = image + r * srcRowByteCount;
 				byte* dst = upload.mappedData + (offY + r) * upload.dstRowByteCount + offX * 4;
-				memcpy(dst, src, srcRowByteCount);
+				memcpy( dst, src, srcRowByteCount );
 			}
 
 			lightmapBiases[i][0] = (float)(offX + LMBorderSize) / (float)sizeX;
