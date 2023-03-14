@@ -24,29 +24,55 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 /*
 to do:
 
+- use ID3D12DebugCommandList::AssertResourceState
+- git cherry-pick 693415a6e2f2f3789215ec037b15d505c5132fd4
+- git cherry-pick c75b2b27fa936854d27dadf458e3ec3b03829561
+- Intel 12th gen handling
+	https://www.intel.com/content/www/us/en/developer/articles/guide/12th-gen-intel-core-processor-gamedev-guide.html
+	https://github.com/GameTechDev/HybridDetect
+	- use GetSystemCpuSetInformation for info
+	- graph GetCurrentProcessorNumber to see where we're executing
+	- use SetThreadSelectedCpuSets
+- CG_INIT sets r_swapinterval to speed up the load, but it doesn't work anymore
+- https://asawicki.info/news_1758_an_idea_for_visualization_of_frame_times
+- add { md3 surface, static shader } pairs to the chunk list on demand
+- tool: can replace image with default to help locate in the map
+- tool: can replace shader with default to help locate in the map
+- tool: live shader override editing
+- tool: shader trace with the pointed pixel being traced
+	render opaque to shader ID render target
+	render transparent to fragment buffer but only output for traced pixel
+		index texture not needed
+		only output depth and shader ID
+	run compute shader to load shader ID linked list into an array, sort it and write it out
+- reloading a map can lead to a TDR timeout
+	could it be related to the copy queue?
+	use PIX to capture and replay the bad command list?
+	seems to not happen ever since I fixed the usage of the stale depth buffer?!
+- transparents don't batch properly I think -> entityMergeable support? ("entityMergable" in the code)
+- use Application Verifier to catch issues
+- tone mapping: look at https://github.com/h3r2tic/tony-mc-mapface
+- ubershader PS: run-time alpha test evaluation to reduce PSO count?
 - use isSky instead of sort == SS_ENVIRONMENT
 - mip-map generation: figure out whether out of bounds texture UAV writes are OK or not
 - fix the uploader (overlapped Begin*Upload calls -> sync fails on overflow)
 - working depth pre-pass (account for cull mode, generate buffers on demand)
-	!!! pre-compiled and run-time compiled shaders don't have bit-exact matching Z output
+	full depth pre-pass -> Z-buffer is complete and won't get updated by opaque drawing
+	1 full-screen pass per dynamic light, culled early with the depth bounds test -> write out to a light buffer
+	draw opaques, locate the light stage and add the light buffer data to the light stage result
 - GPU resident vertex data for models: load on demand based on { surface, shader } pair
 - r_depthFade
 - r_dynamiclight
 - CMAA 2 integration?
 - SMAA S2x support?
 - figure out LOD of baked map surfaces (r_lodCurveError)
-- entityMergeable support ("entityMergable" in the code)
-- speed up map loads with BeginGraphicsPipelineCreation() / WaitForAllPipelineCreations()
-	use for non-UI shaders and run PSO creation on worker threads
-	would need 1 instance of IDxcUtils/IDxcCompiler3 per thread because they're not thread safe
 - when creating the root signature, validate that neither of the tables have any gap
 - use root signature 1.1 to use the hints that help the drivers optimize out static resources
 - is it possible to force Resource Binding Tier 2 somehow? are we supposed to run on old HW to test? :(
 	see if WARP allows us to do that?
 - don't do persistent mapping to help out RenderDoc?
-* implicit barrier & profiling API outside the RHI: Begin/EndRenderPass (specify inputs and outputs too?)
-* partial inits and shutdown
-- evaluate the benefit of static samplers
+- Intel GPU: try storing only 6*2 samplers instead of 6*16: 1 set for no mip bias and 1 set for r_picmip
+- Intel GPU: evaluate the benefit of static samplers
 - leverage rhi.allocator->IsCacheCoherentUMA()
 	- buffers: create with CPU access, map the destination buffer directly
 	- textures: create with undefined layout and CPU access, upload data in 1 step with WriteToSubresource
@@ -62,10 +88,12 @@ to do:
 - what's the actual fog curve used by Q3?
 - not rendering creates issues with resources not getting transitioned
 - depth pre-pass: world entities can reference world surfaces -> must ignore
-- screenshot
-- video
 - roq video textures?
-- Intel GPU: try storing only 6*2 samplers instead of 6*16: 1 set for no mip bias and 1 set for r_picmip
+X rework: simplify by using the direct queue for everything -> nah
+	it makes almost no difference to either the code or map load performance on the GTX 1070
+X figure out brightness/gamma differences between D3D12 & D3D11
+	-> UI uses CGEN_VERTEX / AGEN_VERTEX
+	-> tr.identityLight usage is missing
 
 rejected:
 - NvAPI_D3D_GetLatency to get (simulated) input to display latency
