@@ -1831,227 +1831,6 @@ static shader_t* GeneratePermanentShader()
 }
 
 
-/*
-========================================================================================
-
-SHADER OPTIMIZATION AND FOGGING
-
-========================================================================================
-*/
-
-
-typedef struct {
-	int			blendA;
-	int			blendB;
-	texEnv_t	multitextureEnv;
-	int			multitextureBlend;
-} collapse_t;
-
-static const collapse_t collapse[] = {
-	// the most common (and most worthwhile) collapse is for DxLM shaders
-	{ 0, GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO,
-		TE_MODULATE, 0 },
-
-	{ 0, GLS_DSTBLEND_SRC_COLOR | GLS_SRCBLEND_ZERO,
-		TE_MODULATE, 0 },
-
-	{ GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR, GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR,
-		TE_MODULATE, GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR },
-
-	{ GLS_DSTBLEND_SRC_COLOR | GLS_SRCBLEND_ZERO, GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR,
-		TE_MODULATE, GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR },
-
-	{ GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR, GLS_DSTBLEND_SRC_COLOR | GLS_SRCBLEND_ZERO,
-		TE_MODULATE, GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR },
-
-	{ GLS_DSTBLEND_SRC_COLOR | GLS_SRCBLEND_ZERO, GLS_DSTBLEND_SRC_COLOR | GLS_SRCBLEND_ZERO,
-		TE_MODULATE, GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR },
-
-	{ 0, GLS_DSTBLEND_ONE | GLS_SRCBLEND_ONE,
-		TE_ADD, 0 },
-
-	{ GLS_DSTBLEND_ONE | GLS_SRCBLEND_ONE, GLS_DSTBLEND_ONE | GLS_SRCBLEND_ONE,
-		TE_ADD, GLS_DSTBLEND_ONE | GLS_SRCBLEND_ONE },
-#if 0
-	{ 0, GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA | GLS_SRCBLEND_SRC_ALPHA,
-		TE_DECAL, 0 },
-#endif
-	{ -1 }
-};
-
-/*
-================
-CollapseMultitexture
-
-Attempt to combine two stages into a single multitexture stage
-FIXME: I think modulated add + modulated add collapses incorrectly
-=================
-*/
-static qbool CollapseMultitexture( void ) {
-	int abits, bbits;
-	int i;
-
-	// make sure both stages are active
-	if ( !stages[0].active || !stages[1].active ) {
-		return qfalse;
-	}
-
-	abits = stages[0].stateBits;
-	bbits = stages[1].stateBits;
-
-	// make sure that both stages have identical state other than blend modes
-	if ( ( abits & ~( GLS_DSTBLEND_BITS | GLS_SRCBLEND_BITS | GLS_DEPTHMASK_TRUE ) ) !=
-		( bbits & ~( GLS_DSTBLEND_BITS | GLS_SRCBLEND_BITS | GLS_DEPTHMASK_TRUE ) ) ) {
-		return qfalse;
-	}
-
-	abits &= ( GLS_DSTBLEND_BITS | GLS_SRCBLEND_BITS );
-	bbits &= ( GLS_DSTBLEND_BITS | GLS_SRCBLEND_BITS );
-
-	// search for a valid multitexture blend function
-	for ( i = 0; collapse[i].blendA != -1 ; i++ ) {
-		if ( abits == collapse[i].blendA
-			&& bbits == collapse[i].blendB ) {
-			break;
-		}
-	}
-
-	// nothing found
-	if ( collapse[i].blendA == -1 ) {
-		return qfalse;
-	}
-
-	// make sure waveforms have identical parameters
-	if ( ( stages[0].rgbGen != stages[1].rgbGen ) ||
-		( stages[0].alphaGen != stages[1].alphaGen ) )  {
-		return qfalse;
-	}
-
-	// an add collapse can only have identity colors
-	if ( collapse[i].multitextureEnv == TE_ADD && stages[0].rgbGen != CGEN_IDENTITY ) {
-		return qfalse;
-	}
-
-	if ( stages[0].rgbGen == CGEN_WAVEFORM )
-	{
-		if ( memcmp( &stages[0].rgbWave,
-					 &stages[1].rgbWave,
-					 sizeof( stages[0].rgbWave ) ) )
-		{
-			return qfalse;
-		}
-	}
-	if ( stages[0].alphaGen == AGEN_WAVEFORM )
-	{
-		if ( memcmp( &stages[0].alphaWave,
-					 &stages[1].alphaWave,
-					 sizeof( stages[0].alphaWave ) ) )
-		{
-			return qfalse;
-		}
-	}
-
-
-	return qfalse;
-/*
-	// set the new blend state bits
-	shader.multitextureEnv = collapse[i].multitextureEnv;
-	stages[0].stateBits &= ~( GLS_DSTBLEND_BITS | GLS_SRCBLEND_BITS );
-	stages[0].stateBits |= collapse[i].multitextureBlend;
-
-	//
-	// move down subsequent shaders
-	//
-	memmove( &stages[1], &stages[2], sizeof( stages[0] ) * ( MAX_SHADER_STAGES - 2 ) );
-	Com_Memset( &stages[MAX_SHADER_STAGES-1], 0, sizeof( stages[0] ) );
-
-	return qtrue;
-*/
-}
-
-
-/*
-collapses can be a bit tricky, so we set a few simplifying groundrules:
-first off, GL_REPLACE and GL_DECAL are almost completely pointless
-since they're just subsets of GL_MODULATE. the only time they can ever
-have value is in a multi-add collapse where one layer is modulated by
-an rgbgen but the other needs to maintain identity colors
-*/
-
-static void CollapseStages()
-{
-	int i;
-	// NEVER reference the global stages[] etc in here, only these locals
-	int numStages = shader.numStages;
-	shaderStage_t* aStages = &stages[0];
-
-#define CollapseFailure { ++aStages; --numStages; continue; }
-
-	while (numStages >= 2) {
-		int abits = aStages[0].stateBits;
-		int bbits = aStages[1].stateBits;
-
-		if ( ( abits & ~(GLS_BLEND_BITS | GLS_DEPTHMASK_TRUE) ) !=
-			 ( bbits & ~(GLS_BLEND_BITS | GLS_DEPTHMASK_TRUE) ) )
-			CollapseFailure;
-
-		if ( ( aStages[0].rgbGen != aStages[1].rgbGen ) || ( aStages[0].alphaGen != aStages[1].alphaGen ) )
-			CollapseFailure;
-
-		abits &= GLS_BLEND_BITS;
-		bbits &= GLS_BLEND_BITS;
-
-		for ( i = 0; collapse[i].blendA != -1; ++i ) {
-			if ( (abits == collapse[i].blendA) && (bbits == collapse[i].blendB) ) {
-				break;
-			}
-		}
-
-		if ( collapse[i].blendA == -1 )
-			CollapseFailure;
-
-		// Check that all colors are opaque white on the second stage
-		// because the stage iterator can't currently specify
-		// another color array.
-		// Example shader broken without this extra test:
-		// "textures/sfx/diamond2cjumppad"
-		// The ring pulses in and out instead of only out.
-
-		// These cases must always be rejected because they depend
-		// on time elapsed, camera position, entity colors, etc.
-		if (	aStages[1].rgbGen == CGEN_LIGHTING_DIFFUSE ||
-				aStages[1].rgbGen == CGEN_WAVEFORM ||
-				aStages[1].rgbGen == CGEN_ENTITY ||
-				aStages[1].rgbGen == CGEN_ONE_MINUS_ENTITY ||
-				aStages[1].alphaGen == AGEN_WAVEFORM ||
-				aStages[1].alphaGen == AGEN_LIGHTING_SPECULAR ||
-				aStages[1].alphaGen == AGEN_ENTITY ||
-				aStages[1].alphaGen == AGEN_ONE_MINUS_ENTITY ||
-				aStages[1].alphaGen == AGEN_PORTAL )
-			CollapseFailure;
-
-		// For the remaining cases, we generate and test the colors.
-		R_ComputeColors( &aStages[1], tess.svars[0], 0, tess.numVertexes );
-		const int* colors = (const int*)tess.svars[0].colors;
-		const int colorCount = tess.numVertexes;
-		int allOnes = -1;
-		for ( int c = 0; c < colorCount; ++c )
-			allOnes &= colors[c];
-		if ( allOnes != -1 )
-			CollapseFailure;
-
-		aStages[0].stateBits &= ~GLS_BLEND_BITS;
-		aStages[0].stateBits |= collapse[i].multitextureBlend;
-		aStages[1].mtEnv = collapse[i].multitextureEnv;
-		aStages[0].mtStages = 1;
-		aStages += 2;
-		numStages -= 2;
-	}
-
-#undef CollapseFailure
-}
-
-
 static void FindLightingStages()
 {
 	int i;
@@ -2089,9 +1868,9 @@ static qbool IsAdditiveBlendDepthFade()
 		const unsigned int src = bits & GLS_SRCBLEND_BITS;
 		const unsigned int dst = bits & GLS_DSTBLEND_BITS;
 		if ((src != GLS_SRCBLEND_ONE && src != GLS_SRCBLEND_SRC_ALPHA && src != GLS_SRCBLEND_ONE_MINUS_SRC_ALPHA) ||
-		   dst != GLS_DSTBLEND_ONE ||
-		   (bits & GLS_DEPTHMASK_TRUE) != 0)
-		   return qfalse;
+			dst != GLS_DSTBLEND_ONE ||
+			(bits & GLS_DEPTHMASK_TRUE) != 0)
+			return qfalse;
 	}
 
 	return qtrue;
@@ -2375,13 +2154,11 @@ static void ProcessGreyscale()
 
 static alphaGen_t GetActualAlphaTest(const shaderStage_t* stage)
 {
-	if(stage->alphaGen != AGEN_SKIP)
-	{
+	if (stage->alphaGen != AGEN_SKIP) {
 		return stage->alphaGen;
 	}
 
-	switch(stage->rgbGen)
-	{
+	switch (stage->rgbGen) {
 		case CGEN_IDENTITY: return AGEN_IDENTITY;
 		case CGEN_IDENTITY_LIGHTING: return (alphaGen_t)__LINE__; // alpha = tr.identityLightByte
 		case CGEN_LIGHTING_DIFFUSE: return AGEN_IDENTITY;
@@ -2401,10 +2178,9 @@ static alphaGen_t GetActualAlphaTest(const shaderStage_t* stage)
 
 static void FixRedundantAlphaTesting()
 {
-	if(shader.numStages < 2 ||
+	if (shader.numStages < 2 ||
 		!stages[0].active ||
-		!stages[1].active)
-	{
+		!stages[1].active) {
 		return;
 	}
 
@@ -2414,12 +2190,10 @@ static void FixRedundantAlphaTesting()
 	// both stages must be opaque
 	const unsigned int blendReplace = GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO;
 	const unsigned int blendNone = 0;
-	if((bits0 & GLS_BLEND_BITS) != blendReplace && (bits0 & GLS_BLEND_BITS) != blendNone)
-	{
+	if ((bits0 & GLS_BLEND_BITS) != blendReplace && (bits0 & GLS_BLEND_BITS) != blendNone) {
 		return;
 	}
-	if((bits1 & GLS_BLEND_BITS) != blendReplace && (bits1 & GLS_BLEND_BITS) != blendNone)
-	{
+	if ((bits1 & GLS_BLEND_BITS) != blendReplace && (bits1 & GLS_BLEND_BITS) != blendNone) {
 		return;
 	}
 
@@ -2429,31 +2203,27 @@ static void FixRedundantAlphaTesting()
 	const unsigned int bitsOr = bits0 | bits1;
 	const unsigned int maskAT = GLS_ATEST_BITS;
 	const unsigned int expectAT = GLS_ATEST_GE_80 | GLS_ATEST_LT_80;
-	if((bitsOr & maskAT) != expectAT)
-	{
+	if ((bitsOr & maskAT) != expectAT) {
 		return;
 	}
 
 	// same texture
 	// @TODO: animMap support
-	if(stages[0].bundle.image[0] != stages[1].bundle.image[0])
-	{
+	if (stages[0].bundle.image[0] != stages[1].bundle.image[0]) {
 		return;
 	}
 
 	// same depth states and polygon fill
 	const unsigned int maskRest = GLS_DEPTHMASK_TRUE | GLS_POLYMODE_LINE | GLS_DEPTHTEST_DISABLE | GLS_DEPTHFUNC_EQUAL;
 	const unsigned int expectRest = GLS_DEPTHMASK_TRUE;
-	if((bits0 & maskRest) != expectRest || (bits1 & maskRest) != expectRest)
-	{
+	if ((bits0 & maskRest) != expectRest || (bits1 & maskRest) != expectRest) {
 		return;
 	}
 
 	// same alphaGen
 	const alphaGen_t ag0 = GetActualAlphaTest(&stages[0]);
 	const alphaGen_t ag1 = GetActualAlphaTest(&stages[1]);
-	if(ag0 != ag1)
-	{
+	if (ag0 != ag1) {
 		return;
 	}
 
@@ -2465,17 +2235,13 @@ static void FixRedundantAlphaTesting()
 // this leads to more pixel shaders, more PSOs, more PSO switches...
 static void FixUnusedBlendModes()
 {
-	for(int s = 0; s < MAX_SHADER_STAGES; ++s)
-	{
+	for (int s = 0; s < MAX_SHADER_STAGES; ++s) {
 		const unsigned int oldBlendBits = stages[s].stateBits & GLS_BLEND_BITS;
 
 		int newBlendBits = oldBlendBits;
-		if(oldBlendBits == (GLS_SRCBLEND_ZERO | GLS_DSTBLEND_SRC_COLOR))
-		{
+		if (oldBlendBits == (GLS_SRCBLEND_ZERO | GLS_DSTBLEND_SRC_COLOR)) {
 			newBlendBits = GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO;
-		}
-		else if(oldBlendBits == (GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO))
-		{
+		} else if (oldBlendBits == (GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO)) {
 			newBlendBits = 0;
 		}
 
@@ -2689,20 +2455,9 @@ static shader_t* FinishShader()
 	if ( shader.vlWanted )
 		ApplyVertexLighting();
 
-	//
-	// look for multitexture potential
-	//
-	// @TODO: delete everything related
-	/*if(stage > 1 && CollapseMultitexture()) {
-		stage--;
-	}*/
-
 	shader.numStages = stage;
 
 	FindLightingStages();
-
-	// @TODO: delete everything related
-	//CollapseStages();
 
 	if ( r_fullbright->integer ) {
 		// we replace the lightmap texture with the white texture
@@ -2736,7 +2491,6 @@ static shader_t* FinishShader()
 				stages[i].active = qfalse;
 			}
 			stages[0].stateBits = stateBits;
-			stages[0].mtStages = 0;
 			shader.lightingStages[ST_DIFFUSE] = 0; // for working dynamic lights
 			shader.lightingStages[ST_LIGHTMAP] = 0;
 		}
@@ -3083,7 +2837,7 @@ void R_ShaderList_f( void )
 	const char* const match = Cmd_Argc() > 1 ? Cmd_Argv( 1 ) : NULL;
 
 	ri.Printf( PRINT_ALL, "S   : Stage count\n" );
-	ri.Printf( PRINT_ALL, "P   : Pass count (collapsed stages)\n" );
+	ri.Printf( PRINT_ALL, "P   : PSO count\n" );
 	ri.Printf( PRINT_ALL, "L   : Lightmap index\n" );
 	ri.Printf( PRINT_ALL, "E   : Explicitly defined (i.e. defined by code)\n" );
 	ri.Printf( PRINT_ALL, "func: 'sky' if it's a sky shader, empty otherwise\n" );
@@ -3098,11 +2852,7 @@ void R_ShaderList_f( void )
 		if ( match && !Com_Filter( match, sh->name ) )
 			continue;
 
-		int passes = sh->numStages;
-		for ( int s = 0; s < sh->numStages; ++s )
-			passes -= sh->stages[s]->mtStages;
-
-		ri.Printf( PRINT_ALL, "%i %i ", sh->numStages, passes );
+		ri.Printf( PRINT_ALL, "%i %i ", sh->numStages, sh->numPipelines );
 
 		if (sh->lightmapIndex >= 0 ) {
 			ri.Printf( PRINT_ALL, "L " );

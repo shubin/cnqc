@@ -325,9 +325,6 @@ typedef struct {
 
 	qbool			isDetail;
 	stageType_t		type;
-
-	int				mtStages;	// number of subsequent stages also consumed by this stage (e.g. 1 for DxLM MT)
-	texEnv_t		mtEnv;
 } shaderStage_t;
 
 
