@@ -119,6 +119,7 @@ void World::Init()
 {
 	{
 		TextureDesc desc("depth buffer", glConfig.vidWidth, glConfig.vidHeight);
+		desc.committedResource = true;
 		desc.shortLifeTime = true;
 		desc.initialState = ResourceStates::DepthWriteBit;
 		desc.allowedState = ResourceStates::DepthAccessBits | ResourceStates::PixelShaderAccessBit;

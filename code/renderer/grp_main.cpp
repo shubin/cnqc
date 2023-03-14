@@ -330,6 +330,7 @@ void GRP::EndFrame()
 void GRP::CreateTexture(image_t* image, int mipCount, int width, int height)
 {
 	TextureDesc desc(image->name, width, height, mipCount);
+	desc.committedResource = width * height >= (1 << 20);
 	desc.shortLifeTime = true;
 	if(mipCount > 1)
 	{

@@ -73,7 +73,6 @@ to do:
 - Intel GPU: evaluate the benefit of static samplers
 - defragment on partial inits with D3D12MA?
 - use ID3D12Device4::CreateCommandList1 to create closed command lists
-- resources that should be committed: depth buffer, render targets, static geometry - optional: large textures
 - move UI to the uber shader system, tessellate to generate proper data
 - share structs between HLSL and C++ with .hlsli files -> change cbuffer to ConstantBuffer<MyStruct>
 - share texture and sampler array sizes between HLSL and C++ with .hlsli files
@@ -81,6 +80,7 @@ to do:
 - not rendering creates issues with resources not getting transitioned
 - depth pre-pass: world entities can reference world surfaces -> must ignore
 - roq video textures?
+X committed resources: depth buffer, render targets, static geometry - optional: large textures
 X figure out brightness/gamma differences between D3D12 & D3D11
 	-> UI uses CGEN_VERTEX / AGEN_VERTEX
 	-> tr.identityLight usage is missing

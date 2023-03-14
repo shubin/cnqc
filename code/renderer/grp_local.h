@@ -108,6 +108,7 @@ struct VertexBuffers : BufferBase
 		totalCount = vertexCount;
 
 		BufferDesc desc = {};
+		desc.committedResource = true;
 		desc.initialState = ResourceStates::VertexBufferBit;
 		desc.memoryUsage = memoryUsage;
 		
@@ -203,6 +204,7 @@ struct IndexBuffer : BufferBase
 		totalCount = indexCount;
 
 		BufferDesc desc = {};
+		desc.committedResource = true;
 		desc.initialState = ResourceStates::IndexBufferBit;
 		desc.memoryUsage = memoryUsage;
 		desc.name = va("%s index", name);
