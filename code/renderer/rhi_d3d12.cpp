@@ -580,6 +580,7 @@ namespace RHI
 		UploadManager upload;
 		ReadbackManager readback;
 		StaticUnorderedArray<HTexture, MAX_DRAWIMAGES> texturesToTransition;
+		StaticUnorderedArray<HBuffer, 64> buffersToTransition;
 		FrameQueries frameQueries[FrameCount];
 		ResolvedQueries resolvedQueries;
 		Pix pix;
@@ -2591,6 +2592,7 @@ namespace RHI
 			WaitUntilDeviceIsIdle();
 
 			rhi.texturesToTransition.Clear();
+			rhi.buffersToTransition.Clear();
 
 			DESTROY_POOL_LIST(DESTROY_POOL);
 
@@ -2706,14 +2708,21 @@ namespace RHI
 		const TextureBarrier barrier(rhi.renderTargets[rhi.swapChainBufferIndex], ResourceStates::RenderTargetBit);
 		CmdBarrier(1, &barrier);
 
-		static TextureBarrier barriers[MAX_DRAWIMAGES];
+		static TextureBarrier textureBarriers[MAX_DRAWIMAGES];
+		static BufferBarrier bufferBarriers[64];
 		for(uint32_t t = 0; t < rhi.texturesToTransition.count; ++t)
 		{
 			const HTexture handle = rhi.texturesToTransition[t];
 			const Texture& texture = rhi.textures.Get(handle);
-			barriers[t] = TextureBarrier(handle, texture.desc.initialState);
+			textureBarriers[t] = TextureBarrier(handle, texture.desc.initialState);
 		}
-		CmdBarrier(rhi.texturesToTransition.count, barriers);
+		for(uint32_t b = 0; b < rhi.buffersToTransition.count; ++b)
+		{
+			const HBuffer handle = rhi.buffersToTransition[b];
+			const Buffer& buffer = rhi.buffers.Get(handle);
+			bufferBarriers[b] = BufferBarrier(handle, buffer.desc.initialState);
+		}
+		CmdBarrier(rhi.texturesToTransition.count, textureBarriers, rhi.buffersToTransition.count, bufferBarriers);
 		rhi.texturesToTransition.Clear();
 
 		CmdInsertDebugLabel("RHI::BeginFrame", 0.8f, 0.8f, 0.8f);
@@ -2799,6 +2808,7 @@ namespace RHI
 			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		}
 
+		bool transitionNeeded = false;
 		D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_COMMON;
 		D3D12MA::ALLOCATION_DESC allocDesc = { 0 };
 		allocDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
@@ -2815,7 +2825,7 @@ namespace RHI
 		}
 		else
 		{
-			resourceState = GetD3DResourceStates(rhiDesc.initialState);
+			transitionNeeded = true;
 		}
 		if(rhiDesc.memoryUsage == MemoryUsage::GPU && rhi.umaPool != NULL)
 		{
@@ -2885,7 +2895,13 @@ namespace RHI
 		buffer.cbvIndex = cbvIndex;
 		buffer.uavIndex = uavIndex;
 
-		return rhi.buffers.Add(buffer);
+		const HBuffer hbuffer = rhi.buffers.Add(buffer);
+		if(transitionNeeded)
+		{
+			rhi.buffersToTransition.Add(hbuffer);
+		}
+
+		return hbuffer;
 	}
 
 	void DestroyBuffer(HBuffer handle)
