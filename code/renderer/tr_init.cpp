@@ -683,12 +683,6 @@ static qbool RE_IsDepthClampEnabled()
 }
 
 
-static void RE_SetPVSCulling( qbool enable )
-{
-	tr.drawEntireMap = !enable;
-}
-
-
 const refexport_t* GetRefAPI( const refimport_t* rimp )
 {
 	static refexport_t re;
@@ -741,8 +735,6 @@ const refexport_t* GetRefAPI( const refimport_t* rimp )
 	re.ShouldSleep = RE_IsFrameSleepNeeded;
 
 	re.DepthClamp = RE_IsDepthClampEnabled;
-
-	re.SetPVSCulling = RE_SetPVSCulling;
 
 	return &re;
 }

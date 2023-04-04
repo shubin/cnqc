@@ -512,12 +512,6 @@ static void R_MarkLeaves()
 		return;
 	}
 
-	// when playing a demo on a different map, the area masks might not match
-	// it's safest to ignore the demo's area mask and mark all nodes as visible
-	if ( tr.drawEntireMap ) {
-		tr.refdef.areamaskModified = qtrue;
-	}
-
 	// current viewcluster
 	leaf = R_PointInLeaf( tr.viewParms.pvsOrigin );
 	cluster = leaf->cluster;
@@ -534,7 +528,7 @@ static void R_MarkLeaves()
 	tr.visCount++;
 	tr.viewCluster = cluster;
 
-	if ( r_novis->integer || tr.viewCluster == -1 || tr.drawEntireMap ) {
+	if ( r_novis->integer || tr.viewCluster == -1 ) {
 		for ( i = 0; i < tr.world->numnodes; ++i ) {
 			if (tr.world->nodes[i].contents != CONTENTS_SOLID) {
 				tr.world->nodes[i].visframe = tr.visCount;
