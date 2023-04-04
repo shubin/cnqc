@@ -102,11 +102,7 @@ There's no need to make the player more complex for such an edge case.
 #endif
 
 
-#if defined(_DEBUG)
-#define FULL_SNAPSHOT_INTERVAL_MS (1 * 1000)
-#else
 #define FULL_SNAPSHOT_INTERVAL_MS (8 * 1000)
-#endif
 
 #define MAX_COMMANDS ARRAY_LEN(demo.commands)
 
@@ -933,6 +929,14 @@ static void ReadNextSnapshot()
 }
 
 
+static int PeekNextSnapshotTime()
+{
+	const int serverTime = demo.nextSnap != NULL ? demo.nextSnap->serverTime : INT_MIN;
+
+	return serverTime;
+}
+
+
 static void AddCommand( const char* string )
 {
 	PrintCmd(string);
@@ -1170,12 +1174,7 @@ qbool CL_NDP_GetServerCommand( int serverCommandNumber )
 
 int CL_NDP_Seek( int serverTime )
 {
-	// rate-limit the command to avoid lags etc.
-	static int prevSeekTime = 0;
-	const int currSeekTime = Sys_Milliseconds();
-	if (currSeekTime <= prevSeekTime + 100) {
-		return INT_MIN;
-	}
+	const int seekStartTime = Sys_Milliseconds();
 
 	// figure out which full snapshot we want to jump to
 	int index = 0;
@@ -1201,8 +1200,13 @@ int CL_NDP_Seek( int serverTime )
 	SeekToIndex(index);
 
 	// read more snapshots until we're close to the target time for more precise jumps
+	// we want the the closest snapshot whose time is less or equal to the target time
 	int numSnapshotsRead = 2;
-	while (!demo.isLastSnapshot && demo.currSnap->serverTime < serverTime) {
+	while (!demo.isLastSnapshot) {
+		const int nextServerTime = PeekNextSnapshotTime();
+		if (nextServerTime == INT_MIN || nextServerTime > serverTime) {
+			break;
+		}
 		// add all commands from the snapshot we're about to evict
 		PrintCmdListBegin("evicted snap commands");
 		AddAllCommands(&demo.currSnap->serverCommands);
@@ -1212,9 +1216,7 @@ int CL_NDP_Seek( int serverTime )
 	}
 
 	Com_DPrintf("New Demo Player: sought and read %d snaps in %d ms\n",
-	            numSnapshotsRead, Sys_Milliseconds() - currSeekTime);
-
-	prevSeekTime = currSeekTime;
+	            numSnapshotsRead, Sys_Milliseconds() - seekStartTime);
 
 	return demo.currSnap->serverTime;
 }
