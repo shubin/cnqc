@@ -54,7 +54,8 @@ to do:
 - tone mapping: look at https://github.com/h3r2tic/tony-mc-mapface
 - ubershader PS: run-time alpha test evaluation to reduce PSO count?
 - mip-map generation: figure out whether out of bounds texture UAV writes are OK or not
-- fix the uploader (overlapped Begin*Upload calls -> sync fails on overflow)
+	I think they are in this use case but an explicit confirmation would be nice...
+- fix the uploader (overlapped Begin*Upload calls for map geo leading to overflow -> sync fail)
 - working depth pre-pass (account for cull mode, generate buffers on demand)
 	full depth pre-pass -> Z-buffer is complete and won't get updated by opaque drawing
 	1 full-screen pass per dynamic light, culled early with the depth bounds test -> write out to a light buffer
@@ -78,8 +79,9 @@ to do:
 - share texture and sampler array sizes between HLSL and C++ with .hlsli files
 - what's the actual fog curve used by Q3?
 - not rendering creates issues with resources not getting transitioned
-- depth pre-pass: world entities can reference world surfaces -> must ignore
-- roq video textures?
+- depth pre-pass: world entities can reference world surfaces
+	-> must ignore or figure out which surfaces are referenced by entities...
+- roq video textures support?
 X committed resources: depth buffer, render targets, static geometry - optional: large textures
 X figure out brightness/gamma differences between D3D12 & D3D11
 	-> UI uses CGEN_VERTEX / AGEN_VERTEX
