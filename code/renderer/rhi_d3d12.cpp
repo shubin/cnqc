@@ -579,6 +579,7 @@ namespace RHI
 
 		byte persStringData[64 << 10];
 		byte tempStringData[64 << 10];
+		char adapterName[256];
 		LinearAllocator persStringAllocator;
 		LinearAllocator tempStringAllocator;
 		UploadManager upload;
@@ -2017,6 +2018,8 @@ namespace RHI
 	{
 		if(BeginTable("Capabilities", 2))
 		{
+			TableRow(2, "Adapter", rhi.adapterName);
+
 			D3D12_FEATURE_DATA_D3D12_OPTIONS options0 = { 0 };
 			if(SUCCEEDED(rhi.device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &options0, sizeof(options0))))
 			{
@@ -2326,7 +2329,8 @@ namespace RHI
 			{
 				adapterNamePtr = adapterName;
 			}
-			ri.Printf(PRINT_ALL, "Selected graphics adapter: %s\n", adapterName);
+			ri.Printf(PRINT_ALL, "Selected graphics adapter: %s\n", adapterNamePtr);
+			Q_strncpyz(rhi.adapterName, adapterNamePtr, sizeof(rhi.adapterName));
 		}
 
 		D3D(D3D12CreateDevice(rhi.adapter, FeatureLevel, IID_PPV_ARGS(&rhi.device)));
