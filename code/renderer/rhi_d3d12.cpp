@@ -33,7 +33,6 @@ to do:
 	- use GetSystemCpuSetInformation for info
 	- graph GetCurrentProcessorNumber to see where we're executing
 	- use SetThreadSelectedCpuSets
-- CG_INIT sets r_swapinterval to speed up the load, but it doesn't work anymore
 - https://asawicki.info/news_1758_an_idea_for_visualization_of_frame_times
 - GPU resident vertex data for models: load on demand based on submitted { surface, shader } pairs
 - tool: can replace image with default to help locate in the map
@@ -80,6 +79,8 @@ to do:
 - depth pre-pass: world entities can reference world surfaces
 	-> must ignore or figure out which surfaces are referenced by entities...
 - roq video textures support?
+X CG_INIT sets r_swapinterval to speed up the load, but it doesn't work anymore
+	-> just as fast, still fixes the issue for older clients
 X committed resources: depth buffer, render targets, static geometry - optional: large textures
 X figure out brightness/gamma differences between D3D12 & D3D11
 	-> UI uses CGEN_VERTEX / AGEN_VERTEX
