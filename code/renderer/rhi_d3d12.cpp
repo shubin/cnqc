@@ -77,7 +77,6 @@ to do:
 - share structs between HLSL and C++ with .hlsli files -> change cbuffer to ConstantBuffer<MyStruct>
 - share texture and sampler array sizes between HLSL and C++ with .hlsli files
 - what's the actual fog curve used by Q3?
-- not rendering creates issues with resources not getting transitioned
 - depth pre-pass: world entities can reference world surfaces
 	-> must ignore or figure out which surfaces are referenced by entities...
 - roq video textures support?
