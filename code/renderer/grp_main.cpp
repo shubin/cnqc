@@ -664,6 +664,8 @@ void GRP::DrawGUI()
 
 uint32_t GRP::CreatePSO(CachedPSO& cache, const char* name)
 {
+	Q_assert(cache.stageCount > 0);
+
 	const uint32_t pixelShaderStateBits = GLS_BLEND_BITS | GLS_ATEST_BITS;
 
 	for(uint32_t p = 1; p < psoCount; ++p)
