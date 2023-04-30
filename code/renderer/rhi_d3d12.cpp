@@ -1321,11 +1321,13 @@ namespace RHI
 		}
 	}
 
+#if defined(_DEBUG)
 	static bool CanWriteCommands()
 	{
 		// @TODO: check that the command list is open
 		return rhi.commandList != NULL;
 	}
+#endif
 
 	template<typename T, typename HT, Handle RT, int N>
 	static void DestroyPool(StaticPool<T, HT, RT, N>& pool, void (*DestroyResource)(HT), bool fullShutDown)
