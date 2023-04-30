@@ -128,7 +128,7 @@ void SMAA::Update()
 			{
 				memcpy(texture.mappedData + r * texture.dstRowByteCount, areaTexBytes + r * texture.srcRowByteCount, texture.srcRowByteCount);
 			}
-			EndTextureUpload(areaTexture);
+			EndTextureUpload();
 		}
 		{
 			TextureDesc desc("SMAA search", SEARCHTEX_WIDTH, SEARCHTEX_HEIGHT);
@@ -145,7 +145,7 @@ void SMAA::Update()
 			{
 				memcpy(texture.mappedData + r * texture.dstRowByteCount, searchTexBytes + r * texture.srcRowByteCount, texture.srcRowByteCount);
 			}
-			EndTextureUpload(searchTexture);
+			EndTextureUpload();
 		}
 		{
 			RootSignatureDesc desc("SMAA");

@@ -596,7 +596,7 @@ struct GRP : IRenderPipeline
 	void CreateTexture(image_t* image, int mipCount, int width, int height) override;
 	void UpoadTextureAndGenerateMipMaps(image_t* image, const byte* data) override;
 	void BeginTextureUpload(MappedTexture& mappedTexture, image_t* image) override;
-	void EndTextureUpload(image_t* image) override;
+	void EndTextureUpload() override;
 	void ProcessWorld(world_t& world) override;
 	void ProcessModel(model_t& model) override;
 	void ProcessShader(shader_t& shader) override;

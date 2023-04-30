@@ -214,7 +214,7 @@ static void R_LoadLightmaps( const lump_t* l )
 			++i;
 		}
 
-		renderPipeline->EndTextureUpload( tr.lightmaps[a] );
+		renderPipeline->EndTextureUpload();
 	}
 
 	tr.numLightmaps = numAtlases;

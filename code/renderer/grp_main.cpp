@@ -349,7 +349,7 @@ void GRP::UpoadTextureAndGenerateMipMaps(image_t* image, const byte* data)
 	{
 		memcpy(texture.mappedData + r * texture.dstRowByteCount, data + r * texture.srcRowByteCount, texture.srcRowByteCount);
 	}
-	RHI::EndTextureUpload(image->texture);
+	RHI::EndTextureUpload();
 
 	mipMapGen.GenerateMipMaps(image->texture);
 }
@@ -359,9 +359,9 @@ void GRP::BeginTextureUpload(MappedTexture& mappedTexture, image_t* image)
 	RHI::BeginTextureUpload(mappedTexture, image->texture);
 }
 
-void GRP::EndTextureUpload(image_t* image)
+void GRP::EndTextureUpload()
 {
-	RHI::EndTextureUpload(image->texture);
+	RHI::EndTextureUpload();
 }
 
 void GRP::ProcessWorld(world_t& world_)

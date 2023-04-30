@@ -411,7 +411,7 @@ namespace RHI
 		uint8_t* BeginBufferUpload(HBuffer buffer);
 		void EndBufferUpload(HBuffer buffer);
 		void BeginTextureUpload(MappedTexture& mappedTexture, HTexture texture);
-		void EndTextureUpload(HTexture texture);
+		void EndTextureUpload();
 		void WaitToStartDrawing(ID3D12CommandQueue* commandQueue);
 
 		ID3D12CommandQueue* commandQueue;
@@ -425,6 +425,8 @@ namespace RHI
 
 		Fence fence;
 		UINT64 fenceValue;
+
+		HTexture currentTexture;
 
 	private:
 		void WaitToStartUploading(uint32_t uploadByteCount);
@@ -779,6 +781,8 @@ namespace RHI
 
 		fence.Create(0, "upload");
 		fenceValue = 0;
+
+		currentTexture = RHI_MAKE_NULL_HANDLE();
 	}
 
 	void UploadManager::Release()
@@ -848,6 +852,8 @@ namespace RHI
 
 	void UploadManager::BeginTextureUpload(MappedTexture& mappedTexture, HTexture htexture)
 	{
+		Q_assert(IsNullHandle(currentTexture));
+
 		Texture& texture = rhi.textures.Get(htexture);
 		Q_assert(!texture.uploading);
 		
@@ -867,10 +873,14 @@ namespace RHI
 		texture.uploadByteOffset = bufferByteOffset;
 		texture.uploading = true;
 		bufferByteOffset = AlignUp<uint32_t>(bufferByteOffset + uploadByteCount, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+		currentTexture = htexture;
 	}
 
-	void UploadManager::EndTextureUpload(HTexture htexture)
+	void UploadManager::EndTextureUpload()
 	{
+		Q_assert(!IsNullHandle(currentTexture));
+
+		const HTexture htexture = currentTexture;
 		Texture& texture = rhi.textures.Get(htexture);
 		Q_assert(texture.uploading);
 
@@ -907,6 +917,7 @@ namespace RHI
 		commandQueue->Signal(fence.fence, fenceValue);
 
 		texture.uploading = false;
+		currentTexture = RHI_MAKE_NULL_HANDLE();
 	}
 
 	void UploadManager::WaitToStartDrawing(ID3D12CommandQueue* commandQueue_)
@@ -4112,9 +4123,9 @@ namespace RHI
 		rhi.upload.BeginTextureUpload(mappedTexture, texture);
 	}
 
-	void EndTextureUpload(HTexture texture)
+	void EndTextureUpload()
 	{
-		rhi.upload.EndTextureUpload(texture);
+		rhi.upload.EndTextureUpload();
 	}
 
 	void BeginTempCommandList()

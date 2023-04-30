@@ -727,7 +727,7 @@ namespace RHI
 	void EndBufferUpload(HBuffer buffer);
 
 	void BeginTextureUpload(MappedTexture& mappedTexture, HTexture texture);
-	void EndTextureUpload(HTexture texture);
+	void EndTextureUpload();
 
 	// the temporary command list is guaranteed to be done executing before the next BeginFrame call ends
 	void BeginTempCommandList();

@@ -1679,7 +1679,7 @@ struct IRenderPipeline
 	virtual void CreateTexture(image_t* image, int mipCount, int width, int height) = 0;
 	virtual void UpoadTextureAndGenerateMipMaps(image_t* image, const byte* data) = 0;
 	virtual void BeginTextureUpload(RHI::MappedTexture& mappedTexture, image_t* image) = 0;
-	virtual void EndTextureUpload(image_t* image) = 0;
+	virtual void EndTextureUpload() = 0;
 
 	virtual void ExecuteRenderCommands(const byte* data) = 0;
 

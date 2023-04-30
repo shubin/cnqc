@@ -93,7 +93,7 @@ void ImGUI::Init()
 			{
 				memcpy(update.mappedData + r * update.dstRowByteCount, pixels + r * update.srcRowByteCount, update.srcRowByteCount);
 			}
-			EndTextureUpload(fontAtlas);
+			EndTextureUpload();
 		}
 	}
 
