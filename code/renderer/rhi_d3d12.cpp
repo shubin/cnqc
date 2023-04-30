@@ -55,7 +55,6 @@ to do:
 - ubershader PS: run-time alpha test evaluation to reduce PSO count?
 - mip-map generation: figure out whether out of bounds texture UAV writes are OK or not
 	I think they are in this use case but an explicit confirmation would be nice...
-- fix the uploader (overlapped Begin*Upload calls for map geo leading to overflow -> sync fail)
 - working depth pre-pass (account for cull mode, generate buffers on demand)
 	full depth pre-pass -> Z-buffer is complete and won't get updated by opaque drawing
 	1 full-screen pass per dynamic light, culled early with the depth bounds test -> write out to a light buffer
@@ -427,9 +426,15 @@ namespace RHI
 		UINT64 fenceValue;
 
 		HTexture currentTexture;
+		int bufferUploadCounter;
+		bool multiBufferUpload;
+		bool needsRewind;
+		int batchTextureCount;
+		int batchBufferCount;
 
 	private:
 		void WaitToStartUploading(uint32_t uploadByteCount);
+		void EndOfBufferReached();
 	};
 
 	struct ReadbackManager
@@ -784,6 +789,12 @@ namespace RHI
 		fenceValue = 0;
 
 		currentTexture = RHI_MAKE_NULL_HANDLE();
+
+		bufferUploadCounter = 0;
+		multiBufferUpload = false;
+		needsRewind = false;
+		batchTextureCount = 0;
+		batchBufferCount = 0;
 	}
 
 	void UploadManager::Release()
@@ -797,6 +808,13 @@ namespace RHI
 
 	uint8_t* UploadManager::BeginBufferUpload(HBuffer userHBuffer)
 	{
+		Q_assert(bufferUploadCounter >= 0);
+		bufferUploadCounter++;
+		if(bufferUploadCounter > 1)
+		{
+			multiBufferUpload = true;
+		}
+
 		Buffer& userBuffer = rhi.buffers.Get(userHBuffer);
 		Q_assert(!userBuffer.uploading);
 
@@ -812,6 +830,12 @@ namespace RHI
 			userBuffer.uploadByteOffset = bufferByteOffset;
 
 			bufferByteOffset = AlignUp<uint32_t>(bufferByteOffset + uploadByteCount, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+
+			if(multiBufferUpload)
+			{
+				needsRewind = true;
+			}
+			batchBufferCount++;
 		}
 		else
 		{
@@ -825,6 +849,9 @@ namespace RHI
 
 	void UploadManager::EndBufferUpload(HBuffer userHBuffer)
 	{
+		bufferUploadCounter--;
+		Q_assert(bufferUploadCounter >= 0);
+
 		Buffer& userBuffer = rhi.buffers.Get(userHBuffer);
 		Q_assert(userBuffer.uploading);
 
@@ -849,6 +876,16 @@ namespace RHI
 		}
 
 		userBuffer.uploading = false;
+
+		if(bufferUploadCounter == 0 && multiBufferUpload)
+		{
+			if(needsRewind)
+			{
+				EndOfBufferReached();
+				needsRewind = false;
+			}
+			multiBufferUpload = false;
+		}
 	}
 
 	void UploadManager::BeginTextureUpload(MappedTexture& mappedTexture, HTexture htexture)
@@ -875,6 +912,7 @@ namespace RHI
 		texture.uploading = true;
 		bufferByteOffset = AlignUp<uint32_t>(bufferByteOffset + uploadByteCount, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
 		currentTexture = htexture;
+		batchTextureCount++;
 	}
 
 	void UploadManager::EndTextureUpload()
@@ -935,10 +973,23 @@ namespace RHI
 
 		if(bufferByteOffset + uploadByteCount > bufferByteCount)
 		{
-			fence.WaitOnCPU(fenceValue);
-			D3D(commandAllocator->Reset());
-			bufferByteOffset = 0;
+			EndOfBufferReached();
 		}
+	}
+
+	void UploadManager::EndOfBufferReached()
+	{
+#if defined(_DEBUG)
+		ri.Printf(PRINT_ALL, "Waiting for GPU upload: %s (%d T, %d B)\n",
+			Com_FormatBytes(bufferByteOffset),
+			batchTextureCount,
+			batchBufferCount);
+#endif
+		fence.WaitOnCPU(fenceValue);
+		D3D(commandAllocator->Reset());
+		bufferByteOffset = 0;
+		batchTextureCount = 0;
+		batchBufferCount = 0;
 	}
 
 	void ReadbackManager::Create()
