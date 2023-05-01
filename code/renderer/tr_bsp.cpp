@@ -1624,8 +1624,6 @@ void RE_LoadWorldMap( const char* name )
 	if ( tr.worldMapLoaded )
 		ri.Error( ERR_DROP, "ERROR: attempted to redundantly load world map\n" );
 
-	tr.worldMapLoaded = qtrue;
-
 	byte* buffer;
 	int pakChecksum = 0;
 	ri.FS_ReadFilePak( name, (void**)&buffer, &pakChecksum );
@@ -1684,6 +1682,8 @@ void RE_LoadWorldMap( const char* name )
 	     !Q_stricmp( s_worldData.surfaces[2859].shader->name, "textures/inpe/m_liq/meat_liquid_bloodpool_A" ) ) {
 		s_worldData.surfaces[2859].shader = R_FindShader( "textures/liquids/calm_poollight", LIGHTMAP_NONE, 0 );
 	}
+
+	tr.worldMapLoaded = qtrue;
 }
 
 

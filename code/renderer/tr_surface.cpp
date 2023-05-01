@@ -586,15 +586,19 @@ static void RB_SurfaceFace( srfSurfaceFace_t* surf )
 }
 
 
-static float	LodErrorForVolume( vec3_t local, float radius ) {
-	vec3_t		world;
-	float		d;
-
+static float LodErrorForVolume( vec3_t local, float radius ) {
 	// never let it go negative
 	if ( r_lodCurveError->value < 0 ) {
 		return 0;
 	}
 
+	if ( !tr.worldMapLoaded ) {
+		// if we tessellate during map load, it's for static geometry pre-processing
+		// we want a high level of detail, so consider the distance d to be 1
+		return r_lodCurveError->value;
+	}
+
+	vec3_t world;
 	world[0] = local[0] * backEnd.orient.axis[0][0] + local[1] * backEnd.orient.axis[1][0] +
 		local[2] * backEnd.orient.axis[2][0] + backEnd.orient.origin[0];
 	world[1] = local[0] * backEnd.orient.axis[0][1] + local[1] * backEnd.orient.axis[1][1] +
@@ -602,8 +606,9 @@ static float	LodErrorForVolume( vec3_t local, float radius ) {
 	world[2] = local[0] * backEnd.orient.axis[0][2] + local[1] * backEnd.orient.axis[1][2] +
 		local[2] * backEnd.orient.axis[2][2] + backEnd.orient.origin[2];
 
+	// the final value of d is the distance to the closest point on the sphere along axis 0
 	VectorSubtract( world, backEnd.viewParms.orient.origin, world );
-	d = DotProduct( world, backEnd.viewParms.orient.axis[0] );
+	float d = DotProduct( world, backEnd.viewParms.orient.axis[0] );
 
 	if ( d < 0 ) {
 		d = -d;
