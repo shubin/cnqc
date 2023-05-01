@@ -253,8 +253,7 @@ void GRP::Init()
 		TextureDesc desc("render target", glConfig.vidWidth, glConfig.vidHeight);
 		desc.initialState = ResourceStates::RenderTargetBit;
 		desc.allowedState = ResourceStates::RenderTargetBit | ResourceStates::PixelShaderAccessBit;
-		//Vector4Set(desc.clearColor, 0.0f, 0.0f, 0.0f, 1.0f);
-		Vector4Copy(colorPink, desc.clearColor);
+		Vector4Clear(desc.clearColor);
 		desc.usePreferredClearValue = true;
 		desc.committedResource = true;
 		desc.format = renderTargetFormat;
@@ -293,9 +292,10 @@ void GRP::BeginFrame()
 	ui.BeginFrame();
 	world.BeginFrame();
 
+	const float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	const TextureBarrier barrier(renderTarget, ResourceStates::RenderTargetBit);
 	CmdBarrier(1, &barrier);
-	CmdClearColorTarget(renderTarget, colorPink);
+	CmdClearColorTarget(renderTarget, colorBlack);
 
 	// nothing is bound to the command list yet!
 	renderMode = RenderMode::None;
