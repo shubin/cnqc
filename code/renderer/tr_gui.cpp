@@ -163,6 +163,11 @@ static void OpenShaderDetails(shader_t* shader)
 #undef Append
 }
 
+static bool AreCheatsEnabled()
+{
+	return ri.Cvar_Get("sv_cheats", "0", 0)->integer != 0;
+}
+
 static void AddShaderReplacement(int shaderIndex)
 {
 	if(shaderReplacements.count >= ARRAY_LEN(shaderReplacements.shaders))
@@ -449,18 +454,21 @@ static void DrawShaderWindow()
 				ImGui::Text(shaderPath);
 			}
 
-			if(IsReplacedShader(shader->index))
+			if(AreCheatsEnabled())
 			{
-				if(ImGui::Button("Restore Shader"))
+				if(IsReplacedShader(shader->index))
 				{
-					RemoveShaderReplacement(shader->index);
+					if(ImGui::Button("Restore Shader"))
+					{
+						RemoveShaderReplacement(shader->index);
+					}
 				}
-			}
-			else
-			{
-				if(ImGui::Button("Replace Shader"))
+				else
 				{
-					AddShaderReplacement(shader->index);
+					if(ImGui::Button("Replace Shader"))
+					{
+						AddShaderReplacement(shader->index);
+					}
 				}
 			}
 
