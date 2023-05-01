@@ -35,8 +35,6 @@ to do:
 	- use SetThreadSelectedCpuSets
 - https://asawicki.info/news_1758_an_idea_for_visualization_of_frame_times
 - GPU resident vertex data for models: load on demand based on submitted { surface, shader } pairs
-- tool: can replace image with default to help locate in the map
-- tool: can replace shader with default to help locate in the map
 - tool: live shader override editing
 - tool: shader trace with the pointed pixel being traced
 	render opaque to shader ID render target
