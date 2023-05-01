@@ -264,15 +264,6 @@ void SCR_Init()
 ///////////////////////////////////////////////////////////////
 
 
-static void SCR_DrawStats( float x, float y, float w, float h, int value )
-{
-	if ( value < 0 || value >= 100 )
-		SCR_DrawString( x, y, w, h, "  ?", qfalse );
-	else
-		SCR_DrawString( x, y, w, h, va( "%3d", value ), qfalse );
-}
-
-
 // this will be called twice if rendering in stereo mode
 
 static void SCR_DrawScreenField( stereoFrame_t stereoFrame )
