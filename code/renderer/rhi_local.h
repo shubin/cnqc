@@ -60,6 +60,9 @@ namespace RHI
 #define RHI_MAKE_HANDLE(Value) { Value }
 #define RHI_MAKE_NULL_HANDLE() { 0 }
 
+	void Die(const char* message);
+#define TRUE_OR_DIE(Condition, Message) if(!(Condition)) Die(Message)
+
 	struct IndexType
 	{
 		enum Id
@@ -798,10 +801,7 @@ namespace RHI
 
 		HT Add(const T& item)
 		{
-			if(freeList >= N)
-			{
-				ri.Error(ERR_FATAL, "The memory pool is full\n");
-			}
+			TRUE_OR_DIE(freeList < N, "The memory pool is full");
 			At(freeList).item = item;
 			At(freeList).used = qtrue;
 			const Handle handle = CreateHandle(RT, freeList, At(freeList).generation);
@@ -812,10 +812,7 @@ namespace RHI
 		void Remove(HT handle)
 		{
 			Item& item = GetItemRef(handle);
-			if(!item.used)
-			{
-				ri.Error(ERR_FATAL, "Memory pool item was already freed\n");
-			}
+			TRUE_OR_DIE(item.used, "Memory pool item was already freed");
 			item.generation = (item.generation + 1) & RHI_BIT_MASK(HandleGenBitCount);
 			item.used = 0;
 			item.next = freeList;
@@ -879,28 +876,18 @@ namespace RHI
 		{
 			Handle type, index, gen;
 			DecomposeHandle(&type, &index, &gen, RHI_GET_HANDLE_VALUE(handle));
-			if(type != RT)
-			{
-				ri.Error(ERR_FATAL, "Invalid memory pool handle (wrong resource type)\n");
-			}
-			if(index > (Handle)N)
-			{
-				ri.Error(ERR_FATAL, "Invalid memory pool handle (bad index)\n");
-			}
+			TRUE_OR_DIE(type == RT, "Invalid memory pool handle (wrong resource type)");
+			TRUE_OR_DIE(index <= (Handle)N, "Invalid memory pool handle (bad index)");
 
 			Item& item = At(index);
-			if(!item.used)
-			{
-				ri.Error(ERR_FATAL, "Invalid memory pool handle (unused slot)\n");
-			}
-
+			TRUE_OR_DIE(item.used, "Invalid memory pool handle (unused slot)");
 			if(gen > (Handle)item.generation)
 			{
-				ri.Error(ERR_FATAL, "Invalid memory pool handle (allocation from the future)\n");
+				Die("Invalid memory pool handle (allocation from the future)");
 			}
-			if(gen < (Handle)item.generation)
+			else if(gen < (Handle)item.generation)
 			{
-				ri.Error(ERR_FATAL, "Invalid memory pool handle (the object has been freed)\n");
+				Die("Invalid memory pool handle (the object has been freed)");
 			}
 
 			return item;
@@ -997,8 +984,7 @@ namespace RHI
 
 		uint32_t Allocate()
 		{
-			Q_assert(firstFree != Invalid);
-			// @TODO: fatal error in release
+			TRUE_OR_DIE(firstFree != Invalid, "StaticFreeList out of memory");
 
 			const T index = firstFree;
 			firstFree = items[index];
@@ -1010,8 +996,7 @@ namespace RHI
 
 		void Free(uint32_t index)
 		{
-			Q_assert(index < size);
-			// @TODO: fatal error in release
+			TRUE_OR_DIE(index < size, "StaticFreeList freeing an invalid slot");
 
 			const T oldList = firstFree;
 			firstFree = index;
