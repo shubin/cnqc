@@ -62,7 +62,6 @@ to do:
 - r_dynamiclight
 - CMAA 2 integration?
 - SMAA S2x support?
-- figure out LOD of baked map surfaces (r_lodCurveError)
 - when creating the root signature, validate that neither of the tables have any gap
 - use root signature 1.1 to use the hints that help the drivers optimize out static resources
 - is it possible to force Resource Binding Tier 2 somehow? are we supposed to run on old HW to test? :(
