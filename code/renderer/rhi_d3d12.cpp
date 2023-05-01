@@ -617,19 +617,6 @@ namespace RHI
 #	define D3DDDIERR_DEVICEREMOVED ((HRESULT)0x88760870L)
 #endif
 
-	void Die(const char* message)
-	{
-		if(Sys_IsDebuggerAttached())
-		{
-			__debugbreak();
-		}
-		else
-		{
-			const ULONG_PTR messageArg = (ULONG_PTR)message;
-			RaiseException(0xCAFEBABE, EXCEPTION_NONCONTINUABLE, 1, &messageArg);
-		}
-	}
-
 	static const char* GetSystemErrorString(HRESULT hr)
 	{
 		// FormatMessage might not always give us the string we want but that's ok,

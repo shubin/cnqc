@@ -276,7 +276,7 @@ static const char* WIN_GetExceptionCodeString( DWORD exceptionCode )
 		case EXCEPTION_PRIV_INSTRUCTION: return "The thread tried to execute an instruction whose operation is not allowed in the current machine mode.";
 		case EXCEPTION_SINGLE_STEP: return "A trace trap or other single-instruction mechanism signaled that one instruction has been executed.";
 		case EXCEPTION_STACK_OVERFLOW: return "The thread used up its stack.";
-		case 0xCAFEBABE: return "CNQ3 Fatal Error";
+		case CNQ3_WINDOWS_EXCEPTION_CODE: return "CNQ3 Exception";
 		default: return "Unknown exception code";
 	}
 }
@@ -310,12 +310,22 @@ static qbool WIN_WriteTextData( const char* filePath, debug_help_t* debugHelp, E
 	JSONW_HexValue("exception_flags", pExceptionRecord->ExceptionFlags);
 	JSONW_StringValue("exception_description", WIN_GetExceptionCodeString(pExceptionRecord->ExceptionCode));
 
-	if (pExceptionRecord->ExceptionCode == 0xCAFEBABE &&
-		pExceptionRecord->NumberParameters == 1 &&
-		(pExceptionRecord->ExceptionFlags & EXCEPTION_NONCONTINUABLE) != 0 &&
-		pExceptionRecord->ExceptionInformation[0] != 0)
+	if (pExceptionRecord->ExceptionCode == CNQ3_WINDOWS_EXCEPTION_CODE &&
+		pExceptionRecord->NumberParameters == 4 &&
+		(pExceptionRecord->ExceptionFlags & EXCEPTION_NONCONTINUABLE) != 0)
 	{
-		JSONW_StringValue("exception_message", (const char*)pExceptionRecord->ExceptionInformation[0]);
+		if (pExceptionRecord->ExceptionInformation[0] != 0) {
+			JSONW_StringValue("exception_message", (const char*)pExceptionRecord->ExceptionInformation[0]);
+		}
+		if(pExceptionRecord->ExceptionInformation[1] != 0) {
+			JSONW_StringValue("exception_source_file", (const char*)pExceptionRecord->ExceptionInformation[1]);
+		}
+		if(pExceptionRecord->ExceptionInformation[2] != 0) {
+			JSONW_IntegerValue("exception_source_line", (int)pExceptionRecord->ExceptionInformation[2]);
+		}
+		if(pExceptionRecord->ExceptionInformation[3] != 0) {
+			JSONW_StringValue("exception_source_function", (const char*)pExceptionRecord->ExceptionInformation[3]);
+		}
 	}
 
 	if (pExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION && 

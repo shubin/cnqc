@@ -1180,6 +1180,30 @@ qbool	Sys_IsDebuggerAttached();
 qbool	Sys_IsMinimized();
 #endif
 
+void	Sys_Crash( const char* message, const char* file, int line, const char* function );
+
+#define CNQ3_WINDOWS_EXCEPTION_CODE 0xDEADBEEF
+
+#define SYS_CRASH(Message) Sys_Crash(Message, __FILE__, __LINE__, __FUNCTION__)
+
+#if defined(_MSC_VER)
+#define TRUE_OR_CRASH(Condition, Message) \
+	do { \
+		if (!(Condition)) { \
+			if (IsDebuggerPresent()) \
+				__debugbreak(); \
+			else \
+				Sys_Crash(Message, __FILE__, __LINE__, __FUNCTION__); \
+		} \
+	} while (false)
+#else
+#define TRUE_OR_CRASH(Condition, Message) \
+	do { \
+		if (!(Condition)) \
+			Sys_Crash(Message, __FILE__, __LINE__, __FUNCTION__); \
+	} while (false)
+#endif
+
 // RenderDoc integration - the API is grabbed at start-up by the OS module
 #define CNQ3_RENDERDOC_API_STRUCT  RENDERDOC_API_1_5_0
 #define CNQ3_RENDERDOC_API_VERSION eRENDERDOC_API_Version_1_1_0
