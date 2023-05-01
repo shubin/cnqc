@@ -558,9 +558,8 @@ void World::RestartBatch()
 
 void World::DrawGUI()
 {
-	// ri.Cvar_Get("sv_cheats", "0", CVAR_ROM | CVAR_SYSTEMINFO)->integer == 0
-	if(tr.world == NULL ||
-		ri.Cvar_Get("sv_cheats", "0", 0)->integer == 0)
+#if defined(_DEBUG)
+	if(tr.world == NULL)
 	{
 		return;
 	}
@@ -614,6 +613,7 @@ void World::DrawGUI()
 		}
 		ImGui::End();
 	}
+#endif
 }
 
 void World::ProcessWorld(world_t& world)
