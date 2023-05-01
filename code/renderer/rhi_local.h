@@ -798,7 +798,7 @@ namespace RHI
 
 		HT Add(const T& item)
 		{
-			TRUE_OR_CRASH(freeList < N, "The memory pool is full");
+			ASSERT_OR_DIE(freeList < N, "The memory pool is full");
 			At(freeList).item = item;
 			At(freeList).used = qtrue;
 			const Handle handle = CreateHandle(RT, freeList, At(freeList).generation);
@@ -809,7 +809,7 @@ namespace RHI
 		void Remove(HT handle)
 		{
 			Item& item = GetItemRef(handle);
-			TRUE_OR_CRASH(item.used, "Memory pool item was already freed");
+			ASSERT_OR_DIE(item.used, "Memory pool item was already freed");
 			item.generation = (item.generation + 1) & RHI_BIT_MASK(HandleGenBitCount);
 			item.used = 0;
 			item.next = freeList;
@@ -873,18 +873,18 @@ namespace RHI
 		{
 			Handle type, index, gen;
 			DecomposeHandle(&type, &index, &gen, RHI_GET_HANDLE_VALUE(handle));
-			TRUE_OR_CRASH(type == RT, "Invalid memory pool handle (wrong resource type)");
-			TRUE_OR_CRASH(index <= (Handle)N, "Invalid memory pool handle (bad index)");
+			ASSERT_OR_DIE(type == RT, "Invalid memory pool handle (wrong resource type)");
+			ASSERT_OR_DIE(index <= (Handle)N, "Invalid memory pool handle (bad index)");
 
 			Item& item = At(index);
-			TRUE_OR_CRASH(item.used, "Invalid memory pool handle (unused slot)");
+			ASSERT_OR_DIE(item.used, "Invalid memory pool handle (unused slot)");
 			if(gen > (Handle)item.generation)
 			{
-				SYS_CRASH("Invalid memory pool handle (allocation from the future)");
+				DIE("Invalid memory pool handle (allocation from the future)");
 			}
 			else if(gen < (Handle)item.generation)
 			{
-				SYS_CRASH("Invalid memory pool handle (the object has been freed)");
+				DIE("Invalid memory pool handle (the object has been freed)");
 			}
 
 			return item;
@@ -981,7 +981,7 @@ namespace RHI
 
 		uint32_t Allocate()
 		{
-			TRUE_OR_CRASH(firstFree != Invalid, "StaticFreeList out of memory");
+			ASSERT_OR_DIE(firstFree != Invalid, "StaticFreeList out of memory");
 
 			const T index = firstFree;
 			firstFree = items[index];
@@ -993,7 +993,7 @@ namespace RHI
 
 		void Free(uint32_t index)
 		{
-			TRUE_OR_CRASH(index < size, "StaticFreeList freeing an invalid slot");
+			ASSERT_OR_DIE(index < size, "StaticFreeList freeing an invalid slot");
 
 			const T oldList = firstFree;
 			firstFree = index;

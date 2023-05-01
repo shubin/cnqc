@@ -1,3 +1,5 @@
+#pragma warning(push, 1)
+
 // dear imgui, v1.89.1
 // (widgets code)
 
@@ -8414,3 +8416,5 @@ void ImGui::TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect& bb, 
 
 
 #endif // #ifndef IMGUI_DISABLE
+
+#pragma warning(pop)

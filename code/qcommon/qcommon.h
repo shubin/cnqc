@@ -1184,10 +1184,10 @@ void	Sys_Crash( const char* message, const char* file, int line, const char* fun
 
 #define CNQ3_WINDOWS_EXCEPTION_CODE 0xDEADBEEF
 
-#define SYS_CRASH(Message) Sys_Crash(Message, __FILE__, __LINE__, __FUNCTION__)
+#define DIE(Message) Sys_Crash(Message, __FILE__, __LINE__, __FUNCTION__)
 
 #if defined(_MSC_VER)
-#define TRUE_OR_CRASH(Condition, Message) \
+#define ASSERT_OR_DIE(Condition, Message) \
 	do { \
 		if (!(Condition)) { \
 			if (IsDebuggerPresent()) \
@@ -1197,7 +1197,7 @@ void	Sys_Crash( const char* message, const char* file, int line, const char* fun
 		} \
 	} while (false)
 #else
-#define TRUE_OR_CRASH(Condition, Message) \
+#define ASSERT_OR_DIE(Condition, Message) \
 	do { \
 		if (!(Condition)) \
 			Sys_Crash(Message, __FILE__, __LINE__, __FUNCTION__); \

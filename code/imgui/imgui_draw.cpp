@@ -1,3 +1,5 @@
+#pragma warning(push, 1)
+
 // dear imgui, v1.89.1
 // (drawing and font code)
 
@@ -4165,3 +4167,5 @@ static const char* GetDefaultCompressedFontDataTTFBase85()
 }
 
 #endif // #ifndef IMGUI_DISABLE
+
+#pragma warning(pop)
