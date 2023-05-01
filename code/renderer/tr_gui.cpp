@@ -46,7 +46,7 @@ struct ShaderWindow
 struct ShaderReplacement
 {
 	shader_t original;
-	int shaderIndex;
+	int index;
 };
 
 struct ShaderReplacements
@@ -55,9 +55,22 @@ struct ShaderReplacements
 	int count;
 };
 
+struct ImageReplacement
+{
+	image_t original;
+	int index;
+};
+
+struct ImageReplacements
+{
+	ImageReplacement images[16];
+	int count;
+};
+
 static ImageWindow imageWindow;
 static ShaderWindow shaderWindow;
 static ShaderReplacements shaderReplacements;
+static ImageReplacements imageReplacements;
 
 static const char* mipNames[16] =
 {
@@ -182,29 +195,29 @@ static void AddShaderReplacement(int shaderIndex)
 
 	for(int i = 0; i < shaderReplacements.count; ++i)
 	{
-		if(shaderReplacements.shaders[i].shaderIndex == shaderIndex)
+		if(shaderReplacements.shaders[i].index == shaderIndex)
 		{
 			return;
 		}
 	}
 
-	ShaderReplacement& sr = shaderReplacements.shaders[shaderReplacements.count++];
-	sr.shaderIndex = shaderIndex;
-	sr.original = *tr.shaders[shaderIndex];
+	ShaderReplacement& repl = shaderReplacements.shaders[shaderReplacements.count++];
+	repl.index = shaderIndex;
+	repl.original = *tr.shaders[shaderIndex];
 	*tr.shaders[shaderIndex] = *tr.defaultShader;
-	Q_strncpyz(tr.shaders[shaderIndex]->name, sr.original.name, sizeof(tr.shaders[shaderIndex]->name));
-	tr.shaders[shaderIndex]->index = sr.original.index;
-	tr.shaders[shaderIndex]->sortedIndex = sr.original.sortedIndex;
+	Q_strncpyz(tr.shaders[shaderIndex]->name, repl.original.name, sizeof(tr.shaders[shaderIndex]->name));
+	tr.shaders[shaderIndex]->index = repl.original.index;
+	tr.shaders[shaderIndex]->sortedIndex = repl.original.sortedIndex;
 }
 
 static void RemoveShaderReplacement(int shaderIndex)
 {
 	for(int i = 0; i < shaderReplacements.count; ++i)
 	{
-		const ShaderReplacement& sr = shaderReplacements.shaders[i];
-		if(shaderIndex == sr.shaderIndex && shaderIndex >= 0 && shaderIndex < tr.numShaders)
+		const ShaderReplacement& repl = shaderReplacements.shaders[i];
+		if(shaderIndex == repl.index && shaderIndex >= 0 && shaderIndex < tr.numShaders)
 		{
-			*tr.shaders[sr.shaderIndex] = sr.original;
+			*tr.shaders[repl.index] = repl.original;
 			if(i < shaderReplacements.count - 1)
 			{
 				shaderReplacements.shaders[i] = shaderReplacements.shaders[shaderReplacements.count - 1];
@@ -219,8 +232,8 @@ static bool IsReplacedShader(int shaderIndex)
 {
 	for(int i = 0; i < shaderReplacements.count; ++i)
 	{
-		const ShaderReplacement& sr = shaderReplacements.shaders[i];
-		if(shaderIndex == sr.shaderIndex)
+		const ShaderReplacement& repl = shaderReplacements.shaders[i];
+		if(shaderIndex == repl.index)
 		{
 			return true;
 		}
@@ -234,12 +247,85 @@ static void ClearShaderReplacements()
 	for(int i = 0; i < shaderReplacements.count; ++i)
 	{
 		const ShaderReplacement& sr = shaderReplacements.shaders[i];
-		if(sr.shaderIndex >= 0 && sr.shaderIndex < tr.numShaders)
+		if(sr.index >= 0 && sr.index < tr.numShaders)
 		{
-			*tr.shaders[sr.shaderIndex] = sr.original;
+			*tr.shaders[sr.index] = sr.original;
 		}
 	}
 	shaderReplacements.count = 0;
+}
+
+static void AddImageReplacement(int imageIndex)
+{
+	if(imageReplacements.count >= ARRAY_LEN(imageReplacements.images))
+	{
+		return;
+	}
+
+	if(imageIndex < 0 || imageIndex >= tr.numImages)
+	{
+		return;
+	}
+
+	for(int i = 0; i < imageReplacements.count; ++i)
+	{
+		if(imageReplacements.images[i].index == imageIndex)
+		{
+			return;
+		}
+	}
+
+	ImageReplacement& repl = imageReplacements.images[imageReplacements.count++];
+	repl.index = imageIndex;
+	repl.original = *tr.images[imageIndex];
+	*tr.images[imageIndex] = *tr.defaultImage;
+	Q_strncpyz(tr.images[imageIndex]->name, repl.original.name, sizeof(tr.images[imageIndex]->name));
+	tr.images[imageIndex]->index = repl.original.index;
+}
+
+static void RemoveImageReplacement(int imageIndex)
+{
+	for(int i = 0; i < imageReplacements.count; ++i)
+	{
+		const ImageReplacement& repl = imageReplacements.images[i];
+		if(imageIndex == repl.index && imageIndex >= 0 && imageIndex < tr.numImages)
+		{
+			*tr.images[repl.index] = repl.original;
+			if(i < imageReplacements.count - 1)
+			{
+				imageReplacements.images[i] = imageReplacements.images[imageReplacements.count - 1];
+			}
+			imageReplacements.count--;
+			break;
+		}
+	}
+}
+
+static bool IsReplacedImage(int imageIndex)
+{
+	for(int i = 0; i < imageReplacements.count; ++i)
+	{
+		const ImageReplacement& repl = imageReplacements.images[i];
+		if(imageIndex == repl.index)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+static void ClearImageReplacements()
+{
+	for(int i = 0; i < imageReplacements.count; ++i)
+	{
+		const ImageReplacement& repl = imageReplacements.images[i];
+		if(repl.index >= 0 && repl.index < tr.numImages)
+		{
+			*tr.images[repl.index] = repl.original;
+		}
+	}
+	imageReplacements.count = 0;
 }
 
 static void DrawFilter(char* filter, size_t filterSize)
@@ -281,6 +367,11 @@ static void DrawImageList()
 	{
 		if(ImGui::Begin("Image Explorer", &listActive))
 		{
+			if(imageReplacements.count > 0 && ImGui::Button("Restore Images"))
+			{
+				ClearImageReplacements();
+			}
+
 			static char filter[256];
 			DrawFilter(filter, sizeof(filter));
 
@@ -321,26 +412,46 @@ static void DrawImageWindow()
 	{
 		if(ImGui::Begin(IMAGE_WINDOW_NAME, &window.active, ImGuiWindowFlags_AlwaysAutoResize))
 		{
-			TitleText(window.image->name);
+			const image_t* const image = window.image;
+
+			TitleText(image->name);
 
 			char pakName[256];
-			if(FS_GetPakPath(pakName, sizeof(pakName), window.image->pakChecksum))
+			if(FS_GetPakPath(pakName, sizeof(pakName), image->pakChecksum))
 			{
 				ImGui::Text(pakName);
 			}
 
-			ImGui::Text("%dx%d", window.image->width, window.image->height);
-			if(window.image->wrapClampMode == TW_CLAMP_TO_EDGE)
+			ImGui::Text("%dx%d", image->width, image->height);
+			if(image->wrapClampMode == TW_CLAMP_TO_EDGE)
 			{
 				ImGui::SameLine();
 				ImGui::Text("'clampMap'");
 			}
 			for(int f = 0; f < ARRAY_LEN(imageFlags); ++f)
 			{
-				if(window.image->flags & imageFlags[f].flag)
+				if(image->flags & imageFlags[f].flag)
 				{
 					ImGui::SameLine();
 					ImGui::Text(imageFlags[f].description);
+				}
+			}
+
+			if(AreCheatsEnabled())
+			{
+				if(IsReplacedImage(image->index))
+				{
+					if(ImGui::Button("Restore Image"))
+					{
+						RemoveImageReplacement(image->index);
+					}
+				}
+				else
+				{
+					if(ImGui::Button("Replace Image"))
+					{
+						AddImageReplacement(image->index);
+					}
 				}
 			}
 
@@ -349,7 +460,7 @@ static void DrawImageWindow()
 			for(int is = 0; is < ARRAY_LEN(tr.imageShaders); ++is)
 			{
 				const int i = tr.imageShaders[is] & 0xFFFF;
-				if(i != window.image->index)
+				if(i != image->index)
 				{
 					continue;
 				}
@@ -373,9 +484,9 @@ static void DrawImageWindow()
 			}
 			ImGui::NewLine();
 
-			int width = window.image->width;
-			int height = window.image->height;
-			if((window.image->flags & IMG_NOMIPMAP) == 0)
+			int width = image->width;
+			int height = image->height;
+			if((image->flags & IMG_NOMIPMAP) == 0)
 			{
 				ImGui::Combo("Mip", &window.mip, mipNames, R_ComputeMipCount(width, height));
 			}
@@ -386,7 +497,7 @@ static void DrawImageWindow()
 			}
 
 			const ImTextureID textureId =
-				(ImTextureID)window.image->textureIndex |
+				(ImTextureID)image->textureIndex |
 				(ImTextureID)(window.mip << 16);
 			ImGui::Image(textureId, ImVec2(width, height));
 		}
@@ -545,4 +656,5 @@ void R_ShutDownGUI()
 	shaderWindow.active = false;
 	shaderWindow.shader = NULL;
 	ClearShaderReplacements();
+	ClearImageReplacements();
 }
