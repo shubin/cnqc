@@ -266,9 +266,9 @@ void GRP::Init()
 	world.Init();
 	mipMapGen.Init();
 	imgui.Init();
-	smaa.Init();
 	post.Init();
 	post.SetToneMapInput(renderTarget);
+	smaa.Init(); // must be after post
 
 	firstInit = false;
 }
