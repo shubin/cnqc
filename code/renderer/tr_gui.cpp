@@ -43,8 +43,21 @@ struct ShaderWindow
 	bool active;
 };
 
+struct ShaderReplacement
+{
+	shader_t original;
+	int shaderIndex;
+};
+
+struct ShaderReplacements
+{
+	ShaderReplacement shaders[16];
+	int count;
+};
+
 static ImageWindow imageWindow;
 static ShaderWindow shaderWindow;
+static ShaderReplacements shaderReplacements;
 
 static const char* mipNames[16] =
 {
@@ -148,6 +161,80 @@ static void OpenShaderDetails(shader_t* shader)
 	}
 
 #undef Append
+}
+
+static void AddShaderReplacement(int shaderIndex)
+{
+	if(shaderReplacements.count >= ARRAY_LEN(shaderReplacements.shaders))
+	{
+		return;
+	}
+
+	if(shaderIndex < 0 || shaderIndex >= tr.numShaders)
+	{
+		return;
+	}
+
+	for(int i = 0; i < shaderReplacements.count; ++i)
+	{
+		if(shaderReplacements.shaders[i].shaderIndex == shaderIndex)
+		{
+			return;
+		}
+	}
+
+	ShaderReplacement& sr = shaderReplacements.shaders[shaderReplacements.count++];
+	sr.shaderIndex = shaderIndex;
+	sr.original = *tr.shaders[shaderIndex];
+	*tr.shaders[shaderIndex] = *tr.defaultShader;
+	Q_strncpyz(tr.shaders[shaderIndex]->name, sr.original.name, sizeof(tr.shaders[shaderIndex]->name));
+	tr.shaders[shaderIndex]->index = sr.original.index;
+	tr.shaders[shaderIndex]->sortedIndex = sr.original.sortedIndex;
+}
+
+static void RemoveShaderReplacement(int shaderIndex)
+{
+	for(int i = 0; i < shaderReplacements.count; ++i)
+	{
+		const ShaderReplacement& sr = shaderReplacements.shaders[i];
+		if(shaderIndex == sr.shaderIndex && shaderIndex >= 0 && shaderIndex < tr.numShaders)
+		{
+			*tr.shaders[sr.shaderIndex] = sr.original;
+			if(i < shaderReplacements.count - 1)
+			{
+				shaderReplacements.shaders[i] = shaderReplacements.shaders[shaderReplacements.count - 1];
+			}
+			shaderReplacements.count--;
+			break;
+		}
+	}
+}
+
+static bool IsReplacedShader(int shaderIndex)
+{
+	for(int i = 0; i < shaderReplacements.count; ++i)
+	{
+		const ShaderReplacement& sr = shaderReplacements.shaders[i];
+		if(shaderIndex == sr.shaderIndex)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+static void ClearShaderReplacements()
+{
+	for(int i = 0; i < shaderReplacements.count; ++i)
+	{
+		const ShaderReplacement& sr = shaderReplacements.shaders[i];
+		if(sr.shaderIndex >= 0 && sr.shaderIndex < tr.numShaders)
+		{
+			*tr.shaders[sr.shaderIndex] = sr.original;
+		}
+	}
+	shaderReplacements.count = 0;
 }
 
 static void DrawFilter(char* filter, size_t filterSize)
@@ -312,6 +399,11 @@ static void DrawShaderList()
 	{
 		if(ImGui::Begin("Shader Explorer", &listActive))
 		{
+			if(shaderReplacements.count > 0 && ImGui::Button("Restore Shaders"))
+			{
+				ClearShaderReplacements();
+			}
+
 			static char filter[256];
 			DrawFilter(filter, sizeof(filter));
 
@@ -355,6 +447,21 @@ static void DrawShaderWindow()
 			if(shaderPath != NULL)
 			{
 				ImGui::Text(shaderPath);
+			}
+
+			if(IsReplacedShader(shader->index))
+			{
+				if(ImGui::Button("Restore Shader"))
+				{
+					RemoveShaderReplacement(shader->index);
+				}
+			}
+			else
+			{
+				if(ImGui::Button("Replace Shader"))
+				{
+					AddShaderReplacement(shader->index);
+				}
 			}
 
 			ImGui::NewLine();
@@ -429,4 +536,5 @@ void R_ShutDownGUI()
 	imageWindow.image = NULL;
 	shaderWindow.active = false;
 	shaderWindow.shader = NULL;
+	ClearShaderReplacements();
 }
