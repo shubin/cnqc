@@ -1212,6 +1212,7 @@ void R_RenderDoc_CaptureFrames( int numFrames );
 // tr_gui.cpp
 //
 void R_DrawGUI();
+void R_ShutDownGUI();
 
 //
 // tr_shader.c

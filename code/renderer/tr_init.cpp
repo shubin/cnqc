@@ -519,6 +519,8 @@ static void RE_Shutdown( qbool destroyWindow )
 {
 	ri.Printf( PRINT_DEVELOPER, "RE_Shutdown( %i )\n", destroyWindow );
 
+	R_ShutDownGUI();
+
 	if ( tr.registered ) {
 		ri.Cmd_UnregisterModule();
 		renderPipeline->ShutDown( destroyWindow );

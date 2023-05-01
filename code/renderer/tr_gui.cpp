@@ -419,3 +419,14 @@ void R_DrawGUI()
 	DrawShaderList();
 	DrawShaderWindow();
 }
+
+void R_ShutDownGUI()
+{
+	// this is necessary to avoid crashes in the detail windows
+	// following a map change or video restart:
+	// the renderer is shut down and the pointers become stale
+	imageWindow.active = false;
+	imageWindow.image = NULL;
+	shaderWindow.active = false;
+	shaderWindow.shader = NULL;
+}
