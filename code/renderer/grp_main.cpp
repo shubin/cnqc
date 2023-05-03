@@ -295,7 +295,7 @@ void GRP::BeginFrame()
 	const float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	const TextureBarrier barrier(renderTarget, ResourceStates::RenderTargetBit);
 	CmdBarrier(1, &barrier);
-	CmdClearColorTarget(renderTarget, colorBlack);
+	CmdClearColorTarget(renderTarget, clearColor);
 
 	// nothing is bound to the command list yet!
 	renderMode = RenderMode::None;

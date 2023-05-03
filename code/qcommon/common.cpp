@@ -104,6 +104,8 @@ int		com_frameNumber;
 qbool	com_errorEntered;
 qbool	com_fullyInitialized;
 
+int64_t	com_nextTargetTimeUS = INT64_MIN;
+
 static char com_errorMessage[MAXPRINTMSG];
 
 static void Com_WriteConfigToFile( const char* filename, qbool forceWrite );
@@ -2467,6 +2469,7 @@ static void Com_FrameSleep( qbool demoPlayback )
 		targetTimeUS = Sys_Microseconds() + sleepUS;
 	else
 		targetTimeUS += sleepUS;
+	com_nextTargetTimeUS = targetTimeUS + 1000000 / com_maxfps->integer;
 
 	// sleep if needed
 	if ( com_dedicated->integer ) {
@@ -2482,10 +2485,8 @@ static void Com_FrameSleep( qbool demoPlayback )
 				const int64_t remainingUS = targetTimeUS - Sys_Microseconds();
 				if ( remainingUS > 3000 && runEventLoop )
 					Com_EventLoop();
-				else if ( remainingUS > 1000 )
-					Sys_Sleep( 1 );
-				else if ( remainingUS > 50 )
-					Sys_MicroSleep( 50 );
+				else if ( remainingUS > 0 )
+					Sys_MicroSleep( remainingUS );
 				else
 					break;
 			}

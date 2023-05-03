@@ -224,6 +224,10 @@ D3D(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&graphicsAnalysis)));
 #include "../client/cl_imgui.h"
 
 
+// @TODO: grab from ri.GetNextTargetTimeUS instead
+extern int64_t com_nextTargetTimeUS;
+
+
 #if defined(D3D_DEBUG) || defined(D3D_AGILITY_SDK)
 extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = D3D12_SDK_VERSION; }
 extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8".\\cnq3\\"; }
@@ -2822,13 +2826,20 @@ namespace RHI
 #endif
 		rhi.mainFence.Signal(rhi.mainCommandQueue, rhi.mainFenceValues[rhi.frameIndex]);
 
-		rhie.inputToPresentUS = (uint32_t)(Sys_Microseconds() - rhi.beforeInputSamplingUS);
-		rhie.renderToPresentUS = (uint32_t)(Sys_Microseconds() - rhi.beforeRenderingUS);
+		const int64_t currentTimeUS = Sys_Microseconds();
+		rhie.inputToPresentUS = (uint32_t)(currentTimeUS - rhi.beforeInputSamplingUS);
+		rhie.renderToPresentUS = (uint32_t)(currentTimeUS - rhi.beforeRenderingUS);
 
 		if(backEnd.renderFrame)
 		{
 			ID3D12CommandList* commandListArray[] = { rhi.commandList };
 			rhi.mainCommandQueue->ExecuteCommandLists(ARRAY_LEN(commandListArray), commandListArray);
+
+			if(!rhi.vsync && com_nextTargetTimeUS > currentTimeUS)
+			{
+				const int64_t remainingUS = com_nextTargetTimeUS - currentTimeUS;
+				Sys_MicroSleep((int)remainingUS);
+			}
 
 			Present();
 
