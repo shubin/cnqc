@@ -251,7 +251,7 @@ float4 BlendDest(float4 src, float4 dst, uint stateBits)
 	else if(stateBits == GLS_DSTBLEND_ONE_MINUS_DST_ALPHA)
 		return dst * float4(1.0 - dst.a, 1.0 - dst.a, 1.0 - dst.a, 1.0);
 	else
-		return dst;
+		return float4(0.0, 0.0, 0.0, 0.0);
 }
 
 float4 Blend(float4 src, float4 dst, uint stateBits)
