@@ -442,6 +442,7 @@ namespace RHI
 	{
 		void Create();
 		void Release();
+		void ResizeIfNeeded();
 		void BeginTextureReadback(MappedTexture& mappedTexture, HTexture texture);
 		void EndTextureReadback();
 
@@ -450,6 +451,7 @@ namespace RHI
 		HBuffer readbackBuffer;
 		Fence readbackFence;
 		UINT64 readbackFenceValue;
+		uint32_t bufferByteCount;
 	};
 
 	struct DescriptorHeap
@@ -717,6 +719,18 @@ namespace RHI
 		SetDebugName(heap, name, D3DResourceType::DescriptorHeap);
 
 		return heap;
+	}
+
+	static UINT GetTextureByteCount(ID3D12Resource* texture)
+	{
+		const D3D12_RESOURCE_DESC textureDesc = texture->GetDesc();
+		D3D12_PLACED_SUBRESOURCE_FOOTPRINT layout;
+		rhi.device->GetCopyableFootprints(&textureDesc, 0, 1, 0, &layout, NULL, NULL, NULL);
+		Q_assert(layout.Footprint.Format == DXGI_FORMAT_R8G8B8A8_UNORM);
+		Q_assert((UINT64)layout.Footprint.Width == textureDesc.Width);
+		Q_assert(layout.Footprint.Height == textureDesc.Height);
+
+		return layout.Footprint.RowPitch * layout.Footprint.Height;
 	}
 
 	void Fence::Create(UINT64 value, const char* name)
@@ -1002,11 +1016,13 @@ namespace RHI
 		SetDebugName(readbackCommandList, "readback", D3DResourceType::CommandList);
 		D3D(readbackCommandList->Close());
 
-		// @TODO: dynamically size based on resolution
-		BufferDesc desc("readback", 64 << 20, ResourceStates::CopyDestinationBit);
-		desc.initialState = ResourceStates::CopyDestinationBit;
+		Texture& texture = rhi.textures.Get(GetSwapChainTexture());
+		Q_assert(texture.desc.format == TextureFormat::RGBA32_UNorm);
+		const uint32_t byteCount = GetTextureByteCount(texture.texture);
+		BufferDesc desc("readback", byteCount, ResourceStates::CopyDestinationBit);
 		desc.memoryUsage = MemoryUsage::Readback;
 		readbackBuffer = CreateBuffer(desc);
+		bufferByteCount = byteCount;
 
 		readbackFence.Create(readbackFenceValue, "readback");
 	}
@@ -1016,6 +1032,25 @@ namespace RHI
 		readbackFence.Release();
 		COM_RELEASE(readbackCommandList);
 		COM_RELEASE(readbackCommandAllocator);
+	}
+
+	void ReadbackManager::ResizeIfNeeded()
+	{
+		Texture& texture = rhi.textures.Get(GetSwapChainTexture());
+		Q_assert(texture.desc.format == TextureFormat::RGBA32_UNorm);
+		const UINT byteCount = GetTextureByteCount(texture.texture);
+		if(byteCount <= bufferByteCount)
+		{
+			return;
+		}
+
+		// @NOTE: this is called after the device has become idle
+		DestroyBuffer(readbackBuffer);
+
+		BufferDesc desc("readback", byteCount, ResourceStates::CopyDestinationBit);
+		desc.memoryUsage = MemoryUsage::Readback;
+		readbackBuffer = CreateBuffer(desc);
+		bufferByteCount = byteCount;
 	}
 
 	void ReadbackManager::BeginTextureReadback(MappedTexture& mappedTexture, HTexture htexture)
@@ -2330,6 +2365,8 @@ namespace RHI
 				{
 					rhi.mainFenceValues[f] = 0;
 				}
+
+				rhi.readback.ResizeIfNeeded();
 			}
 
 			GetMonitorRefreshRate();
