@@ -138,6 +138,7 @@ void World::Init()
 
 	if(grp.firstInit)
 	{
+#if defined(ZPP)
 		//
 		// depth pre-pass
 		//
@@ -179,6 +180,7 @@ void World::Init()
 				zppIndexBuffer.buffer = CreateBuffer(desc);
 			}
 		}
+#endif
 
 		//
 		// dynamic (streamed) geometry
@@ -357,6 +359,7 @@ void World::End()
 
 void World::DrawPrePass()
 {
+#if defined(ZPP)
 	if(!drawPrePass ||
 		tr.world == NULL ||
 		zppIndexBuffer.batchCount == 0 ||
@@ -385,6 +388,7 @@ void World::DrawPrePass()
 	CmdDrawIndexed(zppIndexBuffer.batchCount, 0, 0);
 	boundVertexBuffers = BufferFamily::PrePass;
 	boundIndexBuffer = BufferFamily::PrePass;
+#endif
 }
 
 void World::BeginBatch(const shader_t* shader, bool hasStaticGeo)
@@ -618,6 +622,7 @@ void World::DrawGUI()
 
 void World::ProcessWorld(world_t& world)
 {
+#if defined(ZPP)
 	{
 		zppVertexBuffer.batchFirst = 0;
 		zppIndexBuffer.batchFirst = 0;
@@ -681,6 +686,7 @@ void World::ProcessWorld(world_t& world)
 		zppVertexBuffer.batchFirst = 0;
 		zppIndexBuffer.batchFirst = 0;
 	}
+#endif
 
 	statChunkCount = 1; // index 0 is invalid
 	statIndexCount = 0;

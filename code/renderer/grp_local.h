@@ -326,12 +326,14 @@ struct World
 		};
 	};
 
+#if defined(ZPP)
 	// Z pre-pass
 	HRootSignature zppRootSignature;
 	HDescriptorTable zppDescriptorTable;
 	HPipeline zppPipeline; // @TODO: 1 per cull type
 	GeometryBuffer zppIndexBuffer;
 	GeometryBuffer zppVertexBuffer;
+#endif
 
 	// shared
 	BufferFamily::Id boundVertexBuffers;
