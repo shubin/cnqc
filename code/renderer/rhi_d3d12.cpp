@@ -2336,6 +2336,28 @@ namespace RHI
 		// @NOTE: we can't use memset because of the StaticPool members
 		new (&rhi) RHIPrivate();
 
+		// check for the presence of our 3 DLLs ASAP
+		{
+			HMODULE coreModule = LoadLibraryA("cnq3/D3D12Core.dll");
+			if(coreModule == NULL)
+			{
+				ri.Error(ERR_FATAL, "Failed to locate/open cnq3/D3D12Core.dll\n");
+			}
+			FreeLibrary(coreModule);
+
+			rhi.dxilModule = LoadLibraryA("cnq3/dxil.dll");
+			if(rhi.dxilModule == NULL)
+			{
+				ri.Error(ERR_FATAL, "Failed to locate/open cnq3/dxil.dll\n");
+			}
+
+			rhi.dxcModule = LoadLibraryA("cnq3/dxcompiler.dll");
+			if(rhi.dxcModule == NULL)
+			{
+				ri.Error(ERR_FATAL, "Failed to locate/open cnq3/dxcompiler.dll\n");
+			}
+		}
+
 		rhi.persStringAllocator.Init(rhi.persStringData, sizeof(rhi.persStringData));
 		rhi.tempStringAllocator.Init(rhi.tempStringData, sizeof(rhi.tempStringData));
 
@@ -2621,16 +2643,6 @@ namespace RHI
 			rhi.pix.canBeginAndEnd = rhi.pix.BeginEventOnCommandList != NULL && rhi.pix.EndEventOnCommandList != NULL;
 		}
 
-		rhi.dxilModule = LoadLibraryA("cnq3/dxil.dll");
-		if(rhi.dxilModule == NULL)
-		{
-			ri.Error(ERR_FATAL, "Failed to locate/open cnq3/dxil.dll\n");
-		}
-		rhi.dxcModule = LoadLibraryA("cnq3/dxcompiler.dll");
-		if(rhi.dxcModule == NULL)
-		{
-			ri.Error(ERR_FATAL, "Failed to locate/open cnq3/dxcompiler.dll\n");
-		}
 		typedef HRESULT (__stdcall* DxcCreateInstancePtr)(REFCLSID, REFIID, LPVOID*);
 		DxcCreateInstancePtr dxcCreateInstance = (DxcCreateInstancePtr)GetProcAddress(rhi.dxcModule, "DxcCreateInstance");
 		if(dxcCreateInstance == NULL)
