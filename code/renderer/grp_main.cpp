@@ -680,6 +680,10 @@ uint32_t GRP::CreatePSO(CachedPSO& cache, const char* name)
 
 	Q_assert(psoCount < ARRAY_LEN(psos));
 
+#if defined(_DEBUG)
+	Q_strncpyz(cache.name, name, sizeof(cache.name));
+#endif
+
 	int uberPixelShaderIndex = -1;
 	for(uint32_t i = 0; i < uberPixelShaderCacheSize; ++i)
 	{

@@ -517,6 +517,11 @@ struct PSODesc
 
 struct CachedPSO
 {
+#if defined(_DEBUG)
+	// lets us know which Q3 shader
+	// triggered the creation of this PSO
+	char name[MAX_QPATH];
+#endif
 	PSODesc desc;
 	uint32_t stageStateBits[MAX_SHADER_STAGES];
 	uint32_t stageCount;
