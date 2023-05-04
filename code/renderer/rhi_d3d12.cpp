@@ -2163,9 +2163,9 @@ namespace RHI
 		ImGui::SameLine();
 		ImGui::InputText(" ", filter, ARRAY_LEN(filter));
 
-		if(BeginTable("Textures", 2))
+		if(BeginTable("Textures", 3))
 		{
-			TableHeader(2, "Name", "State");
+			TableHeader(3, "Name", "State", "Size");
 
 			int i = 0;
 			Texture* texture;
@@ -2176,7 +2176,11 @@ namespace RHI
 				{
 					continue;
 				}
-				TableRow(2, texture->desc.name, GetNameForD3DResourceStates(texture->currentState));
+				const uint64_t byteCount = texture->allocation != NULL ? texture->allocation->GetSize() : 0;
+				TableRow(3,
+					texture->desc.name,
+					GetNameForD3DResourceStates(texture->currentState),
+					Com_FormatBytes(byteCount));
 			}
 
 			ImGui::EndTable();
@@ -2193,9 +2197,9 @@ namespace RHI
 		ImGui::SameLine();
 		ImGui::InputText(" ", filter, ARRAY_LEN(filter));
 
-		if(BeginTable("Buffers", 3))
+		if(BeginTable("Buffers", 4))
 		{
-			TableHeader(3, "Buffer", "State", "Heap");
+			TableHeader(4, "Buffer", "State", "Heap", "Size");
 
 			int i = 0;
 			Buffer* buffer;
@@ -2206,7 +2210,11 @@ namespace RHI
 				{
 					continue;
 				}
-				TableRow(3, buffer->desc.name, GetNameForD3DResourceStates(buffer->currentState), GetResourceHeapName(buffer->buffer));
+				TableRow(4,
+					buffer->desc.name,
+					GetNameForD3DResourceStates(buffer->currentState),
+					GetResourceHeapName(buffer->buffer),
+					Com_FormatBytes(buffer->allocation->GetSize()));
 			}
 
 			ImGui::EndTable();
