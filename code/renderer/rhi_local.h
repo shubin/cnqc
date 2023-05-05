@@ -798,7 +798,7 @@ namespace RHI
 
 		HT Add(const T& item)
 		{
-			ASSERT_OR_DIE(freeList < N, "The memory pool is full");
+			ASSERT_OR_DIE(freeList < N, "The pool is full");
 			At(freeList).item = item;
 			At(freeList).used = qtrue;
 			const Handle handle = CreateHandle(RT, freeList, At(freeList).generation);
@@ -808,6 +808,7 @@ namespace RHI
 
 		void Remove(HT handle)
 		{
+			ASSERT_OR_DIE(!IsNullHandle(handle), "Null pool handle");
 			Item& item = GetItemRef(handle);
 			ASSERT_OR_DIE(item.used, "Memory pool item was already freed");
 			item.generation = (item.generation + 1) & RHI_BIT_MASK(HandleGenBitCount);
@@ -818,6 +819,7 @@ namespace RHI
 
 		T& Get(HT handle)
 		{
+			ASSERT_OR_DIE(!IsNullHandle(handle), "Null pool handle");
 			return GetItemRef(handle).item;
 		}
 
@@ -871,20 +873,22 @@ namespace RHI
 
 		Item& GetItemRef(HT handle)
 		{
+			ASSERT_OR_DIE(!IsNullHandle(handle), "Null pool handle");
+
 			Handle type, index, gen;
 			DecomposeHandle(&type, &index, &gen, RHI_GET_HANDLE_VALUE(handle));
-			ASSERT_OR_DIE(type == RT, "Invalid memory pool handle (wrong resource type)");
-			ASSERT_OR_DIE(index <= (Handle)N, "Invalid memory pool handle (bad index)");
+			ASSERT_OR_DIE(type == RT, "Invalid pool handle (wrong resource type)");
+			ASSERT_OR_DIE(index <= (Handle)N, "Invalid pool handle (bad index)");
 
 			Item& item = At(index);
-			ASSERT_OR_DIE(item.used, "Invalid memory pool handle (unused slot)");
+			ASSERT_OR_DIE(item.used, "Invalid pool handle (unused slot)");
 			if(gen > (Handle)item.generation)
 			{
-				DIE("Invalid memory pool handle (allocation from the future)");
+				DIE("Invalid pool handle (allocation from the future)");
 			}
 			else if(gen < (Handle)item.generation)
 			{
-				DIE("Invalid memory pool handle (the object has been freed)");
+				DIE("Invalid pool handle (the object has been freed)");
 			}
 
 			return item;
@@ -892,11 +896,13 @@ namespace RHI
 
 		Item& At(uint32_t index)
 		{
+			ASSERT_OR_DIE(index < N, "Invalid pool index");
 			return *(Item*)&items[index * sizeof(Item)];
 		}
 
 		const Item& At(uint32_t index) const
 		{
+			ASSERT_OR_DIE(index < N, "Invalid pool index");
 			return *(Item*)&items[index * sizeof(Item)];
 		}
 
@@ -981,7 +987,7 @@ namespace RHI
 
 		uint32_t Allocate()
 		{
-			ASSERT_OR_DIE(firstFree != Invalid, "StaticFreeList out of memory");
+			ASSERT_OR_DIE(firstFree != Invalid, "Free list out of memory");
 
 			const T index = firstFree;
 			firstFree = items[index];
@@ -993,7 +999,7 @@ namespace RHI
 
 		void Free(uint32_t index)
 		{
-			ASSERT_OR_DIE(index < size, "StaticFreeList freeing an invalid slot");
+			ASSERT_OR_DIE(index < size, "Invalid free list slot");
 
 			const T oldList = firstFree;
 			firstFree = index;
