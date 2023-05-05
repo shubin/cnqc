@@ -1,11 +1,9 @@
-#define _CRT_SECURE_NO_WARNINGS
-
 #include <Windows.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <assert.h>
 
-#include "../../uber_shaders.h"
+#include "../renderer/uber_shaders.h"
 
 
 #define PS(Data) #Data,
@@ -51,7 +49,7 @@ void CompileShader(const ShaderArgs& args, int extraCount = 0, const char** extr
 {
 	static char temp[4096];
 
-	strcpy(temp, va("C:\\Programs\\dxc\\bin\\x64\\dxc.exe -Fh %s -E %s -T %s -WX",
+	strcpy(temp, va("dxc.exe -Fh %s -E %s -T %s -WX",
 		args.headerPath, args.entryPoint, args.targetProfile));
 
 	for(int i = 0; i < extraCount; ++i)
@@ -211,8 +209,21 @@ void CompileUberPS(const char* stateString)
 	CompileShader(args, extraCount, extras);
 }
 
-int main()
+int main(int /*argc*/, const char** argv)
 {
+	char dirPath[MAX_PATH];
+	strcpy(dirPath, argv[0]);
+	int l = strlen(dirPath);
+	while(l-- > 0)
+	{
+		if(dirPath[l] == '/' || dirPath[l] == '\\')
+		{
+			dirPath[l] = '\0';
+			break;
+		}
+	}
+	SetCurrentDirectoryA(dirPath);
+
 	system("del *.h");
 
 	CompileVSAndPS("post_gamma", "post_gamma.hlsl");
@@ -231,7 +242,7 @@ int main()
 	system("type smaa*.h > complete_smaa.h");
 
 	system("type shared.hlsli uber_shader.hlsl > uber_shader.temp"); // combines both files into one
-	system("bin2header.exe --output uber_shader.h --hname uber_shader_string uber_shader.temp");
+	system("..\\..\\..\\tools\\bin2header.exe --output uber_shader.h --hname uber_shader_string uber_shader.temp");
 	system("del uber_shader.temp");
 
 	for(int i = 0; i < 8; ++i)

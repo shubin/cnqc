@@ -1,7 +1,7 @@
 --[[
 
 Currently used build:
-premake 5.0.0-alpha10
+premake v5.0.0-beta2
 
 There are 3 supported build toolchains:
 - Visual C++ on Windows x64 and x86
@@ -9,7 +9,6 @@ There are 3 supported build toolchains:
 - Clang or GCC on FreeBSD x64
 
 @TODO: prevent UNICODE and _UNICODE from being #define'd with premake
-@TODO: enable Minimal Rebuild from premake (instead of adding /Gm)
 
 --]]
 
@@ -61,28 +60,6 @@ local function WIN_CreatePdbCopyPostBuildCommand(exeName)
 	local make_path_pdb = string.format("%s/%s/%s.pdb", make_path_bin, GetBinDirName(), exeName)
 
 	return string.format("copy \"%s\" \"%s\"", make_path_pdb, abs_path_q3)
-
-end
-
-local function WIN_CreateShaderPreBuildCommand(name, shaderType, version, options, suffix)
-
-	extra_fxc_options_map =
-	{
-	   debug = "/O0 /Zi",
-	   release = "/O3"
-	}
-
-	local fxc_path = "..\\compile_shader.cmd"
-	local extra_options = "%{extra_fxc_options_map[cfg.buildcfg]}"..options
-	local name_suffix = suffix
-	local target = string.format("%s_%s", shaderType, version)
-	local entry_point = string.format("%s_main", shaderType)
-	local var_name = string.format("g_%s%s_%s", name, name_suffix, shaderType)
-	local path_hlsl = string.format("%s\\renderer\\hlsl", path.translate(make_path_src))
-	local input_file_name = string.format("%s\\%s.hlsl", path_hlsl, name)
-	local output_file_name = string.format("%s\\%s%s_%s.h", path_hlsl, name, name_suffix, shaderType)
-
-	return string.format("%s %s /nologo /T %s /E %s /Vn %s /Fh %s %s", fxc_path, input_file_name, target, entry_point, var_name, output_file_name, extra_options)
 
 end
 
@@ -189,7 +166,9 @@ local function ApplyProjectSettings(outputExe)
 
 	rtti "Off"
 	exceptionhandling "Off"
-	flags { "NoPCH", "StaticRuntime", "NoManifest", "NoNativeWChar" }
+	staticruntime "On"
+	nativewchar "Off"
+	flags { "NoPCH", "NoManifest" }
 
 	filter "configurations:debug"
 		defines { "DEBUG", "_DEBUG" }
@@ -197,13 +176,13 @@ local function ApplyProjectSettings(outputExe)
 
 	filter "configurations:release"
 		defines { "NDEBUG" }
+		optimize "Size"
+		omitframepointer "On"
+		vectorextensions "SSE2"
+		floatingpoint "Fast"
 		flags -- others: NoIncrementalLink NoCopyLocal NoImplicitLink NoBufferSecurityChecks
 		{
 			"NoMinimalRebuild",
-			"OptimizeSize",
-			"NoFramePointer",
-			"EnableSSE2",
-			"FloatFast",
 			"MultiProcessorCompile",
 			"NoRuntimeChecks"
 		}
@@ -240,14 +219,14 @@ local function ApplyProjectSettings(outputExe)
 		editandcontinue "Off"
 		defines { "_CRT_SECURE_NO_WARNINGS", "WIN32", "_WIN32" }
 		if extra_warnings == 1 then
-			flags { "ExtraWarnings" }
+			warnings "Extra"
 		end
 
 	filter { "action:vs*", "kind:WindowedApp" }
-		flags { "WinMain" }
+		entrypoint "WinMainCRTStartup"
 
 	filter { "action:vs*", "configurations:debug" }
-		buildoptions { "/Gm" }
+		buildoptions { "" }
 		linkoptions { "" }
 
 	filter { "action:vs*", "configurations:release" }
@@ -291,6 +270,8 @@ local function ApplyProjectSettings(outputExe)
 
 	filter { "action:gmake", "platforms:x32" }
 		buildoptions { "-mmmx -msse -msse2" }
+
+	filter { }
 
 end
 
@@ -371,7 +352,7 @@ local function ApplyExeProjectSettings(exeName, server)
 		"client/cl_console.cpp",
 		"client/cl_demo.cpp",
 		"client/cl_download.cpp",
-		"client/cl_gl.cpp",
+		"client/cl_imgui.cpp",
 		"client/cl_input.cpp",
 		"client/cl_keys.cpp",
 		"client/cl_main.cpp",
@@ -450,6 +431,8 @@ local function ApplyExeProjectSettings(exeName, server)
 	AddHeaders("cgame")
 	AddHeaders("game")
 	AddHeaders("ui")
+	AddSourcesAndHeaders("imgui")
+	AddSourcesAndHeaders("implot")
 
 	links { "botlib" }
 
@@ -458,7 +441,7 @@ local function ApplyExeProjectSettings(exeName, server)
 	else
 		AddSourcesFromArray(".", client_sources)
 		AddHeaders("renderer")
-		links { "renderer", "glew", "libjpeg-turbo" }
+		links { "renderer", "libjpeg-turbo" }
 	end
 
 	filter { "system:windows" }
@@ -480,7 +463,7 @@ local function ApplyExeProjectSettings(exeName, server)
 	-- copy the binaries over to the test q3 install
 	-- it seems that "filter" doesn't work with "prebuildcommands", "postbuildcommands"
 	filter { }
-	if os.is("windows") then
+	if os.istarget("windows") then
 		prebuildcommands { path.translate(CreateGitPreBuildCommand(".cmd"), "\\") }
 		postbuildcommands
 		{
@@ -507,14 +490,11 @@ local function ApplyExeProjectSettings(exeName, server)
 	filter "system:windows"
 		links { "Winmm", "ws2_32", "Version" }
 		if (server == 0) then
-			links { "opengl32" }
+			links { "D3D12", "DXGI", "Dwmapi", "nvapi64" }
 		end
 
 	filter "system:not windows"
 		links { "dl", "m" }
-		if (server == 0) then
-			links { "SDL2", "GL" }
-		end
 
 	filter "system:bsd"
 		links { "execinfo" }
@@ -534,6 +514,8 @@ local function ApplyExeProjectSettings(exeName, server)
 	-- otherwise, we run into problems (that should really be fixed)
 	filter "action:gmake"
 		buildoptions { "-x c++" }
+
+	filter { }
 
 end
 
@@ -663,7 +645,7 @@ local function ApplyLibJpegTurboProjectSettings()
 	local asm_inc_path = GetMakePath(path_src.."/libjpeg-turbo")
 	local nasm_flags = GetLibJpegTurboNasmFlags()
 	local nasm_includes
-	if os.is("windows") then
+	if os.istarget("windows") then
 		asm_inc_path = path.translate(asm_inc_path, "\\")
 		nasm_includes = string.format("-I%s\\ -I%s\\win\\ -I%s\\simd\\", asm_inc_path, asm_inc_path, asm_inc_path)
 	else
@@ -672,7 +654,7 @@ local function ApplyLibJpegTurboProjectSettings()
 
 	local obj_file_path = string.format("%s%s", "%{cfg.objdir}/%{file.basename}", GetCompilerObjectExtension())
 	local command = string.format("nasm -o%s %s %s %s", obj_file_path, nasm_flags, nasm_includes, "%{file.relpath}")
-	if os.is("windows") then
+	if os.istarget("windows") then
 		command = path.translate(command, "\\")
 		obj_file_path = path.translate(obj_file_path, "\\")
 	end
@@ -682,6 +664,8 @@ local function ApplyLibJpegTurboProjectSettings()
 		buildcommands { command }
 		buildoutputs { obj_file_path }
 
+	filter { }
+
 	extra_warnings = 0
 	ApplyLibProjectSettings()
 	extra_warnings = 1
@@ -690,26 +674,22 @@ end
 
 solution "cnq3"
 
-	if os.is("windows") then
+	if os.istarget("windows") then
 		platforms { "x64", "x32" }
 	else
 		platforms { "x64" }
 	end
 
-	location ( string.format("%s/%s_%s", path_make, os.get(), _ACTION) )
+	location ( string.format("%s/%s_%s", path_make, os.target(), _ACTION) )
 	configurations { "debug", "release" }
 
-	project "cnq3"
+	project "botlib"
 
-		kind "WindowedApp"
+		kind "StaticLib"
 		language "C++"
-		defines { "GLEW_STATIC" }
-		includedirs { path_src.."/glew/include" }
-		if os.is("bsd") then
-			includedirs { "/usr/local/include" }
-			libdirs { "/usr/local/lib" }
-		end
-		ApplyExeProjectSettings("cnq3", 0)
+		defines { "BOTLIB" }
+		AddSourcesAndHeaders("botlib")
+		ApplyLibProjectSettings()
 		filter "action:gmake"
 			buildoptions { "-std=c++98" }
 
@@ -722,73 +702,67 @@ solution "cnq3"
 		filter "action:gmake"
 			buildoptions { "-std=c++98" }
 
-	project "botlib"
+	if os.istarget("windows") then
 
-		kind "StaticLib"
-		language "C++"
-		defines { "BOTLIB" }
-		AddSourcesAndHeaders("botlib")
-		ApplyLibProjectSettings()
-		filter "action:gmake"
-			buildoptions { "-std=c++98" }
+		project "shadercomp"
 
-	project "glew"
-	
-		kind "StaticLib"
-		language "C"
-		defines { "GLEW_STATIC" }
-		AddSourcesAndHeaders("glew")
-		includedirs { path_src.."/glew/include" }
-		if os.is("bsd") then
-			includedirs { "/usr/local/include" }
-		end
-		ApplyLibProjectSettings()
+			kind "ConsoleApp"
+			language "C++"
+			AddSourcesAndHeaders("shadercomp")
+			postbuildcommands { string.format("{copyfile} \"%%{cfg.buildtarget.directory}/%%{cfg.buildtarget.basename}.exe\" \"%s/renderer/hlsl\"", make_path_src) }
+			postbuildcommands { string.format("{copyfile} \"%%{cfg.buildtarget.directory}/%%{cfg.buildtarget.basename}.pdb\" \"%s/renderer/hlsl\"", make_path_src) }
+			ApplyProjectSettings(true)
+			--[[
+			-- VC++ STILL requires absolute paths for these... maybe it will be fixed a few decades after I'm in the grave
+			local debug_path_dir = string.format("%s/renderer/hlsl", make_path_src)
+			local debug_path_exe = string.format("%s/%%{cfg.buildtarget.name}", debug_path_dir)
+			debugdir(debug_path_dir)
+			debugcommand(debug_path_exe)
+			--]]
 
-	project "renderer"
+		project "renderer"
 
-		kind "StaticLib"
-		language "C++"
-		defines { "GLEW_STATIC" }
-		AddSourcesAndHeaders("renderer")
-		includedirs { path_src.."/glew/include" }
-		if os.is("bsd") then
-			includedirs { "/usr/local/include" }
-		end
-		if os.is("windows") then
-			files { string.format("%s/renderer/hlsl/*.hlsl", path_src) }
-			files { string.format("%s/renderer/hlsl/*.hlsli", path_src) }
-		end
-		ApplyLibProjectSettings()
-		filter "action:gmake"
-			buildoptions { "-std=c++98" }
-		if os.is("windows") then
-			filter "action:vs*"
-				local commands =
-				{
-					WIN_CreateShaderPreBuildCommand("generic", "vs", "4_1", "", ""),
-					WIN_CreateShaderPreBuildCommand("generic", "ps", "4_1", "", ""),
-					WIN_CreateShaderPreBuildCommand("generic", "ps", "4_1", " /DCNQ3_A2C=1", "_a"),
-					WIN_CreateShaderPreBuildCommand("generic", "ps", "4_1", " /DCNQ3_DITHER=1", "_d"),
-					WIN_CreateShaderPreBuildCommand("generic", "ps", "4_1", " /DCNQ3_A2C=1 /DCNQ3_DITHER=1", "_ad"),
-					WIN_CreateShaderPreBuildCommand("post", "vs", "4_1", "", ""),
-					WIN_CreateShaderPreBuildCommand("post", "ps", "4_1", "", ""),
-					WIN_CreateShaderPreBuildCommand("dl", "vs", "4_1", "", ""),
-					WIN_CreateShaderPreBuildCommand("dl", "ps", "4_1", "", ""),
-					WIN_CreateShaderPreBuildCommand("sprite", "vs", "4_1", "", ""),
-					WIN_CreateShaderPreBuildCommand("sprite", "ps", "4_1", "", ""),
-					WIN_CreateShaderPreBuildCommand("clear", "vs", "4_1", "", ""),
-					WIN_CreateShaderPreBuildCommand("clear", "ps", "4_1", "", ""),
-					WIN_CreateShaderPreBuildCommand("mip_start", "cs", "5_0", "", ""),
-					WIN_CreateShaderPreBuildCommand("mip_pass", "cs", "5_0", "", ""),
-					WIN_CreateShaderPreBuildCommand("mip_end", "cs", "5_0", "", "")
-				}
-				-- premake doesn't want to spit one Command XML element per pre-build command
-				-- we generate a full single-line batch command to get around that in the saddest way...
-				prebuildcommands { table.concat(commands, " && ") }
-		end
+			dependson "shadercomp"
+			kind "StaticLib"
+			language "C++"
+			AddSourcesAndHeaders("renderer")
+			if os.istarget("bsd") then
+				includedirs { "/usr/local/include" }
+			end
+			if os.istarget("windows") then
+				files { string.format("%s/renderer/hlsl/*.hlsl", path_src) }
+				files { string.format("%s/renderer/hlsl/*.hlsli", path_src) }
+				filter "files:**.hlsl"
+					flags { "ExcludeFromBuild" }
+				filter { }
+			end
+			prebuildcommands { string.format("\"%s/renderer/hlsl/shadercomp.exe\"", make_path_src) }
+			ApplyLibProjectSettings()
+			includedirs { path_src.."/imgui" }
+			filter "action:gmake"
+				buildoptions { "-std=c++98" }
 
-	project "libjpeg-turbo"
+		project "libjpeg-turbo"
 
-		kind "StaticLib"
-		language "C"
-		ApplyLibJpegTurboProjectSettings()
+			kind "StaticLib"
+			language "C"
+			ApplyLibJpegTurboProjectSettings()
+
+		project "cnq3"
+
+			kind "WindowedApp"
+			language "C++"
+			if os.istarget("windows") then
+				includedirs { path_src.."/imgui" }
+				libdirs { path_src.."/nvapi" }
+			end
+			if os.istarget("bsd") then
+				includedirs { "/usr/local/include" }
+				libdirs { "/usr/local/lib" }
+			end
+			ApplyExeProjectSettings("cnq3", 0)
+			filter "action:gmake"
+				buildoptions { "-std=c++98" }
+
+	end
+

@@ -210,16 +210,14 @@ D3D(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&graphicsAnalysis)));
 
 #include "rhi_local.h"
 #include <Windows.h>
-#include <d3d12.h>
+#include "d3d12/d3d12.h"
 #include <dxgi1_6.h>
 #include <dxgidebug.h>
 #include <dxcapi.h>
-#include <dwmapi.h>
-#pragma comment(lib, "dwmapi")
+#include <dwmapi.h> // for DwmGetCompositionTimingInfo
 #define D3D12MA_D3D12_HEADERS_ALREADY_INCLUDED
 #include "D3D12MemAlloc.h"
 #include "../nvapi/nvapi.h"
-#pragma comment(lib, "nvapi64")
 #include "../pix/pix3.h"
 #include "../client/cl_imgui.h"
 
@@ -3292,7 +3290,7 @@ namespace RHI
 		desc.AddressU = addressMode;
 		desc.AddressV = addressMode;
 		desc.AddressW = addressMode;
-		desc.ComparisonFunc = D3D12_COMPARISON_FUNC_NONE;
+		desc.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
 		desc.MaxAnisotropy = maxAnisotropy;
 		desc.MaxLOD = 666.0f;
 		desc.MinLOD = sampler.minLOD;

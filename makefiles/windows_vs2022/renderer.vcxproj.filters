@@ -6,20 +6,34 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\code\renderer\D3D12MemAlloc.h" />
+    <ClInclude Include="..\..\code\renderer\grp_local.h" />
+    <ClInclude Include="..\..\code\renderer\rhi_local.h" />
+    <ClInclude Include="..\..\code\renderer\rhi_public.h" />
+    <ClInclude Include="..\..\code\renderer\smaa_area_texture.h" />
+    <ClInclude Include="..\..\code\renderer\smaa_search_texture.h" />
     <ClInclude Include="..\..\code\renderer\stb_image.h" />
     <ClInclude Include="..\..\code\renderer\tr_help.h" />
     <ClInclude Include="..\..\code\renderer\tr_local.h" />
     <ClInclude Include="..\..\code\renderer\tr_public.h" />
-    <ClInclude Include="..\..\code\renderer\grp_local.h" />
-    <ClInclude Include="..\..\code\renderer\rhi_public.h" />
-    <ClInclude Include="..\..\code\renderer\rhi_local.h" />
+    <ClInclude Include="..\..\code\renderer\uber_shaders.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\code\renderer\D3D12MemAlloc.cpp" />
+    <ClCompile Include="..\..\code\renderer\grp_imgui.cpp" />
+    <ClCompile Include="..\..\code\renderer\grp_main.cpp" />
+    <ClCompile Include="..\..\code\renderer\grp_mip_gen.cpp" />
+    <ClCompile Include="..\..\code\renderer\grp_post.cpp" />
+    <ClCompile Include="..\..\code\renderer\grp_smaa.cpp" />
+    <ClCompile Include="..\..\code\renderer\grp_ui.cpp" />
+    <ClCompile Include="..\..\code\renderer\grp_world.cpp" />
+    <ClCompile Include="..\..\code\renderer\rhi_d3d12.cpp" />
     <ClCompile Include="..\..\code\renderer\stb_image.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_backend.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_bsp.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_cmds.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_curve.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_gui.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_image.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_image_scale.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_init.cpp" />
@@ -29,6 +43,7 @@
     <ClCompile Include="..\..\code\renderer\tr_mesh.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_model.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_noise.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_renderdoc.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_scene.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_shade.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_shade_calc.cpp" />
@@ -36,45 +51,8 @@
     <ClCompile Include="..\..\code\renderer\tr_sky.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_surface.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_world.cpp" />
-    <ClCompile Include="..\..\code\renderer\rhi_d3d12.cpp" />
-    <ClCompile Include="..\..\code\renderer\D3D12MemAlloc.cpp" />
-    <ClCompile Include="..\..\code\renderer\grp_main.cpp" />
-    <ClCompile Include="..\..\code\renderer\grp_mip_gen.cpp" />
-    <ClCompile Include="..\..\code\renderer\grp_ui.cpp" />
-    <ClCompile Include="..\..\code\renderer\grp_world.cpp" />
-    <ClCompile Include="..\..\code\renderer\tr_renderdoc.cpp" />
-    <ClCompile Include="..\..\code\renderer\grp_imgui.cpp" />
-    <ClCompile Include="..\..\code\renderer\grp_post.cpp" />
-    <ClCompile Include="..\..\code\renderer\grp_smaa.cpp" />
-    <ClCompile Include="..\..\code\renderer\tr_gui.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\code\renderer\hlsl\smaa.hlsli">
-      <Filter>hlsl</Filter>
-    </None>
-    <None Include="..\..\code\renderer\hlsl\shared.hlsli">
-      <Filter>hlsl</Filter>
-    </None>
-    <None Include="..\..\code\renderer\hlsl\fog.hlsli">
-      <Filter>hlsl</Filter>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="..\..\code\renderer\hlsl\smaa_1.hlsl">
-      <Filter>hlsl</Filter>
-    </FxCompile>
-    <FxCompile Include="..\..\code\renderer\hlsl\smaa_2.hlsl">
-      <Filter>hlsl</Filter>
-    </FxCompile>
-    <FxCompile Include="..\..\code\renderer\hlsl\smaa_3.hlsl">
-      <Filter>hlsl</Filter>
-    </FxCompile>
-    <FxCompile Include="..\..\code\renderer\hlsl\imgui.hlsl">
-      <Filter>hlsl</Filter>
-    </FxCompile>
-    <FxCompile Include="..\..\code\renderer\hlsl\post_gamma.hlsl">
-      <Filter>hlsl</Filter>
-    </FxCompile>
     <FxCompile Include="..\..\code\renderer\hlsl\depth_pre_pass.hlsl">
       <Filter>hlsl</Filter>
     </FxCompile>
@@ -82,6 +60,9 @@
       <Filter>hlsl</Filter>
     </FxCompile>
     <FxCompile Include="..\..\code\renderer\hlsl\fog_outside.hlsl">
+      <Filter>hlsl</Filter>
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\imgui.hlsl">
       <Filter>hlsl</Filter>
     </FxCompile>
     <FxCompile Include="..\..\code\renderer\hlsl\mip_1.hlsl">
@@ -93,14 +74,37 @@
     <FxCompile Include="..\..\code\renderer\hlsl\mip_3.hlsl">
       <Filter>hlsl</Filter>
     </FxCompile>
-    <FxCompile Include="..\..\code\renderer\hlsl\ui.hlsl">
-      <Filter>hlsl</Filter>
-    </FxCompile>
-    <FxCompile Include="..\..\code\renderer\hlsl\uber_shader.hlsl">
+    <FxCompile Include="..\..\code\renderer\hlsl\post_gamma.hlsl">
       <Filter>hlsl</Filter>
     </FxCompile>
     <FxCompile Include="..\..\code\renderer\hlsl\post_inverse_gamma.hlsl">
       <Filter>hlsl</Filter>
     </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\smaa_1.hlsl">
+      <Filter>hlsl</Filter>
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\smaa_2.hlsl">
+      <Filter>hlsl</Filter>
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\smaa_3.hlsl">
+      <Filter>hlsl</Filter>
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\uber_shader.hlsl">
+      <Filter>hlsl</Filter>
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\ui.hlsl">
+      <Filter>hlsl</Filter>
+    </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\code\renderer\hlsl\fog.hlsli">
+      <Filter>hlsl</Filter>
+    </None>
+    <None Include="..\..\code\renderer\hlsl\shared.hlsli">
+      <Filter>hlsl</Filter>
+    </None>
+    <None Include="..\..\code\renderer\hlsl\smaa.hlsli">
+      <Filter>hlsl</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -1,3 +1,5 @@
+#pragma warning(push, 1)
+
 // MIT License
 
 // Copyright (c) 2022 Evan Pezent
@@ -5721,3 +5723,5 @@ bool BeginPlot(const char* title, const char* x_label, const char* y1_label, con
 #endif
 
 }  // namespace ImPlot
+
+#pragma warning(pop)
