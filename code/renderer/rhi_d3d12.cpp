@@ -2850,6 +2850,7 @@ namespace RHI
 		}
 		CmdBarrier(rhi.texturesToTransition.count, textureBarriers, rhi.buffersToTransition.count, bufferBarriers);
 		rhi.texturesToTransition.Clear();
+		rhi.buffersToTransition.Clear();
 
 		CmdInsertDebugLabel("RHI::BeginFrame", 0.8f, 0.8f, 0.8f);
 	}
