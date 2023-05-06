@@ -711,6 +711,7 @@ solution "cnq3"
 			AddSourcesAndHeaders("shadercomp")
 			postbuildcommands { string.format("{copyfile} \"%%{cfg.buildtarget.directory}/%%{cfg.buildtarget.basename}.exe\" \"%s/renderer/hlsl\"", make_path_src) }
 			postbuildcommands { string.format("{copyfile} \"%%{cfg.buildtarget.directory}/%%{cfg.buildtarget.basename}.pdb\" \"%s/renderer/hlsl\"", make_path_src) }
+			postbuildcommands { string.format("\"%s/renderer/hlsl/%%{cfg.buildtarget.name}\"", make_path_src) }
 			ApplyProjectSettings(true)
 			--[[
 			-- VC++ STILL requires absolute paths for these... maybe it will be fixed a few decades after I'm in the grave
@@ -736,7 +737,6 @@ solution "cnq3"
 					flags { "ExcludeFromBuild" }
 				filter { }
 			end
-			prebuildcommands { string.format("\"%s/renderer/hlsl/shadercomp.exe\"", make_path_src) }
 			ApplyLibProjectSettings()
 			includedirs { path_src.."/imgui" }
 			filter "action:gmake"

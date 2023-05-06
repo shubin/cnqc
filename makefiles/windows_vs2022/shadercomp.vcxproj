@@ -121,7 +121,8 @@
     </Link>
     <PostBuildEvent>
       <Command>copy /B /Y "$(TargetDir)\$(TargetName).exe" "..\..\code\renderer\hlsl"
-copy /B /Y "$(TargetDir)\$(TargetName).pdb" "..\..\code\renderer\hlsl"</Command>
+copy /B /Y "$(TargetDir)\$(TargetName).pdb" "..\..\code\renderer\hlsl"
+"../../code/renderer/hlsl/$(TargetFileName)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">
@@ -146,7 +147,8 @@ copy /B /Y "$(TargetDir)\$(TargetName).pdb" "..\..\code\renderer\hlsl"</Command>
     </Link>
     <PostBuildEvent>
       <Command>copy /B /Y "$(TargetDir)\$(TargetName).exe" "..\..\code\renderer\hlsl"
-copy /B /Y "$(TargetDir)\$(TargetName).pdb" "..\..\code\renderer\hlsl"</Command>
+copy /B /Y "$(TargetDir)\$(TargetName).pdb" "..\..\code\renderer\hlsl"
+"../../code/renderer/hlsl/$(TargetFileName)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release|x64'">
@@ -181,7 +183,8 @@ copy /B /Y "$(TargetDir)\$(TargetName).pdb" "..\..\code\renderer\hlsl"</Command>
     </Link>
     <PostBuildEvent>
       <Command>copy /B /Y "$(TargetDir)\$(TargetName).exe" "..\..\code\renderer\hlsl"
-copy /B /Y "$(TargetDir)\$(TargetName).pdb" "..\..\code\renderer\hlsl"</Command>
+copy /B /Y "$(TargetDir)\$(TargetName).pdb" "..\..\code\renderer\hlsl"
+"../../code/renderer/hlsl/$(TargetFileName)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release|Win32'">
@@ -217,7 +220,8 @@ copy /B /Y "$(TargetDir)\$(TargetName).pdb" "..\..\code\renderer\hlsl"</Command>
     </Link>
     <PostBuildEvent>
       <Command>copy /B /Y "$(TargetDir)\$(TargetName).exe" "..\..\code\renderer\hlsl"
-copy /B /Y "$(TargetDir)\$(TargetName).pdb" "..\..\code\renderer\hlsl"</Command>
+copy /B /Y "$(TargetDir)\$(TargetName).pdb" "..\..\code\renderer\hlsl"
+"../../code/renderer/hlsl/$(TargetFileName)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
