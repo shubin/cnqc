@@ -1055,6 +1055,9 @@ after_parse:
 	// CGame will also restore previous state when videoRestart is qtrue
 	CL_CGNDP_EndAnalysis(clc.demoName, demo.firstServerTime, demo.lastServerTime, videoRestart);
 
+	// make sure we don't execute commands from the end of the demo when starting up
+	demo.numCommands = 0;
+
 	const int duration = Sys_Milliseconds() - startTime;
 	Com_Printf("New Demo Player: loaded demo in %d.%03d seconds\n", duration / 1000, duration % 1000);
 	Com_DPrintf("New Demo Player: I-frame delay %d ms, %s -> %s (%.2fx)\n",
