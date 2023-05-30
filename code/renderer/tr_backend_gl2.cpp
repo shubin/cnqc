@@ -96,7 +96,55 @@ static const char* sharedFS =
 "}\n"
 "\n";
 
-static const char* genericVS =
+static const char* genericVS_v0 =
+"void main()\n"
+"{\n"
+"	vec4 positionVS = gl_ModelViewMatrix * vec4(gl_Vertex.xyz, 1);\n"
+"	gl_ClipDistance[0] = dot(positionVS, gl_ClipPlane[0]);\n"
+"	gl_Position = ftransform();\n"
+"	gl_TexCoord[0] = gl_MultiTexCoord0;\n"
+"	gl_TexCoord[1] = gl_MultiTexCoord1;\n"
+"	gl_TexCoord[2] = gl_Color;\n"
+"}\n";
+
+// gl_ClipDistance doesn't have to be redeclared according to the GLSL specs,
+// but there might some finicky drivers out there
+static const char* genericVS_v1 =
+"out varying float gl_ClipDistance[1];\n"
+"\n"
+"void main()\n"
+"{\n"
+"	vec4 positionVS = gl_ModelViewMatrix * vec4(gl_Vertex.xyz, 1);\n"
+"	gl_ClipDistance[0] = dot(positionVS, gl_ClipPlane[0]);\n"
+"	gl_Position = ftransform();\n"
+"	gl_TexCoord[0] = gl_MultiTexCoord0;\n"
+"	gl_TexCoord[1] = gl_MultiTexCoord1;\n"
+"	gl_TexCoord[2] = gl_Color;\n"
+"}\n";
+
+// gl_ClipDistance doesn't have to be redeclared according to the GLSL specs,
+// but there might some finicky drivers out there
+static const char* genericVS_v2 =
+"#extension GL_ARB_gpu_shader5 : require\n"
+"\n"
+"out gl_PerVertex\n"
+"{\n"
+"	vec4 gl_Position;\n"
+"	vec4 gl_TexCoord[3];\n"
+"	float gl_ClipDistance[1];\n"
+"};\n"
+"\n"
+"void main()\n"
+"{\n"
+"	vec4 positionVS = gl_ModelViewMatrix * vec4(gl_Vertex.xyz, 1);\n"
+"	gl_ClipDistance[0] = dot(positionVS, gl_ClipPlane[0]);\n"
+"	gl_Position = ftransform();\n"
+"	gl_TexCoord[0] = gl_MultiTexCoord0;\n"
+"	gl_TexCoord[1] = gl_MultiTexCoord1;\n"
+"	gl_TexCoord[2] = gl_Color;\n"
+"}\n";
+
+static const char* genericVS_v3 =
 "void main()\n"
 "{\n"
 "	gl_Position = ftransform();\n"
@@ -104,6 +152,14 @@ static const char* genericVS =
 "	gl_TexCoord[1] = gl_MultiTexCoord1;\n"
 "	gl_TexCoord[2] = gl_Color;\n"
 "}\n";
+
+static const char* genericVS[] =
+{
+	genericVS_v0,
+	genericVS_v1,
+	genericVS_v2,
+	genericVS_v3
+};
 
 static const char* genericFS =
 "uniform sampler2D texture1;\n"
@@ -815,10 +871,21 @@ static qbool GL2_Init()
 		return qfalse;
 	}
 
-	if ( !GL2_CreateProgram( genericProg, genericVS, genericFS ) ) {
-		ri.Error( PRINT_ERROR, "Failed to compile generic shaders\n" );
+	qbool createdGenericVS = qfalse;
+	for ( int i = 0; i < ARRAY_LEN( genericVS ); ++i ) {
+		if ( GL2_CreateProgram( genericProg, genericVS[i], genericFS ) ) {
+			createdGenericVS = qtrue;
+			if ( i == ARRAY_LEN( genericVS ) - 1 ) {
+				ri.Printf( PRINT_WARNING, "Failed to compile generic shader using gl_ClipDistance\n" );
+			}
+			break;
+		}
+	}
+	if ( !createdGenericVS ) {
+		ri.Error( PRINT_ERROR, "Failed to compile all variants of the generic shaders\n" );
 		return qfalse;
 	}
+
 	genericProgAttribs.texture1 = glGetUniformLocation( genericProg.p, "texture1" );
 	genericProgAttribs.texture2 = glGetUniformLocation( genericProg.p, "texture2" );
 	genericProgAttribs.texEnv = glGetUniformLocation( genericProg.p, "texEnv" );
@@ -1305,10 +1372,14 @@ static void GAL_Begin3D()
 		plane2[2] = DotProduct (backEnd.viewParms.orient.axis[2], plane);
 		plane2[3] = DotProduct (plane, backEnd.viewParms.orient.origin) - plane[3];
 
-		glLoadMatrixf( s_flipMatrix );
+		glLoadMatrixf (s_flipMatrix);
 		glClipPlane (GL_CLIP_PLANE0, plane2);
 		glEnable (GL_CLIP_PLANE0);
 	} else {
+		const double dummyPlane[4] = { 0, 0, 0, 0 };
+
+		glLoadIdentity();
+		glClipPlane (GL_CLIP_PLANE0, dummyPlane);
 		glDisable (GL_CLIP_PLANE0);
 	}
 }

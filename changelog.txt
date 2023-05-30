@@ -100,6 +100,9 @@ chg: with r_backend GL3, depth fade with MSAA now requires GLSL 4.00 at a minimu
 
 chg: with r_backend GL3, alpha to coverage now requires GLSL 4.00 at a minimum
 
+fix: with r_backend GL2, the extra clip plane for mirror/portal surfaces was not being used
+  this quick fix is likely to fail for some drivers and vendors due to its use of deprecated features
+
 fix: long demo file names would cause video recording to output files with no extension or outright fail
 
 fix: invalid skybox texture mip-mapping and filtering settings (e.g. cpm25 skybox seams)
