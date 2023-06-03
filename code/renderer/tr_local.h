@@ -1036,6 +1036,7 @@ extern cvar_t	*r_lightmap;			// render lightmaps only
 extern cvar_t	*r_lightmapGreyscale;	// how monochrome the lightmap looks
 extern cvar_t	*r_mapGreyscale;		// how monochrome the map looks
 extern cvar_t	*r_mapGreyscaleCTF;		// how monochrome CTF map surfaces look
+extern cvar_t	*r_sleepThreshold;		// time cushion in us for a call to Sleep(1+)
 extern cvar_t	*r_fullbright;			// avoid lightmap pass
 extern cvar_t	*r_depthFade;			// fades marked shaders based on depth
 extern cvar_t	*r_dither;				// enables dithering
@@ -1043,8 +1044,8 @@ extern cvar_t	*r_rtColorFormat;		// color render target format, see RTCF_*
 extern cvar_t	*r_depthClamp;			// disables clipping vertices against the near and far clip planes
 extern cvar_t	*r_gpuPreference;		// shall we use high-performance or low-power devices?
 
-extern cvar_t	*r_mipGenFilter;			// if the string is invalid, Lanczos 4 is used
-extern cvar_t	*r_mipGenGamma;				// what gamma-space do we consider the textures to be in
+extern cvar_t	*r_mipGenFilter;		// if the string is invalid, Lanczos 4 is used
+extern cvar_t	*r_mipGenGamma;			// what gamma-space do we consider the textures to be in
 extern cvar_t	*r_ext_max_anisotropy;
 extern cvar_t	*r_smaa;
 

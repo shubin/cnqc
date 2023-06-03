@@ -42,6 +42,7 @@ void Sys_Sleep( int ms )
 		Sleep(ms);
 }
 
+
 void Sys_MicroSleep( int us )
 {
 	if (us <= 50)
@@ -56,9 +57,11 @@ void Sys_MicroSleep( int us )
 	endTime.QuadPart += ((LONGLONG)us * frequency.QuadPart) / 1000000LL;
 
 	// reminder: we call timeBeginPeriod(1) at init
-	// Sleep(1) will generally last 1000-2000 us, rarely a bit more
+	// Sleep(1) will generally last 1000-2000 us,
+	// but in some cases quite a bit more (I've seen up to 3500 us)
 	// because threads can take longer to wake up
-	const LONGLONG bigSleepTicks = (2500LL * frequency.QuadPart) / 1000000LL;
+	const LONGLONG thresholdUS = (LONGLONG)Cvar_Get("r_sleepThreshold", "2000", CVAR_ARCHIVE)->integer;
+	const LONGLONG bigSleepTicks = (thresholdUS * frequency.QuadPart) / 1000000LL;
 
 	for (;;) {
 		LARGE_INTEGER currentTime;

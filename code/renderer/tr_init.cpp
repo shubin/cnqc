@@ -58,6 +58,7 @@ cvar_t	*r_lightmap;
 cvar_t	*r_lightmapGreyscale;
 cvar_t	*r_mapGreyscale;
 cvar_t	*r_mapGreyscaleCTF;
+cvar_t	*r_sleepThreshold;
 cvar_t	*r_novis;
 cvar_t	*r_nocull;
 cvar_t	*r_nocurves;
@@ -388,6 +389,7 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_lodCurveError, "r_lodCurveError", "2000", CVAR_ARCHIVE, CVART_FLOAT, "250", "10000", "curved surfaces LOD scale" },
 	{ &r_mapGreyscale, "r_mapGreyscale", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", "1", "how desaturated the map looks" },
 	{ &r_mapGreyscaleCTF, "r_mapGreyscaleCTF", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", "1", help_r_mapGreyscaleCTF },
+	{ &r_sleepThreshold, "r_sleepThreshold", "2000", CVAR_ARCHIVE, CVART_INTEGER, "1000", "4000", help_r_sleepThreshold },
 
 	//
 	// temporary variables that can change at any time

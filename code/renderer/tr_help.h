@@ -135,6 +135,12 @@ S_COLOR_VAL "    2 " S_COLOR_HELP "= None"
 "how desaturated CTF map surfaces look\n" \
 "It applies to the red/blue color-coded surfaces of popular CTF/NTF maps."
 
+#define help_r_sleepThreshold \
+"time cushion (in us) for frame sleep\n" \
+"This is a trade-off between frame time consistency and CPU usage.\n" \
+"Values below " S_COLOR_VAL "2000 " S_COLOR_HELP "are not advised.\n" \
+S_COLOR_VAL "2500 " S_COLOR_HELP "should be enough to avoid stutter due to delayed thread wake-ups."
+
 #define help_r_ignoreShaderSortKey \
 "ignores the shader sort key of transparent surfaces\n" \
 "Instead, it sorts by depth and original registration order only.\n" \
