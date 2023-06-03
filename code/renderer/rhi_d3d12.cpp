@@ -3291,7 +3291,7 @@ namespace RHI
 		desc.AddressU = addressMode;
 		desc.AddressV = addressMode;
 		desc.AddressW = addressMode;
-		desc.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+		desc.ComparisonFunc = D3D12_COMPARISON_FUNC_NONE;
 		desc.MaxAnisotropy = maxAnisotropy;
 		desc.MaxLOD = 666.0f;
 		desc.MinLOD = sampler.minLOD;
