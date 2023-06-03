@@ -2488,10 +2488,14 @@ namespace RHI
 			{
 				rhi.infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
 				rhi.infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
+				rhi.infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
 
 				D3D12_MESSAGE_ID filteredMessages[] =
 				{
-					D3D12_MESSAGE_ID_SETPRIVATEDATA_CHANGINGPARAMS
+					// can't remember what this one is for...
+					//D3D12_MESSAGE_ID_SETPRIVATEDATA_CHANGINGPARAMS,
+					// clear color mismatch will happen when going through a teleporter
+					D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE
 				};
 				D3D12_INFO_QUEUE_FILTER filter = { 0 };
 				filter.DenyList.NumIDs = ARRAY_LEN(filteredMessages);
