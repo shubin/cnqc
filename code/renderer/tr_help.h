@@ -138,8 +138,9 @@ S_COLOR_VAL "    2 " S_COLOR_HELP "= None"
 #define help_r_sleepThreshold \
 "time cushion (in us) for frame sleep\n" \
 "This is a trade-off between frame time consistency and CPU usage.\n" \
-"Values below " S_COLOR_VAL "2000 " S_COLOR_HELP "are not advised.\n" \
-S_COLOR_VAL "2500 " S_COLOR_HELP "should be enough to avoid stutter due to delayed thread wake-ups."
+"Set to " S_COLOR_VAL "2000 " S_COLOR_HELP "if you have a struggling old/low-power CPU.\n" \
+S_COLOR_VAL "2500 " S_COLOR_HELP "should be enough to deal with delayed thread wake-ups.\n" \
+"Use the frame graph to confirm that higher values help on your system."
 
 #define help_r_ignoreShaderSortKey \
 "ignores the shader sort key of transparent surfaces\n" \

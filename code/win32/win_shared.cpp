@@ -60,7 +60,7 @@ void Sys_MicroSleep( int us )
 	// Sleep(1) will generally last 1000-2000 us,
 	// but in some cases quite a bit more (I've seen up to 3500 us)
 	// because threads can take longer to wake up
-	const LONGLONG thresholdUS = (LONGLONG)Cvar_Get("r_sleepThreshold", "2000", CVAR_ARCHIVE)->integer;
+	const LONGLONG thresholdUS = (LONGLONG)Cvar_Get("r_sleepThreshold", "2500", CVAR_ARCHIVE)->integer;
 	const LONGLONG bigSleepTicks = (thresholdUS * frequency.QuadPart) / 1000000LL;
 
 	for (;;) {
