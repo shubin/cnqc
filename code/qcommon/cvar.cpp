@@ -289,6 +289,10 @@ static cvar_t* Cvar_Set2( const char *var_name, const char *value, qbool force )
 		var_name = "BADNAME";
 	}
 
+	if ( !Q_stricmp( var_name, "r_swapInterval" ) ) {
+		force = qfalse;
+	}
+
 	cvar_t* var = Cvar_FindVar(var_name);
 	if (!var) {
 		if ( !value )

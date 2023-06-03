@@ -1300,7 +1300,7 @@ namespace RHI
 	{
 		UINT flags;
 		UINT swapInterval;
-		if(r_vsync->integer)
+		if(r_swapInterval->integer)
 		{
 			swapInterval = 1;
 			flags = 0;
@@ -1816,7 +1816,7 @@ namespace RHI
 		const Buffer& buffer = rhi.buffers.Get(hbuffer);
 
 #if defined(D3D_DEBUG)
-		if(r_vsync->integer)
+		if(r_swapInterval->integer)
 		{
 			Q_assert(rhi.frameIndex == 0);
 			Q_assert(frameIndex == 0);
@@ -1909,7 +1909,7 @@ namespace RHI
 			rhie.monitorFrameDurationMS = 0.0f;
 		}
 
-		if(r_vsync->integer == 0)
+		if(r_swapInterval->integer == 0)
 		{
 			const float maxFPS = ri.Cvar_Get("com_maxfps", "125", CVAR_ARCHIVE)->value;
 			rhie.targetFrameDurationMS = 1000.0f / maxFPS;
@@ -2012,7 +2012,7 @@ namespace RHI
 	static UINT GetSwapChainFlags()
 	{
 		UINT flags = 0;
-		if(r_vsync->integer)
+		if(r_swapInterval->integer)
 		{
 			flags = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
 		}
@@ -2040,7 +2040,7 @@ namespace RHI
 	{
 		if(rhi.frameLatencyWaitableObject != NULL && rhi.frameLatencyWaitNeeded)
 		{
-			Q_assert(r_vsync->integer != 0);
+			Q_assert(r_swapInterval->integer != 0);
 			WaitForSingleObjectEx(rhi.frameLatencyWaitableObject, INFINITE, TRUE);
 			rhi.frameLatencyWaitNeeded = false;
 		}
@@ -2296,7 +2296,7 @@ namespace RHI
 
 			// V-Sync toggles require changing the swap chain flags,
 			// which means ResizeBuffers can't be used
-			const bool vsync = r_vsync->integer != 0;
+			const bool vsync = r_swapInterval->integer != 0;
 			rhi.renderFrameCount = vsync ? 1 : 2;
 
 			if(glConfig.vidWidth != desc.BufferDesc.Width || 
@@ -2553,7 +2553,7 @@ namespace RHI
 
 		rhi.isTearingSupported = IsTearingSupported();
 		rhi.swapChainBufferCount = 2;
-		rhi.renderFrameCount = r_vsync->integer ? 1 : 2;
+		rhi.renderFrameCount = r_swapInterval->integer ? 1 : 2;
 
 		{
 			const UINT flags = GetSwapChainFlags();
@@ -2576,13 +2576,13 @@ namespace RHI
 			swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 			swapChainDesc.Windowed = TRUE;
 			D3D(rhi.factory->CreateSwapChain(rhi.mainCommandQueue, &swapChainDesc, &dxgiSwapChain));
-			rhi.vsync = r_vsync->integer != 0;
+			rhi.vsync = r_swapInterval->integer != 0;
 
 			D3D(dxgiSwapChain->QueryInterface(IID_PPV_ARGS(&rhi.swapChain)));
 			rhi.swapChainBufferIndex = rhi.swapChain->GetCurrentBackBufferIndex();
 			COM_RELEASE(dxgiSwapChain);
 
-			if(r_vsync->integer)
+			if(r_swapInterval->integer)
 			{
 				rhi.frameLatencyWaitableObject = rhi.swapChain->GetFrameLatencyWaitableObject();
 				rhi.frameLatencyWaitNeeded = true;

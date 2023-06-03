@@ -88,7 +88,7 @@ cvar_t	*r_showsky;
 cvar_t	*r_showtris;
 cvar_t	*r_shownormals;
 cvar_t	*r_clear;
-cvar_t	*r_vsync;
+cvar_t	*r_swapInterval;
 cvar_t	*r_lego;
 cvar_t	*r_lockpvs;
 cvar_t	*r_noportals;
@@ -361,7 +361,7 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_rtColorFormat, "r_rtColorFormat", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", XSTRING(RTCF_MAX), help_r_rtColorFormat },
 	{ &r_depthClamp, "r_depthClamp", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_depthClamp },
 	{ &r_gpuPreference, "r_gpuPreference", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", XSTRING(GPUPREF_MAX), help_r_gpuPreference},
-	{ &r_vsync, "r_vsync", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, "enables v-sync" },
+	{ &r_swapInterval, "r_swapInterval", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, "enables v-sync" },
 
 	//
 	// latched variables that can only change over a restart

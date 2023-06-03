@@ -725,14 +725,8 @@ static void CL_SetMaxFPS( int maxFPS )
 	if ( maxFPS > 0 && cls.maxFPS == 0 ) {
 		cls.maxFPS = maxFPS;
 		cls.nextFrameTimeMS = Sys_Milliseconds() + 1000 / maxFPS;
-		cls.oldSwapInterval = Cvar_VariableIntegerValue( "r_swapInterval" );
-		Cvar_Set( "r_swapInterval", "0" );
-	} else if ( maxFPS == 0 && cls.maxFPS > 0 ) {
+	} else {
 		cls.maxFPS = 0;
-		Cvar_Set( "r_swapInterval", va( "%i", cls.oldSwapInterval ) );
-	} else if ( maxFPS > 0 && cls.maxFPS > 0 ) {
-		cls.maxFPS = maxFPS;
-		cls.nextFrameTimeMS = Sys_Milliseconds() + 1000 / maxFPS;
 	}
 }
 

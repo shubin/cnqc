@@ -1053,7 +1053,7 @@ extern	cvar_t	*r_roundImagesDown;
 extern	cvar_t	*r_colorMipLevels;		// development aid to see texture mip usage
 extern	cvar_t	*r_picmip;				// controls picmip values
 
-extern	cvar_t	*r_vsync;
+extern	cvar_t	*r_swapInterval;
 extern	cvar_t	*r_lego;
 
 extern	cvar_t	*r_vertexLight;			// vertex lighting mode for better performance

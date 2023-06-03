@@ -330,7 +330,6 @@ typedef struct {
 	// frame-rate limiting, useful for scenarios like CGAME_INIT
 	int			maxFPS;				// only active if > 0
 	int			nextFrameTimeMS;
-	int			oldSwapInterval;
 } clientStatic_t;
 
 extern	clientStatic_t		cls;

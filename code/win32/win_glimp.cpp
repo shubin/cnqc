@@ -358,7 +358,7 @@ void Sys_V_Shutdown()
 qbool Sys_V_IsVSynced()
 {
 	// with Direct3D 12, our swap interval is (normally) respected
-	return r_vsync->integer != 0;
+	return r_swapInterval->integer != 0;
 }
 
 
