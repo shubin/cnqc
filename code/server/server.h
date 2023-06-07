@@ -335,6 +335,10 @@ void SV_ShutdownGameProgs();
 void SV_RestartGameProgs();
 qbool SV_inPVS( const vec3_t p1, const vec3_t p2 );
 
+#if defined( QC )
+qboolean SV_SkipEntityTrace( int clientNum, int entityNum );
+#endif // QC
+
 //
 // sv_bot.c
 //
