@@ -592,6 +592,9 @@ static const netField_t entityStateFields[] =
 { ESF(modelindex), 8 },
 { ESF(otherEntityNum2), GENTITYNUM_BITS },
 { ESF(loopSound), 8 },
+#if defined( QC )
+{ ESF(loopSoundDist), 12 },
+#endif // QC
 { ESF(generic1), 8 },
 { ESF(origin2[2]), 0 },
 { ESF(origin2[0]), 0 },

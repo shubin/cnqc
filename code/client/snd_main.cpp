@@ -108,12 +108,19 @@ void S_ClearLoopingSounds()
 		si.ClearLoopingSounds();
 }
 
-
+#if defined( QC )
+void S_AddLoopingSound(int entityNum, const vec3_t origin, const vec3_t velocity, sfxHandle_t sfx)
+{
+	if (si.AddLoopingSound)
+		si.AddLoopingSound(entityNum, origin, velocity[0], sfx);
+}
+#else  // QC
 void S_AddLoopingSound( int entityNum, const vec3_t origin, sfxHandle_t sfx )
 {
 	if (si.AddLoopingSound)
 		si.AddLoopingSound( entityNum, origin, sfx );
 }
+#endif // QC
 
 
 void S_Respatialize( int entityNum, const vec3_t origin, const vec3_t axis[3], int inwater )

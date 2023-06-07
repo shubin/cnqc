@@ -301,7 +301,11 @@ static void S_Base_BeginRegistration()
 
 // used for spatializing s_channels (duh, really?)
 
+#if defined( QC )
+static void S_SpatializeOrigin(const vec3_t origin, int master_vol, int max_dist, int* left_vol, int* right_vol)
+#else  // QC
 static void S_SpatializeOrigin( const vec3_t origin, int master_vol, int* left_vol, int* right_vol )
+#endif // QC
 {
 	vec_t		dot;
 	vec_t		dist;
@@ -313,12 +317,24 @@ static void S_SpatializeOrigin( const vec3_t origin, int master_vol, int* left_v
 	VectorSubtract( origin, listener_origin, source_vec );
 	dist = VectorNormalize( source_vec );
 
+#if defined( QC )
+	if (max_dist == 0) {
+		max_dist = SOUND_MAX_DIST;
+	}
+
+	if (dist >= max_dist) {
+#else
 	if (dist >= SOUND_MAX_DIST) {
+#endif // QC
 		*left_vol = *right_vol = 0;
 		return;
 	}
 
+#if defined( QC )
+	dist *= (1.0f / max_dist);
+#else  // QC
 	dist *= (1.0f / SOUND_MAX_DIST);
+#endif // QC
 	vec_t scale = master_vol * (1.0f - dist);
 
 	// attenuate correctly even if we can't spatialise
@@ -567,7 +583,11 @@ static void S_Base_ClearLoopingSounds()
 
 // called during entity generation for a frame
 
+#if defined( QC )
+static void S_Base_AddLoopingSound(int entityNum, const vec3_t origin, int max_dist, sfxHandle_t sfxHandle)
+#else  // QC
 static void S_Base_AddLoopingSound( int entityNum, const vec3_t origin, sfxHandle_t sfxHandle )
+#endif // QC
 {
 	if ( !s_soundStarted || s_soundMuted || !sfxHandle ) {
 		return;
@@ -591,6 +611,9 @@ static void S_Base_AddLoopingSound( int entityNum, const vec3_t origin, sfxHandl
 	VectorCopy( origin, loopSounds[entityNum].origin );
 	loopSounds[entityNum].sfx = sfx;
 	loopSounds[entityNum].active = qtrue;
+#if defined( QC )
+	loopSounds[entityNum].maxDist = max_dist;
+#endif // QC
 }
 
 
@@ -617,8 +640,11 @@ static void S_AddLoopSounds()
 		if ( !loop->active || loop->mergeFrame == loopFrame ) {
 			continue;	// already merged into an earlier sound
 		}
-
+#if defined( QC )
+		S_SpatializeOrigin(loop->origin, MASTER_VOL, loop->maxDist, &left_total, &right_total);
+#else  // QC
 		S_SpatializeOrigin( loop->origin, MASTER_VOL, &left_total, &right_total );
+#endif // QC
 
 		loop->sfx->lastTimeUsed = time;
 
@@ -629,7 +655,11 @@ static void S_AddLoopSounds()
 			}
 			loop2->mergeFrame = loopFrame;
 
+#if defined( QC )
+			S_SpatializeOrigin(loop2->origin, MASTER_VOL, loop->maxDist, &left, &right);
+#else  // QC
 			S_SpatializeOrigin( loop2->origin, MASTER_VOL, &left, &right );
+#endif // QC
 
 			loop2->sfx->lastTimeUsed = time;
 			left_total += left;
@@ -779,6 +809,9 @@ static void S_Base_UpdateEntityPosition( int entityNum, const vec3_t origin )
 static void S_Base_Respatialize( int entityNum, const vec3_t head, const vec3_t axis[3], int inwater )
 {
 	vec3_t origin;
+#if defined( QC )
+	int max_dist;
+#endif // QC
 
 	if ( !s_soundStarted || s_soundMuted ) {
 		return;
@@ -803,10 +836,20 @@ static void S_Base_Respatialize( int entityNum, const vec3_t head, const vec3_t 
 		} else {
 			if (ch->fixed_origin) {
 				VectorCopy( ch->origin, origin );
+#if defined( QC )
+				max_dist = SOUND_MAX_DIST;
+#endif // QC
 			} else {
 				VectorCopy( loopSounds[ ch->entnum ].origin, origin );
+#if defined( QC )
+				max_dist = loopSounds[ ch->entnum ].maxDist;
+#endif // QC
 			}
+#if defined( QC )
+			S_SpatializeOrigin(origin, ch->master_vol, max_dist, &ch->leftvol, &ch->rightvol);
+#else // QC
 			S_SpatializeOrigin( origin, ch->master_vol, &ch->leftvol, &ch->rightvol );
+#endif // QC
 		}
 	}
 

@@ -67,6 +67,9 @@ typedef struct {
 	sfx_t		*sfx;
 	int			mergeFrame;
 	qbool		active;
+#if defined( QC )
+	int			maxDist;
+#endif // QC
 } loopSound_t;
 
 typedef struct
@@ -98,7 +101,11 @@ typedef struct
 	void (*RawSamples)( int samples, int rate, int width, int channels, const byte *data, float volume );
 	void (*StopAllSounds)();
 	void (*ClearLoopingSounds)();
+#if defined( QC )
+	void (*AddLoopingSound)(int entityNum, const vec3_t origin, int maxDist, sfxHandle_t sfx);
+#else  // QC
 	void (*AddLoopingSound)( int entityNum, const vec3_t origin, sfxHandle_t sfx );
+#endif // QC
 	void (*Respatialize)( int entityNum, const vec3_t origin, const vec3_t axis[3], int inwater );
 	void (*UpdateEntityPosition)( int entityNum, const vec3_t origin );
 	void (*Update)();
