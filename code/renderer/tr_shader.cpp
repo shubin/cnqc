@@ -519,6 +519,9 @@ static void ParseTexMod( const char** text, shaderStage_t *stage )
 static qbool ParseStage( const char** text, shaderStage_t* stage )
 {
 	int depthMaskBits = GLS_DEPTHMASK_TRUE, blendSrcBits = 0, blendDstBits = 0, atestBits = 0, depthFuncBits = 0;
+#if defined( QC )
+	int depthTestBits = 0;
+#endif // QC
 	qbool depthMaskExplicit = qfalse;
 
 	stage->active = qtrue;
@@ -922,6 +925,25 @@ static qbool ParseStage( const char** text, shaderStage_t* stage )
 			depthMaskExplicit = qtrue;
 			continue;
 		}
+#if defined( QC )
+		else if ( !Q_stricmp( token, "depthtest" ) ) {
+			token = COM_ParseExt( text, qfalse );
+			if ( token[0] == 0 ) {
+				ri.Printf( PRINT_WARNING, "WARNING: missing depthtest parm in shader '%s'\n", shader.name );
+				continue;
+			}
+
+			if ( !Q_stricmp( token, "disable" ) ) {
+				depthTestBits |= GLS_DEPTHTEST_DISABLE;
+				continue;
+			} else if ( !Q_stricmp( token, "enable" ) ) {
+				depthTestBits &= ~GLS_DEPTHTEST_DISABLE;
+				continue;
+			} else {
+				ri.Printf(PRINT_WARNING, "WARNING: unknown depthtest parm in shader '%s'\n", shader.name);
+			}
+		}
+#endif // QC
 		else
 		{
 			ri.Printf( PRINT_WARNING, "WARNING: unknown parameter '%s' in shader '%s'\n", token, shader.name );
@@ -967,7 +989,9 @@ static qbool ParseStage( const char** text, shaderStage_t* stage )
 	stage->stateBits = depthMaskBits | depthFuncBits |
 					   blendSrcBits | blendDstBits |
 					   atestBits;
-
+#if defined( QC )
+	stage->stateBits |= depthTestBits;
+#endif // QC
 	return qtrue;
 }
 
@@ -1230,6 +1254,9 @@ static infoParm_t infoParms[] = {
 	{"playerclip",	1,	0,	CONTENTS_PLAYERCLIP },
 	{"monsterclip",	1,	0,	CONTENTS_MONSTERCLIP },
 	{"nodrop",		1,	0,	int(CONTENTS_NODROP) },	// don't drop items or leave bodies (death fog, lava, etc)
+#if defined( QC )
+	{ "nototem",	1,	0,	CONTENTS_NOTOTEM },		// don't drop totems here
+#endif                                        // QC
 	{"nonsolid",	1,	SURF_NONSOLID,	0},						// clears the solid flag
 
 	// utility relevant attributes
