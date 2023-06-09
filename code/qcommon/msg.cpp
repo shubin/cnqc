@@ -577,7 +577,11 @@ static const netField_t entityStateFields[] =
 { ESF(legsAnim), 8 },
 { ESF(groundEntityNum), GENTITYNUM_BITS },
 { ESF(pos.trType), 8 },
+#if defined( QC )
+{ ESF(eFlags), 24 },
+#else // QC
 { ESF(eFlags), 19 },
+#endif // QC
 { ESF(otherEntityNum), GENTITYNUM_BITS },
 { ESF(weapon), 8 },
 { ESF(clientNum), 8 },
@@ -595,7 +599,11 @@ static const netField_t entityStateFields[] =
 #if defined( QC )
 { ESF(loopSoundDist), 12 },
 #endif // QC
+#if defined( QC )
+{ ESF(generic1), 32 }, // more generic
+#else // QC
 { ESF(generic1), 8 },
+#endif // QC
 { ESF(origin2[2]), 0 },
 { ESF(origin2[0]), 0 },
 { ESF(origin2[1]), 0 },
@@ -616,7 +624,11 @@ static const netField_t entityStateFields[] =
 { ESF(angles2[0]), 0 },
 { ESF(angles2[2]), 0 },
 { ESF(constantLight), 32 },
-{ ESF(frame), 16 }
+{ ESF(frame), 16 },
+#if defined( QC )
+{ ESF(affiliation), 8 },
+{ ESF(totemcharge), 32 },
+#endif // QC
 };
 
 static const int numESF = sizeof(entityStateFields) / sizeof(entityStateFields[0]);
@@ -930,7 +942,7 @@ static const netField_t playerStateFields[] =
 { PSF(weaponFiringState), 8 },
 { PSF(champion), 5 },
 { PSF(ab_time), 6 }, // up to 64 seconds to recharge an ability
-{ PSF(ab_misctime), 8 }, // up to 25.6 seconds to count
+{ PSF(ab_misctime), 24 }, // can count milliseconds for the fair amount of time
 { PSF(ab_flags), 8 },
 { PSF(ab_num), 32 },
 { PSF(overbounce), 1 },
