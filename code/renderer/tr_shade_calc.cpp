@@ -995,7 +995,11 @@ static void RB_CalcDiffuseColor( unsigned char *colors, int firstVertex, int num
 	float* normal = tess.normal[firstVertex];
 	colors += firstVertex * 4;
 
+#if defined( QC )
+	const float t = 1.0f - ( 1.0f - r_mapGreyscale->value ) * ( 1.0f - tr.viewParms.greyscale );
+#else // QC
 	const float t = r_mapGreyscale->value;
+#endif // QC
 	const float ti = 1.0f - t;
 
 	// fix up ambientLightInt for the case where the dot product is 0 or negative

@@ -230,6 +230,9 @@ void RE_RenderScene( const refdef_t* fd, int us )
 	tr.refdef.time = fd->time;
 	tr.refdef.microSeconds = us;
 	tr.refdef.rdflags = fd->rdflags;
+#if defined( QC )
+	tr.refdef.forcedGreyscale = fd->forcedGreyscale;
+#endif //
 
 	// copy the areamask data over and note if it has changed, which
 	// will force a reset of the visible leafs even if the view hasn't moved
@@ -297,6 +300,14 @@ void RE_RenderScene( const refdef_t* fd, int us )
 
 	parms.fovX = tr.refdef.fov_x;
 	parms.fovY = tr.refdef.fov_y;
+
+#if defined( QC )
+	if ( fd->rdflags & RDF_FORCEGREYSCALE ) {
+		parms.greyscale = fd->forcedGreyscale;
+	} else {
+		parms.greyscale = 0.0f;
+	}
+#endif // QC
 
 	VectorCopy( fd->vieworg, parms.orient.origin );
 	VectorCopy( fd->viewaxis[0], parms.orient.axis[0] );

@@ -42,6 +42,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // refdef flags
 #define RDF_NOWORLDMODEL	1		// used for player configuration screen
 #define RDF_HYPERSPACE		4		// teleportation effect
+#if defined( QC )
+#define RDF_FORCEGREYSCALE	8		// lerps between r_greyscale and the number given in the refdef.forcedGreyscale
+#endif // QC
 
 typedef struct {
 	vec3_t		xyz;
@@ -126,6 +129,9 @@ typedef struct {
 
 	// text messages for deform text shaders
 	char		text[MAX_RENDER_STRINGS][MAX_RENDER_STRING_LENGTH];
+#if defined( QC )
+	float		forcedGreyscale;
+#endif // QC
 } refdef_t;
 
 

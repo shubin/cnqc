@@ -1074,8 +1074,12 @@ static float SurfGreyscaleAmount( const shader_t* shader )
 {
 	if (!tr.worldSurface)
 		return 0.0f;
-
+#if defined( QC )
+	float greyscale = shader->greyscaleCTF ? r_mapGreyscaleCTF->value : r_mapGreyscale->value;
+	return 1.0f - ( 1.0f - greyscale ) * ( 1.0f - tr.viewParms.greyscale );
+#else  // QC
 	return shader->greyscaleCTF ? r_mapGreyscaleCTF->value : r_mapGreyscale->value;
+#endif // QC
 }
 
 
