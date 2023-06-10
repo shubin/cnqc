@@ -62,6 +62,9 @@ typedef struct {
 	// if SVF_CLIENTMASK is set, use as bitmask of clients to send to
 	// (maxclients must be <= 32, up to the mod to enforce this)
 	int			singleClient;
+#if defined( QC )
+	int			piercingSightMask;
+#endif // QC
 
 	qboolean	bmodel;				// if false, assume an explicit mins / maxs bounding box
 									// only set by trap_SetBrushModel
