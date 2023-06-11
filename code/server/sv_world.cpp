@@ -582,8 +582,12 @@ void SV_Trace( trace_t *results, const vec3_t start, const vec3_t mins, const ve
 #if defined( QC )
 	int			clientNum;
 
-	clientNum = passEntityNum >> 24;
-	passEntityNum &= 0x00FFFFFF;
+	if ( passEntityNum == -1 ) { // -1 appears to be a special value
+		clientNum = -1;
+	} else {
+		clientNum = passEntityNum >> 24;
+		passEntityNum &= 0x00FFFFFF;
+	}
 #endif // QC
 
 	if ( !mins ) {
