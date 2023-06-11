@@ -636,6 +636,15 @@ static intptr_t CL_CgameSystemCalls( intptr_t *args )
 		CIN_SetExtents(args[1], args[2], args[3], args[4], args[5]);
 		return 0;
 
+#if defined( QC )
+	case DO_NOT_WANT_CG_S_ADDREALLOOPINGSOUND:
+		S_AddLoopingSound(args[1], VMA(2), VMA(3), args[4]);
+
+		return 0;
+	case DO_NOT_WANT_CG_S_STOPLOOPINGSOUND:
+		return 0;
+#endif // QC
+
 	case CG_R_INPVS:
 		return re.inPVS( VMA(1), VMA(2) );
 
