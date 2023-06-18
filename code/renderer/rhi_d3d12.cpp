@@ -2988,14 +2988,23 @@ namespace RHI
 		{
 			D3D12_SHADER_RESOURCE_VIEW_DESC srv = {};
 			srv.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-			//srv.Format = DXGI_FORMAT_UNKNOWN; // @TODO: structured buffer
-			srv.Format = DXGI_FORMAT_R32_TYPELESS;
-			srv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			srv.Buffer.FirstElement = 0;
-			srv.Buffer.NumElements = rhiDesc.byteCount / 4;
-			srv.Buffer.StructureByteStride = 0;
-			//srv.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE; // @TODO: structured buffer
-			srv.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
+			if(rhiDesc.structureByteCount > 0)
+			{
+				srv.Format = DXGI_FORMAT_UNKNOWN;
+				srv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+				srv.Buffer.NumElements = rhiDesc.byteCount / rhiDesc.structureByteCount;
+				srv.Buffer.StructureByteStride = rhiDesc.structureByteCount;
+				srv.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+			}
+			else
+			{
+				srv.Format = DXGI_FORMAT_R32_TYPELESS;
+				srv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+				srv.Buffer.NumElements = rhiDesc.byteCount / 4;
+				srv.Buffer.StructureByteStride = 0;
+				srv.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
+			}
 			srvIndex = rhi.descHeapGeneric.CreateSRV(resource, srv);
 		}
 
@@ -3009,19 +3018,28 @@ namespace RHI
 		}
 
 		uint32_t uavIndex = InvalidDescriptorIndex;
-		// @TODO:
-		/*if(rhiDesc.initialState & ResourceStates::UnorderedAccessBit)
+		if(rhiDesc.initialState & ResourceStates::UnorderedAccessBit)
 		{
 			D3D12_UNORDERED_ACCESS_VIEW_DESC uav = { 0 };
 			uav.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-			uav.Format = DXGI_FORMAT_R8G8B8A8_UNORM; // @TODO: is this field needed?
-			uav.Buffer.CounterOffsetInBytes = ;
+			uav.Buffer.CounterOffsetInBytes = 0;
 			uav.Buffer.FirstElement = 0;
-			uav.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE; // flag RAW?
-			uav.Buffer.NumElements = ;
-			uav.Buffer.StructureByteStride = ;
+			if(rhiDesc.structureByteCount > 0)
+			{
+				uav.Format = DXGI_FORMAT_UNKNOWN;
+				uav.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+				uav.Buffer.NumElements = rhiDesc.byteCount / rhiDesc.structureByteCount;
+				uav.Buffer.StructureByteStride = rhiDesc.structureByteCount;
+			}
+			else
+			{
+				uav.Format = DXGI_FORMAT_R32_TYPELESS;
+				uav.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
+				uav.Buffer.NumElements = rhiDesc.byteCount / 4;
+				uav.Buffer.StructureByteStride = 0;
+			}
 			uavIndex = rhi.descHeapGeneric.CreateUAV(resource, uav);
-		}*/
+		}
 
 		Buffer buffer = {};
 		buffer.desc = rhiDesc;
@@ -3531,7 +3549,17 @@ namespace RHI
 			for(uint32_t i = 0; i < update.resourceCount; ++i)
 			{
 				const Texture& texture = rhi.textures.Get(update.textures[i]);
+				Q_assert(texture.srvIndex != InvalidDescriptorIndex);
 				CopyDescriptor(table.genericHeap, update.firstIndex + i, rhi.descHeapGeneric, texture.srvIndex);
+			}
+		}
+		else if(update.type == DescriptorType::RWBuffer && table.genericHeap)
+		{
+			for(uint32_t i = 0; i < update.resourceCount; ++i)
+			{
+				const Buffer& buffer = rhi.buffers.Get(update.buffers[i]);
+				Q_assert(buffer.uavIndex != InvalidDescriptorIndex);
+				CopyDescriptor(table.genericHeap, update.firstIndex + i, rhi.descHeapGeneric, buffer.uavIndex);
 			}
 		}
 		else if(update.type == DescriptorType::RWTexture && table.genericHeap)
@@ -3556,6 +3584,7 @@ namespace RHI
 
 				for(uint32_t m = start; m < end; ++m)
 				{
+					Q_assert(texture.mips[m].uavIndex != InvalidDescriptorIndex);
 					CopyDescriptor(table.genericHeap, destIndex++, rhi.descHeapGeneric, texture.mips[m].uavIndex);
 				}
 			}
@@ -3566,6 +3595,7 @@ namespace RHI
 			{
 				Handle htype, index, gen;
 				DecomposeHandle(&htype, &index, &gen, update.samplers[i].v);
+				Q_assert(index != InvalidDescriptorIndex);
 				CopyDescriptor(table.samplerHeap, update.firstIndex + i, rhi.descHeapSamplers, index);
 			}
 		}
@@ -4221,6 +4251,16 @@ namespace RHI
 	void CmdSetStencilReference(uint8_t stencilRef)
 	{
 		rhi.commandList->OMSetStencilRef((UINT)stencilRef);
+	}
+
+	void CmdCopyBuffer(HBuffer dest, HBuffer source)
+	{
+		Q_assert(CanWriteCommands());
+
+		const Buffer& dst = rhi.buffers.Get(dest);
+		const Buffer& src = rhi.buffers.Get(source);
+		const UINT64 byteCount = min(src.desc.byteCount, dst.desc.byteCount);
+		rhi.commandList->CopyBufferRegion(dst.buffer, 0, src.buffer, 0, byteCount);
 	}
 
 	uint32_t GetDurationCount()

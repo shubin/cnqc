@@ -439,6 +439,7 @@ namespace RHI
 		ResourceStates::Flags initialState = ResourceStates::Common;
 		MemoryUsage::Id memoryUsage = MemoryUsage::GPU;
 		bool committedResource = false;
+		uint32_t structureByteCount = 0; // > 0 means structured buffer, == 0 means byte address buffer
 	};
 
 	struct TextureDesc
@@ -713,6 +714,7 @@ namespace RHI
 	void CmdBeginDebugLabel(const char* name, float r = 1.0f, float g = 1.0f, float b = 1.0f);
 	void CmdEndDebugLabel();
 	void CmdSetStencilReference(uint8_t stencilRef);
+	void CmdCopyBuffer(HBuffer dest, HBuffer source);
 
 #if 0
 	void CmdClearUAV(HTexture htexture, uint32_t mip);

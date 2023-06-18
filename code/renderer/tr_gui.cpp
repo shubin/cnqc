@@ -520,6 +520,32 @@ static void DrawShaderList()
 				ClearShaderReplacements();
 			}
 
+			if(tr.world != NULL)
+			{
+				if(tr.traceWorldShader)
+				{
+					if(ImGui::Button("Disable world shader tracing"))
+					{
+						tr.traceWorldShader = qfalse;
+					}
+					if((uint32_t)tr.tracedWorldShaderIndex < (uint32_t)tr.numShaders)
+					{
+						shader_t* shader = tr.shaders[tr.tracedWorldShaderIndex];
+						if(ImGui::Selectable(va("%s##world_shader_trace", shader->name), false))
+						{
+							OpenShaderDetails(shader);
+						}
+					}
+				}
+				else
+				{
+					if(ImGui::Button("Enable world shader tracing"))
+					{
+						tr.traceWorldShader = qtrue;
+					}
+				}
+			}
+
 			static char filter[256];
 			DrawFilter(filter, sizeof(filter));
 

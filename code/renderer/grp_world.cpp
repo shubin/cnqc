@@ -262,6 +262,23 @@ void World::Init()
 			memcpy(mapped, vertices, sizeof(vertices));
 			EndBufferUpload(boxVertexBuffer);
 		}
+
+		//
+		// shader trace
+		//
+		{
+			BufferDesc desc("shader trace opaque", 2 * sizeof(uint32_t), ResourceStates::UnorderedAccessBit);
+			traceRenderBuffer = CreateBuffer(desc);
+
+			DescriptorTableUpdate update;
+			update.SetRWBuffers(1, &traceRenderBuffer, MAX_DRAWIMAGES * 2);
+			UpdateDescriptorTable(grp.descriptorTable, update);
+		}
+		{
+			BufferDesc desc("shader trace opaque readback", 2 * sizeof(uint32_t), ResourceStates::Common);
+			desc.memoryUsage = MemoryUsage::Readback;
+			traceReadbackBuffer = CreateBuffer(desc);
+		}
 	}
 
 	//
@@ -307,6 +324,33 @@ void World::BeginFrame()
 	DrawGUI();
 
 	psoChangeCount = 0; // read by the GUI code
+}
+
+void World::EndFrame()
+{
+	tr.tracedWorldShaderIndex = -1;
+	if(tr.traceWorldShader && tr.world != NULL)
+	{
+		// schedule a GPU -> CPU transfer
+		{
+			BufferBarrier barrier(traceRenderBuffer, ResourceStates::CopySourceBit);
+			CmdBarrier(0, NULL, 1, &barrier);
+		}
+		CmdCopyBuffer(traceReadbackBuffer, traceRenderBuffer);
+		{
+			BufferBarrier barrier(traceRenderBuffer, ResourceStates::UnorderedAccessBit);
+			CmdBarrier(0, NULL, 1, &barrier);
+		}
+
+		// grab last frame's result
+		uint32_t* shaderIndices = (uint32_t*)MapBuffer(traceReadbackBuffer);
+		const uint32_t shaderIndex = shaderIndices[RHI::GetFrameIndex() ^ 1];
+		UnmapBuffer(traceReadbackBuffer);
+		if(shaderIndex < (uint32_t)tr.numShaders)
+		{
+			tr.tracedWorldShaderIndex = (int)shaderIndex;
+		}
+	}
 }
 
 void World::Begin()
@@ -501,6 +545,10 @@ void World::EndBatch()
 		pixelRC.noiseScale = r_ditherStrength->value;
 		pixelRC.invBrightness = 1.0f / r_brightness->value;
 		pixelRC.invGamma = 1.0f / r_gamma->value;
+		pixelRC.shaderTrace = (uint32_t)!!tr.traceWorldShader;
+		pixelRC.shaderIndex = (uint32_t)shader->index;
+		pixelRC.frameIndex = RHI::GetFrameIndex();
+		pixelRC.centerPixel = (glConfig.vidWidth / 2) | ((glConfig.vidHeight / 2) << 16);
 		for(int s = 0; s < pipeline.numStages; ++s)
 		{
 			const image_t* image = GetBundleImage(shader->stages[pipeline.firstStage + s]->bundle);
