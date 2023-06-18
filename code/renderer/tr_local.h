@@ -951,6 +951,9 @@ typedef struct {
 	shader_t*	shaders[MAX_SHADERS];
 	shader_t*	sortedShaders[MAX_SHADERS];
 
+	qbool		traceWorldShader;
+	int			tracedWorldShaderIndex;
+
 	int			numSkins;
 	skin_t*		skins[MAX_SKINS];
 

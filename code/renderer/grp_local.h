@@ -47,8 +47,20 @@ struct WorldVertexRC
 
 struct WorldPixelRC
 {
+	// general
 	uint32_t stageIndices[8];
 	float greyscale;
+	float pad0;
+	float pad1;
+	float pad2;
+
+	// r_shaderTrace - dynamically enabled
+	uint32_t shaderTrace;
+	uint32_t shaderIndex;
+	uint32_t frameIndex;
+	uint32_t centerPixel; // x | (y << 16)
+
+	// r_dither - statically enabled
 	float frameSeed;
 	float noiseScale;
 	float invGamma;
@@ -291,6 +303,7 @@ struct World
 {
 	void Init();
 	void BeginFrame();
+	void EndFrame();
 	void Begin();
 	void End();
 	void DrawPrePass();
@@ -363,6 +376,10 @@ struct World
 	HPipeline fogInsidePipeline;
 	HBuffer boxVertexBuffer;
 	HBuffer boxIndexBuffer;
+
+	// shader trace
+	HBuffer traceRenderBuffer;
+	HBuffer traceReadbackBuffer;
 };
 
 struct UI

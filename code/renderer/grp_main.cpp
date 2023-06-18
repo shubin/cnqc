@@ -206,6 +206,7 @@ void GRP::Init()
 		desc.samplerVisibility = ShaderStages::PixelBit;
 		desc.genericVisibility = ShaderStages::PixelBit;
 		desc.AddRange(DescriptorType::Texture, 0, MAX_DRAWIMAGES * 2);
+		desc.AddRange(DescriptorType::RWBuffer, MAX_DRAWIMAGES * 2, 1);
 		rootSignatureDesc = desc;
 		rootSignature = CreateRootSignature(desc);
 
@@ -309,6 +310,7 @@ void GRP::EndFrame()
 	R_DrawGUI();
 	imgui.Draw();
 	post.Draw();
+	world.EndFrame();
 	RHI::EndFrame();
 
 	if(rhie.presentToPresentUS > 0)

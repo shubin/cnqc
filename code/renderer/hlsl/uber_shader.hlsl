@@ -165,13 +165,22 @@ VOut vs(VIn input)
 
 cbuffer RootConstants
 {
-	// @TODO: 16 bits per stage: low 12 = texture, high 4 = sampler
-	//uint stageIndices[4];
-	// low 16 = texture, high 16 = sampler
-	uint4 stageIndices0;
+	// general
+	uint4 stageIndices0; // low 16 = texture, high 16 = sampler
 	uint4 stageIndices1;
 	float greyscale;
+	float pad0;
+	float pad1;
+	float pad2;
+
+	// shader trace
+	uint shaderTrace;
+	uint shaderIndex;
+	uint frameIndex;
+	uint centerPixel; // x | (y << 16)
+
 #if DITHER
+	// dither
 	float frameSeed;
 	float noiseScale;
 	float invGamma;
@@ -181,6 +190,7 @@ cbuffer RootConstants
 
 Texture2D textures2D[4096] : register(t0);
 SamplerState samplers[96] : register(s0);
+RWByteAddressBuffer shaderIndexBuffer : register(u0);
 
 #define GLS_SRCBLEND_ZERO						0x00000001
 #define GLS_SRCBLEND_ONE						0x00000002
@@ -327,6 +337,17 @@ float4 ps(VOut input) : SV_Target
 #if DITHER
 	dst = Dither(dst, input.position.xyz, frameSeed, noiseScale, invBrightness, invGamma);
 #endif
+
+	if(shaderTrace)
+	{
+		// we only store the shader index of 1 pixel
+		uint2 fragmentCoords = uint2(input.position.xy);
+		uint2 centerCoords = uint2(centerPixel & 0xFFFF, centerPixel >> 16);
+		if(all(fragmentCoords == centerCoords))
+		{
+			shaderIndexBuffer.Store(frameIndex * 4, shaderIndex);
+		}
+	}
 
 	return dst;
 }
