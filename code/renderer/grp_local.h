@@ -364,7 +364,7 @@ struct World
 
 	// static
 	GeometryBuffers statBuffers;
-	StaticGeometryChunk statChunks[16384];
+	StaticGeometryChunk statChunks[32768];
 	uint32_t statChunkCount;
 	uint32_t statIndices[1 << 20];
 	uint32_t statIndexCount;
