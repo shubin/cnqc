@@ -139,7 +139,12 @@ R_BoxSurfaces_r
 
 =================
 */
-static void R_BoxSurfaces_r( mnode_t *node, vec3_t mins, vec3_t maxs, surfaceType_t **list, int listsize, int *listlength, vec3_t dir ) {
+static void R_BoxSurfaces_r( 
+	const mnode_t *node, 
+	const vec3_t mins, vec3_t maxs, 
+	surfaceType_t **list, int listsize, int *listlength,
+	const vec3_t dir
+) {
 
 	int			s, c;
 	msurface_t *surf, **mark;
@@ -258,9 +263,13 @@ R_ProjectDecal
 =================
 */
 int R_ProjectDecal(
-	int xnumPoints,
-	const vec3_t *xpoints,
-	const vec3_t xprojection,
+	const vec3_t origin,
+	const vec3_t projectionDir,
+
+	vec_t radius,
+	vec_t depth,
+	vec_t orientation,
+
 	int maxPoints,
 	vec3_t pointBuffer,
 	int maxFragments,
@@ -282,32 +291,27 @@ int R_ProjectDecal(
 	srfGridMesh_t *cv;
 	drawVert_t *dv;
 	vec3_t			normal;
-	vec3_t			projectionDir;
+	//vec3_t			projectionDir;
 	vec3_t			v1, v2;
 	int *indexes;
 
-	// replace existing arguments
 	vec3_t		points[4];
 	int			numPoints;
 	vec3_t		projection;
 
-	// from CG_Decal()
-	vec3_t		dir, origin;
 	vec3_t		axis[3];
-	vec_t		orientation;
-	vec_t		radius;
 	vec_t		texCoordScale;
-
-	// Get CG_Decal() variables
-	orientation = xpoints[0][0];
-	radius = xpoints[0][1];
-	VectorCopy( xpoints[1], dir );
-	VectorCopy( xpoints[2], origin );
 
 	// generate decal projection geometry
 
+	//vec3_t dir;
+
+	//VectorNegate( xdir, dir );
+
 	// create the texture axis
-	VectorNormalize2( dir, axis[0] );
+	VectorNormalize2( projectionDir, axis[0] );
+	VectorNegate( axis[0], axis[0] );
+
 	PerpendicularVector( axis[1], axis[0] );
 	RotatePointAroundVector( axis[2], axis[0], axis[1], orientation );
 	CrossProduct( axis[0], axis[2], axis[1] );
@@ -321,15 +325,16 @@ int R_ProjectDecal(
 		points[2][i] = origin[i] + radius * axis[1][i] + radius * axis[2][i];
 		points[3][i] = origin[i] - radius * axis[1][i] + radius * axis[2][i];
 	}
-
-	numPoints = 4;
-	VectorScale( dir, -60, projection );
+	
+	VectorScale( projectionDir, 60, projection );
 
 	//increment view count for double check prevention
 	tr.viewCount++;
 
 	//
-	VectorNormalize2( projection, projectionDir );
+	//VectorNormalize2( projection, projectionDir );
+	//VectorNegate( dir, projectionDir );
+	//VectorCopy( xdir, projectionDir );
 	// find all the brushes that are to be considered
 	ClearBounds( mins, maxs );
 	for ( i = 0; i < numPoints; i++ ) {

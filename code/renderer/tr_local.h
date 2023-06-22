@@ -1396,7 +1396,9 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 		int maxPoints, vec3_t pointBuffer, int maxFragments, markFragment_t *fragmentBuffer );
 
 #if defined( QC )
-int R_ProjectDecal( int numPoints, const vec3_t *points, const vec3_t projection,
+int R_ProjectDecal(
+		const vec3_t origin, const vec3_t dir,
+		vec_t radius, vec_t depth, vec_t orientation,
 		int maxPoints, vec3_t pointBuffer, int maxFragments, markFragment_t *fragmentBuffer );
 #endif // QC
 
