@@ -187,6 +187,7 @@ typedef enum {
 #if defined( QC )
 	CG_GET_ADVERTISEMENTS = 500,
 	CG_R_DRAWTRIANGLE,
+	CG_CM_PROJECTDECAL,
 #endif
 
 	// engine extensions

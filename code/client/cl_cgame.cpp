@@ -656,6 +656,9 @@ static intptr_t CL_CgameSystemCalls( intptr_t *args )
 	case CG_R_DRAWTRIANGLE:
 		re.DrawTriangle( VMF(1), VMF(2), VMF(3), VMF(4), VMF(5), VMF(6), VMF(7), VMF(8), VMF(9), VMF(10), VMF(11), VMF(12), args[13] );
 		return 0;
+
+	case CG_CM_PROJECTDECAL:
+		return re.ProjectDecal( args[1], VMA( 2 ), VMA( 3 ), args[4], VMA( 5 ), args[6], VMA( 7 ) );
 #endif
 
 	// engine extensions

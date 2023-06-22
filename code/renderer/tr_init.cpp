@@ -708,6 +708,9 @@ const refexport_t* GetRefAPI( const refimport_t* rimp )
 	re.EndFrame = RE_EndFrame;
 
 	re.MarkFragments = R_MarkFragments;
+#if defined( QC )
+	re.ProjectDecal = R_ProjectDecal;
+#endif // QC
 	re.LerpTag = R_LerpTag;
 	re.ModelBounds = R_ModelBounds;
 

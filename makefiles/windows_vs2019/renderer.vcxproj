@@ -441,6 +441,7 @@
     <ClCompile Include="..\..\code\renderer\tr_light.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_main.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_marks.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_decals.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_mesh.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_model.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_noise.cpp" />

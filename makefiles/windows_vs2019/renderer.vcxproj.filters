@@ -36,6 +36,7 @@
     <ClCompile Include="..\..\code\renderer\tr_sky.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_surface.cpp" />
     <ClCompile Include="..\..\code\renderer\tr_world.cpp" />
+    <ClCompile Include="..\..\code\renderer\tr_decals.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\code\renderer\hlsl\clear.hlsl">
