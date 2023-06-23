@@ -422,6 +422,7 @@ void R_ProjectDecalOntoSurface( const surfaceType_t *surfType, const projectionP
 				VectorNormalizeFast( normal );
 				if ( DotProduct( normal, params->direction ) < ANGLE_CUTOFF ) {
 					// add the fragments of this triangle
+					results->numClipPoints = numClipPoints;
 					R_AddMarkFragments( params, results );
 					if ( results->returnedFragments == results->maxFragments ) {
 						return;
