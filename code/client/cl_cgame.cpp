@@ -658,7 +658,7 @@ static intptr_t CL_CgameSystemCalls( intptr_t *args )
 		return 0;
 
 	case CG_CM_PROJECTDECAL:
-		return re.ProjectDecal( VMA(1), VMA( 2 ), VMF( 3 ), VMF( 4 ), VMF( 5 ), args[6], VMA( 7 ), args[8], VMA( 9 ) );
+		return re.ProjectDecal( VMA(1), VMA( 2 ), VMF( 3 ), VMF( 4 ), VMF( 5 ), args[6], VMA( 7 ), VMA( 8 ), args[9], VMA( 10 ) );
 #endif
 
 	// engine extensions
