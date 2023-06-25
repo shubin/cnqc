@@ -866,11 +866,15 @@ typedef struct {
 #define FOG_TABLE_SIZE		256
 
 
-enum renderMode_t
-{
+enum renderMode_t {
 	RM_NONE,
 	RM_UI,
 	RM_3D
+};
+
+
+struct shaderParseMessage_t {
+	char message[256];
 };
 
 
@@ -964,6 +968,16 @@ typedef struct {
 	qbool		worldSurface; // is the currently added draw surface a world surface?
 
 	renderMode_t	renderMode;
+
+	// the following are only to be used after calling R_UpdateShader()
+	// the save state boolean is needed because otherwise, a delayed shader load
+	// could change the error and warning messages of the edited shader
+	shaderParseMessage_t	shaderParseError;
+	shaderParseMessage_t	shaderParseWarnings[16];
+	qbool					shaderParseSaveState;
+	qbool					shaderParseFailed;
+	int						shaderParseNumWarnings;
+	
 } trGlobals_t;
 
 extern backEndState_t	backEnd;
@@ -1236,7 +1250,9 @@ void		R_ShaderList_f( void );
 void		R_ShaderInfo_f();
 void		R_ShaderMixedUse_f();
 void		R_CompleteShaderName_f( int startArg, int compArg );
-const char* R_GetShaderPath( const shader_t* shader );
+const char*	R_GetShaderPath( const shader_t* shader );
+qbool		R_EditShader( shader_t* sh, const shader_t* original, const char* shaderText );
+void		R_SetShaderData( shader_t* sh, const shader_t* original );
 
 /*
 ====================================================================

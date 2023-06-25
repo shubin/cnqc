@@ -75,9 +75,15 @@ static bool drawClouds = true;
 static bool forceDynamic = false;
 
 
-static bool HasStaticGeo(const drawSurf_t* drawSurf)
+static bool HasStaticGeo(const drawSurf_t* drawSurf, const shader_t* shader)
 {
-	return drawSurf->staticGeoChunk > 0 && drawSurf->staticGeoChunk < ARRAY_LEN(grp.world.statChunks);
+	// @NOTE: the shader->isDynamic check is needed because of the shader editing feature
+	// without it, an edited shader that changes vertex attributes won't display correctly
+	// because the original "baked" vertex attributes would be used instead
+	return
+		!shader->isDynamic &&
+		drawSurf->staticGeoChunk > 0 &&
+		drawSurf->staticGeoChunk < ARRAY_LEN(grp.world.statChunks);
 }
 
 static void UpdateEntityData(bool& depthHack, int entityNum, double originalTime)
@@ -919,7 +925,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			}
 		}
 
-		const bool hasStaticGeo = forceDynamic ? false : HasStaticGeo(drawSurf);
+		const bool hasStaticGeo = forceDynamic ? false : HasStaticGeo(drawSurf, shader);
 		const bool staticChanged = hasStaticGeo != oldHasStaticGeo;
 		const bool shaderChanged = shader != oldShader;
 		bool entityChanged = entityNum != oldEntityNum;
