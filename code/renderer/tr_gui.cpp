@@ -27,6 +27,7 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 
 #define IMAGE_WINDOW_NAME  "Image Details"
 #define SHADER_WINDOW_NAME "Shader Details"
+#define EDIT_WINDOW_NAME   "Shader Editor"
 
 
 struct ImageWindow
@@ -67,10 +68,19 @@ struct ImageReplacements
 	int count;
 };
 
+struct ShaderEditWindow
+{
+	char code[4096];
+	shader_t originalShader;
+	shader_t* shader;
+	bool active;
+};
+
 static ImageWindow imageWindow;
 static ShaderWindow shaderWindow;
 static ShaderReplacements shaderReplacements;
 static ImageReplacements imageReplacements;
+static ShaderEditWindow shaderEditWindow;
 
 static const char* mipNames[16] =
 {
@@ -109,30 +119,25 @@ static const ImageFlag imageFlags[] =
 };
 
 
-static void TitleText(const char* text)
+#if 0
+static void SelectableText(const char* text)
 {
-	ImGui::TextColored(ImVec4(1.0f, 0.25f, 0.0f, 1.0f), text);
+	char buffer[256];
+	Q_strncpyz(buffer, text, sizeof(buffer));
+
+	ImGui::PushID(text);
+	ImGui::PushItemWidth(ImGui::GetWindowSize().x);
+	ImGui::InputText("", buffer, sizeof(buffer), ImGuiInputTextFlags_ReadOnly);
+	ImGui::PopItemWidth();
+	ImGui::PopID();
 }
+#endif
 
-static void OpenImageDetails(const image_t* image)
+static void FormatShaderCode(char* dest, int destSize, const shader_t* shader)
 {
-	ImGui::SetWindowFocus(IMAGE_WINDOW_NAME);
+#define Append(Text) Q_strcat(dest, destSize, Text)
 
-	imageWindow.active = true;
-	imageWindow.image = image;
-	imageWindow.mip = 0;
-}
-
-static void OpenShaderDetails(shader_t* shader)
-{
-#define Append(Text) Q_strcat(shaderWindow.formattedCode, sizeof(shaderWindow.formattedCode), Text)
-
-	ImGui::SetWindowFocus(SHADER_WINDOW_NAME);
-
-	shaderWindow.active = true;
-	shaderWindow.shader = shader;
-
-	shaderWindow.formattedCode[0] = '\0';
+	dest[0] = '\0';
 	if(shader->text == NULL)
 	{
 		return;
@@ -176,9 +181,67 @@ static void OpenShaderDetails(shader_t* shader)
 #undef Append
 }
 
-static bool AreCheatsEnabled()
+static void TitleText(const char* text)
+{
+	ImGui::TextColored(ImVec4(1.0f, 0.25f, 0.0f, 1.0f), text);
+}
+
+static void OpenImageDetails(const image_t* image)
+{
+	ImGui::SetWindowFocus(IMAGE_WINDOW_NAME);
+
+	imageWindow.active = true;
+	imageWindow.image = image;
+	imageWindow.mip = 0;
+}
+
+static void OpenShaderDetails(shader_t* shader)
+{
+	ImGui::SetWindowFocus(SHADER_WINDOW_NAME);
+
+	shaderWindow.active = true;
+	shaderWindow.shader = shader;
+	FormatShaderCode(shaderWindow.formattedCode, sizeof(shaderWindow.formattedCode), shader);
+}
+
+static void OpenShaderEdit(shader_t* shader)
+{
+	ImGui::SetWindowFocus(EDIT_WINDOW_NAME);
+
+	if(shaderEditWindow.active)
+	{
+		R_SetShaderData(shaderEditWindow.shader, &shaderEditWindow.originalShader);
+	}
+
+	shaderEditWindow.active = true;
+	shaderEditWindow.shader = shader;
+	shaderEditWindow.originalShader = *shader;
+	FormatShaderCode(shaderEditWindow.code, sizeof(shaderEditWindow.code), shader);
+	tr.shaderParseFailed = qfalse;
+	tr.shaderParseNumWarnings = 0;
+}
+
+static bool IsCheating()
 {
 	return ri.Cvar_Get("sv_cheats", "0", 0)->integer != 0;
+}
+
+static void RemoveShaderReplacement(int shaderIndex)
+{
+	for(int i = 0; i < shaderReplacements.count; ++i)
+	{
+		const ShaderReplacement& repl = shaderReplacements.shaders[i];
+		if(shaderIndex == repl.index && shaderIndex >= 0 && shaderIndex < tr.numShaders)
+		{
+			*tr.shaders[repl.index] = repl.original;
+			if(i < shaderReplacements.count - 1)
+			{
+				shaderReplacements.shaders[i] = shaderReplacements.shaders[shaderReplacements.count - 1];
+			}
+			shaderReplacements.count--;
+			break;
+		}
+	}
 }
 
 static void AddShaderReplacement(int shaderIndex)
@@ -201,6 +264,13 @@ static void AddShaderReplacement(int shaderIndex)
 		}
 	}
 
+	ShaderEditWindow& edit = shaderEditWindow;
+	if(edit.active && edit.shader->index == shaderIndex)
+	{
+		RemoveShaderReplacement(shaderIndex);
+		edit.active = false;
+	}
+
 	ShaderReplacement& repl = shaderReplacements.shaders[shaderReplacements.count++];
 	repl.index = shaderIndex;
 	repl.original = *tr.shaders[shaderIndex];
@@ -208,24 +278,6 @@ static void AddShaderReplacement(int shaderIndex)
 	Q_strncpyz(tr.shaders[shaderIndex]->name, repl.original.name, sizeof(tr.shaders[shaderIndex]->name));
 	tr.shaders[shaderIndex]->index = repl.original.index;
 	tr.shaders[shaderIndex]->sortedIndex = repl.original.sortedIndex;
-}
-
-static void RemoveShaderReplacement(int shaderIndex)
-{
-	for(int i = 0; i < shaderReplacements.count; ++i)
-	{
-		const ShaderReplacement& repl = shaderReplacements.shaders[i];
-		if(shaderIndex == repl.index && shaderIndex >= 0 && shaderIndex < tr.numShaders)
-		{
-			*tr.shaders[repl.index] = repl.original;
-			if(i < shaderReplacements.count - 1)
-			{
-				shaderReplacements.shaders[i] = shaderReplacements.shaders[shaderReplacements.count - 1];
-			}
-			shaderReplacements.count--;
-			break;
-		}
-	}
 }
 
 static bool IsReplacedShader(int shaderIndex)
@@ -437,7 +489,7 @@ static void DrawImageWindow()
 				}
 			}
 
-			if(AreCheatsEnabled())
+			if(IsCheating())
 			{
 				if(IsReplacedImage(image->index))
 				{
@@ -591,9 +643,12 @@ static void DrawShaderWindow()
 				ImGui::Text(shaderPath);
 			}
 
-			if(AreCheatsEnabled())
+			const bool isReplaced = IsReplacedShader(shader->index);
+			const bool isCheating = IsCheating();
+
+			if(isCheating)
 			{
-				if(IsReplacedShader(shader->index))
+				if(isReplaced)
 				{
 					if(ImGui::Button("Restore Shader"))
 					{
@@ -631,6 +686,9 @@ static void DrawShaderWindow()
 					}
 				}
 			}
+
+			const image_t* displayImages[MAX_IMAGE_ANIMATIONS * MAX_SHADER_STAGES];
+			int displayImageCount = 0;
 			for(int s = 0; s < shader->numStages; ++s)
 			{
 				const textureBundle_t& bundle = shader->stages[s]->bundle;
@@ -638,6 +696,25 @@ static void DrawShaderWindow()
 				for(int i = 0; i < imageCount; ++i)
 				{
 					const image_t* image = bundle.image[i];
+
+					bool found = false;
+					for(int di = 0; di < displayImageCount; ++di)
+					{
+						if(displayImages[di] == image)
+						{
+							found = true;
+							break;
+						}
+					}
+					if(found)
+					{
+						continue;
+					}
+					if(displayImageCount < ARRAY_LEN(displayImages))
+					{
+						displayImages[displayImageCount++] = image;
+					}
+
 					if(ImGui::Selectable(va("%s##%d_%d", image->name, s, i), false))
 					{
 						OpenImageDetails(image);
@@ -650,17 +727,121 @@ static void DrawShaderWindow()
 			}
 			ImGui::NewLine();
 
-			if(window.formattedCode[0] != '\0')
+			if(isReplaced)
+			{
+				ImGui::Text("No code available (using default shader)");
+			}
+			else if(shaderEditWindow.active && window.shader == shaderEditWindow.shader)
+			{
+				ImGui::Text("Shader code is being edited");
+				if(shaderEditWindow.code[0] != '\0')
+				{
+					ImGui::Text("This is the current edited code, not the last successful compile");
+					ImGui::TextUnformatted(shaderEditWindow.code);
+				}
+			}
+			else if(window.formattedCode[0] != '\0')
 			{
 				ImGui::TextUnformatted(window.formattedCode);
+				ImGui::NewLine();
+				if(ImGui::Button("Copy Code"))
+				{
+					ImGui::SetClipboardText(window.formattedCode);
+				}
 			}
 			else
 			{
 				ImGui::Text("No code available");
 			}
+
+			if(isCheating)
+			{
+				if(!shaderEditWindow.active || window.shader != shaderEditWindow.shader)
+				{
+					ImGui::NewLine();
+					if(ImGui::Button("Edit Shader"))
+					{
+						if(isReplaced)
+						{
+							RemoveShaderReplacement(shader->index);
+						}
+						OpenShaderEdit(shader);
+					}
+				}
+			}
 		}
 
 		ImGui::End();
+	}
+}
+
+static int ShaderEditCallback(ImGuiInputTextCallbackData* data)
+{
+	data->InsertChars(data->CursorPos, "    ");
+	return 1;
+}
+
+static void DrawShaderEdit()
+{
+	ShaderEditWindow& window = shaderEditWindow;
+	const bool wasActive = window.active;
+	if(window.active)
+	{
+		if(ImGui::Begin(EDIT_WINDOW_NAME, &window.active, ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			shader_t* shader = window.shader;
+			TitleText(shader->name);
+
+			if(IsCheating())
+			{
+				ImGui::NewLine();
+
+				if(ImGui::IsWindowAppearing())
+				{
+					ImGui::SetKeyboardFocusHere();
+				}
+				const ImVec2 xSize = ImGui::CalcTextSize("X");
+				const ImVec2 inputSize = ImVec2(xSize.x * 60.0f, xSize.y * 30.0f);
+				ImGui::InputTextMultiline(
+					"##Shader Code", window.code, sizeof(window.code), inputSize,
+					ImGuiInputTextFlags_CallbackCompletion, &ShaderEditCallback);
+
+				ImGui::NewLine();
+				if(ImGui::Button("Apply Code"))
+				{
+					R_EditShader(window.shader, &window.originalShader, window.code);
+				}
+				ImGui::SameLine(inputSize.x - ImGui::CalcTextSize("Close and Discard").x);
+				if(ImGui::Button("Close and Discard"))
+				{
+					window.active = false;
+				}
+
+				if(tr.shaderParseFailed || tr.shaderParseNumWarnings > 0)
+				{
+					ImGui::NewLine();
+				}
+				if(tr.shaderParseFailed)
+				{
+					ImGui::TextColored(ImVec4(1.0f, 0.25f, 0.0f, 1.0f), "Error: %s", tr.shaderParseError);
+				}
+				for(int i = 0; i < tr.shaderParseNumWarnings; ++i)
+				{
+					ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "Warning: %s", tr.shaderParseWarnings[i]);
+				}
+			}
+			else
+			{
+				ImGui::Text("Enable cheats to use");
+			}
+		}
+
+		ImGui::End();
+	}
+
+	if(wasActive && !window.active)
+	{
+		R_SetShaderData(window.shader, &window.originalShader);
 	}
 }
 
@@ -670,6 +851,7 @@ void R_DrawGUI()
 	DrawImageWindow();
 	DrawShaderList();
 	DrawShaderWindow();
+	DrawShaderEdit();
 }
 
 void R_ShutDownGUI()
@@ -677,10 +859,13 @@ void R_ShutDownGUI()
 	// this is necessary to avoid crashes in the detail windows
 	// following a map change or video restart:
 	// the renderer is shut down and the pointers become stale
-	imageWindow.active = false;
-	imageWindow.image = NULL;
-	shaderWindow.active = false;
-	shaderWindow.shader = NULL;
+	if(shaderEditWindow.active)
+	{
+		R_SetShaderData(shaderEditWindow.shader, &shaderEditWindow.originalShader);
+	}
+	memset(&imageWindow, 0, sizeof(imageWindow));
+	memset(&shaderWindow, 0, sizeof(shaderWindow));
+	memset(&shaderEditWindow, 0, sizeof(shaderEditWindow));
 	ClearShaderReplacements();
 	ClearImageReplacements();
 }

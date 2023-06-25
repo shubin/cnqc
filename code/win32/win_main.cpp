@@ -329,7 +329,7 @@ char *Sys_GetClipboardData( void )
 				data = (char*)Z_Malloc( GlobalSize( hClipboardData ) + 1 );
 				Q_strncpyz( data, cliptext, GlobalSize( hClipboardData ) );
 				GlobalUnlock( hClipboardData );
-				strtok( data, "\n\r\b" );
+				//strtok( data, "\n\r\b" ); // keep all the lines...
 			}
 		}
 

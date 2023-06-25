@@ -286,6 +286,16 @@ static const cmdTableItem_t imgui_cmds[] =
 	{ "toggleguiinput", &ToggleGuiInput_f, NULL, "toggles CNQ3 GUI input capture" }
 };
 
+static const char* GetClipboardText(void*)
+{
+	return Sys_GetClipboardData();
+}
+
+static void SetClipboardText(void*, const char* text)
+{
+	Sys_SetClipboardData(text);
+}
+
 void CL_IMGUI_Init()
 {
 	Cmd_RegisterArray(imgui_cmds, MODULE_CLIENT);
@@ -297,6 +307,8 @@ void CL_IMGUI_Init()
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 	io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
 	io.IniFilename = "cnq3/imgui.ini";
+	io.GetClipboardTextFn = &GetClipboardText;
+	io.SetClipboardTextFn = &SetClipboardText;
 	//io.MouseDrawCursor = true; // just use the operating system's
 
 	ImFontConfig fontConfig;
