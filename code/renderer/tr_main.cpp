@@ -1280,7 +1280,7 @@ static float SurfGreyscaleAmount( const shader_t* shader )
 }
 
 
-void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int fogIndex, int staticGeoChunk )
+void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int fogIndex, int staticGeoChunk, int zppFirstIndex, int zppIndexCount, float radiusOverZ )
 {
 	if (tr.refdef.numDrawSurfs >= MAX_DRAWSURFS)
 		return;
@@ -1292,6 +1292,9 @@ void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int fo
 	drawSurf->shaderNum = shader->index;
 	drawSurf->greyscale = SurfGreyscaleAmount( shader );
 	drawSurf->staticGeoChunk = staticGeoChunk;
+	drawSurf->zppFirstIndex = zppFirstIndex;
+	drawSurf->zppIndexCount = zppIndexCount;
+	drawSurf->radiusOverZ = radiusOverZ;
 }
 
 

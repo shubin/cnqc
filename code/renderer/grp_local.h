@@ -243,6 +243,11 @@ struct IndexBuffer : BufferBase
 		memcpy(idx, &tess.indexes[0], tess.numIndexes * sizeof(uint32_t));
 	}
 
+	uint32_t* GetCurrentAddress()
+	{
+		return mapped + batchFirst + batchCount;
+	}
+
 	HBuffer buffer = RHI_MAKE_NULL_HANDLE();
 	uint32_t* mapped = NULL;
 };
@@ -306,7 +311,7 @@ struct World
 	void EndFrame();
 	void Begin();
 	void End();
-	void DrawPrePass();
+	void DrawPrePass(const drawSceneViewCommand_t& cmd);
 	void BeginBatch(const shader_t* shader, bool hasStaticGeo);
 	void EndBatch();
 	void EndSkyBatch();
@@ -339,14 +344,11 @@ struct World
 		};
 	};
 
-#if defined(ZPP)
 	// Z pre-pass
 	HRootSignature zppRootSignature;
 	HDescriptorTable zppDescriptorTable;
-	HPipeline zppPipeline; // @TODO: 1 per cull type
-	GeometryBuffer zppIndexBuffer;
+	HPipeline zppPipeline;
 	GeometryBuffer zppVertexBuffer;
-#endif
 
 	// shared
 	BufferFamily::Id boundVertexBuffers;

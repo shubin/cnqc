@@ -199,7 +199,18 @@ static void R_AddWorldSurface( msurface_t* surf )
 
 	surf->vcVisible = tr.viewCount;
 
-	R_AddDrawSurf( surf->data, surf->shader, surf->fogIndex, surf->staticGeoChunk );
+	float radiusOverZ = 666.0f;
+	if ( *surf->data == SF_GRID ) {
+		const srfGridMesh_t* const grid = (const srfGridMesh_t*)surf->data;
+		const float dist = Distance( grid->localOrigin, tr.refdef.vieworg );
+		radiusOverZ = grid->meshRadius / max( dist, 0.001f );
+	} else if ( *surf->data == SF_TRIANGLES ) {
+		const srfTriangles_t* const triangles = (const srfTriangles_t*)surf->data;
+		const float dist = Distance( triangles->localOrigin, tr.refdef.vieworg );
+		radiusOverZ = triangles->radius / max( dist, 0.001f );
+	}
+
+	R_AddDrawSurf( surf->data, surf->shader, surf->fogIndex, surf->staticGeoChunk, surf->zppFirstIndex, surf->zppIndexCount, radiusOverZ );
 }
 
 
