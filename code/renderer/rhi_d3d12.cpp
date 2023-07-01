@@ -2299,8 +2299,8 @@ namespace RHI
 			const bool vsync = r_swapInterval->integer != 0;
 			rhi.renderFrameCount = vsync ? 1 : 2;
 
-			if(glConfig.vidWidth != desc.BufferDesc.Width || 
-				glConfig.vidHeight != desc.BufferDesc.Height ||
+			if(glInfo.winWidth != desc.BufferDesc.Width || 
+				glInfo.winHeight != desc.BufferDesc.Height ||
 				vsync != rhi.vsync)
 			{
 				WaitUntilDeviceIsIdle();
@@ -2313,7 +2313,7 @@ namespace RHI
 				const UINT flags = GetSwapChainFlags();
 				if(vsync == rhi.vsync)
 				{
-					D3D(rhi.swapChain->ResizeBuffers(desc.BufferCount, glConfig.vidWidth, glConfig.vidHeight, desc.BufferDesc.Format, flags));
+					D3D(rhi.swapChain->ResizeBuffers(desc.BufferCount, glInfo.winWidth, glInfo.winHeight, desc.BufferDesc.Format, flags));
 				}
 				else
 				{
