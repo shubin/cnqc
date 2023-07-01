@@ -21,6 +21,9 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 // Gameplay Rendering Pipeline - world/3D rendering
 
 
+//#define ENABLE_GUI
+
+
 #include "grp_local.h"
 #include "../client/cl_imgui.h"
 namespace zpp
@@ -66,13 +69,20 @@ struct FogPixelRC
 #pragma pack(pop)
 
 
-static bool drawPrePass = false;
+static bool drawPrePass = true;
 static bool drawDynamic = true;
 static bool drawTransparents = true;
 static bool drawFog = true;
 static bool drawSky = true;
 static bool drawClouds = true;
 static bool forceDynamic = false;
+static int zppMaxTriangleCount = 64;
+static float zppMinRadiusOverZ = 0.5f;
+static int zppDrawnTriangleCount = 0;
+
+static const uint32_t zppMaxVertexCount = 1 << 20;
+static const uint32_t zppMaxIndexCount = 8 * zppMaxVertexCount;
+static uint32_t zppIndices[zppMaxIndexCount];
 
 
 static bool HasStaticGeo(const drawSurf_t* drawSurf, const shader_t* shader)
@@ -144,7 +154,6 @@ void World::Init()
 
 	if(grp.firstInit)
 	{
-#if defined(ZPP)
 		//
 		// depth pre-pass
 		//
@@ -161,40 +170,35 @@ void World::Init()
 			zppDescriptorTable = CreateDescriptorTable(DescriptorTableDesc("Z pre-pass", zppRootSignature));
 		}
 		{
+			// we could handle all 3 cull mode modes and alpha testing, but we do a partial pre-pass
+			// it wouldn't make sense going any further instead of trying a visibility buffer approach
 			GraphicsPipelineDesc desc("Z pre-pass", zppRootSignature);
 			desc.vertexShader = ShaderByteCode(zpp::g_vs);
 			desc.pixelShader = ShaderByteCode(zpp::g_ps);
-			desc.vertexLayout.AddAttribute(0, ShaderSemantic::Position, DataType::Float32, 4, 0);
+			desc.vertexLayout.AddAttribute(0, ShaderSemantic::Position, DataType::Float32, 3, 0);
 			desc.depthStencil.depthComparison = ComparisonFunction::GreaterEqual;
 			desc.depthStencil.depthStencilFormat = TextureFormat::Depth32_Float;
 			desc.depthStencil.enableDepthTest = true;
 			desc.depthStencil.enableDepthWrites = true;
-			desc.rasterizer.cullMode = CT_FRONT_SIDED; // need 1 PSO per cull mode...
+			desc.rasterizer.cullMode = CT_FRONT_SIDED;
 			zppPipeline = CreateGraphicsPipeline(desc);
 		}
 		{
-			const uint32_t maxVertexCount = 1 << 20;
-			const uint32_t maxIndexCount = 8 * maxVertexCount;
-			zppVertexBuffer.Init(maxVertexCount, 16);
-			zppIndexBuffer.Init(maxIndexCount, sizeof(Index));
+			zppVertexBuffer.Init(zppMaxVertexCount, 3 * sizeof(float));
 			{
 				BufferDesc desc("depth pre-pass vertex", zppVertexBuffer.byteCount, ResourceStates::VertexBufferBit);
 				zppVertexBuffer.buffer = CreateBuffer(desc);
 			}
-			{
-				BufferDesc desc("depth pre-pass index", zppIndexBuffer.byteCount, ResourceStates::IndexBufferBit);
-				zppIndexBuffer.buffer = CreateBuffer(desc);
-			}
 		}
-#endif
 
 		//
 		// dynamic (streamed) geometry
 		//
 		for(uint32_t f = 0; f < FrameCount; ++f)
 		{
+			// the doubled index count is for the depth pre-pass
 			const int MaxDynamicVertexCount = 256 << 10;
-			const int MaxDynamicIndexCount = MaxDynamicVertexCount * 8;
+			const int MaxDynamicIndexCount = MaxDynamicVertexCount * 8 * 2;
 			GeometryBuffers& db = dynBuffers[f];
 			db.vertexBuffers.Create(va("dynamic #%d", f + 1), MemoryUsage::Upload, MaxDynamicVertexCount);
 			db.indexBuffer.Create(va("dynamic #%d", f + 1), MemoryUsage::Upload, MaxDynamicIndexCount);
@@ -407,22 +411,55 @@ void World::End()
 	grp.renderMode = RenderMode::None;
 }
 
-void World::DrawPrePass()
+void World::DrawPrePass(const drawSceneViewCommand_t& cmd)
 {
-#if defined(ZPP)
-	if(!drawPrePass ||
-		tr.world == NULL ||
-		zppIndexBuffer.batchCount == 0 ||
-		zppVertexBuffer.batchCount == 0)
+	if(!drawPrePass || tr.world == NULL)
+	{
+		return;
+	}
+
+	GeometryBuffers& db = dynBuffers[GetFrameIndex()];
+	const uint32_t firstIndex = db.indexBuffer.batchFirst;
+	uint32_t* indices = db.indexBuffer.GetCurrentAddress();
+	int fullIndexCount = 0;
+
+	// we can't do a single draw because some world surfaces could be referenced by animated entities
+	const int surfCount = cmd.numDrawSurfs;
+	const drawSurf_t* drawSurf = cmd.drawSurfs;
+	for(int ds = 0; ds < surfCount; ++ds, ++drawSurf)
+	{
+		int entityNum = 0;
+		const shader_t* shader = NULL;
+		R_DecomposeSort(drawSurf->sort, &entityNum, &shader);
+		const int surfIndexCount = drawSurf->zppIndexCount;
+		if(surfIndexCount <= 0 ||
+			entityNum != ENTITYNUM_WORLD ||
+			surfIndexCount > zppMaxTriangleCount * 3 ||
+			drawSurf->radiusOverZ < zppMinRadiusOverZ)
+		{
+			continue;
+		}
+
+		if(!db.indexBuffer.CanAdd(surfIndexCount))
+		{
+			Q_assert(!"Dynamic buffer too small!");
+			break;
+		}
+		
+		memcpy(indices, zppIndices + drawSurf->zppFirstIndex, surfIndexCount * sizeof(uint32_t));
+		fullIndexCount += surfIndexCount;
+		indices += surfIndexCount;
+		db.indexBuffer.EndBatch(surfIndexCount);
+	}
+	zppDrawnTriangleCount = fullIndexCount;
+	if(fullIndexCount <= 0)
 	{
 		return;
 	}
 
 	SCOPED_RENDER_PASS("Depth Pre-Pass", 0.75f, 0.75f, 0.375f);
 
-	// @TODO: evaluate later whether binding the color target here is OK?
 	CmdBindRenderTargets(0, NULL, &depthTexture);
-
 	CmdBindRootSignature(zppRootSignature);
 	CmdBindPipeline(zppPipeline);
 	CmdBindDescriptorTable(zppRootSignature, zppDescriptorTable);
@@ -431,14 +468,11 @@ void World::DrawPrePass()
 	memcpy(vertexRC.modelViewMatrix, backEnd.viewParms.world.modelMatrix, sizeof(vertexRC.modelViewMatrix));
 	memcpy(vertexRC.projectionMatrix, backEnd.viewParms.projectionMatrix, sizeof(vertexRC.projectionMatrix));
 	CmdSetRootConstants(zppRootSignature, ShaderStage::Vertex, &vertexRC);
-	CmdBindPipeline(zppPipeline);
-	CmdBindIndexBuffer(zppIndexBuffer.buffer, indexType, 0);
-	const uint32_t vertexStride = 4 * sizeof(float);
+	const uint32_t vertexStride = 3 * sizeof(float);
 	CmdBindVertexBuffers(1, &zppVertexBuffer.buffer, &vertexStride, NULL);
-	CmdDrawIndexed(zppIndexBuffer.batchCount, 0, 0);
 	boundVertexBuffers = BufferFamily::PrePass;
-	boundIndexBuffer = BufferFamily::PrePass;
-#endif
+	BindIndexBuffer(false);
+	CmdDrawIndexed(fullIndexCount, firstIndex, 0);
 }
 
 void World::BeginBatch(const shader_t* shader, bool hasStaticGeo)
@@ -616,7 +650,7 @@ void World::RestartBatch()
 
 void World::DrawGUI()
 {
-#if defined(_DEBUG)
+#if defined(ENABLE_GUI)
 	if(tr.world == NULL)
 	{
 		return;
@@ -640,6 +674,8 @@ void World::DrawGUI()
 		if(ImGui::Begin("World", &active, ImGuiWindowFlags_AlwaysAutoResize))
 		{
 			ImGui::Checkbox("Depth Pre-Pass", &drawPrePass);
+			ImGui::SliderInt("Pre-pass Max Triangles", &zppMaxTriangleCount, 1, 256);
+			ImGui::SliderFloat("Pre-pass Min Radius", &zppMinRadiusOverZ, 1.0f / 256.0f, 256.0f / 256.0f);
 			ImGui::Checkbox("Draw Dynamic", &drawDynamic);
 			ImGui::Checkbox("Draw Transparents", &drawTransparents);
 			ImGui::Checkbox("Draw Fog", &drawFog);
@@ -649,6 +685,7 @@ void World::DrawGUI()
 
 			ImGui::Text("PSO count: %d", (int)grp.psoCount);
 			ImGui::Text("PSO changes: %d", psoChangeCount);
+			ImGui::Text("ZPP triangles: %d", zppDrawnTriangleCount);
 
 #if 0
 			vec3_t axis[3];
@@ -676,15 +713,11 @@ void World::DrawGUI()
 
 void World::ProcessWorld(world_t& world)
 {
-#if defined(ZPP)
 	{
 		zppVertexBuffer.batchFirst = 0;
-		zppIndexBuffer.batchFirst = 0;
 		zppVertexBuffer.batchCount = 0;
-		zppIndexBuffer.batchCount = 0;
 
 		float* vtx = (float*)BeginBufferUpload(zppVertexBuffer.buffer);
-		Index* idx = (Index*)BeginBufferUpload(zppIndexBuffer.buffer);
 
 		int firstVertex = 0;
 		int firstIndex = 0;
@@ -692,7 +725,10 @@ void World::ProcessWorld(world_t& world)
 		{
 			msurface_t* const surf = &world.surfaces[s];
 			if(surf->shader->numStages == 0 ||
-				surf->shader->isDynamic)
+				surf->shader->isDynamic ||
+				!surf->shader->isOpaque ||
+				surf->shader->isAlphaTestedOpaque ||
+				surf->shader->cullType != CT_FRONT_SIDED)
 			{
 				continue;
 			}
@@ -707,25 +743,26 @@ void World::ProcessWorld(world_t& world)
 			{
 				continue;
 			}
-			if(firstVertex + surfVertexCount >= zppVertexBuffer.totalCount ||
-				firstIndex + surfIndexCount >= zppIndexBuffer.totalCount)
+			if(firstVertex + surfVertexCount >= zppVertexBuffer.totalCount)
 			{
 				break;
 			}
 
-			for(int v = 0; v < tess.numVertexes; ++v)
+			for(int v = 0; v < surfVertexCount; ++v)
 			{
 				*vtx++ = tess.xyz[v][0];
 				*vtx++ = tess.xyz[v][1];
 				*vtx++ = tess.xyz[v][2];
-				*vtx++ = 1.0f;
 			}
 
-			for(int i = 0; i < tess.numIndexes; ++i)
+			uint32_t* idx = zppIndices + firstIndex;
+			for(int i = 0; i < surfIndexCount; ++i)
 			{
 				*idx++ = tess.indexes[i] + firstVertex;
 			}
 
+			surf->zppFirstIndex = firstIndex;
+			surf->zppIndexCount = surfIndexCount;
 			firstVertex += surfVertexCount;
 			firstIndex += surfIndexCount;
 			tess.numVertexes = 0;
@@ -733,14 +770,10 @@ void World::ProcessWorld(world_t& world)
 		}
 
 		EndBufferUpload(zppVertexBuffer.buffer);
-		EndBufferUpload(zppIndexBuffer.buffer);
 
 		zppVertexBuffer.batchCount = firstVertex;
-		zppIndexBuffer.batchCount = firstIndex;
 		zppVertexBuffer.batchFirst = 0;
-		zppIndexBuffer.batchFirst = 0;
 	}
-#endif
 
 	statChunkCount = 1; // index 0 is invalid
 	statIndexCount = 0;
@@ -852,6 +885,11 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 	boundVertexBuffers = BufferFamily::Invalid;
 	boundIndexBuffer = BufferFamily::Invalid;
 
+	// the index buffer is also used for the Z pre-pass
+	GeometryBuffers& db = dynBuffers[GetFrameIndex()];
+	db.vertexBuffers.BeginUpload();
+	db.indexBuffer.BeginUpload();
+
 	// portals get the chance to write to depth and color before everyone else
 	{
 		const shader_t* shader = NULL;
@@ -859,7 +897,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 		R_DecomposeSort(cmd.drawSurfs->shaderSort, &entityNum, &shader);
 		if(shader->sort != SS_PORTAL)
 		{
-			DrawPrePass();
+			DrawPrePass(cmd);
 		}
 	}
 
@@ -881,10 +919,6 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 	int oldEntityNum = -1;
 	bool oldHasStaticGeo = false;
 	backEnd.currentEntity = &tr.worldEntity;
-
-	GeometryBuffers& db = dynBuffers[GetFrameIndex()];
-	db.vertexBuffers.BeginUpload();
-	db.indexBuffer.BeginUpload();
 
 	int ds;
 	const drawSurf_t* drawSurf;

@@ -536,6 +536,9 @@ struct drawSurf_t {
 	int						shaderNum;	// unsorted shader index, for when we need to do fix-ups
 	float					greyscale;  // how monochrome to draw all the stages
 	int						staticGeoChunk;
+	int						zppFirstIndex;
+	int						zppIndexCount;
+	float					radiusOverZ;
 };
 
 void R_TessellateSurface( const surfaceType_t* surfType );
@@ -695,6 +698,8 @@ struct msurface_t {
 	const shader_t* shader;
 	int fogIndex;
 	int staticGeoChunk;
+	int zppFirstIndex;
+	int zppIndexCount;
 
 	const surfaceType_t* data; // any of srf*_t
 };
@@ -1112,7 +1117,7 @@ void R_AddMD3Surfaces( trRefEntity_t *e );
 
 void R_AddPolygonSurfaces();
 
-void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int fogIndex, int staticGeoChunk = 0 );
+void R_AddDrawSurf(const surfaceType_t* surface, const shader_t* shader, int fogIndex, int staticGeoChunk = 0, int zppFirstIndex = 0, int zppIndexCount = 0, float radiusOverZ = 666.0f );
 void R_AddLitSurf( const surfaceType_t* surface, const shader_t* shader, int fogIndex );
 uint64_t R_ComposeSort( int entityNum, const shader_t* shader, int staticGeoChunk );
 void R_DecomposeSort( uint64_t sort, int* entityNum, const shader_t** shader );
