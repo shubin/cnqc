@@ -420,10 +420,14 @@ void GRP::ProcessShader(shader_t& shader)
 		int firstStage = 0;
 		for(int s = 0; s < shader.numStages; ++s)
 		{
-			const unsigned int currStateBits = shader.stages[s]->stateBits & (~(GLS_POLYMODE_LINE | GLS_ATEST_BITS));
+			const unsigned int currStateBits = shader.stages[s]->stateBits & (~GLS_POLYMODE_LINE);
 			if(cache.stageCount > 0)
 			{
-				if(currStateBits == prevStateBits && IsCommutativeBlendState(currStateBits))
+				// we could combine AT/DW in some circumstances, but we don't care to for now
+				const bool cantCombine = (shader.stages[s]->stateBits & (GLS_ATEST_BITS | GLS_DEPTHMASK_TRUE)) != 0;
+				if(currStateBits == prevStateBits &&
+					!cantCombine &&
+					IsCommutativeBlendState(currStateBits))
 				{
 					cache.stageStateBits[cache.stageCount++] = currStateBits;
 				}
