@@ -712,6 +712,11 @@ void RB_PopShader()
 // used when a player has predicted a teleport, but hasn't arrived yet
 float RB_HyperspaceColor()
 {
+	if ( r_teleporterFlash->integer == 0 )
+	{
+		return 0.0f;
+	}
+
 	const float c = 0.25f + 0.5f * sinf(M_PI * (backEnd.refdef.time & 0x01FF) / 0x0200);
 
 	return c;

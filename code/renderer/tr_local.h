@@ -1025,6 +1025,7 @@ extern cvar_t	*r_lightmap;			// render lightmaps only
 extern cvar_t	*r_lightmapGreyscale;	// how monochrome the lightmap looks
 extern cvar_t	*r_mapGreyscale;		// how monochrome the map looks
 extern cvar_t	*r_mapGreyscaleCTF;		// how monochrome CTF map surfaces look
+extern cvar_t	*r_teleporterFlash;		// 1 is default Q3 behavior, 0 is pure black
 extern cvar_t	*r_fullbright;			// avoid lightmap pass
 extern cvar_t	*r_depthFade;			// fades marked shaders based on depth
 extern cvar_t	*r_gpuMipGen;			// uses GPU-side mip-map generation

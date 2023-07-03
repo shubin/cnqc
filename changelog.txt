@@ -4,6 +4,8 @@ See the end of this file for known issues.
 
 DD Mmm 20 - 1.53
 
+add: r_teleporterFlash <0|1> (default: 1) draws bright colors when being teleported (use 0 for black)
+
 add: s_khz <22|44> (default: 22) is the sound mixing sampling frequency: 22.05 kHz or 44.1 kHz
 
 add: /writeconfig now has a "-f" option to force writing all CVars (whether archived or not)
