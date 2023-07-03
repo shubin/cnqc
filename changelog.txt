@@ -2,7 +2,7 @@
 See the end of this file for known issues.
 
 
-DD Mmm 20 - 1.53
+DD Mmm 23 - 1.53
 
 add: r_teleporterFlash <0|1> (default: 1) draws bright colors when being teleported (use 0 for black)
 
@@ -104,6 +104,7 @@ chg: with r_backend GL3, alpha to coverage now requires GLSL 4.00 at a minimum
 
 fix: with r_backend GL2, the extra clip plane for mirror/portal surfaces was not being used
   this quick fix is likely to fail for some drivers and vendors due to its use of deprecated features
+  based on a few tests: OK on NVIDIA and Intel, not working on AMD
 
 fix: long demo file names would cause video recording to output files with no extension or outright fail
 
@@ -1143,3 +1144,9 @@ iss: D3D11 full-screen toggles with the 32-bit client freeze myT's PC :-(
 cfg: nVidia GeForce GTX 1070 - Windows 7 SP1 x64 - drivers 445.87
 fix: use the 64-bit client
 act: can't fix (root cause unknown)
+
+iss: with GL2, mirror/portal surface rendering doesn't use the extra clip plane
+cfg: AMD Radeon 780M Graphics
+exp: AMD drivers are more strict
+fix: use another backend
+act: won't fix
