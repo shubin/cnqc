@@ -373,6 +373,7 @@ struct pipeline_t {
 	int firstStage;
 	int numStages;
 	int pipeline;
+	int mirrorPipeline;
 };
 
 

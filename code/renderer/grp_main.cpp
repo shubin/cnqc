@@ -160,6 +160,17 @@ static bool IsCommutativeBlendState(unsigned int stateBits)
 }
 
 
+static cullType_t GetMirrorredCullType(cullType_t cullType)
+{
+	switch(cullType)
+	{
+		case CT_BACK_SIDED: return CT_FRONT_SIDED;
+		case CT_FRONT_SIDED: return CT_BACK_SIDED;
+		default: return CT_TWO_SIDED;
+	}
+}
+
+
 void FrameStats::EndFrame()
 {
 	frameCount = min(frameCount + 1, (int)MaxFrames);
@@ -393,7 +404,6 @@ void GRP::ProcessShader(shader_t& shader)
 	{
 		// @TODO: fix up cache.stageStateBits[0] based on depth state from follow-up states
 		CachedPSO cache = {};
-		cache.desc.cullType = shader.cullType;
 		cache.desc.polygonOffset = !!shader.polygonOffset;
 		cache.desc.clampDepth = clampDepth;
 		cache.stageStateBits[0] = shader.stages[0]->stateBits & (~GLS_POLYMODE_LINE);
@@ -403,7 +413,10 @@ void GRP::ProcessShader(shader_t& shader)
 		}
 		cache.stageCount = shader.numStages;
 
+		cache.desc.cullType = shader.cullType;
 		shader.pipelines[0].pipeline = CreatePSO(cache, shader.name);
+		cache.desc.cullType = GetMirrorredCullType(shader.cullType);
+		shader.pipelines[0].mirrorPipeline = CreatePSO(cache, va("%s mirror", shader.name));
 		shader.pipelines[0].firstStage = 0;
 		shader.pipelines[0].numStages = shader.numStages;
 		shader.numPipelines = 1;
@@ -411,7 +424,7 @@ void GRP::ProcessShader(shader_t& shader)
 	else
 	{
 		CachedPSO cache = {};
-		cache.desc.cullType = shader.cullType;
+		
 		cache.desc.polygonOffset = !!shader.polygonOffset;
 		cache.desc.clampDepth = clampDepth;
 		cache.stageCount = 0;
@@ -434,7 +447,10 @@ void GRP::ProcessShader(shader_t& shader)
 				else
 				{
 					pipeline_t& p = shader.pipelines[shader.numPipelines++];
+					cache.desc.cullType = shader.cullType;
 					p.pipeline = CreatePSO(cache, va("%s #%d", shader.name, shader.numPipelines));
+					cache.desc.cullType = GetMirrorredCullType(shader.cullType);
+					p.mirrorPipeline = CreatePSO(cache, va("%s #%d mirror", shader.name, shader.numPipelines));
 					p.firstStage = firstStage;
 					p.numStages = cache.stageCount;
 					cache.stageStateBits[0] = currStateBits;
@@ -453,7 +469,10 @@ void GRP::ProcessShader(shader_t& shader)
 		if(cache.stageCount > 0)
 		{
 			pipeline_t& p = shader.pipelines[shader.numPipelines++];
+			cache.desc.cullType = shader.cullType;
 			p.pipeline = CreatePSO(cache, va("%s #%d", shader.name, shader.numPipelines));
+			cache.desc.cullType = GetMirrorredCullType(shader.cullType);
+			p.mirrorPipeline = CreatePSO(cache, va("%s #%d mirror", shader.name, shader.numPipelines));
 			p.firstStage = firstStage;
 			p.numStages = cache.stageCount;
 		}
