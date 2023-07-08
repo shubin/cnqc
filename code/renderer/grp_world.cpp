@@ -565,7 +565,7 @@ void World::EndBatch()
 	for(int p = 0; p < shader->numPipelines; ++p)
 	{
 		const pipeline_t& pipeline = shader->pipelines[p];
-		const int psoIndex = pipeline.pipeline;
+		const int psoIndex = backEnd.viewParms.isMirror ? pipeline.mirrorPipeline : pipeline.pipeline;
 		if(batchPSO != grp.psos[psoIndex].pipeline)
 		{
 			batchPSO = grp.psos[psoIndex].pipeline;
