@@ -282,7 +282,8 @@ namespace RHI
 	R(Heap, "heap") \
 	R(QueryHeap, "query heap") \
 	R(Texture, "texture") \
-	R(Buffer, "buffer")
+	R(Buffer, "buffer") \
+	R(Sampler, "samplers")
 
 #define R(Enum, Name) Enum,
 	struct D3DResourceType
@@ -376,6 +377,13 @@ namespace RHI
 	{
 		IDxcBlob* blob = NULL;
 		bool shortLifeTime = false;
+	};
+
+	struct Sampler
+	{
+		SamplerDesc desc;
+		uint32_t heapIndex = UINT32_MAX;
+		bool shortLifeTime = true;
 	};
 
 	struct QueryState
@@ -566,6 +574,7 @@ namespace RHI
 		POOL(DescriptorTable, 64) descriptorTables;
 		POOL(Pipeline, 256) pipelines;
 		POOL(Shader, 16) shaders;
+		POOL(Sampler, 128) samplers;
 #undef POOL
 
 #define DESTROY_POOL_LIST(POOL) \
@@ -574,7 +583,8 @@ namespace RHI
 		POOL(rootSignatures, DestroyRootSignature) \
 		POOL(descriptorTables, DestroyDescriptorTable) \
 		POOL(pipelines, DestroyPipeline) \
-		POOL(shaders, DestroyShader)
+		POOL(shaders, DestroyShader) \
+		POOL(samplers, DestroySampler)
 
 		// null resources, no manual clean-up needed
 		HTexture nullTexture; // SRV
@@ -2059,6 +2069,7 @@ namespace RHI
 			ITEM("Descriptor Tables", rhi.descriptorTables);
 			ITEM("Pipelines", rhi.pipelines);
 			ITEM("Shaders", rhi.shaders);
+			ITEM("Samplers", rhi.samplers);
 #undef ITEM
 			TableRow(3, "Duration Queries",
 				va("%d", rhi.frameQueries[rhi.frameIndex].durationQueryCount),
@@ -3294,10 +3305,10 @@ namespace RHI
 		rhi.textures.Remove(handle);
 	}
 
-	HSampler CreateSampler(const SamplerDesc& sampler)
+	HSampler CreateSampler(const SamplerDesc& rhiDesc)
 	{
-		const D3D12_TEXTURE_ADDRESS_MODE addressMode = GetD3DTextureAddressMode(sampler.wrapMode);
-		D3D12_FILTER filter = GetD3DFilter(sampler.filterMode);
+		const D3D12_TEXTURE_ADDRESS_MODE addressMode = GetD3DTextureAddressMode(rhiDesc.wrapMode);
+		D3D12_FILTER filter = GetD3DFilter(rhiDesc.filterMode);
 		UINT maxAnisotropy = r_ext_max_anisotropy->integer;
 		if(filter == D3D12_FILTER_ANISOTROPIC && maxAnisotropy <= 1)
 		{
@@ -3316,26 +3327,25 @@ namespace RHI
 		desc.ComparisonFunc = D3D12_COMPARISON_FUNC_NONE;
 		desc.MaxAnisotropy = maxAnisotropy;
 		desc.MaxLOD = 666.0f;
-		desc.MinLOD = sampler.minLOD;
-		desc.MipLODBias = sampler.mipLODBias;
+		desc.MinLOD = rhiDesc.minLOD;
+		desc.MipLODBias = rhiDesc.mipLODBias;
 		desc.Filter = filter;
 		const uint32_t index = rhi.descHeapSamplers.CreateSampler(desc);
 
-		return RHI_MAKE_HANDLE(CreateHandle(ResourceType::Sampler, index, 0));
+		Sampler sampler;
+		sampler.desc = rhiDesc;
+		sampler.shortLifeTime = rhiDesc.shortLifeTime;
+		sampler.heapIndex = index;
+		const HSampler handle = rhi.samplers.Add(sampler);
+
+		return handle;
 	}
 
-	void DestroySampler(HSampler sampler)
+	void DestroySampler(HSampler hsampler)
 	{
-		Handle type, index, gen;
-		DecomposeHandle(&type, &index, &gen, sampler.v);
-		Q_assert(type == ResourceType::Sampler);
-		if(type != ResourceType::Sampler)
-		{
-			ri.Error(ERR_FATAL, "DestroySampler handle is not a sampler!\n");
-			return;
-		}
-
-		rhi.descHeapSamplers.Free(index);
+		const Sampler& sampler = rhi.samplers.Get(hsampler);
+		rhi.descHeapSamplers.Free(sampler.heapIndex);
+		rhi.samplers.Remove(hsampler);
 	}
 
 	static void AddShaderVisibility(bool outVis[ShaderStage::Count], D3D12_SHADER_VISIBILITY inVis)

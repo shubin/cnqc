@@ -506,6 +506,7 @@ namespace RHI
 		TextureFilter::Id filterMode = TextureFilter::Linear;
 		float minLOD = 0.0f;
 		float mipLODBias = 0.0f;
+		bool shortLifeTime = false;
 	};
 
 	struct DescriptorTableDesc
