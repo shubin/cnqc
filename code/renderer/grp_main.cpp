@@ -197,20 +197,6 @@ void GRP::Init()
 
 	if(firstInit)
 	{
-		for(uint32_t w = 0; w < TW_COUNT; ++w)
-		{
-			for(uint32_t f = 0; f < TextureFilter::Count; ++f)
-			{
-				for(uint32_t m = 0; m < MaxTextureMips; ++m)
-				{
-					const textureWrap_t wrap = (textureWrap_t)w;
-					const TextureFilter::Id filter = (TextureFilter::Id)f;
-					const uint32_t s = GetSamplerIndex(wrap, filter, m);
-					samplers[s] = CreateSampler(SamplerDesc(wrap, filter, (float)m));
-				}
-			}
-		}
-
 		RootSignatureDesc desc("main");
 		desc.usingVertexBuffers = true;
 		desc.samplerCount = ARRAY_LEN(samplers);
@@ -222,10 +208,6 @@ void GRP::Init()
 		rootSignature = CreateRootSignature(desc);
 
 		descriptorTable = CreateDescriptorTable(DescriptorTableDesc("game textures", rootSignature));
-
-		DescriptorTableUpdate update;
-		update.SetSamplers(ARRAY_LEN(samplers), samplers);
-		UpdateDescriptorTable(descriptorTable, update);
 
 		desc.name = "world";
 		desc.usingVertexBuffers = true;
@@ -242,6 +224,31 @@ void GRP::Init()
 				Q_assert(!"ParseUberPixelShaderState failed!");
 			}
 		}
+	}
+
+	// we recreate the samplers on every vid_restart to create the right level
+	// of anisotropy based on the latched CVar
+	for(uint32_t w = 0; w < TW_COUNT; ++w)
+	{
+		for(uint32_t f = 0; f < TextureFilter::Count; ++f)
+		{
+			for(uint32_t m = 0; m < MaxTextureMips; ++m)
+			{
+				const textureWrap_t wrap = (textureWrap_t)w;
+				const TextureFilter::Id filter = (TextureFilter::Id)f;
+				const uint32_t s = GetSamplerIndex(wrap, filter, m);
+				SamplerDesc desc(wrap, filter, (float)m);
+				desc.shortLifeTime = true;
+				samplers[s] = CreateSampler(desc);
+			}
+		}
+	}
+
+	// update our descriptor table with the new sampler descriptors
+	{
+		DescriptorTableUpdate update;
+		update.SetSamplers(ARRAY_LEN(samplers), samplers);
+		UpdateDescriptorTable(descriptorTable, update);
 	}
 
 	textureIndex = 0;
