@@ -2262,19 +2262,19 @@ static void DrawGeneric()
 
 		BindBundle(0, &stage->bundle);
 
-		if(stage->mtStages == 0)
-		{
-			BindImage(1, tr.whiteImage);
-			BindVertexArray(VB_TEXCOORD2);
-			ApplyTexEnv(TE_DISABLED);
-		}
-		else
+		if(stage->mtStages == 1 && tess.xstages[i + 1] != NULL)
 		{
 			const shaderStage_t* const stage2 = tess.xstages[i + 1];
 			BindBundle(1, &stage2->bundle);
 			UploadVertexArray(VB_TEXCOORD2, tess.svars[i + 1].texcoordsptr);
 			ApplyTexEnv(stage2->mtEnv);
 			++i;
+		}
+		else
+		{
+			BindImage(1, tr.whiteImage);
+			BindVertexArray(VB_TEXCOORD2);
+			ApplyTexEnv(TE_DISABLED);
 		}
 
 		if(pipeline->uniformsDirty[GU_ALPHA_TEX])

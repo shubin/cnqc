@@ -2526,7 +2526,7 @@ static void DrawGeneric()
 
 		BindBundle(0, &stage->bundle);
 
-		if(stage->mtStages == 1)
+		if(stage->mtStages == 1 && tess.xstages[i + 1] != NULL)
 		{
 			const shaderStage_t* stage2 = tess.xstages[i + 1];
 			d3d.texEnv = stage2->mtEnv;

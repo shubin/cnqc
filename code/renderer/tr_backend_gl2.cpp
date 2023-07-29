@@ -320,9 +320,7 @@ static void DrawGeneric()
 		R_BindAnimatedImage( &pStage->bundle );
 		GL_State( pStage->stateBits );
 
-		if ( pStage->mtStages ) {
-			// we can't really cope with massive collapses, so
-			assert( pStage->mtStages == 1 );
+		if ( pStage->mtStages == 1 && tess.xstages[stage + 1] != NULL ) {
 			glUniform1i( genericProgAttribs.texEnv, tess.xstages[stage + 1]->mtEnv );
 			if ( GL2_StageIterator_MultitextureStage( stage + 1 ) )
 				break;
