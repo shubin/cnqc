@@ -871,6 +871,116 @@ static void WIN_RegisterDemoShellCommands()
 }
 
 
+static void WIN_SetCorePreference()
+{
+	struct local_resources_t {
+		~local_resources_t()
+		{
+			if ( cpuSetBuffer != NULL ) {
+				free( cpuSetBuffer );
+			}
+			if ( pcoreIdBuffer != NULL ) {
+				free( pcoreIdBuffer );
+			}
+			if ( library != NULL ) {
+				FreeLibrary( library );
+			}
+		}
+
+		byte* cpuSetBuffer = NULL;
+		ULONG* pcoreIdBuffer = NULL;
+		HMODULE library = NULL;
+	};
+
+	local_resources_t res;
+
+	res.library = LoadLibraryA( "kernel32.dll" );
+	if ( res.library == NULL ) {
+		Com_Printf( "^3WIN_SetCorePreference: Failed to open kernel32.dll\n" );
+		return;
+	}
+
+	typedef BOOL (WINAPI* GetSystemCpuSetInformationFPtr)( PSYSTEM_CPU_SET_INFORMATION Information, ULONG BufferLength, PULONG ReturnedLength, HANDLE Process, ULONG Flags );
+	typedef BOOL (WINAPI* SetThreadSelectedCpuSetsFPtr)( HANDLE Thread, const ULONG* CpuSetIds, ULONG CpuSetIdCount );
+	const GetSystemCpuSetInformationFPtr pGetSystemCpuSetInformation = (GetSystemCpuSetInformationFPtr)GetProcAddress( res.library, "GetSystemCpuSetInformation" );
+	const SetThreadSelectedCpuSetsFPtr pSetThreadSelectedCpuSets = (SetThreadSelectedCpuSetsFPtr)GetProcAddress( res.library, "SetThreadSelectedCpuSets" );
+	if ( pGetSystemCpuSetInformation == NULL || pSetThreadSelectedCpuSets == NULL ) {
+		Com_Printf( "^3WIN_SetCorePreference: Failed to grab function pointers\n" );
+		Com_Printf( "^3WIN_SetCorePreference: Ignore this if you're not on Windows 10/11\n" );
+		return;
+	}
+
+	ULONG requiredByteCount = 0;
+	if ( pGetSystemCpuSetInformation( NULL, 0, &requiredByteCount, GetCurrentProcess(), 0 ) != TRUE &&
+		GetLastError() != ERROR_INSUFFICIENT_BUFFER ) {
+		Com_Printf( "^3WIN_SetCorePreference: GetSystemCpuSetInformation failed\n" );
+		return;
+	}
+
+	res.cpuSetBuffer = (byte*)malloc( requiredByteCount );
+	if ( res.cpuSetBuffer == NULL ) {
+		Com_Printf( "^3WIN_SetCorePreference: malloc failed with %s\n", Com_FormatBytes( (int)requiredByteCount ) );
+		return;
+	}
+
+	if ( pGetSystemCpuSetInformation( (SYSTEM_CPU_SET_INFORMATION*)res.cpuSetBuffer, requiredByteCount, &requiredByteCount, GetCurrentProcess(), 0 ) != TRUE ) {
+		Com_Printf( "^3WIN_SetCorePreference: GetSystemCpuSetInformation failed\n" );
+		return;
+	}
+
+	ULONG pcoreCount = 0;
+	ULONG ecoreCount = 0;
+	byte* cpuSetByte = res.cpuSetBuffer;
+	for ( ULONG cpuSetByteOffset = 0; cpuSetByteOffset < requiredByteCount; ) {
+		SYSTEM_CPU_SET_INFORMATION* cpuSet = (SYSTEM_CPU_SET_INFORMATION*)cpuSetByte;
+		if ( cpuSet->Type == CpuSetInformation ) {
+			if ( cpuSet->CpuSet.EfficiencyClass > 0 ) {
+				pcoreCount++;
+			} else {
+				ecoreCount++;
+			}
+		}
+		cpuSetByte += cpuSet->Size;
+		cpuSetByteOffset += cpuSet->Size;
+	}
+	if ( pcoreCount + ecoreCount <= 1 ) {
+		Com_Printf( "^3WIN_SetCorePreference: no valid CPU core information found\n" );
+		return;
+	}
+
+	const size_t pcoreIdBufferSize = (size_t)pcoreCount * sizeof(ULONG);
+	res.pcoreIdBuffer = (ULONG*)malloc( pcoreIdBufferSize );
+	if ( res.pcoreIdBuffer == NULL ) {
+		Com_Printf( "^3WIN_SetCorePreference: malloc failed with %s\n", Com_FormatBytes( (int)pcoreIdBufferSize ) );
+		return;
+	}
+
+	ULONG* currPCoreId = res.pcoreIdBuffer;
+	cpuSetByte = res.cpuSetBuffer;
+	for ( ULONG cpuSetByteOffset = 0; cpuSetByteOffset < requiredByteCount; ) {
+		SYSTEM_CPU_SET_INFORMATION* cpuSet = (SYSTEM_CPU_SET_INFORMATION*)cpuSetByte;
+		if ( cpuSet->Type == CpuSetInformation ) {
+			if ( cpuSet->CpuSet.EfficiencyClass > 0 ) {
+				*currPCoreId++ = (ULONG)cpuSet->CpuSet.Id;
+			}
+		}
+		cpuSetByte += cpuSet->Size;
+		cpuSetByteOffset += cpuSet->Size;
+	}
+
+	if ( pcoreCount > 0 && ecoreCount > 0 ) {
+		Com_Printf( "CPU configuration: %dP/%dE hybrid cores\n", (int)pcoreCount, (int)ecoreCount );
+		if ( pSetThreadSelectedCpuSets( GetCurrentThread(), res.pcoreIdBuffer, pcoreCount) ) {
+			Com_Printf( "Main thread successfully set to run on P-Cores only\n" );
+		} else {
+			Com_Printf( "^3WIN_SetCorePreference: SetThreadSelectedCpuSets failed\n" );
+		}
+	} else {
+		Com_Printf( "CPU configuration: %d homogeneous cores\n", (int)(pcoreCount + ecoreCount) );
+	}
+}
+
+
 ///////////////////////////////////////////////////////////////
 
 
@@ -911,6 +1021,7 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	WIN_RegisterExceptionCommands();
 	WIN_RegisterMonitorCommands();
 	WIN_RegisterDemoShellCommands();
+	WIN_SetCorePreference();
 
 	NET_Init();
 
