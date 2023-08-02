@@ -664,6 +664,8 @@ int		FS_FOpenFileRead( const char *qpath, fileHandle_t *file, qbool uniqueFILE, 
 // It is generally safe to always set uniqueFILE to qtrue, because the majority of
 // file IO goes through FS_ReadFile, which Does The Right Thing already.
 
+int		FS_FOpenAbsoluteRead( const char* absPath, fileHandle_t* file );
+
 qbool	FS_FileIsInPAK( const char* filename, int* pureChecksum, int* checksum );
 
 int		FS_Write( const void *buffer, int len, fileHandle_t f );
@@ -1159,6 +1161,8 @@ int64_t	Sys_Microseconds();
 // prints text in the debugger's output window
 void	Sys_DebugPrintf( PRINTF_FORMAT_STRING const char* fmt, ... );
 qbool	Sys_IsDebuggerAttached();
+
+qbool	Sys_IsAbsolutePath( const char* path );
 
 #ifndef DEDICATED
 qbool	Sys_IsMinimized();

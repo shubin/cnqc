@@ -505,7 +505,7 @@ local function ApplyExeProjectSettings(exeName, server)
 		debugdir(abs_path_q3)
 
 	filter "system:windows"
-		links { "Winmm", "ws2_32", "Version" }
+		links { "Winmm", "ws2_32", "Version", "Shlwapi" }
 		if (server == 0) then
 			links { "opengl32" }
 		end
@@ -757,6 +757,9 @@ solution "cnq3"
 		if os.is("windows") then
 			files { string.format("%s/renderer/hlsl/*.hlsl", path_src) }
 			files { string.format("%s/renderer/hlsl/*.hlsli", path_src) }
+			filter { "files:**.hlsl" }
+				flags { "ExcludeFromBuild" }
+			filter { }
 		end
 		ApplyLibProjectSettings()
 		filter "action:gmake"

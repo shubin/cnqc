@@ -38,31 +38,33 @@
     <ClCompile Include="..\..\code\renderer\tr_world.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\code\renderer\hlsl\clear.hlsl">
+    <FxCompile Include="..\..\code\renderer\hlsl\clear.hlsl">
       <Filter>hlsl</Filter>
-    </None>
-    <None Include="..\..\code\renderer\hlsl\dl.hlsl">
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\dl.hlsl">
       <Filter>hlsl</Filter>
-    </None>
-    <None Include="..\..\code\renderer\hlsl\generic.hlsl">
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\generic.hlsl">
       <Filter>hlsl</Filter>
-    </None>
-    <None Include="..\..\code\renderer\hlsl\mip_end.hlsl">
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\mip_end.hlsl">
       <Filter>hlsl</Filter>
-    </None>
-    <None Include="..\..\code\renderer\hlsl\mip_pass.hlsl">
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\mip_pass.hlsl">
       <Filter>hlsl</Filter>
-    </None>
-    <None Include="..\..\code\renderer\hlsl\mip_start.hlsl">
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\mip_start.hlsl">
       <Filter>hlsl</Filter>
-    </None>
-    <None Include="..\..\code\renderer\hlsl\post.hlsl">
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\post.hlsl">
       <Filter>hlsl</Filter>
-    </None>
+    </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\sprite.hlsl">
+      <Filter>hlsl</Filter>
+    </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
     <None Include="..\..\code\renderer\hlsl\shared.hlsli">
-      <Filter>hlsl</Filter>
-    </None>
-    <None Include="..\..\code\renderer\hlsl\sprite.hlsl">
       <Filter>hlsl</Filter>
     </None>
   </ItemGroup>

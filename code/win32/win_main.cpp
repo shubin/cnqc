@@ -762,6 +762,115 @@ static void WIN_RegisterMonitorCommands()
 }
 
 
+static void WIN_FixCurrentDirectory()
+{
+	char dirPath[1024];
+	Q_strncpyz( dirPath, __argv[0], sizeof( dirPath ) );
+	size_t i = strlen( dirPath );
+	if ( i <= 1 ) {
+		return;
+	}
+	--i;
+
+	for ( ; i > 0; --i ) {
+		if ( dirPath[i] == '/' || dirPath[i] == '\\' ) {
+			dirPath[i] = '\0';
+			SetCurrentDirectoryA( dirPath );
+			break;
+		}
+	}
+}
+
+
+static void WIN_RegisterDemoExtensions()
+{
+	HKEY hkcr;
+	if ( RegOpenKeyExA( HKEY_CLASSES_ROOT, NULL, 0, KEY_ALL_ACCESS, &hkcr ) == ERROR_SUCCESS ) {
+		HKEY command;
+		if ( RegCreateKeyA( hkcr, "CNQ3.demo\\Shell\\Open\\Command", &command ) == ERROR_SUCCESS ) {
+			const char* const appCmdLine = va( "\"%s\" +demo \"%%1\"", __argv[0] );
+			RegSetValueA( command, "", REG_SZ, appCmdLine, 0 );
+			RegCloseKey( command );
+		}
+
+		HKEY cnq3Demo;
+		if ( RegOpenKeyA( hkcr, "CNQ3.demo", &cnq3Demo ) == ERROR_SUCCESS ) {
+			RegSetValueA( cnq3Demo, "", REG_SZ, "CNQ3 Demo File", 0 );
+			RegCloseKey( cnq3Demo );
+		}
+
+		const char* extensions[] = { ".dm_68", ".dm_67", ".dm_66" };
+		for ( int i = 0; i < ARRAY_LEN( extensions ); ++i ) {
+			HKEY demoExt;
+			if ( RegCreateKeyA( hkcr, extensions[i], &demoExt ) == ERROR_SUCCESS ) {
+				RegSetValueA( demoExt, "", REG_SZ, "CNQ3.demo", 0 );
+				RegCloseKey( demoExt );
+			}
+		}
+
+		RegCloseKey( hkcr );
+	}
+}
+
+
+static void WIN_UnregisterDemoExtensions()
+{
+	RegDeleteTreeA( HKEY_CLASSES_ROOT, "CNQ3.demo" );
+}
+
+
+static void WIN_RunProcessElevated( const char* cmdLine )
+{
+	char exeFileName[MAX_PATH];
+	if ( GetModuleFileNameA( NULL, exeFileName, sizeof( exeFileName ) ) == 0 ||
+	     GetLastError() == ERROR_INSUFFICIENT_BUFFER ) {
+		Com_Printf( "^1ERROR: WIN_RunProcessElevated: GetModuleFileNameA failed\n" );
+		return;
+	}
+
+	SHELLEXECUTEINFOA shExInfo = { 0 };
+	shExInfo.cbSize = sizeof(shExInfo);
+	shExInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
+	shExInfo.lpVerb = "runas";
+	shExInfo.lpFile = exeFileName;
+	shExInfo.lpParameters = cmdLine;
+	shExInfo.nShow = SW_HIDE;
+	if ( ShellExecuteEx( &shExInfo ) ) {
+		WaitForSingleObject( shExInfo.hProcess, INFINITE );
+		CloseHandle( shExInfo.hProcess );
+	} else {
+		Com_Printf("^1ERROR: WIN_RunProcessElevated: ShellExecuteEx failed\n");
+	}
+}
+
+
+static void WIN_RegisterDemoExtensions_f()
+{
+	WIN_RunProcessElevated( "/reg_demo_ext" );
+}
+
+
+static void WIN_UnregisterDemoExtensions_f()
+{
+	WIN_RunProcessElevated( "/unreg_demo_ext" );
+}
+
+
+static void WIN_RegisterDemoShellCommands()
+{
+	Cmd_AddCommand( "registerdemos", &WIN_RegisterDemoExtensions_f );
+	Cmd_SetModule( "registerdemos", MODULE_CLIENT );
+	Cmd_SetHelp( "registerdemos",
+		"associates demo files with CNQ3\n"
+		"Double-clicking a demo in the file explorer will open CNQ3 for playback.\n"
+		"Extensions: .dm_68 .dm_67 .dm_66" );
+
+	Cmd_AddCommand( "unregisterdemos", &WIN_UnregisterDemoExtensions_f );
+	Cmd_SetModule( "unregisterdemos", MODULE_CLIENT );
+	Cmd_SetHelp( "unregisterdemos", "dissociates demo files from CNQ3" );
+}
+
+
 ///////////////////////////////////////////////////////////////
 
 
@@ -774,6 +883,18 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	g_wv.hInstance = hInstance;
 
 	WIN_InstallExceptionHandlers();
+
+	WIN_FixCurrentDirectory();
+
+	if ( !Q_stricmp( lpCmdLine, "/reg_demo_ext" ) ) {
+		WIN_RegisterDemoExtensions();
+		return 0;
+	}
+
+	if ( !Q_stricmp( lpCmdLine, "/unreg_demo_ext" ) ) {
+		WIN_UnregisterDemoExtensions();
+		return 0;
+	}
 
 	// done here so the early console can be shown on the primary monitor
 	WIN_InitMonitorList();
@@ -789,6 +910,7 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	Com_Init( sys_cmdline );
 	WIN_RegisterExceptionCommands();
 	WIN_RegisterMonitorCommands();
+	WIN_RegisterDemoShellCommands();
 
 	NET_Init();
 

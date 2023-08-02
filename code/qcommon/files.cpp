@@ -1097,6 +1097,28 @@ int FS_FOpenFileRead( const char *filename, fileHandle_t *file, qbool uniqueFILE
 }
 
 
+int FS_FOpenAbsoluteRead( const char* absPath, fileHandle_t* file )
+{
+	Q_assert( absPath );
+	Q_assert( file );
+
+	*file = FS_HandleForFile();
+
+	fileHandleData_t& fhd = fsh[*file];
+
+	Com_Memset( &fhd, 0, sizeof( fhd ) );
+	fhd.handleFiles.file.o = fopen( absPath, "rb" );
+	if ( fhd.handleFiles.file.o == NULL ) {
+		return -1;
+	}
+
+	fhd.fileSize = FS_filelength( *file );
+	Q_strncpyz( fhd.name, absPath, sizeof( fhd.name ) );
+
+	return fhd.fileSize;
+}
+
+
 /*
 =================
 FS_Read

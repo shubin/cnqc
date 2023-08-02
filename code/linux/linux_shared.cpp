@@ -757,3 +757,9 @@ qbool Sys_IsDebuggerAttached()
 {
 	return qfalse;
 }
+
+
+qbool Sys_IsAbsolutePath( const char* path )
+{
+	return path[0] == '/';
+}

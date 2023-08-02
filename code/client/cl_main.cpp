@@ -356,6 +356,11 @@ static void CL_WalkDemoExt( const char* path, fileHandle_t* fh )
 
 	*fh = 0;
 
+	if (Sys_IsAbsolutePath( path )) {
+		FS_FOpenAbsoluteRead( path, fh );
+		return;
+	}
+
 	for (int i = 0; i < ARRAY_LEN(protocols); ++i) {
 		Com_sprintf( fullPath, sizeof( fullPath ), "demos/%s.dm_%d", path, protocols[i] );
 		FS_FOpenFileRead( fullPath, fh, qtrue );
