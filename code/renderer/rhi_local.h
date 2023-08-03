@@ -234,6 +234,23 @@ namespace RHI
 		};
 	};
 
+	struct ShadingRate
+	{
+		enum Id
+		{
+			// Guaranteed modes:
+			SR_1x1,
+			SR_2x1,
+			SR_1x2,
+			SR_2x2,
+			// Additional modes:
+			SR_4x2,
+			SR_2x4,
+			SR_4x4,
+			Count
+		};
+	};
+
 	struct RootSignatureDesc
 	{
 		RootSignatureDesc() = default;
@@ -716,6 +733,7 @@ namespace RHI
 	void CmdEndDebugLabel();
 	void CmdSetStencilReference(uint8_t stencilRef);
 	void CmdCopyBuffer(HBuffer dest, HBuffer source);
+	void CmdSetShadingRate(ShadingRate::Id shadingRate);
 
 #if 0
 	void CmdClearUAV(HTexture htexture, uint32_t mip);

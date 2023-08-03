@@ -60,6 +60,7 @@ cvar_t	*r_mapGreyscale;
 cvar_t	*r_mapGreyscaleCTF;
 cvar_t	*r_teleporterFlash;
 cvar_t	*r_sleepThreshold;
+cvar_t	*r_shadingRate;
 cvar_t	*r_novis;
 cvar_t	*r_nocull;
 cvar_t	*r_nocurves;
@@ -392,6 +393,7 @@ static const cvarTableItem_t r_cvars[] =
 	{ &r_mapGreyscaleCTF, "r_mapGreyscaleCTF", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", "1", help_r_mapGreyscaleCTF },
 	{ &r_teleporterFlash, "r_teleporterFlash", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "draws bright colors when being teleported" },
 	{ &r_sleepThreshold, "r_sleepThreshold", "2500", CVAR_ARCHIVE, CVART_INTEGER, "2000", "4000", help_r_sleepThreshold },
+	{ &r_shadingRate, "r_shadingRate", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "6", help_r_shadingRate },
 
 	//
 	// temporary variables that can change at any time

@@ -399,6 +399,8 @@ void World::Begin()
 	CmdSetViewportAndScissor(backEnd.viewParms);
 	batchOldDepthHack = false;
 	batchDepthHack = false;
+	batchOldShadingRate = ShadingRate::SR_1x1;
+	batchShadingRate = ShadingRate::SR_1x1;
 
 	TextureBarrier tb(depthTexture, ResourceStates::DepthWriteBit);
 	CmdBarrier(1, &tb);
@@ -562,6 +564,12 @@ void World::EndBatch()
 		batchOldDepthHack = batchDepthHack;
 	}
 
+	if(batchShadingRate != batchOldShadingRate)
+	{
+		CmdSetShadingRate(batchShadingRate);
+		batchOldShadingRate = batchShadingRate;
+	}
+
 	for(int p = 0; p < shader->numPipelines; ++p)
 	{
 		const pipeline_t& pipeline = shader->pipelines[p];
@@ -631,6 +639,8 @@ void World::EndSkyBatch()
 
 	SCOPED_RENDER_PASS("Sky", 0.0, 0.5f, 1.0f);
 
+	CmdSetShadingRate(ShadingRate::SR_1x1);
+
 	const viewParms_t& vp = backEnd.viewParms;
 	CmdSetViewport(vp.viewportX, vp.viewportY, vp.viewportWidth, vp.viewportHeight, 0.0f, 0.0f);
 	RB_DrawSky();
@@ -640,6 +650,8 @@ void World::EndSkyBatch()
 
 	batchOldDepthHack = false;
 	batchDepthHack = false;
+	batchOldShadingRate = ShadingRate::SR_1x1;
+	batchShadingRate = ShadingRate::SR_1x1;
 }
 
 void World::RestartBatch()
@@ -920,6 +932,10 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 	bool oldHasStaticGeo = false;
 	backEnd.currentEntity = &tr.worldEntity;
 
+	ShadingRate::Id lowShadingRate = (ShadingRate::Id)r_shadingRate->integer;
+	batchShadingRate = ShadingRate::SR_1x1;
+	batchOldShadingRate = ShadingRate::SR_1x1;
+
 	int ds;
 	const drawSurf_t* drawSurf;
 	for(ds = 0, drawSurf = drawSurfs; ds < surfCount; ++ds, ++drawSurf)
@@ -929,6 +945,8 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			EndSkyBatch();
 			EndBatch();
 
+			CmdSetShadingRate(lowShadingRate);
+			batchOldShadingRate = lowShadingRate;
 			DrawFog();
 
 			if(transpCount > 0)
@@ -982,6 +1000,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			EndBatch();
 			BeginBatch(shader, hasStaticGeo);
 			tess.greyscale = drawSurf->greyscale;
+			batchShadingRate = lowShadingRate;
 		}
 
 		if(entityChanged)
@@ -996,6 +1015,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			{
 				EndBatch();
 				BeginBatch(tess.shader, batchHasStaticGeo);
+				batchShadingRate = lowShadingRate;
 			}
 
 			memcpy(tess.indexes + tess.numIndexes, statIndices + chunk.firstCPUIndex, chunk.indexCount * sizeof(uint32_t));
@@ -1005,12 +1025,27 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 		{
 			R_TessellateSurface(drawSurf->surface);
 		}
+
+		// we want full rate for nopicmipped sprites and nopicmipped alpha tests
+		if((shader->imgflags & IMG_NOPICMIP) != 0)
+		{
+			if(entityNum != ENTITYNUM_WORLD && tr.refdef.entities[entityNum].e.reType == RT_SPRITE)
+			{
+				batchShadingRate = ShadingRate::SR_1x1;
+			}
+			else if(shader->isAlphaTestedOpaque)
+			{
+				batchShadingRate = ShadingRate::SR_1x1;
+			}
+		}
 	}
 
 	backEnd.refdef.floatTime = originalTime;
 
 	EndSkyBatch();
 	EndBatch();
+
+	CmdSetShadingRate(ShadingRate::SR_1x1);
 
 	if(transpCount <= 0)
 	{
@@ -1024,6 +1059,10 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 	CmdSetViewportAndScissor(backEnd.viewParms);
 	batchOldDepthHack = false;
 	batchDepthHack = false;
+
+	CmdSetShadingRate(ShadingRate::SR_1x1);
+	batchOldShadingRate = ShadingRate::SR_1x1;
+	batchShadingRate = ShadingRate::SR_1x1;
 }
 
 void World::BindVertexBuffers(bool staticGeo, uint32_t firstStage, uint32_t stageCount)

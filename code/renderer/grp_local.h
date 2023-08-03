@@ -360,6 +360,8 @@ struct World
 	int psoChangeCount;
 	bool batchDepthHack;
 	bool batchOldDepthHack;
+	ShadingRate::Id batchShadingRate;
+	ShadingRate::Id batchOldShadingRate;
 
 	// dynamic
 	GeometryBuffers dynBuffers[FrameCount];
