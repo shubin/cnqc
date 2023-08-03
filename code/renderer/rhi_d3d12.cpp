@@ -533,11 +533,11 @@ namespace RHI
 		IDXGISwapChain3* swapChain;
 		HTexture renderTargets[FrameCount];
 		ID3D12CommandAllocator* mainCommandAllocators[FrameCount];
-		ID3D12GraphicsCommandList* mainCommandList;
+		ID3D12GraphicsCommandList6* mainCommandList;
 		ID3D12CommandAllocator* tempCommandAllocator;
-		ID3D12GraphicsCommandList* tempCommandList;
+		ID3D12GraphicsCommandList6* tempCommandList;
 		bool tempCommandListOpen;
-		ID3D12GraphicsCommandList* commandList; // not owned, don't release it!
+		ID3D12GraphicsCommandList6* commandList; // not owned, don't release it!
 		uint32_t swapChainBufferCount;
 		uint32_t renderFrameCount;
 		HANDLE frameLatencyWaitableObject;
@@ -555,6 +555,8 @@ namespace RHI
 		bool isTearingSupported;
 		bool vsync;
 		bool frameBegun;
+		bool baseVRSSupport;
+		bool extendedVRSSupport;
 
 		HMODULE dxcModule;
 		HMODULE dxilModule;
@@ -1646,6 +1648,21 @@ namespace RHI
 		}
 	}
 
+	D3D12_SHADING_RATE GetD3DShadingRate(ShadingRate::Id shadingRate)
+	{
+		switch(shadingRate)
+		{
+			case ShadingRate::SR_1x1: return D3D12_SHADING_RATE_1X1;
+			case ShadingRate::SR_1x2: return D3D12_SHADING_RATE_1X2;
+			case ShadingRate::SR_2x1: return D3D12_SHADING_RATE_2X1;
+			case ShadingRate::SR_2x2: return D3D12_SHADING_RATE_2X2;
+			case ShadingRate::SR_2x4: return D3D12_SHADING_RATE_2X4;
+			case ShadingRate::SR_4x2: return D3D12_SHADING_RATE_4X2;
+			case ShadingRate::SR_4x4: return D3D12_SHADING_RATE_4X4;
+			default: Q_assert(!"Unsupported shading rate"); return D3D12_SHADING_RATE_1X1;
+		}
+	}
+
 	static D3D12_BLEND GetAlphaBlendFromColorBlend(D3D12_BLEND colorBlend)
 	{
 		switch(colorBlend)
@@ -2178,7 +2195,23 @@ namespace RHI
 					case D3D12_RAYTRACING_TIER_1_1: tier = "1.1";
 					default: break;
 				}
-				TableRow(2, "Raytracing tier (DXR)", tier);
+				TableRow(2, "Raytracing (DXR) tier", tier);
+			}
+
+			D3D12_FEATURE_DATA_D3D12_OPTIONS6 options6 = { 0 };
+			if(SUCCEEDED(rhi.device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS6, &options6, sizeof(options6))))
+			{
+				const char* tier = "Unknown";
+				switch(options6.VariableShadingRateTier)
+				{
+					case D3D12_VARIABLE_SHADING_RATE_TIER_NOT_SUPPORTED: tier = "N/A";
+					case D3D12_VARIABLE_SHADING_RATE_TIER_1: tier = "1";
+					case D3D12_VARIABLE_SHADING_RATE_TIER_2: tier = "2";
+					default: break;
+				}
+				TableRow(2, "Variable shading rate (VRS) tier", tier);
+
+				TableRow(2, "VRS: 2x4, 4x2, 4x4 support", options6.AdditionalShadingRatesSupported ? "YES" : "NO");
 			}
 
 			NvU64 cvvTotal, cvvFree;
@@ -2709,6 +2742,19 @@ namespace RHI
 		}
 		D3D(dxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&rhi.dxcUtils)));
 		D3D(dxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&rhi.dxcCompiler)));
+
+		{
+			D3D12_FEATURE_DATA_D3D12_OPTIONS6 options6 = {};
+			if(SUCCEEDED(rhi.device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS6, &options6, sizeof(options6))))
+			{
+				rhi.baseVRSSupport = options6.VariableShadingRateTier != D3D12_VARIABLE_SHADING_RATE_TIER_NOT_SUPPORTED;
+				rhi.extendedVRSSupport = rhi.baseVRSSupport && options6.AdditionalShadingRatesSupported;
+			}
+
+			const char* modeLists[] = { "1x1", "1x1 2x1 1x2 2x2", "1x1 2x1 1x2 2x2 4x2 2x4 4x4" };
+			const int listIndex = rhi.extendedVRSSupport ? 2 : (rhi.baseVRSSupport ? 1 : 0);
+			ri.Printf(PRINT_ALL, "Supported VRS modes: %s\n", modeLists[listIndex]);
+		}
 
 		glInfo.maxTextureSize = MAX_TEXTURE_SIZE;
 		glInfo.maxAnisotropy = 16;
@@ -4271,6 +4317,32 @@ namespace RHI
 		const Buffer& src = rhi.buffers.Get(source);
 		const UINT64 byteCount = min(src.desc.byteCount, dst.desc.byteCount);
 		rhi.commandList->CopyBufferRegion(dst.buffer, 0, src.buffer, 0, byteCount);
+	}
+
+	void CmdSetShadingRate(ShadingRate::Id shadingRate)
+	{
+		Q_assert(CanWriteCommands());
+
+		if(!rhi.baseVRSSupport)
+		{
+			return;
+		}
+
+		if(!rhi.extendedVRSSupport)
+		{
+			switch(shadingRate)
+			{
+				case ShadingRate::SR_2x4:
+				case ShadingRate::SR_4x2:
+				case ShadingRate::SR_4x4:
+					shadingRate = ShadingRate::SR_2x2;
+					break;
+				default:
+					break;
+			}
+		}
+
+		rhi.commandList->RSSetShadingRate(GetD3DShadingRate(shadingRate), NULL);
 	}
 
 	uint32_t GetDurationCount()

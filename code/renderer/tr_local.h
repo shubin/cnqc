@@ -1060,6 +1060,7 @@ extern cvar_t	*r_lightmapGreyscale;	// how monochrome the lightmap looks
 extern cvar_t	*r_mapGreyscale;		// how monochrome the map looks
 extern cvar_t	*r_mapGreyscaleCTF;		// how monochrome CTF map surfaces look
 extern cvar_t	*r_sleepThreshold;		// time cushion in us for a call to Sleep(1+)
+extern cvar_t	*r_shadingRate;			// variable-rate shading (VRS) mode
 extern cvar_t	*r_fullbright;			// avoid lightmap pass
 extern cvar_t	*r_depthFade;			// fades marked shaders based on depth
 extern cvar_t	*r_dither;				// enables dithering

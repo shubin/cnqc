@@ -142,6 +142,23 @@ S_COLOR_VAL "    2 " S_COLOR_HELP "= None"
 S_COLOR_VAL "2500 " S_COLOR_HELP "should be enough to deal with delayed thread wake-ups.\n" \
 "Use the frame graph to confirm that higher values help on your system."
 
+#define help_r_shadingRate \
+"variable-rate shading (VRS) mode\n" \
+S_COLOR_VAL "    0 " S_COLOR_HELP "= 1x1 (VRS off)\n" \
+S_COLOR_VAL "    1 " S_COLOR_HELP "= 2x1 (base mode)\n" \
+S_COLOR_VAL "    2 " S_COLOR_HELP "= 1x2 (base mode)\n" \
+S_COLOR_VAL "    3 " S_COLOR_HELP "= 2x2 (base mode)\n" \
+S_COLOR_VAL "    4 " S_COLOR_HELP "= 4x2 (extended mode)\n" \
+S_COLOR_VAL "    5 " S_COLOR_HELP "= 2x4 (extended mode)\n" \
+S_COLOR_VAL "    6 " S_COLOR_HELP "= 4x4 (extended mode)\n" \
+"The numbers are the horizontal and vertical subsampling factors.\n" \
+"1x1 is forced for the sky, nopicmipped sprites (e.g. simple items)\n" \
+"and nopicmipped alpha tested surfaces (e.g. grates).\n" \
+"If extended modes are not supported, 2x2 is used instead.\n" \
+"Prefer horizontal subsampling as many maps have textures\n" \
+"with thin horizontal lines, which become an aliased mess when\n" \
+"vertically subsampled."
+
 #define help_r_ignoreShaderSortKey \
 "ignores the shader sort key of transparent surfaces\n" \
 "Instead, it sorts by depth and original registration order only.\n" \
