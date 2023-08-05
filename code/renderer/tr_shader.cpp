@@ -2413,7 +2413,11 @@ static shader_t* FinishShader()
 	//
 	// if we are in r_vertexLight mode, never use a lightmap texture
 	//
+#if defined( QC )
 	if ( shader.vlWanted && !shader.noVLCollapse )
+#else // QC
+	if ( shader.vlWanted )
+#endif // QC
 		ApplyVertexLighting();
 
 	//
