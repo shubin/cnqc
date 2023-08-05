@@ -133,6 +133,11 @@ static void UpdateEntityData(bool& depthHack, int entityNum, double originalTime
 
 void World::Init()
 {
+	if(grp.firstInit)
+	{
+		fogDescriptorTable = RHI_MAKE_NULL_HANDLE();
+	}
+
 	{
 		TextureDesc desc("depth buffer", glConfig.vidWidth, glConfig.vidHeight);
 		desc.committedResource = true;

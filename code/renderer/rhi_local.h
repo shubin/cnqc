@@ -676,7 +676,7 @@ namespace RHI
 		const ShaderMacro* macros = NULL;
 	};
 
-	void Init();
+	bool Init(); // true when a full init happened (the device was created)
 	void ShutDown(bool destroyWindow);
 
 	void BeginFrame();

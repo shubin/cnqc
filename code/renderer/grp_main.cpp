@@ -193,7 +193,7 @@ void RenderPassStats::EndFrame(uint32_t cpu, uint32_t gpu)
 
 void GRP::Init()
 {
-	RHI::Init();
+	firstInit = RHI::Init();
 
 	if(firstInit)
 	{
