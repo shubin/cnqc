@@ -2329,7 +2329,7 @@ namespace RHI
 		}
 	}
 
-	void Init()
+	bool Init()
 	{
 		Sys_V_Init();
 
@@ -2417,7 +2417,7 @@ namespace RHI
 
 			rhi.vsync = vsync;
 
-			return;
+			return false;
 		}
 
 		// @NOTE: we can't use memset because of the StaticPool members
@@ -2761,11 +2761,20 @@ namespace RHI
 		glInfo.depthFadeSupport = qfalse;
 
 		rhi.initialized = true;
+
+		return true;
 	}
 
 	void ShutDown(bool destroyWindow)
 	{
 #define DESTROY_POOL(Name, Func) DestroyPool(rhi.Name, &Func, !!destroyWindow);
+
+		if(!destroyWindow &&
+			r_gpuPreference->latchedString != NULL &&
+			Q_stricmp(r_gpuPreference->latchedString, r_gpuPreference->string) != 0)
+		{
+			destroyWindow = true;
+		}
 
 		if(rhi.frameBegun)
 		{
