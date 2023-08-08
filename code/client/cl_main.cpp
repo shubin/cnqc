@@ -1896,7 +1896,7 @@ static void CL_Vid_Restart_f()
 	// we don't really technically need to run everything again,
 	// but trying to optimize parts out is very likely to lead to nasty bugs
 	if ( clc.demoplaying && clc.newDemoPlayer ) {
-		Cmd_TokenizeString( va("demo %s", clc.demoName) );
+		Cmd_TokenizeString( va("demo \"%s\"", clc.demoName) );
 		CL_PlayDemo( qtrue );
 	}
 	// start the cgame if connected
