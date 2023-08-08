@@ -522,7 +522,7 @@ void CL_CGameRendering( stereoFrame_t stereo );
 void CL_SetCGameTime();
 void CL_ConfigstringModified();
 void CL_CGNDP_EndAnalysis( const char* filePath, int firstServerTime, int lastServerTime, qbool videoRestart );
-void CL_CGNDP_AnalyzeSnapshot( int progress );
+qbool CL_CGNDP_AnalyzeSnapshot( int progress ); // qtrue when a server pause is active
 void CL_CGNDP_AnalyzeCommand( int serverTime );
 void CL_CGNDP_GenerateCommands( const char** commands, int* numCommandBytes );
 qbool CL_CGNDP_IsConfigStringNeeded( int csIndex );

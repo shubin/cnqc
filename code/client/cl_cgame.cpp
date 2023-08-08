@@ -1031,11 +1031,11 @@ qbool CL_CGNDP_IsConfigStringNeeded( int csIndex )
 }
 
 
-void CL_CGNDP_AnalyzeSnapshot( int progress )
+qbool CL_CGNDP_AnalyzeSnapshot( int progress )
 {
 	Q_assert(cls.cgameNewDemoPlayer);
 	Q_assert(progress >= 0 && progress < 100);
-	VM_Call(cgvm, cls.cgvmCalls[CGVM_NDP_ANALYZE_SNAPSHOT], progress);
+	return (qbool)VM_Call(cgvm, cls.cgvmCalls[CGVM_NDP_ANALYZE_SNAPSHOT], progress);
 }
 
 
