@@ -1,6 +1,14 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="debug qc|Win32">
+      <Configuration>debug qc</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="debug qc|x64">
+      <Configuration>debug qc</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="debug|x64">
       <Configuration>debug</Configuration>
       <Platform>x64</Platform>
@@ -8,6 +16,14 @@
     <ProjectConfiguration Include="debug|Win32">
       <Configuration>debug</Configuration>
       <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="release qc|Win32">
+      <Configuration>release qc</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="release qc|x64">
+      <Configuration>release qc</Configuration>
+      <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="release|x64">
       <Configuration>release</Configuration>
@@ -23,9 +39,16 @@
     <IgnoreWarnCompileDuplicatedFilename>true</IgnoreWarnCompileDuplicatedFilename>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>renderer</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='debug qc|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
@@ -37,7 +60,20 @@
     <CharacterSet>Unicode</CharacterSet>
     <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='release qc|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
@@ -51,23 +87,49 @@
     <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='debug qc|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='release qc|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='debug|x64'">
+    <OutDir>..\..\.build\debug_x64\</OutDir>
+    <IntDir>..\..\.build\debug_x64\renderer\</IntDir>
+    <TargetName>renderer</TargetName>
+    <TargetExt>.lib</TargetExt>
+    <GenerateManifest>false</GenerateManifest>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='debug qc|x64'">
     <OutDir>..\..\.build\debug_x64\</OutDir>
     <IntDir>..\..\.build\debug_x64\renderer\</IntDir>
     <TargetName>renderer</TargetName>
@@ -81,6 +143,13 @@
     <TargetExt>.lib</TargetExt>
     <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">
+    <OutDir>..\..\.build\debug_x32\</OutDir>
+    <IntDir>..\..\.build\debug_x32\renderer\</IntDir>
+    <TargetName>renderer</TargetName>
+    <TargetExt>.lib</TargetExt>
+    <GenerateManifest>false</GenerateManifest>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='release|x64'">
     <OutDir>..\..\.build\release_x64\</OutDir>
     <IntDir>..\..\.build\release_x64\renderer\</IntDir>
@@ -88,7 +157,21 @@
     <TargetExt>.lib</TargetExt>
     <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">
+    <OutDir>..\..\.build\release_x64\</OutDir>
+    <IntDir>..\..\.build\release_x64\renderer\</IntDir>
+    <TargetName>renderer</TargetName>
+    <TargetExt>.lib</TargetExt>
+    <GenerateManifest>false</GenerateManifest>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='release|Win32'">
+    <OutDir>..\..\.build\release_x32\</OutDir>
+    <IntDir>..\..\.build\release_x32\renderer\</IntDir>
+    <TargetName>renderer</TargetName>
+    <TargetExt>.lib</TargetExt>
+    <GenerateManifest>false</GenerateManifest>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">
     <OutDir>..\..\.build\release_x32\</OutDir>
     <IntDir>..\..\.build\release_x32\renderer\</IntDir>
     <TargetName>renderer</TargetName>
@@ -108,6 +191,33 @@
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
       <AdditionalOptions>/wd4267 %(AdditionalOptions)</AdditionalOptions>
+      <MinimalRebuild />
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <Lib>
+      <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
+    </Lib>
+    <PreBuildEvent>
+      <Command>..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_generic_vs /Fh ..\..\code\renderer\hlsl\generic_vs.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_ps /Fh ..\..\code\renderer\hlsl\generic_ps.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_a_ps /Fh ..\..\code\renderer\hlsl\generic_a_ps.h /O0 /Zi /DCNQ3_A2C=1 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_d_ps /Fh ..\..\code\renderer\hlsl\generic_d_ps.h /O0 /Zi /DCNQ3_DITHER=1 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_ad_ps /Fh ..\..\code\renderer\hlsl\generic_ad_ps.h /O0 /Zi /DCNQ3_A2C=1 /DCNQ3_DITHER=1 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\post.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_post_vs /Fh ..\..\code\renderer\hlsl\post_vs.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\post.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_post_ps /Fh ..\..\code\renderer\hlsl\post_ps.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\dl.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_dl_vs /Fh ..\..\code\renderer\hlsl\dl_vs.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\dl.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_dl_ps /Fh ..\..\code\renderer\hlsl\dl_ps.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\sprite.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_sprite_vs /Fh ..\..\code\renderer\hlsl\sprite_vs.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\sprite.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_sprite_ps /Fh ..\..\code\renderer\hlsl\sprite_ps.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\clear.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_clear_vs /Fh ..\..\code\renderer\hlsl\clear_vs.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\clear.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_clear_ps /Fh ..\..\code\renderer\hlsl\clear_ps.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\mip_start.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_start_cs /Fh ..\..\code\renderer\hlsl\mip_start_cs.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\mip_pass.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_pass_cs /Fh ..\..\code\renderer\hlsl\mip_pass_cs.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\mip_end.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_end_cs /Fh ..\..\code\renderer\hlsl\mip_end_cs.h /O0 /Zi</Command>
+    </PreBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='debug qc|x64'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>GLEW_STATIC;DEBUG;_DEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;QC=QC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\code\glew\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <Optimization>Disabled</Optimization>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <ExceptionHandling>false</ExceptionHandling>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
+      <AdditionalOptions>/wd4267 %(AdditionalOptions)</AdditionalOptions>
+      <MinimalRebuild />
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -133,6 +243,33 @@
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
       <AdditionalOptions>/arch:SSE2 %(AdditionalOptions)</AdditionalOptions>
+      <MinimalRebuild />
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <Lib>
+      <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
+    </Lib>
+    <PreBuildEvent>
+      <Command>..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_generic_vs /Fh ..\..\code\renderer\hlsl\generic_vs.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_ps /Fh ..\..\code\renderer\hlsl\generic_ps.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_a_ps /Fh ..\..\code\renderer\hlsl\generic_a_ps.h /O0 /Zi /DCNQ3_A2C=1 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_d_ps /Fh ..\..\code\renderer\hlsl\generic_d_ps.h /O0 /Zi /DCNQ3_DITHER=1 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_ad_ps /Fh ..\..\code\renderer\hlsl\generic_ad_ps.h /O0 /Zi /DCNQ3_A2C=1 /DCNQ3_DITHER=1 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\post.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_post_vs /Fh ..\..\code\renderer\hlsl\post_vs.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\post.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_post_ps /Fh ..\..\code\renderer\hlsl\post_ps.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\dl.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_dl_vs /Fh ..\..\code\renderer\hlsl\dl_vs.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\dl.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_dl_ps /Fh ..\..\code\renderer\hlsl\dl_ps.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\sprite.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_sprite_vs /Fh ..\..\code\renderer\hlsl\sprite_vs.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\sprite.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_sprite_ps /Fh ..\..\code\renderer\hlsl\sprite_ps.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\clear.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_clear_vs /Fh ..\..\code\renderer\hlsl\clear_vs.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\clear.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_clear_ps /Fh ..\..\code\renderer\hlsl\clear_ps.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\mip_start.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_start_cs /Fh ..\..\code\renderer\hlsl\mip_start_cs.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\mip_pass.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_pass_cs /Fh ..\..\code\renderer\hlsl\mip_pass_cs.h /O0 /Zi &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\mip_end.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_end_cs /Fh ..\..\code\renderer\hlsl\mip_end_cs.h /O0 /Zi</Command>
+    </PreBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>GLEW_STATIC;DEBUG;_DEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;QC=QC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\code\glew\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <Optimization>Disabled</Optimization>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <ExceptionHandling>false</ExceptionHandling>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
+      <AdditionalOptions>/arch:SSE2 %(AdditionalOptions)</AdditionalOptions>
+      <MinimalRebuild />
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -156,7 +293,6 @@
       <Optimization>MinSpace</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <MinimalRebuild>false</MinimalRebuild>
       <OmitFramePointers>true</OmitFramePointers>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -166,6 +302,42 @@
       <FloatingPointModel>Fast</FloatingPointModel>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalOptions>/GL /wd4267 %(AdditionalOptions)</AdditionalOptions>
+      <MinimalRebuild />
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+    <Lib>
+      <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
+    </Lib>
+    <PreBuildEvent>
+      <Command>..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_generic_vs /Fh ..\..\code\renderer\hlsl\generic_vs.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_ps /Fh ..\..\code\renderer\hlsl\generic_ps.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_a_ps /Fh ..\..\code\renderer\hlsl\generic_a_ps.h /O3 /DCNQ3_A2C=1 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_d_ps /Fh ..\..\code\renderer\hlsl\generic_d_ps.h /O3 /DCNQ3_DITHER=1 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_ad_ps /Fh ..\..\code\renderer\hlsl\generic_ad_ps.h /O3 /DCNQ3_A2C=1 /DCNQ3_DITHER=1 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\post.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_post_vs /Fh ..\..\code\renderer\hlsl\post_vs.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\post.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_post_ps /Fh ..\..\code\renderer\hlsl\post_ps.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\dl.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_dl_vs /Fh ..\..\code\renderer\hlsl\dl_vs.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\dl.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_dl_ps /Fh ..\..\code\renderer\hlsl\dl_ps.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\sprite.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_sprite_vs /Fh ..\..\code\renderer\hlsl\sprite_vs.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\sprite.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_sprite_ps /Fh ..\..\code\renderer\hlsl\sprite_ps.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\clear.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_clear_vs /Fh ..\..\code\renderer\hlsl\clear_vs.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\clear.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_clear_ps /Fh ..\..\code\renderer\hlsl\clear_ps.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\mip_start.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_start_cs /Fh ..\..\code\renderer\hlsl\mip_start_cs.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\mip_pass.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_pass_cs /Fh ..\..\code\renderer\hlsl\mip_pass_cs.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\mip_end.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_end_cs /Fh ..\..\code\renderer\hlsl\mip_end_cs.h /O3</Command>
+    </PreBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <PreprocessorDefinitions>GLEW_STATIC;NDEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;QC=QC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\code\glew\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <Optimization>MinSpace</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <OmitFramePointers>true</OmitFramePointers>
+      <StringPooling>true</StringPooling>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <ExceptionHandling>false</ExceptionHandling>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <AdditionalOptions>/GL /wd4267 %(AdditionalOptions)</AdditionalOptions>
+      <MinimalRebuild />
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -191,7 +363,6 @@
       <Optimization>MinSpace</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <MinimalRebuild>false</MinimalRebuild>
       <OmitFramePointers>true</OmitFramePointers>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -202,6 +373,43 @@
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalOptions>/GL /arch:SSE2 %(AdditionalOptions)</AdditionalOptions>
+      <MinimalRebuild />
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+    <Lib>
+      <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
+    </Lib>
+    <PreBuildEvent>
+      <Command>..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_generic_vs /Fh ..\..\code\renderer\hlsl\generic_vs.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_ps /Fh ..\..\code\renderer\hlsl\generic_ps.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_a_ps /Fh ..\..\code\renderer\hlsl\generic_a_ps.h /O3 /DCNQ3_A2C=1 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_d_ps /Fh ..\..\code\renderer\hlsl\generic_d_ps.h /O3 /DCNQ3_DITHER=1 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\generic.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_generic_ad_ps /Fh ..\..\code\renderer\hlsl\generic_ad_ps.h /O3 /DCNQ3_A2C=1 /DCNQ3_DITHER=1 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\post.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_post_vs /Fh ..\..\code\renderer\hlsl\post_vs.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\post.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_post_ps /Fh ..\..\code\renderer\hlsl\post_ps.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\dl.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_dl_vs /Fh ..\..\code\renderer\hlsl\dl_vs.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\dl.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_dl_ps /Fh ..\..\code\renderer\hlsl\dl_ps.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\sprite.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_sprite_vs /Fh ..\..\code\renderer\hlsl\sprite_vs.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\sprite.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_sprite_ps /Fh ..\..\code\renderer\hlsl\sprite_ps.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\clear.hlsl /nologo /T vs_4_1 /E vs_main /Vn g_clear_vs /Fh ..\..\code\renderer\hlsl\clear_vs.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\clear.hlsl /nologo /T ps_4_1 /E ps_main /Vn g_clear_ps /Fh ..\..\code\renderer\hlsl\clear_ps.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\mip_start.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_start_cs /Fh ..\..\code\renderer\hlsl\mip_start_cs.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\mip_pass.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_pass_cs /Fh ..\..\code\renderer\hlsl\mip_pass_cs.h /O3 &amp;&amp; ..\compile_shader.cmd ..\..\code\renderer\hlsl\mip_end.hlsl /nologo /T cs_5_0 /E cs_main /Vn g_mip_end_cs /Fh ..\..\code\renderer\hlsl\mip_end_cs.h /O3</Command>
+    </PreBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <PreprocessorDefinitions>GLEW_STATIC;NDEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;QC=QC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\code\glew\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <Optimization>MinSpace</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <OmitFramePointers>true</OmitFramePointers>
+      <StringPooling>true</StringPooling>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <ExceptionHandling>false</ExceptionHandling>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <AdditionalOptions>/GL /arch:SSE2 %(AdditionalOptions)</AdditionalOptions>
+      <MinimalRebuild />
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

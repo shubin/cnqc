@@ -329,5 +329,8 @@
     <ClCompile Include="..\..\code\win32\win_syscon.cpp">
       <Filter>win32</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\code\win32\win_files.cpp">
+      <Filter>win32</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

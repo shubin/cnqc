@@ -248,9 +248,6 @@
     <ClCompile Include="..\..\code\client\cl_console.cpp">
       <Filter>client</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\code\client\cl_demo.cpp">
-      <Filter>client</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\code\client\cl_download.cpp">
       <Filter>client</Filter>
     </ClCompile>
@@ -419,5 +416,16 @@
     <ClCompile Include="..\..\code\win32\win_wndproc.cpp">
       <Filter>win32</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\code\win32\win_files.cpp">
+      <Filter>win32</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\client\cl_demo.cpp">
+      <Filter>client</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\..\code\win32\winquake.rc">
+      <Filter>win32</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>
