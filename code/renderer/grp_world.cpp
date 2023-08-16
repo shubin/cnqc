@@ -941,6 +941,9 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 	batchShadingRate = ShadingRate::SR_1x1;
 	batchOldShadingRate = ShadingRate::SR_1x1;
 
+	tess.numVertexes = 0;
+	tess.numIndexes = 0;
+
 	int ds;
 	const drawSurf_t* drawSurf;
 	for(ds = 0, drawSurf = drawSurfs; ds < surfCount; ++ds, ++drawSurf)
