@@ -311,7 +311,11 @@ static void RB_SurfaceLightningBolt()
 
 	for ( i = 0 ; i < 4 ; i++ ) {
 		vec3_t temp;
+#if defined( QC )
+		RB_LightningBoltFace( start, end, right, len, e->radius ? e->radius : 8 );
+#else // QC
 		RB_LightningBoltFace( start, end, right, len, 8 );
+#endif // QC
 		RotatePointAroundVector( temp, vec, right, 45 );
 		VectorCopy( temp, right );
 	}
