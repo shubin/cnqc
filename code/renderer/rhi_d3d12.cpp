@@ -27,21 +27,8 @@ to do:
 - use ID3D12DebugCommandList::AssertResourceState
 - git cherry-pick 693415a6e2f2f3789215ec037b15d505c5132fd4
 - git cherry-pick c75b2b27fa936854d27dadf458e3ec3b03829561
-- Intel 12th gen handling
-	https://www.intel.com/content/www/us/en/developer/articles/guide/12th-gen-intel-core-processor-gamedev-guide.html
-	https://github.com/GameTechDev/HybridDetect
-	- use GetSystemCpuSetInformation for info
-	- graph GetCurrentProcessorNumber to see where we're executing
-	- use SetThreadSelectedCpuSets
 - https://asawicki.info/news_1758_an_idea_for_visualization_of_frame_times
 - GPU resident vertex data for models: load on demand based on submitted { surface, shader } pairs
-- tool: live shader override editing
-- tool: shader trace with the pointed pixel being traced
-	render opaque to shader ID render target
-	render transparent to fragment buffer but only output for traced pixel
-		index texture not needed
-		only output depth and shader ID
-	run compute shader to load shader ID linked list into an array, sort it and write it out
 - reloading a map can lead to a TDR timeout
 	could it be related to the copy queue?
 	use PIX to capture and replay the bad command list?
@@ -58,8 +45,6 @@ to do:
 	draw opaques, locate the light stage and add the light buffer data to the light stage result
 - r_depthFade
 - r_dynamiclight
-- CMAA 2 integration?
-- SMAA S2x support?
 - when creating the root signature, validate that neither of the tables have any gap
 - use root signature 1.1 to use the hints that help the drivers optimize out static resources
 - is it possible to force Resource Binding Tier 2 somehow? are we supposed to run on old HW to test? :(
@@ -73,31 +58,7 @@ to do:
 - share structs between HLSL and C++ with .hlsli files -> change cbuffer to ConstantBuffer<MyStruct>
 - share texture and sampler array sizes between HLSL and C++ with .hlsli files
 - what's the actual fog curve used by Q3?
-- depth pre-pass: world entities can reference world surfaces
-	-> must ignore or figure out which surfaces are referenced by entities...
 - roq video textures support?
-X CG_INIT sets r_swapinterval to speed up the load, but it doesn't work anymore
-	-> just as fast, still fixes the issue for older clients
-X committed resources: depth buffer, render targets, static geometry - optional: large textures
-X figure out brightness/gamma differences between D3D12 & D3D11
-	-> UI uses CGEN_VERTEX / AGEN_VERTEX
-	-> tr.identityLight usage is missing
-
-rejected:
-- NvAPI_D3D_GetLatency to get (simulated) input to display latency
-	-> nope, it doesn't say when the frame gets displayed or even queued for display
-- NvAPI_D3D_IsGSyncCapable / NvAPI_D3D_IsGSyncActive for diagnostics
-	-> nope, that's for D3D9-11
-- textures on cache-coherent UMA:
-	1. create with undefined layout and CPU access (custom heap)
-	2. upload data in 1 step with WriteToSubresource
-	-> nope, render times are worse (map loads were faster, but the render time hit was not small)
-- simplify by using the direct queue for everything
-	-> it makes almost no difference to either the code or map load performance
-- IDXGISwapChain::SetFullScreenState(TRUE) with the borderless window taking up the entire screen
-	and ALLOW_TEARING set on both the flip mode swap chain and Present() flags
-	will enable true immediate independent flip mode and give us the lowest latency possible
-	-> not using SetFullScreenState is perfectly fine
 */
 
 /*
@@ -1312,7 +1273,7 @@ namespace RHI
 	{
 		UINT flags;
 		UINT swapInterval;
-		if(r_swapInterval->integer)
+		if(r_vsync->integer)
 		{
 			swapInterval = 1;
 			flags = 0;
@@ -1363,7 +1324,7 @@ namespace RHI
 		else if(presentError == PE_DEVICE_RESET)
 		{
 			ri.Printf(PRINT_ERROR, "Direct3D device was reset! Restarting the video system...");
-			Cmd_ExecuteString("vid_restart;");
+			Cbuf_AddText("vid_restart\n");
 		}
 	}
 
@@ -1843,7 +1804,7 @@ namespace RHI
 		const Buffer& buffer = rhi.buffers.Get(hbuffer);
 
 #if defined(D3D_DEBUG)
-		if(r_swapInterval->integer)
+		if(r_vsync->integer)
 		{
 			Q_assert(rhi.frameIndex == 0);
 			Q_assert(frameIndex == 0);
@@ -1936,7 +1897,7 @@ namespace RHI
 			rhie.monitorFrameDurationMS = 0.0f;
 		}
 
-		if(r_swapInterval->integer == 0)
+		if(r_vsync->integer == 0)
 		{
 			const float maxFPS = ri.Cvar_Get("com_maxfps", "125", CVAR_ARCHIVE)->value;
 			rhie.targetFrameDurationMS = 1000.0f / maxFPS;
@@ -2039,7 +2000,7 @@ namespace RHI
 	static UINT GetSwapChainFlags()
 	{
 		UINT flags = 0;
-		if(r_swapInterval->integer)
+		if(r_vsync->integer)
 		{
 			flags = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
 		}
@@ -2067,7 +2028,7 @@ namespace RHI
 	{
 		if(rhi.frameLatencyWaitableObject != NULL && rhi.frameLatencyWaitNeeded)
 		{
-			Q_assert(r_swapInterval->integer != 0);
+			Q_assert(r_vsync->integer != 0);
 			WaitForSingleObjectEx(rhi.frameLatencyWaitableObject, INFINITE, TRUE);
 			rhi.frameLatencyWaitNeeded = false;
 		}
@@ -2167,8 +2128,8 @@ namespace RHI
 				const char* version = "Unknown";
 				switch(root0.HighestVersion)
 				{
-					case D3D_ROOT_SIGNATURE_VERSION_1_0: version = "1.0";
-					case D3D_ROOT_SIGNATURE_VERSION_1_1: version = "1.1";
+					case D3D_ROOT_SIGNATURE_VERSION_1_0: version = "1.0"; break;
+					case D3D_ROOT_SIGNATURE_VERSION_1_1: version = "1.1"; break;
 					default: break;
 				}
 				TableRow(2, "Root signature version", version);
@@ -2180,9 +2141,9 @@ namespace RHI
 				const char* tier = "Unknown";
 				switch(options5.RenderPassesTier)
 				{
-					case D3D12_RENDER_PASS_TIER_0: tier = "0";
-					case D3D12_RENDER_PASS_TIER_1: tier = "1";
-					case D3D12_RENDER_PASS_TIER_2: tier = "2";
+					case D3D12_RENDER_PASS_TIER_0: tier = "0"; break;
+					case D3D12_RENDER_PASS_TIER_1: tier = "1"; break;
+					case D3D12_RENDER_PASS_TIER_2: tier = "2"; break;
 					default: break;
 				}
 				TableRow(2, "Render passes tier", tier);
@@ -2190,9 +2151,9 @@ namespace RHI
 				tier = "Unknown";
 				switch(options5.RaytracingTier)
 				{
-					case D3D12_RAYTRACING_TIER_NOT_SUPPORTED: tier = "Not supported";
-					case D3D12_RAYTRACING_TIER_1_0: tier = "1.0";
-					case D3D12_RAYTRACING_TIER_1_1: tier = "1.1";
+					case D3D12_RAYTRACING_TIER_NOT_SUPPORTED: tier = "Not supported"; break;
+					case D3D12_RAYTRACING_TIER_1_0: tier = "1.0"; break;
+					case D3D12_RAYTRACING_TIER_1_1: tier = "1.1"; break;
 					default: break;
 				}
 				TableRow(2, "Raytracing (DXR) tier", tier);
@@ -2204,12 +2165,12 @@ namespace RHI
 				const char* tier = "Unknown";
 				switch(options6.VariableShadingRateTier)
 				{
-					case D3D12_VARIABLE_SHADING_RATE_TIER_NOT_SUPPORTED: tier = "N/A";
-					case D3D12_VARIABLE_SHADING_RATE_TIER_1: tier = "1";
-					case D3D12_VARIABLE_SHADING_RATE_TIER_2: tier = "2";
+					case D3D12_VARIABLE_SHADING_RATE_TIER_NOT_SUPPORTED: tier = "N/A"; break;
+					case D3D12_VARIABLE_SHADING_RATE_TIER_1: tier = "1"; break;
+					case D3D12_VARIABLE_SHADING_RATE_TIER_2: tier = "2"; break;
 					default: break;
 				}
-				TableRow(2, "Variable shading rate (VRS) tier", tier);
+				TableRow(2, "Variable-rate shading (VRS) tier", tier);
 
 				TableRow(2, "VRS: 2x4, 4x2, 4x4 support", options6.AdditionalShadingRatesSupported ? "YES" : "NO");
 			}
@@ -2340,7 +2301,7 @@ namespace RHI
 
 			// V-Sync toggles require changing the swap chain flags,
 			// which means ResizeBuffers can't be used
-			const bool vsync = r_swapInterval->integer != 0;
+			const bool vsync = r_vsync->integer != 0;
 			rhi.renderFrameCount = vsync ? 1 : 2;
 
 			if(glInfo.winWidth != desc.BufferDesc.Width || 
@@ -2601,7 +2562,7 @@ namespace RHI
 
 		rhi.isTearingSupported = IsTearingSupported();
 		rhi.swapChainBufferCount = 2;
-		rhi.renderFrameCount = r_swapInterval->integer ? 1 : 2;
+		rhi.renderFrameCount = r_vsync->integer ? 1 : 2;
 
 		{
 			const UINT flags = GetSwapChainFlags();
@@ -2624,13 +2585,13 @@ namespace RHI
 			swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 			swapChainDesc.Windowed = TRUE;
 			D3D(rhi.factory->CreateSwapChain(rhi.mainCommandQueue, &swapChainDesc, &dxgiSwapChain));
-			rhi.vsync = r_swapInterval->integer != 0;
+			rhi.vsync = r_vsync->integer != 0;
 
 			D3D(dxgiSwapChain->QueryInterface(IID_PPV_ARGS(&rhi.swapChain)));
 			rhi.swapChainBufferIndex = rhi.swapChain->GetCurrentBackBufferIndex();
 			COM_RELEASE(dxgiSwapChain);
 
-			if(r_swapInterval->integer)
+			if(r_vsync->integer)
 			{
 				rhi.frameLatencyWaitableObject = rhi.swapChain->GetFrameLatencyWaitableObject();
 				rhi.frameLatencyWaitNeeded = true;

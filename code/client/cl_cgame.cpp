@@ -769,6 +769,7 @@ void CL_InitCGame()
 	CL_SetMaxFPS( 20 );
 	VM_Call( cgvm, CG_INIT, clc.serverMessageSequence, clc.lastExecutedServerCommand, clc.clientNum );
 	CL_SetMaxFPS( 0 );
+	CL_SetMenuData( qtrue );
 
 	// send a usercmd this frame, which will cause the server to send us the first snapshot
 	cls.state = CA_PRIMED;

@@ -31,8 +31,6 @@ screenshotCommand_t	r_delayedScreenshot;
 qbool				r_delayedScreenshotPending = qfalse;
 int					r_delayedScreenshotFrame = 0;
 
-cvar_t	*r_verbose;
-
 cvar_t	*r_displayRefresh;
 
 cvar_t	*r_detailTextures;
@@ -52,7 +50,6 @@ cvar_t	*r_lodscale;
 cvar_t	*r_norefresh;
 cvar_t	*r_drawentities;
 cvar_t	*r_drawworld;
-cvar_t	*r_speeds;
 cvar_t	*r_fullbright;
 cvar_t	*r_lightmap;
 cvar_t	*r_lightmapGreyscale;
@@ -60,6 +57,7 @@ cvar_t	*r_mapGreyscale;
 cvar_t	*r_mapGreyscaleCTF;
 cvar_t	*r_sleepThreshold;
 cvar_t	*r_shadingRate;
+cvar_t	*r_guiFont;
 cvar_t	*r_novis;
 cvar_t	*r_nocull;
 cvar_t	*r_nocurves;
@@ -90,7 +88,7 @@ cvar_t	*r_showsky;
 cvar_t	*r_showtris;
 cvar_t	*r_shownormals;
 cvar_t	*r_clear;
-cvar_t	*r_swapInterval;
+cvar_t	*r_vsync;
 cvar_t	*r_lego;
 cvar_t	*r_lockpvs;
 cvar_t	*r_noportals;
@@ -101,7 +99,6 @@ cvar_t	*r_lodCurveError;
 
 cvar_t	*r_width;
 cvar_t	*r_height;
-cvar_t	*r_customaspect;
 
 cvar_t	*r_brightness;
 cvar_t	*r_mapBrightness;
@@ -336,91 +333,349 @@ static const cvarTableItem_t r_cvars[] =
 	//
 	// latched and archived variables
 	//
-	{ &r_mipGenFilter, "r_mipGenFilter", "L4", CVAR_ARCHIVE | CVAR_LATCH, CVART_STRING, NULL, NULL, help_r_mipGenFilter },
-	{ &r_mipGenGamma, "r_mipGenGamma", "1.8", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "1.0", "3.0", help_r_mipGenGamma },
-	{ &r_ext_max_anisotropy, "r_ext_max_anisotropy", "16", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "16", help_r_ext_max_anisotropy },
-	{ &r_roundImagesDown, "r_roundImagesDown", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_roundImagesDown },
-	{ &r_colorMipLevels, "r_colorMipLevels", "0", CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_colorMipLevels },
-	{ &r_detailTextures, "r_detailtextures", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, "enables detail textures shader stages" },
-	{ &r_mode, "r_mode", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", XSTRING(VIDEOMODE_MAX), help_r_mode },
-	{ &r_brightness, "r_brightness", "2", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "0.25", "32", "overall brightness" },
-	// should be called r_lightmapBrightness
-	{ &r_mapBrightness, "r_mapBrightness", "2", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "0.25", "32", "brightness of lightmap textures" },
-	// should be called r_textureBrightness
-	{ &r_intensity, "r_intensity", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "1", NULL, "brightness of non-lightmap map textures" },
-	{ &r_fullscreen, "r_fullscreen", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, "full-screen mode" },
-	{ &r_width, "r_width", "1280", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "320", "65535", "custom window/render width" },
-	{ &r_height, "r_height", "720", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "240", "65535", "custom window/render height" },
-	{ &r_customaspect, "r_customaspect", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0.1", "10", "custom pixel aspect ratio" },
-	{ &r_vertexLight, "r_vertexLight", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, "disables lightmap texture blending" },
-	// note that r_subdivisions > 64 will create rendering artefacts because you'll see the other side of a curved surface when against it
-	{ &r_subdivisions, "r_subdivisions", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "1", "64", help_r_subdivisions },
-	{ &r_fullbright, "r_fullbright", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_fullbright },
-	{ &r_lightmap, "r_lightmap", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_lightmap },
-	{ &r_lightmapGreyscale, "r_lightmapGreyscale", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "0", "1", "how desaturated the lightmap looks" },
-	{ &r_depthFade, "r_depthFade", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_depthFade },
-	{ &r_dither, "r_dither", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_dither },
-	{ &r_rtColorFormat, "r_rtColorFormat", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", XSTRING(RTCF_MAX), help_r_rtColorFormat },
-	{ &r_depthClamp, "r_depthClamp", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_depthClamp },
-	{ &r_gpuPreference, "r_gpuPreference", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", XSTRING(GPUPREF_MAX), help_r_gpuPreference},
-	{ &r_swapInterval, "r_swapInterval", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, "enables v-sync" },
+	{
+		&r_mipGenFilter, "r_mipGenFilter", "L4", CVAR_ARCHIVE | CVAR_LATCH, CVART_STRING, NULL, NULL, "mip-map generation filter",
+		"Mip-map filter", CVARCAT_GRAPHICS, "Texture sharpness in the distance", "",
+		CVAR_GUI_VALUE("L4", "Lanczos 4", "Very sharp, 4-pixel radius")
+		CVAR_GUI_VALUE("L3", "Lanczos 3", "Very sharp, 3-pixel radius")
+		CVAR_GUI_VALUE("BL", "Bi-linear", "Blurry, 1-pixel radius")
+		CVAR_GUI_VALUE("MN2", "Mitchell-Netravali 2", "Balanced, 2-pixel radius")
+		CVAR_GUI_VALUE("BH4", "3-term Blackman-Harris 4", "Balanced, 4-pixel radius")
+		CVAR_GUI_VALUE("BH3", "3-term Blackman-Harris 3", "Balanced, 3-pixel radius")
+		CVAR_GUI_VALUE("BH2", "3-term Blackman-Harris 2", "Balanced, 2-pixel radius")
+		CVAR_GUI_VALUE("T2", "Tent 2 (1/3 2/3)", "Blurry, 2-pixel radius")
+	},
+	{
+		&r_mipGenGamma, "r_mipGenGamma", "1.8", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "1.0", "3.0", help_r_mipGenGamma,
+		"Mip-map gamma", CVARCAT_GRAPHICS, "Texture contrast in the distance", ""
+	},
+	{
+		&r_ext_max_anisotropy, "r_ext_max_anisotropy", "16", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", "16", help_r_ext_max_anisotropy,
+		"Texture anisotropy", CVARCAT_GRAPHICS | CVARCAT_PERFORMANCE, "Texture sharpness at oblique angles", ""
+	},
+	{
+		&r_roundImagesDown, "r_roundImagesDown", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_roundImagesDown,
+		"Low-resolution resampling", CVARCAT_GRAPHICS, "Lowers the resolution of non-power of two textures"
+	},
+	{
+		&r_colorMipLevels, "r_colorMipLevels", "0", CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_colorMipLevels,
+		"Colorize texture mips", CVARCAT_GRAPHICS | CVARCAT_DEBUGGING, "", ""
+	},
+	{
+		&r_detailTextures, "r_detailtextures", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, "enables detail textures shader stages",
+		"Enable detail textures", CVARCAT_GRAPHICS, "It also toggles decals on some maps", ""
+	},
+	{
+		&r_mode, "r_mode", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", XSTRING(VIDEOMODE_MAX), help_r_mode,
+		"Full-screen video mode", CVARCAT_DISPLAY, "", "",
+		CVAR_GUI_VALUE("0", "Native res", "Same resolution as on the desktop")
+		CVAR_GUI_VALUE("1", "Custom res/upscale", "Custom resolution, upsampled by CNQ3")
+		CVAR_GUI_VALUE("2", "Video mode change", "Custom resolution, upsampled by the system\n\n"
+			"Only use this on monitors that can reach higher refresh rates at lower resolutions.\n"
+			"It makes alt-tabbing slow.")
+	},
+	{
+		&r_brightness, "r_brightness", "2", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "0.25", "32", "overall brightness",
+		"Screen brightness", CVARCAT_GRAPHICS, "", ""
+	},
+	{
+		// should be called r_lightmapBrightness
+		&r_mapBrightness, "r_mapBrightness", "2", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "0.25", "32", "brightness of lightmap textures",
+		"Lightmap brightness", CVARCAT_GRAPHICS, "Applies to lightmap textures only", ""
+	},
+	{
+		// should be called r_textureBrightness
+		&r_intensity, "r_intensity", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "1", "32", "brightness of non-lightmap map textures",
+		"Texture brightness", CVARCAT_GRAPHICS, "Applies to non-lightmap textures only", ""
+	},
+	{
+		&r_fullscreen, "r_fullscreen", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, "full-screen mode",
+		"Fullscreen", CVARCAT_DISPLAY, "", "",
+		CVAR_GUI_VALUE("0", "Windowed", "")
+		CVAR_GUI_VALUE("1", "Fullscreen", "")
+	},
+	{
+		&r_width, "r_width", "1280", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "320", "65535", "custom window/render width",
+		"Window/render width", CVARCAT_DISPLAY, "Used in windowed mode and non-native full-screen", ""
+	},
+	{
+		&r_height, "r_height", "720", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "240", "65535", "custom window/render height",
+		"Window/render height", CVARCAT_DISPLAY, "Used in windowed mode and non-native full-screen", ""
+	},
+	{
+		&r_vertexLight, "r_vertexLight", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, "disables lightmap texture blending",
+		"Vertex lighting", CVARCAT_GRAPHICS, "Uses per-vertex lighting data instead of lightmaps", ""
+	},
+	{
+		// note that r_subdivisions > 64 will create rendering artefacts because you'll see the other side of a curved surface when against it
+		&r_subdivisions, "r_subdivisions", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "1", "64", help_r_subdivisions,
+		"Patch tessellation step size", CVARCAT_GRAPHICS | CVARCAT_PERFORMANCE, "Lower values produce smoother curves", ""
+	},
+	{
+		&r_fullbright, "r_fullbright", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_fullbright,
+		"Fullbright lighting", CVARCAT_GRAPHICS, "Lightmap textures get replaced by white/grey images", ""
+	},
+	{
+		&r_lightmap, "r_lightmap", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_lightmap,
+		"Draw lightmaps", CVARCAT_GRAPHICS, "Draws lightmap data only when available", ""
+	},
+	{
+		&r_lightmapGreyscale, "r_lightmapGreyscale", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "0", "1", "how desaturated the lightmap looks",
+		"Lightmap desaturation", CVARCAT_GRAPHICS, "Desaturates the lightmap data", ""
+	},
+	// @TODO:
+	//{
+		//&r_depthFade, "r_depthFade", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_depthFade,
+		//"", CVARCAT_GRAPHICS | CVARCAT_PERFORMANCE, "", ""
+	//},
+	{
+		&r_dither, "r_dither", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_dither,
+		"Dither", CVARCAT_GRAPHICS | CVARCAT_PERFORMANCE, "Adds noise to fight color banding artifacts", ""
+	},
+	{
+		&r_rtColorFormat, "r_rtColorFormat", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", XSTRING(RTCF_MAX), help_r_rtColorFormat,
+		"Render target format", CVARCAT_GRAPHICS | CVARCAT_PERFORMANCE, "Controls the number of bits per pixel for the RGBA channels", "",
+		CVAR_GUI_VALUE("0", "R8G8B8A8", "High perf, standard quality")
+		CVAR_GUI_VALUE("1", "R10G10B10A2", "High perf, better colors, worse alpha")
+		CVAR_GUI_VALUE("2", "R16G16B16A16", "Low perf, better colors and alpha")
+	},
+	{
+		&r_depthClamp, "r_depthClamp", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_depthClamp,
+		"Depth clamping", CVARCAT_GRAPHICS, "Enable if you want a horizontal FOV larger than 130", ""
+	},
+	{
+		&r_gpuPreference, "r_gpuPreference", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_INTEGER, "0", XSTRING(GPUPREF_MAX), help_r_gpuPreference,
+		"GPU selection", CVARCAT_DISPLAY | CVARCAT_PERFORMANCE, "Choose between low-power and high-performance devices", "",
+		CVAR_GUI_VALUE("0", "High performance", "")
+		CVAR_GUI_VALUE("1", "Low power", "")
+		CVAR_GUI_VALUE("2", "None", "")
+	},
+	{
+		&r_vsync, "r_vsync", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, "enables v-sync",
+		"V-Sync", CVARCAT_DISPLAY | CVARCAT_PERFORMANCE, "Enabling locks the framerate to the monitor's refresh rate", ""
+		CVAR_GUI_VALUE("0", "Frame cap", "The framerate is capped by CNQ3's own limiter")
+		CVAR_GUI_VALUE("1", "V-Sync", "The framerate matches the monitor's refresh rate")
+	},
 
 	//
 	// latched variables that can only change over a restart
 	//
-	{ &r_displayRefresh, "r_displayRefresh", "0", CVAR_LATCH, CVART_INTEGER, "0", "480", S_COLOR_VAL "0 " S_COLOR_HELP "lets the driver decide" },
-	{ &r_singleShader, "r_singleShader", "0", CVAR_CHEAT | CVAR_LATCH },
+	{
+		&r_displayRefresh, "r_displayRefresh", "0", CVAR_LATCH, CVART_INTEGER, "0", "480", S_COLOR_VAL "0 " S_COLOR_HELP "lets the driver decide",
+		"Refresh rate", CVARCAT_DISPLAY, "0 to let the driver decide", "Only available in fullscreen with video mode change"
+	},
+	{
+		&r_singleShader, "r_singleShader", "0", CVAR_CHEAT | CVAR_LATCH, CVART_BOOL, NULL, NULL, "forces the default shader on all world surfaces except the sky",
+		"Force default shader", CVARCAT_GRAPHICS | CVARCAT_DEBUGGING, "Forces it on all world surfaces except the sky", ""
+	},
 
 	//
 	// archived variables that can change at any time
 	//
-	{ &r_smaa, "r_smaa", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "4", help_r_smaa },
-	{ &r_picmip, "r_picmip", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "16", help_r_picmip },
-	{ &r_blitMode, "r_blitMode", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", XSTRING(BLITMODE_MAX), help_r_blitMode },
-	{ &r_lodbias, "r_lodbias", "-2", CVAR_ARCHIVE, CVART_INTEGER, "-16", "16", help_r_lodbias },
-	{ &r_ignoreShaderSortKey, "r_ignoreShaderSortKey", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_ignoreShaderSortKey },
-	{ &r_fastsky, "r_fastsky", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_fastsky },
-	{ &r_noportals, "r_noportals", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_noportals },
-	{ &r_dynamiclight, "r_dynamiclight", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "enables dynamic lights" },
-	{ &r_lego, "r_lego", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "LEGO(R) texture filtering" },
-	{ &r_gamma, "r_gamma", "1.2", CVAR_ARCHIVE, CVART_FLOAT, "0.5", "3", help_r_gamma },
-	{ &r_greyscale, "r_greyscale", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", "1", "how desaturated the final image looks" },
-	{ &r_ditherStrength, "r_ditherStrength", "1.0", CVAR_ARCHIVE, CVART_FLOAT, "0.125", "8.0", help_r_ditherStrength },
-	{ &r_transpSort, "r_transpSort", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_transpSort },
-	{ &r_lodCurveError, "r_lodCurveError", "2000", CVAR_ARCHIVE, CVART_FLOAT, "250", "10000", "curved surfaces LOD scale" },
-	{ &r_mapGreyscale, "r_mapGreyscale", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", "1", "how desaturated the map looks" },
-	{ &r_mapGreyscaleCTF, "r_mapGreyscaleCTF", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", "1", help_r_mapGreyscaleCTF },
-	{ &r_sleepThreshold, "r_sleepThreshold", "2500", CVAR_ARCHIVE, CVART_INTEGER, "2000", "4000", help_r_sleepThreshold },
-	{ &r_shadingRate, "r_shadingRate", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "6", help_r_shadingRate },
+	{
+		&r_smaa, "r_smaa", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "4", help_r_smaa,
+		"SMAA", CVARCAT_GRAPHICS | CVARCAT_PERFORMANCE, "Enhanced sub-pixel morphological anti-aliasing", "",
+		CVAR_GUI_VALUE("0", "Disabled", "")
+		CVAR_GUI_VALUE("1", "Low quality", "")
+		CVAR_GUI_VALUE("2", "Medium quality", "")
+		CVAR_GUI_VALUE("3", "High quality", "")
+		CVAR_GUI_VALUE("4", "Ultra quality", "")
+	},
+	{
+		&r_picmip, "r_picmip", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "16", help_r_picmip,
+		"Picmip", CVARCAT_GRAPHICS | CVARCAT_PERFORMANCE, "Higher numbers make for blurrier textures", ""
+	},
+	{
+		&r_blitMode, "r_blitMode", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", XSTRING(BLITMODE_MAX), help_r_blitMode,
+		"Fullscreen blit mode", CVARCAT_DISPLAY, "Dictates how the image gets upsampled", "",
+		CVAR_GUI_VALUE("0", "Scaled to fit", "Preserves aspect ratio -> black bars")
+		CVAR_GUI_VALUE("1", "Centered", "No scaling at all")
+		CVAR_GUI_VALUE("2", "Stretched", "Takes the entire screen -> no black bars")
+	},
+	{
+		&r_lodbias, "r_lodbias", "-2", CVAR_ARCHIVE, CVART_INTEGER, "-2", "2", help_r_lodbias,
+		"MD3 LoD bias", CVARCAT_GRAPHICS, "Applies to items and player models\nLower means more detail", ""
+	},
+	{
+		&r_ignoreShaderSortKey, "r_ignoreShaderSortKey", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_ignoreShaderSortKey,
+		"Ignore shader draw order", CVARCAT_GRAPHICS, "All transparent surfaces are sorted by depth", ""
+	},
+	{
+		&r_fastsky, "r_fastsky", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_fastsky,
+		"Fast sky", CVARCAT_GRAPHICS | CVARCAT_PERFORMANCE, "Draws the sky and portal surfaces in black", ""
+	},
+	{
+		&r_noportals, "r_noportals", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_noportals,
+		"Disable portal rendering", CVARCAT_GRAPHICS, "Draws teleporter and mirror surfaces in black", ""
+	},
+	{
+		&r_dynamiclight, "r_dynamiclight", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "enables dynamic lights",
+		"", 0, "", "" // @TODO: CVARCAT_GRAPHICS | CVARCAT_PERFORMANCE once implemented
+	},
+	{
+		&r_lego, "r_lego", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "LEGO(R) texture filtering",
+		"LEGO(R) textures", CVARCAT_GRAPHICS, "Makes textures look blocky", "Forces nearest neighbor texture filtering"
+	},
+	{
+		&r_gamma, "r_gamma", "1.2", CVAR_ARCHIVE, CVART_FLOAT, "0.5", "3", help_r_gamma,
+		"Screen gamma", CVARCAT_GRAPHICS, "", ""
+	},
+	{
+		&r_greyscale, "r_greyscale", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", "1", "how desaturated the final image looks",
+		"Screen desaturation", CVARCAT_GRAPHICS, "", ""
+	},
+	{
+		&r_ditherStrength, "r_ditherStrength", "1.0", CVAR_ARCHIVE, CVART_FLOAT, "0.125", "8.0", help_r_ditherStrength,
+		"Dither strength", CVARCAT_GRAPHICS, "Amount of noise added to fight color banding", ""
+	},
+	{
+		&r_transpSort, "r_transpSort", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_r_transpSort,
+		"Transparent surface sorting", CVARCAT_GRAPHICS, "", "",
+		CVAR_GUI_VALUE("0", "Sort dynamic", "")
+		CVAR_GUI_VALUE("1", "Sort all", "")
+	},
+	{
+		&r_lodCurveError, "r_lodCurveError", "2000", CVAR_ARCHIVE, CVART_FLOAT, "250", "10000", "curved surfaces LOD scale",
+		"Curve LoD scale", CVARCAT_GRAPHICS | CVARCAT_PERFORMANCE, "Higher is more detailed", ""
+	},
+	{
+		&r_mapGreyscale, "r_mapGreyscale", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", "1", "how desaturated the map looks",
+		"Non-CTF map desaturation", CVARCAT_GRAPHICS, "Desaturates non-CTF world surfaces", "CTF surfaces are the red/blue base banners/markers"
+	},
+	{
+		&r_mapGreyscaleCTF, "r_mapGreyscaleCTF", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", "1", help_r_mapGreyscaleCTF,
+		"CTF map desaturation", CVARCAT_GRAPHICS, "Desaturates CTF world surfaces", "CTF surfaces are the red/blue base banners/markers"
+	},
+	{
+		&r_sleepThreshold, "r_sleepThreshold", "2500", CVAR_ARCHIVE, CVART_INTEGER, "2000", "4000", help_r_sleepThreshold,
+		"Frame sleep threshold", CVARCAT_GRAPHICS | CVARCAT_PERFORMANCE, "Higher means more consistent frame times but higher CPU usage",
+		"This is the time cushion (in microseconds) for frame sleep.\n"
+		"It's a trade-off between frame time consistency and CPU usage.\n"
+		"Set to 2000 if you have a struggling old/low-power CPU.\n"
+		"2500 should be enough to deal with delayed thread wake-ups.\n"
+		"Use the frame graph to confirm that higher values help on your system."
+	},
+	{
+		&r_shadingRate, "r_shadingRate", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "6", help_r_shadingRate,
+		"Shading rate", CVARCAT_GRAPHICS | CVARCAT_PERFORMANCE, "Variable-Rate Shading (VRS) mode",
+		"The numbers are the horizontal and vertical subsampling factors.\n"
+		"1x1 is forced for the sky, nopicmipped sprites (e.g. simple items)\n"
+		"and nopicmipped alpha tested surfaces (e.g. grates).\n"
+		"If extended modes are not supported, 2x2 is used instead.\n"
+		"Prefer horizontal subsampling as many maps have textures\n"
+		"with thin horizontal lines, which become an aliased mess when\n"
+		"vertically subsampled.",
+		CVAR_GUI_VALUE("0", "Off", "1x horizontal, 1x vertical")
+		CVAR_GUI_VALUE("1", "2x1", "2x horizontal, 1x vertical")
+		CVAR_GUI_VALUE("2", "1x2", "1x horizontal, 2x vertical")
+		CVAR_GUI_VALUE("3", "2x2", "2x horizontal, 2x vertical")
+		CVAR_GUI_VALUE("4", "4x2", "4x horizontal, 2x vertical")
+		CVAR_GUI_VALUE("5", "2x4", "2x horizontal, 4x vertical")
+		CVAR_GUI_VALUE("6", "4x4", "4x horizontal, 4x vertical")
+	},
+	{
+		&r_guiFont, "r_guiFont", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "1", help_r_guiFont,
+		"GUI font", CVARCAT_GUI, "", "",
+		CVAR_GUI_VALUE("0", "Proggy Clean (13px)", "")
+		CVAR_GUI_VALUE("1", "Sweet16 Mono (16px)", "")
+	},
 
 	//
 	// temporary variables that can change at any time
 	//
-	{ &r_ambientScale, "r_ambientScale", "0.6", CVAR_CHEAT, CVART_FLOAT, "0", NULL, "entity ambient light scale" },
-	{ &r_directedScale, "r_directedScale", "1", CVAR_CHEAT, CVART_FLOAT, "0", NULL, "entity directed light scale" },
-	{ &r_uiFullScreen, "r_uifullscreen", "0", CVAR_TEMP, CVART_BOOL }, // keeping it around in case we enable other mods again
-	{ &r_debugLight, "r_debuglight", "0", CVAR_TEMP, CVART_BOOL, NULL, NULL, "prints entity light values" },
-	{ &r_debugSort, "r_debugSort", "0", CVAR_CHEAT, CVART_FLOAT, "0", NULL, "doesn't render shaders with a greater sort key" },
-	{ &r_nocurves, "r_nocurves", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "doesn't render grid meshes" },
-	{ &r_drawworld, "r_drawworld", "1", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "disables rendering of world surfaces" },
-	{ &r_portalOnly, "r_portalOnly", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "only draws the mirrored plane" },
-	{ &r_lodscale, "r_lodscale", "5", CVAR_CHEAT, CVART_FLOAT, "1", "20", "LOD scale for MD3 models" },
-	{ &r_norefresh, "r_norefresh", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "disables 3D scene rendering" },
-	{ &r_drawentities, "r_drawentities", "1", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "enables entity rendering" },
-	{ &r_nocull, "r_nocull", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "disables frustum culling" },
-	{ &r_novis, "r_novis", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "disables PVS usage" },
-	{ &r_speeds, "r_speeds", "0", CVAR_TEMP, CVART_BOOL, NULL, NULL, "draws rendering performance counters" },
-	{ &r_verbose, "r_verbose", "0", CVAR_TEMP, CVART_BOOL, NULL, NULL, "prints additional information" },
-	{ &r_debugSurface, "r_debugSurface", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "draws collision models" },
-	{ &r_showsky, "r_showsky", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "forces sky in front of all surfaces" },
-	{ &r_showtris, "r_showtris", "0", CVAR_CHEAT, CVART_BITMASK, "0", XSTRING(SHOWTRIS_MAX), help_r_showtris },
-	{ &r_shownormals, "r_shownormals", "0", CVAR_CHEAT, CVART_BITMASK, "0", XSTRING(SHOWTRIS_MAX), help_r_shownormals },
-	{ &r_clear, "r_clear", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "clears to violet instead of black" },
-	{ &r_lockpvs, "r_lockpvs", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "helps visualize the current PVS' limits" },
-	{ &r_maxpolys, "r_maxpolys", XSTRING(DEFAULT_MAX_POLYS), 0, CVART_INTEGER, XSTRING(DEFAULT_MAX_POLYS), NULL, "maximum polygon count per frame" },
-	{ &r_maxpolyverts, "r_maxpolyverts", XSTRING(DEFAULT_MAX_POLYVERTS), 0, CVART_INTEGER, XSTRING(DEFAULT_MAX_POLYVERTS), NULL, "maximum polygon vertex count per frame" },
-	{ &r_debugUI, "r_debugUI", "0", CVAR_TEMP, CVART_BOOL, NULL, NULL, "displays the debug/profile GUI" },
-	{ &r_debugInput, "r_debugInput", "0", CVAR_TEMP, CVART_BOOL, NULL, NULL, "routes input to the debug/profile GUI" }
+	{
+		&r_ambientScale, "r_ambientScale", "0.6", CVAR_CHEAT, CVART_FLOAT, "0", NULL, "entity ambient light scale",
+		"", CVARCAT_GRAPHICS | CVARCAT_DEBUGGING, "", ""
+	},
+	{
+		&r_directedScale, "r_directedScale", "1", CVAR_CHEAT, CVART_FLOAT, "0", NULL, "entity directed light scale",
+		"", CVARCAT_GRAPHICS | CVARCAT_DEBUGGING, "", ""
+	},
+	{
+		// keeping it around in case we enable other mods again
+		&r_uiFullScreen, "r_uifullscreen", "0", CVAR_TEMP, CVART_BOOL, NULL, NULL, NULL,
+		"", 0, "", ""
+	},
+	{
+		&r_debugLight, "r_debuglight", "0", CVAR_TEMP, CVART_BOOL, NULL, NULL, "prints entity light values",
+		"", CVARCAT_GRAPHICS | CVARCAT_DEBUGGING, "", ""
+	},
+	{
+		&r_debugSort, "r_debugSort", "0", CVAR_CHEAT, CVART_FLOAT, "0", NULL, "doesn't render shaders with a greater sort key",
+		"", CVARCAT_GRAPHICS | CVARCAT_DEBUGGING, "", ""
+	},
+	{
+		&r_nocurves, "r_nocurves", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "doesn't render grid meshes",
+		"", CVARCAT_GRAPHICS | CVARCAT_DEBUGGING, "", ""
+	},
+	{
+		&r_drawworld, "r_drawworld", "1", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "disables rendering of world surfaces",
+		"", CVARCAT_GRAPHICS | CVARCAT_DEBUGGING, "", ""
+	},
+	{
+		&r_portalOnly, "r_portalOnly", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "only draws the mirrored plane",
+		"", CVARCAT_GRAPHICS | CVARCAT_DEBUGGING, "", ""
+	},
+	{
+		&r_lodscale, "r_lodscale", "5", CVAR_CHEAT, CVART_FLOAT, "1", "20", "LOD scale for MD3 models",
+		"", CVARCAT_GRAPHICS | CVARCAT_DEBUGGING, "", ""
+	},
+	{
+		&r_norefresh, "r_norefresh", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "disables 3D scene rendering",
+		"", CVARCAT_GRAPHICS | CVARCAT_DEBUGGING, "", ""
+	},
+	{
+		&r_drawentities, "r_drawentities", "1", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "enables entity rendering",
+		"", CVARCAT_GRAPHICS | CVARCAT_DEBUGGING, "", ""
+	},
+	{
+		&r_nocull, "r_nocull", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "disables frustum culling",
+		"", CVARCAT_GRAPHICS | CVARCAT_DEBUGGING, "", ""
+	},
+	{
+		&r_novis, "r_novis", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "disables PVS usage",
+		"", CVARCAT_GRAPHICS | CVARCAT_DEBUGGING, "", ""
+	},
+	{
+		&r_debugSurface, "r_debugSurface", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "draws collision models",
+		"", CVARCAT_GRAPHICS | CVARCAT_DEBUGGING, "", ""
+	},
+	{
+		&r_showsky, "r_showsky", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "forces sky in front of all surfaces",
+		"", CVARCAT_GRAPHICS | CVARCAT_DEBUGGING, "", ""
+	},
+	{
+		&r_showtris, "r_showtris", "0", CVAR_CHEAT, CVART_BITMASK, "0", XSTRING(SHOWTRIS_MAX), help_r_showtris,
+		"", CVARCAT_GRAPHICS | CVARCAT_DEBUGGING, "", ""
+	},
+	{
+		&r_shownormals, "r_shownormals", "0", CVAR_CHEAT, CVART_BITMASK, "0", XSTRING(SHOWTRIS_MAX), help_r_shownormals,
+		"", CVARCAT_GRAPHICS | CVARCAT_DEBUGGING, "", ""
+	},
+	{
+		&r_clear, "r_clear", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "clears to violet instead of black",
+		"", CVARCAT_GRAPHICS | CVARCAT_DEBUGGING, "", ""
+	},
+	{
+		&r_lockpvs, "r_lockpvs", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "helps visualize the current PVS' limits",
+		"", CVARCAT_GRAPHICS | CVARCAT_DEBUGGING, "", ""
+	},
+	{
+		&r_maxpolys, "r_maxpolys", XSTRING(DEFAULT_MAX_POLYS), 0, CVART_INTEGER, XSTRING(DEFAULT_MAX_POLYS), NULL, "maximum polygon count per frame",
+		"Max poly count", 0, "Maximum polygon count per frame", ""
+	},
+	{
+		&r_maxpolyverts, "r_maxpolyverts", XSTRING(DEFAULT_MAX_POLYVERTS), 0, CVART_INTEGER, XSTRING(DEFAULT_MAX_POLYVERTS), NULL, "maximum polygon vertex count per frame",
+		"Max poly vertices", 0, "Maximum polygon vertex count per frame", ""
+	},
+	{
+		&r_debugUI, "r_debugUI", "0", CVAR_TEMP, CVART_BOOL, NULL, NULL, "displays the debug/profile GUI",
+		"", 0, "", ""
+	},
+	{
+		&r_debugInput, "r_debugInput", "0", CVAR_TEMP, CVART_BOOL, NULL, NULL, "routes input to the debug/profile GUI",
+		"", 0, "", ""
+	}
 };
 
 
@@ -587,6 +842,45 @@ static qbool RE_IsDepthClampEnabled()
 }
 
 
+static void RE_ComputeCursorPosition( int* x, int* y )
+{ 
+	if ( r_fullscreen->integer != 1 || r_mode->integer != VIDEOMODE_UPSCALE ) {
+		return;
+	}
+
+	if ( r_blitMode->integer == BLITMODE_CENTERED ) {
+		*x -= (glInfo.winWidth - glConfig.vidWidth) / 2;
+		*y -= (glInfo.winHeight - glConfig.vidHeight) / 2;
+	} else if ( r_blitMode->integer == BLITMODE_STRETCHED ) {
+		const float sx = (float)glConfig.vidWidth / (float)glInfo.winWidth;
+		const float sy = (float)glConfig.vidHeight / (float)glInfo.winHeight;
+		*x *= sx;
+		*y *= sy;
+	} else if ( r_blitMode->integer == BLITMODE_ASPECT ) {
+		const float art = (float)glConfig.vidWidth / (float)glConfig.vidHeight;
+		const float arw = (float)glInfo.winWidth / (float)glInfo.winHeight;
+		float wsx, wsy, s;
+		if ( arw > art ) {
+			wsx = art / arw;
+			wsy = 1.0f;
+			s = (float)glConfig.vidHeight / (float)glInfo.winHeight;
+		} else {
+			wsx = 1.0f;
+			wsy = arw / art;
+			s = (float)glConfig.vidWidth / (float)glInfo.winWidth;
+		}
+		const int x0 = (glInfo.winWidth - (glInfo.winWidth * wsx)) * 0.5f;
+		const int y0 = (glInfo.winHeight - (glInfo.winHeight * wsy)) * 0.5f;
+		*x -= x0;
+		*y -= y0;
+		*x *= s;
+		*y *= s;
+	} else {
+		Q_assert( !"Invalid r_blitMode" );
+	}
+}
+
+
 const refexport_t* GetRefAPI( const refimport_t* rimp )
 {
 	static refexport_t re;
@@ -637,6 +931,8 @@ const refexport_t* GetRefAPI( const refimport_t* rimp )
 	re.ShouldSleep = RE_IsFrameSleepNeeded;
 
 	re.DepthClamp = RE_IsDepthClampEnabled;
+
+	re.ComputeCursorPosition = RE_ComputeCursorPosition;
 
 	return &re;
 }

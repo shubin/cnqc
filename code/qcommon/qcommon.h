@@ -469,6 +469,23 @@ typedef union {
 	floatValidator_s	f;
 } cvarValidator_t;
 
+struct cvarGuiValue_t {
+	const char* value;
+	const char* title;
+	const char* desc;
+	int valueLength;
+};
+
+struct cvarGui_t {
+	const char* title;
+	const char* desc;
+	const char* help;
+	cvarGuiValue_t* values;
+	int categories;
+	int numValues;
+	int maxValueLength;
+};
+
 // nothing outside the Cvar_*() functions should modify these fields!
 typedef struct cvar_s {
 	char		*name;
@@ -487,6 +504,7 @@ typedef struct cvar_s {
 	int			integer;			// atoi( string )
 	qbool		mismatchPrinted;	// have we already notified of mismatching initial values?
 	cvarValidator_t	validator;
+	cvarGui_t	gui;
 	struct cvar_s *next;
 	struct cvar_s *hashNext;
 } cvar_t;
@@ -500,7 +518,14 @@ typedef struct cvarTableItem_s {
 	const char*		min;
 	const char*		max;
 	const char*		help;
+	const char*		guiName;
+	int				categories;
+	const char*		guiDesc;
+	const char*		guiHelp;
+	const char*		guiValues;
 } cvarTableItem_t;
+
+#define CVARSET_BYPASSLATCH_BIT		1
 
 typedef void ( QDECL *printf_t )( PRINTF_FORMAT_STRING const char* fmt, ... );
 
@@ -518,6 +543,9 @@ void	Cvar_SetHelp( const char *var_name, const char *help );
 qbool	Cvar_GetHelp( const char **desc, const char **help, const char* var_name );	// qtrue if the cvar was found
 
 void	Cvar_SetRange( const char *var_name, cvarType_t type, const char *min, const char *max );
+
+void	Cvar_SetDataType( const char* cvarName, cvarType_t type );
+void	Cvar_SetMenuData( const char* cvarName, int categories, const char* title, const char* desc, const char* help, const char* values );
 
 void	Cvar_RegisterTable( const cvarTableItem_t* cvars, int count, module_t module );
 #define Cvar_RegisterArray(a, m)	Cvar_RegisterTable( a, ARRAY_LEN(a), m )
@@ -538,6 +566,9 @@ void	Cvar_Update( vmCvar_t *vmCvar );
 // updates an interpreted module's version of a cvar
 
 void	Cvar_Set( const char *var_name, const char *value );
+// will create the variable with no flags if it doesn't exist
+
+cvar_t* Cvar_Set2( const char *var_name, const char *value, int cvarSetFlags );
 // will create the variable with no flags if it doesn't exist
 
 void	Cvar_SetValue( const char *var_name, float value );
@@ -581,6 +612,8 @@ const char* Cvar_InfoString_Big( int bit );
 // returns an info string containing all the cvars that have the given bit set
 // in their flags ( CVAR_USERINFO, CVAR_SERVERINFO, CVAR_SYSTEMINFO, etc )
 void	Cvar_InfoStringBuffer( int bit, char *buff, int buffsize );
+
+cvar_t* Cvar_GetFirst();
 
 extern	int			cvar_modifiedFlags;
 // whenever a cvar is modifed, its flags will be OR'd into this, so
@@ -874,6 +907,8 @@ void		Com_StartupVariable( const char *match );
 // if match is NULL, all set commands will be executed, otherwise
 // only a set with the exact name.  Only used during startup.
 
+void		Com_ParseHexColor( float* color, const char* text, qbool hasAlpha );
+
 
 extern	cvar_t	*com_developer;
 extern	cvar_t	*com_dedicated;
@@ -1043,6 +1078,9 @@ void CL_DisableFramerateLimiter();
 // map loads might be interrupted by a drop-style error,
 // which would leave the FPS limit enabled until the next successful map load
 // this should therefore always be called by Com_Error
+
+void CL_SetMenuData( qboolean typeOnly );
+// sets GUI data for CVars registered by ui.qvm and cgame.qvm
 
 void Key_KeyNameCompletion( void (*callback)(const char *s) );
 // for /bind and /unbind auto-completion

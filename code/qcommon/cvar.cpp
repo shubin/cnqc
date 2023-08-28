@@ -183,33 +183,27 @@ void Cvar_EnumHelp( search_callback_t callback, const char* pattern )
 }
 
 
-static qbool Cvar_IsValidValuePrintNothing( cvar_t *var, const char *value )
+static qbool IsHexChar( char c )
 {
-	if ( var->type == CVART_STRING )
-		return qtrue;
-
-	if ( var->type == CVART_FLOAT ) {
-		float f;
-		if ( sscanf(value, "%f", &f) != 1 ||
-			!isfinite(f) ||
-			f < var->validator.f.min ||
-			f > var->validator.f.max)
-			return qfalse;
-	} else {
-		int i;
-		if ( sscanf(value, "%d", &i) != 1 ||
-			i < var->validator.i.min ||
-			i > var->validator.i.max)
-			return qfalse;
-	}
-
-	return qtrue;
+	return
+		( c >= 'a' && c <= 'f' ) ||
+		( c >= 'A' && c <= 'F' ) ||
+		( c >= '0' && c <= '9' );
 }
 
 
-static qbool Cvar_IsValidValuePrintWarnings( cvar_t *var, const char *value )
+static qbool IsCPMAColorCode( char c )
 {
-#define WARNING( Message )	{ Com_Printf( "^3%s: " Message "\n", var->name ); return qfalse; }
+	return
+		( c >= 'a' && c <= 'z' ) ||
+		( c >= 'A' && c <= 'Z' ) ||
+		( c >= '0' && c <= '9' );
+}
+
+
+static qbool Cvar_IsValidValue( cvar_t *var, const char *value, qboolean printWarnings )
+{
+#define WARNING( Message )	{ if ( printWarnings ) Com_Printf( "^3%s: " Message "\n", var->name ); return qfalse; }
 
 	if ( var->type == CVART_STRING )
 		return qtrue;
@@ -222,7 +216,7 @@ static qbool Cvar_IsValidValuePrintWarnings( cvar_t *var, const char *value )
 			WARNING( "float value too low" )
 		if( f > var->validator.f.max )
 			WARNING( "float value too high" )
-	} else {
+	} else if ( var->type == CVART_INTEGER || var->type == CVART_BITMASK ) {
 		int i;
 		if ( sscanf(value, "%d", &i) != 1 )
 			WARNING( "not a whole number (integer)" )
@@ -230,19 +224,44 @@ static qbool Cvar_IsValidValuePrintWarnings( cvar_t *var, const char *value )
 			WARNING( "integer value too low" )
 		if( i > var->validator.i.max )
 			WARNING( "integer value too high" )
+	} else if ( var->type == CVART_BOOL ) {
+		if ( strlen(value) != 1 )
+			WARNING( "must be a single char" );
+		if ( value[0] != '0' && value[0] != '1' )
+			WARNING( "must be 0 or 1" );
+	} else if ( var->type == CVART_COLOR_RGB ) {
+		if ( strlen(value) != 6 )
+			WARNING( "must be 6 hex chars" );
+		for ( int i = 0; i < 6; ++i ) {
+			if ( !IsHexChar(value[i]) )
+				WARNING( "must be 6 hex chars" );
+		}
+	} else if ( var->type == CVART_COLOR_RGBA ) {
+		if ( strlen(value) != 8 )
+			WARNING( "must be 8 hex chars" );
+		for ( int i = 0; i < 8; ++i ) {
+			if ( !IsHexChar(value[i]) )
+				WARNING( "must be 8 hex chars" );
+		}
+	} else if ( var->type == CVART_COLOR_CPMA ) {
+		if ( strlen(value) != 1 )
+			WARNING( "must be a single char" );
+		if ( !IsCPMAColorCode(value[0]) )
+			WARNING( "invalid color code, must be [a-zA-Z0-9]" );
+	} else if ( var->type == CVART_COLOR_CHBLS ) {
+		if ( strlen(value) != 5 )
+			WARNING( "must be 5 chars" );
+		for ( int i = 0; i < 5; ++i ) {
+			if ( !IsCPMAColorCode(value[i]) )
+				WARNING( "must be 5 color codes [a-zA-Z0-9]" );
+		}
+	} else {
+		Q_assert( !"Unsupported CVar type" );
 	}
 
 	return qtrue;
 
 #undef WARNING
-}
-
-
-static qbool Cvar_IsValidValue( cvar_t *var, const char *value, qbool printWarnings )
-{
-	return printWarnings ?
-		Cvar_IsValidValuePrintWarnings( var, value ) :
-		Cvar_IsValidValuePrintNothing( var, value );
 }
 
 
@@ -280,17 +299,13 @@ void Cvar_PrintDeprecationWarnings()
 }
 
 
-static cvar_t* Cvar_Set2( const char *var_name, const char *value, qbool force )
+cvar_t* Cvar_Set2( const char *var_name, const char *value, int cvarSetFlags )
 {
-//	Com_DPrintf( "Cvar_Set2: %s %s\n", var_name, value );
+	const qbool force = (cvarSetFlags & CVARSET_BYPASSLATCH_BIT) != 0;
 
 	if ( !Cvar_ValidateString( var_name ) ) {
 		Com_Printf( "invalid cvar name string: %s\n", var_name );
 		var_name = "BADNAME";
-	}
-
-	if ( !Q_stricmp( var_name, "r_swapInterval" ) ) {
-		force = qfalse;
 	}
 
 	cvar_t* var = Cvar_FindVar(var_name);
@@ -446,7 +461,7 @@ cvar_t* Cvar_Get( const char *var_name, const char *var_value, int flags )
 		if ( var->latchedString ) {
 			char* s = var->latchedString;
 			var->latchedString = NULL;	// otherwise cvar_set2 would free it
-			Cvar_Set2( var_name, s, qtrue );
+			Cvar_Set2( var_name, s, CVARSET_BYPASSLATCH_BIT );
 			Z_Free( s );
 		}
 
@@ -469,7 +484,7 @@ myT: we don't care about other mods and keeping it broken is not acceptable at a
 */
 		// CVAR_ROM always overrides
 		if (flags & CVAR_ROM) {
-			Cvar_Set2( var_name, var_value, qtrue );
+			Cvar_Set2( var_name, var_value, CVARSET_BYPASSLATCH_BIT );
 		}
 
 		return var;
@@ -622,6 +637,93 @@ void Cvar_SetRange( const char *var_name, cvarType_t type, const char *minStr, c
 }
 
 
+void Cvar_SetDataType( const char* cvarName, cvarType_t type )
+{
+	cvar_t* const cvar = Cvar_FindVar( cvarName );
+	if ( cvar == NULL )
+		return;
+
+#if defined(_DEBUG)
+	if ( cvar->type == CVART_STRING ) {
+		Q_assert(
+			type == CVART_STRING ||
+			type == CVART_COLOR_CPMA ||
+			type == CVART_COLOR_CHBLS ||
+			type == CVART_COLOR_RGB ||
+			type == CVART_COLOR_RGBA );
+	} else {
+		Q_assert( type == cvar->type );
+	}
+#endif
+	cvar->type = type;
+}
+
+
+void Cvar_SetMenuData( const char* cvarName, int categories, const char* title, const char* desc, const char* help, const char* values )
+{
+	cvar_t* const cvar = Cvar_FindVar( cvarName );
+	if ( cvar == NULL )
+		return;
+
+	cvarGui_t* const gui = &cvar->gui;
+	gui->categories = categories;
+	gui->title = title != NULL ? CopyString( title ) : NULL;
+	gui->desc = desc != NULL ? CopyString( desc ) : NULL;
+	gui->help = help != NULL ? CopyString( help ) : NULL;
+
+	if ( values == NULL )
+		return;
+
+	const char* const allStrings = values;
+	const char* string = NULL;
+	int maxLength = 0;
+	int numValues = 0;
+
+	string = allStrings;
+	for ( ; string[0] != '\0'; numValues++ ) {
+		int length = strlen( string );
+		maxLength = max( maxLength, length );
+		string += length + 1;
+		length = strlen( string );
+		string += length + 1;
+		length = strlen( string );
+		string += length + 1;
+	}
+
+#if defined(_DEBUG)
+	// make sure we have 1 set of strings for each possible value
+	if ( cvar->type == CVART_INTEGER ) {
+		Q_assert( numValues == cvar->validator.i.max - cvar->validator.i.min + 1 );
+	} else if ( cvar->type == CVART_BITMASK ) {
+		int numBits = 0;
+		int test = cvar->validator.i.max + 1;
+		while ( test >>= 1 ) {
+			numBits++;
+		}
+		Q_assert( numValues == numBits );
+	}
+#endif
+
+	gui->maxValueLength = maxLength;
+	gui->numValues = numValues;
+	gui->values = (cvarGuiValue_t*)S_Malloc( numValues * (int)sizeof( cvarGuiValue_t ) );
+
+	string = allStrings;
+	for ( int i = 0; string[0] != '\0'; i++ ) {
+		int length = strlen( string );
+		gui->values[i].valueLength = length;
+		gui->values[i].value = CopyString( string );
+		string += length + 1;
+		length = strlen( string );
+		gui->values[i].title = CopyString( string );
+		string += length + 1;
+		length = strlen( string );
+		gui->values[i].desc = CopyString( string );
+		string += length + 1;
+	}
+}
+
+
 void Cvar_RegisterTable( const cvarTableItem_t* cvars, int count, module_t module )
 {
 	for ( int i = 0; i < count; ++i ) {
@@ -637,9 +739,10 @@ void Cvar_RegisterTable( const cvarTableItem_t* cvars, int count, module_t modul
 
 		if ( item->min ||
 			item->max ||
-			item->type == CVART_BITMASK ||
-			item->type == CVART_BOOL )
+			item->type != CVART_STRING )
 			Cvar_SetRange( item->name, item->type, item->min, item->max );
+
+		Cvar_SetMenuData( item->name, item->categories, item->guiName, item->guiDesc, item->guiHelp, item->guiValues );
 
 		Cvar_SetModule( item->name, module );
 	}
@@ -727,6 +830,14 @@ void Cvar_PrintTypeAndRange( const char *var_name, printf_t print )
 			const char* max = maxV == INT_MAX ? "+inf" : va( "%d", maxV );
 			print( S_COLOR_VAL "%s ^7to " S_COLOR_VAL "%s", min, max );
 		}
+	} else if ( var->type == CVART_COLOR_RGB ) {
+		print( "RGB" );
+	} else if ( var->type == CVART_COLOR_RGBA ) {
+		print( "RGBA" );
+	} else if ( var->type == CVART_COLOR_CPMA ) {
+		print( "color_code" );
+	} else if ( var->type == CVART_COLOR_CHBLS ) {
+		print( "color_CHBLS" );
 	} else {
 		print( "string" );
 	}
@@ -796,7 +907,7 @@ void Cvar_PrintFlags( const char *var_name, printf_t print )
 
 void Cvar_Set( const char *var_name, const char *value )
 {
-	Cvar_Set2( var_name, value, qtrue );
+	Cvar_Set2( var_name, value, CVARSET_BYPASSLATCH_BIT );
 }
 
 
@@ -812,7 +923,7 @@ void Cvar_SetValue( const char *var_name, float value )
 
 void Cvar_Reset( const char *var_name )
 {
-	Cvar_Set2( var_name, NULL, qfalse );
+	Cvar_Set2( var_name, NULL, 0 );
 }
 
 
@@ -857,7 +968,7 @@ qbool Cvar_Command()
 	}
 
 	// set the value if forcing isn't required
-	Cvar_Set2( v->name, Cmd_Args(), qfalse );
+	Cvar_Set2( v->name, Cmd_Args(), 0 );
 	return qtrue;
 }
 
@@ -886,7 +997,7 @@ static void Cvar_Toggle_f( void )
 
 	if ( argc == 2 ) {
 		const int v = !Cvar_VariableIntegerValue( name );
-		Cvar_Set2( name, va("%i", v), qfalse );
+		Cvar_Set2( name, va("%i", v), 0 );
 		return;
 	}
 
@@ -904,7 +1015,7 @@ static void Cvar_Toggle_f( void )
 	if ( index < 0 )
 		index = 0;
 
-	Cvar_Set2( name, Cmd_Argv(index + valueOffset), qfalse );
+	Cvar_Set2( name, Cmd_Argv(index + valueOffset), 0 );
 }
 
 
@@ -1091,7 +1202,7 @@ static void Cvar_Set_f( void )
 		l += len;
 	}
 
-	Cvar_Set2( Cmd_Argv(1), combined, qfalse );
+	Cvar_Set2( Cmd_Argv(1), combined, 0 );
 }
 
 
@@ -1377,4 +1488,10 @@ void Cvar_Init()
 	Cvar_Get( "git_headHash", GIT_COMMIT, CVAR_ROM );
 
 	Cmd_RegisterArray( cl_cmds, MODULE_COMMON );
+}
+
+
+cvar_t* Cvar_GetFirst()
+{
+	return cvar_vars;
 }

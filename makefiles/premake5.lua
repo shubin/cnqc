@@ -431,8 +431,6 @@ local function ApplyExeProjectSettings(exeName, server)
 	AddHeaders("cgame")
 	AddHeaders("game")
 	AddHeaders("ui")
-	AddSourcesAndHeaders("imgui")
-	AddSourcesAndHeaders("implot")
 
 	links { "botlib" }
 
@@ -440,6 +438,8 @@ local function ApplyExeProjectSettings(exeName, server)
 		AddSourcesFromArray(".", server_sources)
 	else
 		AddSourcesFromArray(".", client_sources)
+		AddSourcesAndHeaders("imgui")
+		AddSourcesAndHeaders("implot")
 		AddHeaders("renderer")
 		links { "renderer", "libjpeg-turbo" }
 	end

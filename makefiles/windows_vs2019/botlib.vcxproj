@@ -19,36 +19,36 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{3EA67B52-AA5B-F447-3350-EE1E9F04EB4B}</ProjectGuid>
+    <ProjectGuid>{A1A792F4-8D49-BDCA-7604-D11E6245441B}</ProjectGuid>
     <IgnoreWarnCompileDuplicatedFilename>true</IgnoreWarnCompileDuplicatedFilename>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>cnq3-server</RootNamespace>
+    <RootNamespace>botlib</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='debug|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='debug|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='release|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='release|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -68,42 +68,38 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='debug|x64'">
-    <LinkIncremental>true</LinkIncremental>
-    <OutDir>..\..\.bin\debug_x64\</OutDir>
-    <IntDir>..\..\.build\debug_x64\cnq3-server\</IntDir>
-    <TargetName>cnq3-server-x64</TargetName>
-    <TargetExt>.exe</TargetExt>
+    <OutDir>..\..\.build\debug_x64\</OutDir>
+    <IntDir>..\..\.build\debug_x64\botlib\</IntDir>
+    <TargetName>botlib</TargetName>
+    <TargetExt>.lib</TargetExt>
     <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">
-    <LinkIncremental>true</LinkIncremental>
-    <OutDir>..\..\.bin\debug_x32\</OutDir>
-    <IntDir>..\..\.build\debug_x32\cnq3-server\</IntDir>
-    <TargetName>cnq3-server-x86</TargetName>
-    <TargetExt>.exe</TargetExt>
+    <OutDir>..\..\.build\debug_x32\</OutDir>
+    <IntDir>..\..\.build\debug_x32\botlib\</IntDir>
+    <TargetName>botlib</TargetName>
+    <TargetExt>.lib</TargetExt>
     <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='release|x64'">
-    <LinkIncremental>false</LinkIncremental>
-    <OutDir>..\..\.bin\release_x64\</OutDir>
-    <IntDir>..\..\.build\release_x64\cnq3-server\</IntDir>
-    <TargetName>cnq3-server-x64</TargetName>
-    <TargetExt>.exe</TargetExt>
+    <OutDir>..\..\.build\release_x64\</OutDir>
+    <IntDir>..\..\.build\release_x64\botlib\</IntDir>
+    <TargetName>botlib</TargetName>
+    <TargetExt>.lib</TargetExt>
     <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='release|Win32'">
-    <LinkIncremental>false</LinkIncremental>
-    <OutDir>..\..\.bin\release_x32\</OutDir>
-    <IntDir>..\..\.build\release_x32\cnq3-server\</IntDir>
-    <TargetName>cnq3-server-x86</TargetName>
-    <TargetExt>.exe</TargetExt>
+    <OutDir>..\..\.build\release_x32\</OutDir>
+    <IntDir>..\..\.build\release_x32\botlib\</IntDir>
+    <TargetName>botlib</TargetName>
+    <TargetExt>.lib</TargetExt>
     <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='debug|x64'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
-      <PreprocessorDefinitions>DEDICATED;DEBUG;_DEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;_HAS_EXCEPTIONS=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>BOTLIB;DEBUG;_DEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;_HAS_EXCEPTIONS=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -111,29 +107,21 @@
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
       <AdditionalOptions> /wd4267 %(AdditionalOptions)</AdditionalOptions>
-      <ExternalWarningLevel>Level3</ExternalWarningLevel>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Winmm.lib;ws2_32.lib;Version.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\.build\debug_x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <EntryPointSymbol>WinMainCRTStartup</EntryPointSymbol>
-      <AdditionalOptions> ..\..\code\win32\winquake.res /STACK:8388608 %(AdditionalOptions)</AdditionalOptions>
     </Link>
-    <PreBuildEvent>
-      <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
-    </PreBuildEvent>
-    <PostBuildEvent>
-      <Command>copy "..\..\.bin\debug_x64\cnq3-server-x64.exe" "$(QUAKE3DIR)"
-copy "..\..\.bin\debug_x64\cnq3-server-x64.pdb" "$(QUAKE3DIR)"</Command>
-    </PostBuildEvent>
+    <Lib>
+      <AdditionalLibraryDirectories>..\..\.build\debug_x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
-      <PreprocessorDefinitions>DEDICATED;DEBUG;_DEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;_HAS_EXCEPTIONS=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>BOTLIB;DEBUG;_DEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;_HAS_EXCEPTIONS=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -141,30 +129,22 @@ copy "..\..\.bin\debug_x64\cnq3-server-x64.pdb" "$(QUAKE3DIR)"</Command>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
       <AdditionalOptions> /arch:SSE2 %(AdditionalOptions)</AdditionalOptions>
-      <ExternalWarningLevel>Level3</ExternalWarningLevel>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Winmm.lib;ws2_32.lib;Version.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\.build\debug_x32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <EntryPointSymbol>WinMainCRTStartup</EntryPointSymbol>
-      <AdditionalOptions> ..\..\code\win32\winquake.res /STACK:8388608 %(AdditionalOptions)</AdditionalOptions>
     </Link>
-    <PreBuildEvent>
-      <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
-    </PreBuildEvent>
-    <PostBuildEvent>
-      <Command>copy "..\..\.bin\debug_x32\cnq3-server-x86.exe" "$(QUAKE3DIR)"
-copy "..\..\.bin\debug_x32\cnq3-server-x86.pdb" "$(QUAKE3DIR)"</Command>
-    </PostBuildEvent>
+    <Lib>
+      <AdditionalLibraryDirectories>..\..\.build\debug_x32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release|x64'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
-      <PreprocessorDefinitions>DEDICATED;NDEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;_HAS_EXCEPTIONS=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>BOTLIB;NDEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;_HAS_EXCEPTIONS=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>MinSpace</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -179,32 +159,24 @@ copy "..\..\.bin\debug_x32\cnq3-server-x86.pdb" "$(QUAKE3DIR)"</Command>
       <FloatingPointModel>Fast</FloatingPointModel>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalOptions>/GL /wd4267 %(AdditionalOptions)</AdditionalOptions>
-      <ExternalWarningLevel>Level3</ExternalWarningLevel>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>Winmm.lib;ws2_32.lib;Version.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\.build\release_x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <EntryPointSymbol>WinMainCRTStartup</EntryPointSymbol>
-      <AdditionalOptions> ..\..\code\win32\winquake.res /STACK:8388608 /OPT:REF /OPT:ICF %(AdditionalOptions)</AdditionalOptions>
     </Link>
-    <PreBuildEvent>
-      <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
-    </PreBuildEvent>
-    <PostBuildEvent>
-      <Command>copy "..\..\.bin\release_x64\cnq3-server-x64.exe" "$(QUAKE3DIR)"
-copy "..\..\.bin\release_x64\cnq3-server-x64.pdb" "$(QUAKE3DIR)"</Command>
-    </PostBuildEvent>
+    <Lib>
+      <AdditionalLibraryDirectories>..\..\.build\release_x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release|Win32'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
-      <PreprocessorDefinitions>DEDICATED;NDEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;_HAS_EXCEPTIONS=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>BOTLIB;NDEBUG;_CRT_SECURE_NO_WARNINGS;WIN32;_WIN32;_HAS_EXCEPTIONS=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>MinSpace</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -220,25 +192,17 @@ copy "..\..\.bin\release_x64\cnq3-server-x64.pdb" "$(QUAKE3DIR)"</Command>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalOptions>/GL /arch:SSE2 %(AdditionalOptions)</AdditionalOptions>
-      <ExternalWarningLevel>Level3</ExternalWarningLevel>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>Winmm.lib;ws2_32.lib;Version.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\.build\release_x32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <EntryPointSymbol>WinMainCRTStartup</EntryPointSymbol>
-      <AdditionalOptions> ..\..\code\win32\winquake.res /STACK:8388608 /OPT:REF /OPT:ICF %(AdditionalOptions)</AdditionalOptions>
     </Link>
-    <PreBuildEvent>
-      <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
-    </PreBuildEvent>
-    <PostBuildEvent>
-      <Command>copy "..\..\.bin\release_x32\cnq3-server-x86.exe" "$(QUAKE3DIR)"
-copy "..\..\.bin\release_x32\cnq3-server-x86.pdb" "$(QUAKE3DIR)"</Command>
-    </PostBuildEvent>
+    <Lib>
+      <AdditionalLibraryDirectories>..\..\.build\release_x32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\..\code\botlib\aasfile.h" />
@@ -274,84 +238,36 @@ copy "..\..\.bin\release_x32\cnq3-server-x86.pdb" "$(QUAKE3DIR)"</Command>
     <ClInclude Include="..\..\code\botlib\l_precomp.h" />
     <ClInclude Include="..\..\code\botlib\l_script.h" />
     <ClInclude Include="..\..\code\botlib\l_struct.h" />
-    <ClInclude Include="..\..\code\client\cl_imgui.h" />
-    <ClInclude Include="..\..\code\client\client.h" />
-    <ClInclude Include="..\..\code\client\client_help.h" />
-    <ClInclude Include="..\..\code\client\keycodes.h" />
-    <ClInclude Include="..\..\code\client\keys.h" />
-    <ClInclude Include="..\..\code\client\snd_codec.h" />
-    <ClInclude Include="..\..\code\client\snd_local.h" />
-    <ClInclude Include="..\..\code\client\snd_public.h" />
-    <ClInclude Include="..\..\code\qcommon\cg_public.h" />
-    <ClInclude Include="..\..\code\qcommon\cm_local.h" />
-    <ClInclude Include="..\..\code\qcommon\cm_patch.h" />
-    <ClInclude Include="..\..\code\qcommon\cm_polylib.h" />
-    <ClInclude Include="..\..\code\qcommon\cm_public.h" />
-    <ClInclude Include="..\..\code\qcommon\common_help.h" />
-    <ClInclude Include="..\..\code\qcommon\crash.h" />
-    <ClInclude Include="..\..\code\qcommon\g_public.h" />
-    <ClInclude Include="..\..\code\qcommon\git.h" />
-    <ClInclude Include="..\..\code\qcommon\q_platform.h" />
-    <ClInclude Include="..\..\code\qcommon\q_shared.h" />
-    <ClInclude Include="..\..\code\qcommon\qcommon.h" />
-    <ClInclude Include="..\..\code\qcommon\qfiles.h" />
-    <ClInclude Include="..\..\code\qcommon\surfaceflags.h" />
-    <ClInclude Include="..\..\code\qcommon\syscall_ext.h" />
-    <ClInclude Include="..\..\code\qcommon\tr_types.h" />
-    <ClInclude Include="..\..\code\qcommon\ui_public.h" />
-    <ClInclude Include="..\..\code\qcommon\unzip.h" />
-    <ClInclude Include="..\..\code\qcommon\vm_local.h" />
-    <ClInclude Include="..\..\code\qcommon\vm_shim.h" />
-    <ClInclude Include="..\..\code\server\server.h" />
-    <ClInclude Include="..\..\code\win32\glw_win.h" />
-    <ClInclude Include="..\..\code\win32\resource.h" />
-    <ClInclude Include="..\..\code\win32\win_help.h" />
-    <ClInclude Include="..\..\code\win32\win_local.h" />
-    <ClInclude Include="..\..\code\win32\windows.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\code\qcommon\cm_load.cpp" />
-    <ClCompile Include="..\..\code\qcommon\cm_patch.cpp" />
-    <ClCompile Include="..\..\code\qcommon\cm_polylib.cpp" />
-    <ClCompile Include="..\..\code\qcommon\cm_test.cpp" />
-    <ClCompile Include="..\..\code\qcommon\cm_trace.cpp" />
-    <ClCompile Include="..\..\code\qcommon\cmd.cpp" />
-    <ClCompile Include="..\..\code\qcommon\common.cpp" />
-    <ClCompile Include="..\..\code\qcommon\crash.cpp" />
-    <ClCompile Include="..\..\code\qcommon\cvar.cpp" />
-    <ClCompile Include="..\..\code\qcommon\files.cpp" />
-    <ClCompile Include="..\..\code\qcommon\huffman.cpp" />
-    <ClCompile Include="..\..\code\qcommon\huffman_static.cpp" />
-    <ClCompile Include="..\..\code\qcommon\json.cpp" />
-    <ClCompile Include="..\..\code\qcommon\md4.cpp" />
-    <ClCompile Include="..\..\code\qcommon\md5.cpp" />
-    <ClCompile Include="..\..\code\qcommon\msg.cpp" />
-    <ClCompile Include="..\..\code\qcommon\net_chan.cpp" />
-    <ClCompile Include="..\..\code\qcommon\net_ip.cpp" />
-    <ClCompile Include="..\..\code\qcommon\q_math.c" />
-    <ClCompile Include="..\..\code\qcommon\q_shared.c" />
-    <ClCompile Include="..\..\code\qcommon\unzip.cpp" />
-    <ClCompile Include="..\..\code\qcommon\vm.cpp" />
-    <ClCompile Include="..\..\code\qcommon\vm_interpreted.cpp" />
-    <ClCompile Include="..\..\code\qcommon\vm_x86.cpp" />
-    <ClCompile Include="..\..\code\server\sv_bot.cpp" />
-    <ClCompile Include="..\..\code\server\sv_ccmds.cpp" />
-    <ClCompile Include="..\..\code\server\sv_client.cpp" />
-    <ClCompile Include="..\..\code\server\sv_game.cpp" />
-    <ClCompile Include="..\..\code\server\sv_init.cpp" />
-    <ClCompile Include="..\..\code\server\sv_main.cpp" />
-    <ClCompile Include="..\..\code\server\sv_net_chan.cpp" />
-    <ClCompile Include="..\..\code\server\sv_snapshot.cpp" />
-    <ClCompile Include="..\..\code\server\sv_world.cpp" />
-    <ClCompile Include="..\..\code\win32\win_exception.cpp" />
-    <ClCompile Include="..\..\code\win32\win_main.cpp" />
-    <ClCompile Include="..\..\code\win32\win_shared.cpp" />
-    <ClCompile Include="..\..\code\win32\win_syscon.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="botlib.vcxproj">
-      <Project>{A1A792F4-8D49-BDCA-7604-D11E6245441B}</Project>
-    </ProjectReference>
+    <ClCompile Include="..\..\code\botlib\be_aas_bspq3.cpp" />
+    <ClCompile Include="..\..\code\botlib\be_aas_cluster.cpp" />
+    <ClCompile Include="..\..\code\botlib\be_aas_debug.cpp" />
+    <ClCompile Include="..\..\code\botlib\be_aas_entity.cpp" />
+    <ClCompile Include="..\..\code\botlib\be_aas_file.cpp" />
+    <ClCompile Include="..\..\code\botlib\be_aas_main.cpp" />
+    <ClCompile Include="..\..\code\botlib\be_aas_move.cpp" />
+    <ClCompile Include="..\..\code\botlib\be_aas_optimize.cpp" />
+    <ClCompile Include="..\..\code\botlib\be_aas_reach.cpp" />
+    <ClCompile Include="..\..\code\botlib\be_aas_route.cpp" />
+    <ClCompile Include="..\..\code\botlib\be_aas_routealt.cpp" />
+    <ClCompile Include="..\..\code\botlib\be_aas_sample.cpp" />
+    <ClCompile Include="..\..\code\botlib\be_ai_char.cpp" />
+    <ClCompile Include="..\..\code\botlib\be_ai_chat.cpp" />
+    <ClCompile Include="..\..\code\botlib\be_ai_gen.cpp" />
+    <ClCompile Include="..\..\code\botlib\be_ai_goal.cpp" />
+    <ClCompile Include="..\..\code\botlib\be_ai_move.cpp" />
+    <ClCompile Include="..\..\code\botlib\be_ai_weap.cpp" />
+    <ClCompile Include="..\..\code\botlib\be_ai_weight.cpp" />
+    <ClCompile Include="..\..\code\botlib\be_ea.cpp" />
+    <ClCompile Include="..\..\code\botlib\be_interface.cpp" />
+    <ClCompile Include="..\..\code\botlib\l_crc.cpp" />
+    <ClCompile Include="..\..\code\botlib\l_libvar.cpp" />
+    <ClCompile Include="..\..\code\botlib\l_log.cpp" />
+    <ClCompile Include="..\..\code\botlib\l_memory.cpp" />
+    <ClCompile Include="..\..\code\botlib\l_precomp.cpp" />
+    <ClCompile Include="..\..\code\botlib\l_script.cpp" />
+    <ClCompile Include="..\..\code\botlib\l_struct.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

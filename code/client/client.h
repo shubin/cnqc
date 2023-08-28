@@ -379,8 +379,6 @@ extern	cvar_t	*cl_matchAlerts;	// bit mask, see the MAF_* constants
 extern	cvar_t	*cl_demoPlayer;
 extern	cvar_t	*cl_escapeAbortsDemo;
 
-extern	cvar_t	*r_khr_debug;
-
 extern	cvar_t	*s_autoMute;
 
 //=================================================

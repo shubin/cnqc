@@ -24,6 +24,7 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 #include "client.h"
 #include "cl_imgui.h"
 #include "../imgui/ProggyClean.h"
+#include "../imgui/Sweet16Mono.h"
 
 
 static int keyMap[256];
@@ -311,10 +312,12 @@ void CL_IMGUI_Init()
 	io.SetClipboardTextFn = &SetClipboardText;
 	//io.MouseDrawCursor = true; // just use the operating system's
 
-	ImFontConfig fontConfig;
+	ImFontConfig fontConfig = {};
 	fontConfig.FontDataOwnedByAtlas = false;
-	io.Fonts->AddFontFromMemoryCompressedTTF(
+	Q_strncpyz(fontConfig.Name, "Proggy Clean (13px)", sizeof(fontConfig.Name));
+	io.FontDefault = io.Fonts->AddFontFromMemoryCompressedTTF(
 		ProggyClean_compressed_data, ProggyClean_compressed_size, 13.0f, &fontConfig);
+	AddSweet16MonoFont();
 
 	ImGUI_ApplyTheme();
 
@@ -388,6 +391,7 @@ void CL_IMGUI_Frame()
 
 	int x, y;
 	Sys_GetCursorPosition(&x, &y);
+	re.ComputeCursorPosition(&x, &y);
 
 	ImGuiIO& io = ImGui::GetIO();
 	io.DeltaTime = (float)((double)elapsedUS / 1000000.0);
@@ -406,9 +410,10 @@ qbool CL_IMGUI_KeyEvent(int key, qbool down, const char* cmd)
 	{
 		if(cmd != NULL)
 		{
-			if(!Q_stricmp(cmd, "togglegui") || !Q_stricmp(cmd, "toggleguiinput"))
+			const char* const prefix = "keycatchgui";
+			if(Q_stristr(cmd, prefix) == cmd)
 			{
-				Cbuf_AddText(cmd);
+				Cbuf_AddText(cmd + strlen(prefix));
 				Cbuf_AddText("\n");
 				return qtrue;
 			}
@@ -419,9 +424,9 @@ qbool CL_IMGUI_KeyEvent(int key, qbool down, const char* cmd)
 	{
 		if(down && (key == '`' || key == '~'))
 		{
-			Cvar_Set("r_debugUI", "0");
+			// continue displaying the GUI but route input to the console
 			Cvar_Set("r_debugInput", "0");
-			return qtrue;
+			return qfalse;
 		}
 
 		unsigned int imguiKey;

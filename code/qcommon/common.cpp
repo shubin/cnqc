@@ -93,10 +93,7 @@ cvar_t	*com_noErrorInterrupt;
 static cvar_t	*con_completionStyle;	// 0 = legacy, 1 = ET-style
 static cvar_t	*con_history;
 
-// com_speeds times
-int		time_game;
-int		time_frontend;		// renderer frontend time
-int		time_backend;		// renderer backend time
+int		time_game; // for com_speeds
 
 int		com_frameTime;
 int		com_frameNumber;
@@ -2189,7 +2186,10 @@ static const cmdTableItem_t com_cmds[] =
 
 static const cvarTableItem_t com_cvars[] =
 {
-	{ &com_maxfps, "com_maxfps", "125", CVAR_ARCHIVE, CVART_INTEGER, "60", "250", help_com_maxfps },
+	{
+		&com_maxfps, "com_maxfps", "125", CVAR_ARCHIVE, CVART_INTEGER, "60", "250", help_com_maxfps,
+		"Framerate cap", CVARCAT_DISPLAY, "If you see 'connection interrupted' online, lower the cap", ""
+	},
 	{ &com_developer, "developer", "0", CVAR_TEMP, CVART_BOOL, NULL, NULL, "enables detailed logging" },
 	{ &com_logfile, "logfile", "0", CVAR_TEMP, CVART_INTEGER, "0", "2", help_com_logfile },
 	{ &com_timescale, "timescale", "1", CVAR_CHEAT | CVAR_SYSTEMINFO, CVART_FLOAT, "0", "100", "game time to real time ratio" },
@@ -2207,8 +2207,16 @@ static const cvarTableItem_t com_cvars[] =
 #if defined(_WIN32) && defined(_DEBUG)
 	{ &com_noErrorInterrupt, "com_noErrorInterrupt", "0", 0, CVART_BOOL },
 #endif
-	{ &con_completionStyle, "con_completionStyle", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_con_completionStyle },
-	{ &con_history, "con_history", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "writes the command history to a file on exit" }
+	{
+		&con_completionStyle, "con_completionStyle", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, help_con_completionStyle,
+		"Console completion style", CVARCAT_CONSOLE, "", "",
+		CVAR_GUI_VALUE("0", "Quake 3", "Always prints all results")
+		CVAR_GUI_VALUE("1", "Enemy Territory", "Prints once then cycles")
+	},
+	{
+		&con_history, "con_history", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "writes the command history to a file on exit",
+		"Save console history", CVARCAT_CONSOLE, "save the command history to a file on exit", ""
+	}
 };
 
 
@@ -2621,9 +2629,7 @@ void Com_Frame( qbool demoPlayback )
 		int all = timeAfter - timeBeforeServer;
 		int sv = timeBeforeEvents - timeBeforeServer - time_game;
 		int ev = timeBeforeServer - timeBeforeFirstEvents + timeBeforeClient - timeBeforeEvents;
-		int cl = timeAfter - timeBeforeClient - (time_frontend + time_backend);
-		Com_Printf( "frame:%i all:%3i sv:%3i ev:%3i cl:%3i gm:%3i rf:%3i bk:%3i\n",
-				com_frameNumber, all, sv, ev, cl, time_game, time_frontend, time_backend );
+		Com_Printf( "frame:%i all:%3i sv:%3i ev:%3i gm:%3i\n", com_frameNumber, all, sv, ev, time_game );
 	}
 
 	//
@@ -3527,12 +3533,13 @@ printHelpResult_t Com_PrintHelp( const char* name, printf_t print, qbool printNo
 	if ( !desc ) {
 		if ( printNotFound )
 			print(	"no help text found for %s %s%s\n",
-			isCvar ? "cvar" : "command", isCvar ? S_COLOR_CVAR : S_COLOR_CMD, name );
+				isCvar ? "cvar" : "command", isCvar ? S_COLOR_CVAR : S_COLOR_CMD, name );
 		return PHR_NOHELP;
 	}
 
 	const char firstLetter = toupper( *desc );
 	print( S_COLOR_HELP "%c%s" S_COLOR_HELP ".\n", firstLetter, desc + 1 );
+
 	if ( help )
 		print( S_COLOR_HELP "%s\n", help );
 
@@ -3689,4 +3696,30 @@ void Com_StatsFromArray( const int* input, int numSamples, int* temp, stats_t* s
 void Com_StatsFromArray( const float* input, int numSamples, float* temp, stats_t* stats )
 {
 	StatsFromArray<float>( input, numSamples, &SortFloatDescending, temp, stats );
+}
+
+
+void Com_ParseHexColor( float* c, const char* text, qbool hasAlpha )
+{
+	c[0] = 1.0f;
+	c[1] = 1.0f;
+	c[2] = 1.0f;
+	c[3] = 1.0f;
+
+	unsigned int uc[4];
+	if ( hasAlpha ) {
+		if ( sscanf(text, "%02X%02X%02X%02X", &uc[0], &uc[1], &uc[2], &uc[3]) != 4 )
+			return;
+		c[0] = uc[0] / 255.0f;
+		c[1] = uc[1] / 255.0f;
+		c[2] = uc[2] / 255.0f;
+		c[3] = uc[3] / 255.0f;
+	} else {
+		if ( sscanf(text, "%02X%02X%02X", &uc[0], &uc[1], &uc[2]) != 3 )
+			return;
+		c[0] = uc[0] / 255.0f;
+		c[1] = uc[1] / 255.0f;
+		c[2] = uc[2] / 255.0f;
+		c[3] = 1.0f;
+	}
 }
