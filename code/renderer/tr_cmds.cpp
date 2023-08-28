@@ -325,7 +325,7 @@ void RE_BeginFrame( stereoFrame_t stereoFrame )
 }
 
 
-void RE_EndFrame( int* pcFE, int* pc2D, int* pc3D, qbool render )
+void RE_EndFrame( qbool render )
 {
 	if (!tr.registered)
 		return;
@@ -349,7 +349,6 @@ void RE_EndFrame( int* pcFE, int* pc2D, int* pc3D, qbool render )
 		}
 	}
 
-	// @TODO:
 	backEnd.renderFrame = render;
 
 	End2D( qtrue );
@@ -368,15 +367,6 @@ void RE_EndFrame( int* pcFE, int* pc2D, int* pc3D, qbool render )
 	R_IssueRenderCommands();
 
 	R_ClearFrame();
-
-	if (pcFE)
-		Com_Memcpy( pcFE, &tr.pc, sizeof( tr.pc ) );
-
-	if (pc2D)
-		Com_Memcpy( pc2D, &backEnd.pc2D, sizeof( backEnd.pc2D ) );
-
-	if (pc3D)
-		Com_Memcpy( pc3D, &backEnd.pc3D, sizeof( backEnd.pc3D ) );
 
 	Com_Memset( &tr.pc, 0, sizeof( tr.pc ) );
 	Com_Memset( &backEnd.pc2D, 0, sizeof( backEnd.pc2D ) );

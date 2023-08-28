@@ -1027,8 +1027,6 @@ extern trGlobals_t	tr;
 #define GPUPREF_MAX				2
 
 
-extern cvar_t	*r_verbose;				// used for verbose debug spew
-
 extern cvar_t	*r_lodbias;				// push/pull LOD transitions
 extern cvar_t	*r_lodscale;
 
@@ -1039,7 +1037,6 @@ extern cvar_t	*r_dynamiclight;		// dynamic lights enabled/disabled
 extern	cvar_t	*r_norefresh;			// bypasses the ref rendering
 extern	cvar_t	*r_drawentities;		// disable/enable entity rendering
 extern	cvar_t	*r_drawworld;			// disable/enable world rendering
-extern	cvar_t	*r_speeds;				// various levels of information display
 extern  cvar_t	*r_detailTextures;		// enables/disables detail texturing stages
 extern	cvar_t	*r_novis;				// disable/enable usage of PVS
 extern	cvar_t	*r_nocull;
@@ -1062,6 +1059,7 @@ extern cvar_t	*r_mapGreyscaleCTF;		// how monochrome CTF map surfaces look
 extern cvar_t	*r_teleporterFlash;		// 1 is default Q3 behavior, 0 is pure black
 extern cvar_t	*r_sleepThreshold;		// time cushion in us for a call to Sleep(1+)
 extern cvar_t	*r_shadingRate;			// variable-rate shading (VRS) mode
+extern cvar_t	*r_guiFont;				// Dear ImGui font
 extern cvar_t	*r_fullbright;			// avoid lightmap pass
 extern cvar_t	*r_depthFade;			// fades marked shaders based on depth
 extern cvar_t	*r_dither;				// enables dithering
@@ -1079,7 +1077,7 @@ extern	cvar_t	*r_roundImagesDown;
 extern	cvar_t	*r_colorMipLevels;		// development aid to see texture mip usage
 extern	cvar_t	*r_picmip;				// controls picmip values
 
-extern	cvar_t	*r_swapInterval;
+extern	cvar_t	*r_vsync;
 extern	cvar_t	*r_lego;
 
 extern	cvar_t	*r_vertexLight;			// vertex lighting mode for better performance
@@ -1280,7 +1278,7 @@ void Sys_V_Init();
 // - resetting the proper video mode if necessary
 void Sys_V_Shutdown();
 
-// Swaps buffers and applies r_swapInterval if the back-end can't already do it.
+// Swaps buffers and applies r_vsync if the back-end can't already do it.
 void Sys_V_EndFrame();
 
 // Used to know if we must sleep ourselves to maintain the frame-rate cap.
@@ -1628,7 +1626,7 @@ byte* R_AllocateRenderCommand( int bytes, int commandId, qbool endFrame );
 void R_AddDrawSurfCmd( drawSurf_t* drawSurfs, int numDrawSurfs, int numTranspSurfs );
 
 void RE_BeginFrame( stereoFrame_t stereoFrame );
-void RE_EndFrame( int* pcFE, int* pc2D, int* pc3D, qbool render );
+void RE_EndFrame( qbool render );
 void RE_SetColor( const float* rgba );
 void RE_StretchPic( float x, float y, float w, float h,
 		float s1, float t1, float s2, float t2, qhandle_t hShader );

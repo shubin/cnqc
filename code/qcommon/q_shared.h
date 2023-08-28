@@ -672,13 +672,35 @@ default values.
 
 #define	MAX_CVAR_VALUE_STRING	256
 
+#define CVAR_GUI_VALUE( Value, Title, Desc )	Value "\0" Title "\0" Desc "\0"
+
+// CVar categories
+#define CVARCAT_GENERAL			1
+#define CVARCAT_GAMEPLAY		2
+#define CVARCAT_NETWORK			4
+#define CVARCAT_DISPLAY			8
+#define CVARCAT_GRAPHICS		16
+#define CVARCAT_SOUND			32
+#define CVARCAT_CONSOLE			64
+#define CVARCAT_HUD				128
+#define CVARCAT_GUI				256
+#define CVARCAT_PERFORMANCE		512
+#define CVARCAT_DEBUGGING		1024
+#define CVARCAT_INPUT			2048
+#define CVARCAT_DEMO			4096
+
 typedef enum {
-	CVART_STRING,	// no validation
-	CVART_FLOAT,	// uses floating-point min/max bounds
-	CVART_INTEGER,	// uses integer min/max bounds
-	CVART_BITMASK,	// uses integer min/max bounds
-	CVART_BOOL,		// uses integer min/max bounds, min=0 and max=1
-	CVART_COUNT		// always last in the enum
+	CVART_STRING,		// no validation
+	CVART_FLOAT,		// uses floating-point min/max bounds
+	CVART_INTEGER,		// uses integer min/max bounds
+	CVART_BITMASK,		// uses integer min/max bounds
+	CVART_BOOL,			// uses integer min/max bounds, min=0 and max=1
+	// extended data types (not currently used by the CPMA QVMs)
+	CVART_COLOR_CPMA,	// CPMA color code (0-9 A-Z a-z)
+	CVART_COLOR_CHBLS,	// CPMA color codes: rail Core, Head, Body, Legs, rail Spiral
+	CVART_COLOR_RGB,	// as hex, e.g. FF00FF
+	CVART_COLOR_RGBA,	// as hex, e.g. FF00FF00
+	CVART_COUNT			// always last in the enum
 } cvarType_t;
 
 typedef int	cvarHandle_t;

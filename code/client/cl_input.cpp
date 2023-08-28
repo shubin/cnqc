@@ -843,16 +843,42 @@ static void IN_Restart_f()
 
 static const cvarTableItem_t cl_cvars[] =
 {
-	{ &m_speed, "m_speed", "2", CVAR_ARCHIVE, CVART_FLOAT, "0", "100", "mouse sensitivity" },
-	{ &m_accel, "m_accel", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", NULL, "mouse acceleration" },
-	{ &m_accelStyle, "m_accelStyle", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "1", help_m_accelStyle },
-	{ &m_accelOffset, "m_accelOffset", "5", CVAR_ARCHIVE, CVART_FLOAT, "0.001", "5000", help_m_accelOffset },
-	{ &m_limit, "m_limit", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", NULL, help_m_limit },
-	{ &m_pitch, "m_pitch", "0.022", CVAR_ARCHIVE, CVART_FLOAT, "-100", "100", "post-accel vertical mouse sens." },
-	{ &m_yaw, "m_yaw", "0.022", CVAR_ARCHIVE, CVART_FLOAT, "-100", "100", "post-accel horizontal mouse sens." },
+	{
+		&m_speed, "m_speed", "2", CVAR_ARCHIVE, CVART_FLOAT, "0", "100", "mouse sensitivity",
+		"Mouse sensitivity", CVARCAT_INPUT, "", ""
+	},
+	{
+		&m_accel, "m_accel", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", "100", "mouse acceleration",
+		"Mouse acceleration", CVARCAT_INPUT, "", ""
+	},
+	{
+		&m_accelStyle, "m_accelStyle", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "1", help_m_accelStyle,
+		"Mouse accel style", CVARCAT_INPUT, "", "",
+		CVAR_GUI_VALUE("0", "Quake 3", "")
+		CVAR_GUI_VALUE("1", "New", "")
+	},
+	{
+		&m_accelOffset, "m_accelOffset", "5", CVAR_ARCHIVE, CVART_FLOAT, "0.001", "5000", help_m_accelOffset,
+		"Mouse accel offset", CVARCAT_INPUT, "Offset for the power function", "For the new accel style only"
+	},
+	{
+		&m_limit, "m_limit", "0", CVAR_ARCHIVE, CVART_FLOAT, "0", "100", help_m_limit,
+		"Mouse speed cap", CVARCAT_INPUT, "0 means no cap", "For the Quake 3 accel style only"
+	},
+	{
+		&m_pitch, "m_pitch", "0.022", CVAR_ARCHIVE, CVART_FLOAT, "-100", "100", "post-accel vertical mouse sens.",
+		"Vertical mouse sens", CVARCAT_INPUT, "Post-acceleration sensitivity", ""
+	},
+	{
+		&m_yaw, "m_yaw", "0.022", CVAR_ARCHIVE, CVART_FLOAT, "-100", "100", "post-accel horizontal mouse sens.",
+		"Horizontal mouse sens", CVARCAT_INPUT, "Post-acceleration sensitivity", ""
+	},
 	{ &m_forward, "m_forward", "0.25", CVAR_ARCHIVE, CVART_FLOAT, "-32767", "32767", help_m_forward },
 	{ &m_side, "m_side", "0.25", CVAR_ARCHIVE, CVART_FLOAT, "-32767", "32767", help_m_side },
-	{ &m_filter, "m_filter", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "mouse smoothing" },
+	{
+		&m_filter, "m_filter", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "mouse smoothing",
+		"Mouse smoothing", CVARCAT_INPUT, "", ""
+	},
 	{ &cl_pitchspeed, "cl_pitchspeed", "140", CVAR_ARCHIVE, CVART_FLOAT, "0", NULL, help_cl_pitchspeed },
 	{ &cl_yawspeed, "cl_yawspeed", "140", CVAR_ARCHIVE, CVART_FLOAT, "0", NULL, help_cl_yawspeed },
 	{ &cl_anglespeedkey, "cl_anglespeedkey", "1.5", 0, CVART_FLOAT },

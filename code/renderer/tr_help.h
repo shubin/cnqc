@@ -159,6 +159,11 @@ S_COLOR_VAL "    6 " S_COLOR_HELP "= 4x4 (extended mode)\n" \
 "with thin horizontal lines, which become an aliased mess when\n" \
 "vertically subsampled."
 
+#define help_r_guiFont \
+"font for CNQ3's GUI\n" \
+S_COLOR_VAL "    0 " S_COLOR_HELP "= Proggy Clean (13px)\n" \
+S_COLOR_VAL "    1 " S_COLOR_HELP "= Sweet16 Mono (16px)"
+
 #define help_r_ignoreShaderSortKey \
 "ignores the shader sort key of transparent surfaces\n" \
 "Instead, it sorts by depth and original registration order only.\n" \

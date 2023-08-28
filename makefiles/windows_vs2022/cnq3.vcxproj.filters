@@ -153,6 +153,9 @@
     <ClInclude Include="..\..\code\imgui\ProggyClean.h">
       <Filter>imgui</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\code\imgui\Sweet16Mono.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\code\imgui\imconfig.h">
       <Filter>imgui</Filter>
     </ClInclude>
