@@ -262,7 +262,7 @@ qboolean Sys_LocateQ3APath( void ) {
 	
 	result = MessageBoxA( g_wv.hWnd, 
 	"Quake III Arena installation path is not found.\n"
-	"You must have Quake III Arena installed to play Quake III Champions.\n"
+	"You must have Quake III Arena installed to play Blood Run.\n"
 	"Please install Quake III Arena from Steam, GOG or Microsoft Store.\n"
 	"Alternatively, you can provide Quake III Arena installation directory.\n"
 	"Would you like to choose Quake III Arena installation directory?",

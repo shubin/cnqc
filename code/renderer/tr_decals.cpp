@@ -24,7 +24,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 Copyright (C) 2003 Sergei Shubin
 
-This file is part of Quake III Champions source code.
+This file is part of Blood Run source code.
 Quake and Quake III Arena are trademarks of id Software, Inc.
 ===========================================================================
 */
