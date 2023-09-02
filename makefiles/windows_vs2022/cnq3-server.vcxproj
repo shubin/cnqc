@@ -142,7 +142,7 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>..\..\.bin\debug_x64\</OutDir>
     <IntDir>..\..\.build\debug_x64\cnqc-server\</IntDir>
-    <TargetName>cnqc-server-debug-x64</TargetName>
+    <TargetName>bloodrun-server-debug</TargetName>
     <TargetExt>.exe</TargetExt>
     <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
@@ -158,7 +158,7 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>..\..\.bin\debug_x32\</OutDir>
     <IntDir>..\..\.build\debug_x32\cnqc-server\</IntDir>
-    <TargetName>cnqc-server-debug-x86</TargetName>
+    <TargetName>bloodrun-server-debug-x86</TargetName>
     <TargetExt>.exe</TargetExt>
     <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
@@ -174,7 +174,7 @@
     <LinkIncremental>false</LinkIncremental>
     <OutDir>..\..\.bin\release_x64\</OutDir>
     <IntDir>..\..\.build\release_x64\cnqc-server\</IntDir>
-    <TargetName>cnqc-server-x64</TargetName>
+    <TargetName>bloodrun-server</TargetName>
     <TargetExt>.exe</TargetExt>
     <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
@@ -190,7 +190,7 @@
     <LinkIncremental>false</LinkIncremental>
     <OutDir>..\..\.bin\release_x32\</OutDir>
     <IntDir>..\..\.build\release_x32\cnqc-server\</IntDir>
-    <TargetName>cnqc-server-x86</TargetName>
+    <TargetName>bloodrun-server-x86</TargetName>
     <TargetExt>.exe</TargetExt>
     <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
@@ -219,8 +219,10 @@
       <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>copy "..\..\.bin\debug_x64\cnq3-server-x64.exe" "$(QUAKE3DIR)"
-copy "..\..\.bin\debug_x64\cnq3-server-x64.pdb" "$(QUAKE3DIR)"</Command>
+      <Command>copy $(TargetPath) "$(QUAKE3DIR)"
+
+copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='debug qc|x64'">
@@ -248,8 +250,10 @@ copy "..\..\.bin\debug_x64\cnq3-server-x64.pdb" "$(QUAKE3DIR)"</Command>
       <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>copy "..\..\.bin\debug_x64\cnqc-server-debug-x64.exe" "$(QUAKE3DIR)"
-copy "..\..\.bin\debug_x64\cnqc-server-debug-x64.pdb" "$(QUAKE3DIR)"</Command>
+      <Command>copy $(TargetPath) "$(QUAKE3DIR)"
+
+copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">
@@ -277,8 +281,10 @@ copy "..\..\.bin\debug_x64\cnqc-server-debug-x64.pdb" "$(QUAKE3DIR)"</Command>
       <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>copy "..\..\.bin\debug_x32\cnq3-server-x86.exe" "$(QUAKE3DIR)"
-copy "..\..\.bin\debug_x32\cnq3-server-x86.pdb" "$(QUAKE3DIR)"</Command>
+      <Command>copy $(TargetPath) "$(QUAKE3DIR)"
+
+copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">
@@ -306,8 +312,10 @@ copy "..\..\.bin\debug_x32\cnq3-server-x86.pdb" "$(QUAKE3DIR)"</Command>
       <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>copy "..\..\.bin\debug_x32\cnqc-server-debug-x86.exe" "$(QUAKE3DIR)"
-copy "..\..\.bin\debug_x32\cnqc-server-debug-x86.pdb" "$(QUAKE3DIR)"</Command>
+      <Command>copy $(TargetPath) "$(QUAKE3DIR)"
+
+copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release|x64'">
@@ -344,8 +352,10 @@ copy "..\..\.bin\debug_x32\cnqc-server-debug-x86.pdb" "$(QUAKE3DIR)"</Command>
       <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>copy "..\..\.bin\release_x64\cnq3-server-x64.exe" "$(QUAKE3DIR)"
-copy "..\..\.bin\release_x64\cnq3-server-x64.pdb" "$(QUAKE3DIR)"</Command>
+      <Command>copy $(TargetPath) "$(QUAKE3DIR)"
+
+copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">
@@ -382,8 +392,10 @@ copy "..\..\.bin\release_x64\cnq3-server-x64.pdb" "$(QUAKE3DIR)"</Command>
       <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>copy "..\..\.bin\release_x64\cnqc-server-x64.exe" "$(QUAKE3DIR)"
-copy "..\..\.bin\release_x64\cnqc-server-x64.pdb" "$(QUAKE3DIR)"</Command>
+      <Command>copy $(TargetPath) "$(QUAKE3DIR)"
+
+copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release|Win32'">
@@ -421,8 +433,10 @@ copy "..\..\.bin\release_x64\cnqc-server-x64.pdb" "$(QUAKE3DIR)"</Command>
       <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>copy "..\..\.bin\release_x32\cnq3-server-x86.exe" "$(QUAKE3DIR)"
-copy "..\..\.bin\release_x32\cnq3-server-x86.pdb" "$(QUAKE3DIR)"</Command>
+      <Command>copy $(TargetPath) "$(QUAKE3DIR)"
+
+copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">
@@ -460,8 +474,10 @@ copy "..\..\.bin\release_x32\cnq3-server-x86.pdb" "$(QUAKE3DIR)"</Command>
       <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>copy "..\..\.bin\release_x32\cnqc-server-x86.exe" "$(QUAKE3DIR)"
-copy "..\..\.bin\release_x32\cnqc-server-x86.pdb" "$(QUAKE3DIR)"</Command>
+      <Command>copy $(TargetPath) "$(QUAKE3DIR)"
+
+copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

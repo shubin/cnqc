@@ -63,9 +63,9 @@ IDI_ICON1               ICON    DISCARDABLE     "code/win32/qc.ico"
 #endif
 #else
 #ifndef __MINGW32__
-IDI_ICON1               ICON    DISCARDABLE     "cpma.ico"
+IDI_ICON1               ICON    DISCARDABLE     "qc.ico"
 #else
-IDI_ICON1               ICON    DISCARDABLE     "code/win32/cpma.ico"
+IDI_ICON1               ICON    DISCARDABLE     "code/win32/qc.ico"
 #endif
 #endif
 
@@ -76,7 +76,7 @@ IDI_ICON1               ICON    DISCARDABLE     "code/win32/cpma.ico"
 
 STRINGTABLE DISCARDABLE 
 BEGIN
-    IDS_STRING1             "The Challenge Network's Quake 3"
+    IDS_STRING1             "Blood Run"
 END
 
 #endif    // English (U.S.) resources
