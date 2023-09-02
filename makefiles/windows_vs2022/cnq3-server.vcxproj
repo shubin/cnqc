@@ -611,7 +611,12 @@ copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="..\..\code\win32\winquake.rc" />
+    <ResourceCompile Include="..\..\code\win32\winquake.rc">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug qc|x64'">false</ExcludedFromBuild>
+    </ResourceCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
