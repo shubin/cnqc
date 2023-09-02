@@ -213,7 +213,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>Winmm.lib;ws2_32.lib;Version.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\..\.build\debug_x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalOptions> ..\..\code\win32\winquake.res /STACK:8388608 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/STACK:8388608 %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
       <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
@@ -244,7 +244,7 @@ copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>Winmm.lib;ws2_32.lib;Version.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\..\.build\debug_x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalOptions> ..\..\code\win32\winquake.res /STACK:8388608 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/STACK:8388608 %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
       <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
@@ -255,6 +255,9 @@ copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
 copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
 </Command>
     </PostBuildEvent>
+    <ResourceCompile>
+      <PreprocessorDefinitions>QC;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">
     <ClCompile>
@@ -275,7 +278,7 @@ copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>Winmm.lib;ws2_32.lib;Version.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\..\.build\debug_x32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalOptions> ..\..\code\win32\winquake.res /STACK:8388608 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/STACK:8388608 %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
       <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
@@ -306,7 +309,7 @@ copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>Winmm.lib;ws2_32.lib;Version.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\..\.build\debug_x32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalOptions> ..\..\code\win32\winquake.res /STACK:8388608 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/STACK:8388608 %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
       <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
@@ -317,6 +320,9 @@ copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
 copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
 </Command>
     </PostBuildEvent>
+    <ResourceCompile>
+      <PreprocessorDefinitions>QC;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release|x64'">
     <ClCompile>
@@ -346,7 +352,7 @@ copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>Winmm.lib;ws2_32.lib;Version.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\..\.build\release_x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalOptions> ..\..\code\win32\winquake.res /STACK:8388608 /OPT:REF /OPT:ICF %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/STACK:8388608 /OPT:REF /OPT:ICF %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
       <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
@@ -386,7 +392,7 @@ copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>Winmm.lib;ws2_32.lib;Version.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\..\.build\release_x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalOptions> ..\..\code\win32\winquake.res /STACK:8388608 /OPT:REF /OPT:ICF %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/STACK:8388608 /OPT:REF /OPT:ICF %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
       <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
@@ -397,6 +403,9 @@ copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
 copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
 </Command>
     </PostBuildEvent>
+    <ResourceCompile>
+      <PreprocessorDefinitions>QC;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release|Win32'">
     <ClCompile>
@@ -427,7 +436,7 @@ copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>Winmm.lib;ws2_32.lib;Version.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\..\.build\release_x32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalOptions> ..\..\code\win32\winquake.res /STACK:8388608 /OPT:REF /OPT:ICF %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/STACK:8388608 /OPT:REF /OPT:ICF %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
       <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
@@ -468,7 +477,7 @@ copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>Winmm.lib;ws2_32.lib;Version.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\..\.build\release_x32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalOptions> ..\..\code\win32\winquake.res /STACK:8388608 /OPT:REF /OPT:ICF %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/STACK:8388608 /OPT:REF /OPT:ICF %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
       <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
@@ -479,6 +488,9 @@ copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
 copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
 </Command>
     </PostBuildEvent>
+    <ResourceCompile>
+      <PreprocessorDefinitions>QC;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\..\code\botlib\aasfile.h" />
@@ -597,6 +609,9 @@ copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
     <ProjectReference Include="botlib.vcxproj">
       <Project>{A1A792F4-8D49-BDCA-7604-D11E6245441B}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\..\code\win32\winquake.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

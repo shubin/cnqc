@@ -333,4 +333,9 @@
       <Filter>win32</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\..\code\win32\winquake.rc">
+      <Filter>win32</Filter>
+    </ResourceCompile>
+  </ItemGroup>
 </Project>

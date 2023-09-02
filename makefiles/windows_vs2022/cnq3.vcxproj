@@ -214,7 +214,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>Winmm.lib;ws2_32.lib;Version.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\..\.build\debug_x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalOptions> ..\..\code\win32\winquake.res /STACK:8388608 /MANIFEST:EMBED /MANIFESTINPUT:..\..\code\win32\client.manifest %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/STACK:8388608 /MANIFEST:EMBED /MANIFESTINPUT:..\..\code\win32\client.manifest %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
       <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
@@ -257,6 +257,9 @@ copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
 copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
 </Command>
     </PostBuildEvent>
+    <ResourceCompile>
+      <PreprocessorDefinitions>QC;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">
     <ClCompile>
@@ -278,7 +281,7 @@ copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>Winmm.lib;ws2_32.lib;Version.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\..\.build\debug_x32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalOptions> ..\..\code\win32\winquake.res /STACK:8388608 /MANIFEST:EMBED /MANIFESTINPUT:..\..\code\win32\client.manifest %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/STACK:8388608 /MANIFEST:EMBED /MANIFESTINPUT:..\..\code\win32\client.manifest %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
       <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
@@ -321,6 +324,9 @@ copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
 copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
 </Command>
     </PostBuildEvent>
+    <ResourceCompile>
+      <PreprocessorDefinitions>QC;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release|x64'">
     <ClCompile>
@@ -351,7 +357,7 @@ copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>Winmm.lib;ws2_32.lib;Version.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\..\.build\release_x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalOptions> ..\..\code\win32\winquake.res /STACK:8388608 /MANIFEST:EMBED /MANIFESTINPUT:..\..\code\win32\client.manifest /OPT:REF /OPT:ICF %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/STACK:8388608 /MANIFEST:EMBED /MANIFESTINPUT:..\..\code\win32\client.manifest /OPT:REF /OPT:ICF %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
       <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
@@ -403,6 +409,9 @@ copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
 copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
 </Command>
     </PostBuildEvent>
+    <ResourceCompile>
+      <PreprocessorDefinitions>QC;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release|Win32'">
     <ClCompile>
@@ -434,7 +443,7 @@ copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>Winmm.lib;ws2_32.lib;Version.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\..\.build\release_x32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalOptions> ..\..\code\win32\winquake.res /STACK:8388608 /MANIFEST:EMBED /MANIFESTINPUT:..\..\code\win32\client.manifest /OPT:REF /OPT:ICF %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/STACK:8388608 /MANIFEST:EMBED /MANIFESTINPUT:..\..\code\win32\client.manifest /OPT:REF /OPT:ICF %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
       <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
@@ -487,6 +496,9 @@ copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
 copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
 </Command>
     </PostBuildEvent>
+    <ResourceCompile>
+      <PreprocessorDefinitions>QC;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\..\code\botlib\aasfile.h" />
@@ -648,13 +660,14 @@ copy $(TargetDir)$(TargetName).pdb "$(QUAKE3DIR)"
     <ResourceCompile Include="..\..\code\win32\winquake.rc">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">_UNICODE;UNICODE;QC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">_UNICODE;UNICODE;QC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug qc|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug qc|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">false</ExcludedFromBuild>
     </ResourceCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
