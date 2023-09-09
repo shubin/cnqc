@@ -222,7 +222,11 @@ but not on every player enter or exit.
 ================
 */
 #define	HEARTBEAT_MSEC	300*1000
+#if defined( QC )
+#define HEARTBEAT_GAME	"Quake3Champions"
+#else // QC
 #define	HEARTBEAT_GAME	"QuakeArena-1"
+#endif // QC
 void SV_MasterHeartbeat( void ) {
 	static netadr_t	adr[MAX_MASTER_SERVERS];
 	int			i;
