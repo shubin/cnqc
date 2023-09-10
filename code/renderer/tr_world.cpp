@@ -210,7 +210,7 @@ static void R_AddWorldSurface( msurface_t* surf )
 		radiusOverZ = triangles->radius / max( dist, 0.001f );
 	}
 
-	R_AddDrawSurf( surf->data, surf->shader, surf->fogIndex, surf->staticGeoChunk, surf->zppFirstIndex, surf->zppIndexCount, radiusOverZ );
+	R_AddDrawSurf( surf->data, surf->shader, surf->staticGeoChunk, surf->zppFirstIndex, surf->zppIndexCount, radiusOverZ );
 }
 
 
@@ -378,7 +378,7 @@ static void R_AddLitSurface( msurface_t* surf, const dlight_t* light )
 		return;
 	}
 
-	R_AddLitSurf( surf->data, surf->shader, surf->fogIndex, surf->staticGeoChunk );
+	R_AddLitSurf( surf->data, surf->shader, surf->staticGeoChunk );
 }
 
 

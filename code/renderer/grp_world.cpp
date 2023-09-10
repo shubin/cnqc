@@ -566,7 +566,6 @@ void World::BeginBatch(const shader_t* shader, bool hasStaticGeo, BatchType::Id 
 {
 	tess.numVertexes = 0;
 	tess.numIndexes = 0;
-	tess.fogNum = 0;
 	tess.depthFade = DFT_NONE;
 	tess.deformsPreApplied = qfalse;
 	tess.xstages = (const shaderStage_t**)shader->stages;

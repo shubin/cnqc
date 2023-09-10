@@ -195,7 +195,6 @@ typedef enum {
 	CGEN_ONE_MINUS_VERTEX,
 	CGEN_WAVEFORM,			// programmatically generated
 	CGEN_LIGHTING_DIFFUSE,
-	CGEN_FOG,				// standard fog
 	CGEN_CONST,				// fixed color
 	CGEN_DEBUG_ALPHA		// debug only: replicate the alpha channel
 } colorGen_t;
@@ -206,16 +205,8 @@ typedef enum {
 	TCGEN_LIGHTMAP,
 	TCGEN_TEXTURE,
 	TCGEN_ENVIRONMENT_MAPPED,
-	TCGEN_FOG,
 	TCGEN_VECTOR			// S and T from world coordinates
 } texCoordGen_t;
-
-typedef enum {
-	ACFF_NONE,
-	ACFF_MODULATE_RGB,
-	ACFF_MODULATE_RGBA,
-	ACFF_MODULATE_ALPHA
-} acff_t;
 
 typedef struct {
 	genFunc_t	func;
@@ -321,8 +312,6 @@ typedef struct {
 
 	unsigned		stateBits;					// GLS_xxxx mask
 
-	acff_t			adjustColorsForFog;
-
 	qbool			isDetail;
 	stageType_t		type;
 } shaderStage_t;
@@ -339,12 +328,6 @@ typedef enum {
 	CT_TWO_SIDED,
 	CT_COUNT
 } cullType_t;
-
-typedef enum {
-	FP_NONE,		// surface is translucent and will just be adjusted properly
-	FP_EQUAL,		// surface is opaque but possibly alpha tested
-	FP_LE			// surface is trnaslucent, but still needs a fog pass (fog surface)
-} fogPass_t;
 
 typedef struct {
 	float		cloudHeight;
@@ -412,11 +395,9 @@ struct shader_t {
 	int			numDeforms;
 	deformStage_t	deforms[MAX_SHADER_DEFORMS];
 
-	int			numStages;			// not counting fog pass (if any)
+	int			numStages;
 	shaderStage_t	*stages[MAX_SHADER_STAGES];
 	int lightingStages[ST_MAX];
-
-	fogPass_t	fogPass;			// draw a blended pass, possibly with depth test equals
 
 	double clampTime;				// time this shader is clamped to
 	double timeOffset;				// current time offset for this shader
@@ -879,9 +860,6 @@ typedef struct {
 } backEndState_t;
 
 
-#define FOG_TABLE_SIZE		256
-
-
 enum renderMode_t {
 	RM_NONE,
 	RM_UI,
@@ -921,7 +899,6 @@ typedef struct {
 	image_t*		defaultImage;
 	image_t*		whiteImage;			// { 255, 255, 255, 255 }
 	image_t*		fullBrightImage;	// RGB scale based on r_mapBrightness, alpha 255
-	image_t*		fogImage;
 	image_t*		scratchImage[16];	// MAX_VIDEO_HANDLES
 
 	shader_t*		defaultShader;
@@ -976,8 +953,6 @@ typedef struct {
 
 	int			numSkins;
 	skin_t*		skins[MAX_SKINS];
-
-	float		fogTable[FOG_TABLE_SIZE];
 
 	float		mipFilter[4]; // only used by the GPU generators
 
@@ -1119,16 +1094,14 @@ extern	cvar_t	*r_debugInput;
 void  R_NoiseInit();
 double R_NoiseGet4f( double x, double y, double z, double t );
 
-void R_SwapBuffers( int );
-
 void R_RenderScene( const viewParms_t* parms );
 
 void R_AddMD3Surfaces( trRefEntity_t *e );
 
 void R_AddPolygonSurfaces();
 
-void R_AddDrawSurf(const surfaceType_t* surface, const shader_t* shader, int fogIndex, int staticGeoChunk = 0, int zppFirstIndex = 0, int zppIndexCount = 0, float radiusOverZ = 666.0f );
-void R_AddLitSurf( const surfaceType_t* surface, const shader_t* shader, int fogIndex, int staticGeoChunk );
+void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int staticGeoChunk = 0, int zppFirstIndex = 0, int zppIndexCount = 0, float radiusOverZ = 666.0f );
+void R_AddLitSurf( const surfaceType_t* surface, const shader_t* shader, int staticGeoChunk );
 uint64_t R_ComposeSort( int entityNum, const shader_t* shader, int staticGeoChunk );
 void R_DecomposeSort( uint64_t sort, int* entityNum, const shader_t** shader );
 uint32_t R_ComposeLitSort( int entityNum, const shader_t* shader, int staticGeoChunk );
@@ -1223,10 +1196,7 @@ void	R_SkinList_f( void );
 
 void	R_AddImageShader( image_t* image, shader_t* shader );
 
-void	R_InitFogTable();
-float	R_FogFactor( float s, float t );
 void	R_InitImages();
-void	R_DeleteTextures();
 void	R_InitSkins();
 const skin_t* R_GetSkinByHandle( qhandle_t hSkin );
 
@@ -1323,13 +1293,11 @@ struct shaderCommands_t
 	vec2_t			texCoords2[SHADER_MAX_VERTEXES];
 	color4ub_t		vertexColors[SHADER_MAX_VERTEXES];
 	stageVars_t		svars[MAX_SHADER_STAGES];
-	stageVars_t		svarsFog;
 
 	enum { TP_BASE, TP_LIGHT } pass;
 
 	const shader_t* shader;
 	double		shaderTime;
-	int			fogNum;
 
 	int			numIndexes;
 	int			numVertexes;
@@ -1343,12 +1311,6 @@ struct shaderCommands_t
 
 	// when qtrue, RB_EndSurface doesn't need to compute deforms, colors, texture coordinates
 	qbool deformsPreApplied;
-
-	// when qtrue, draw a fog pass using fogStateBits and svarsFog
-	qbool drawFog;
-
-	// use this state vector when drawing the fog pass
-	unsigned int fogStateBits;
 
 	// how to process the colors of the current batch
 	float greyscale;
@@ -1465,8 +1427,6 @@ void	R_TransformModelToClip( const vec3_t src, const float *modelMatrix, const f
 void	R_TransformClipToWindow( const vec4_t clip, const viewParms_t *view, vec4_t normalized, vec4_t window );
 
 void	RB_DeformTessGeometry( int firstVertex, int numVertexes, int firstIndex, int numIndexes );
-
-void	RB_CalcFogTexCoords( float *st, int firstVertex, int numVertexes );
 
 
 /*
