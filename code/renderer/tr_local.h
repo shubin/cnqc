@@ -552,6 +552,7 @@ struct litSurf_t {
 	const surfaceType_t* surface;		// any of surface*_t
 	litSurf_t* next;
 	float greyscale;
+	int staticGeoChunk;
 };
 
 struct dlight_t {
@@ -837,6 +838,24 @@ enum drawSurfGeneralSort_t {
 };
 
 
+enum litSurfGeneralSort_t {
+	// dimensions - the sum should stay within 32 bits
+	LITSORT_ENTITY_BITS = 10, // GENTITYNUM_BITS
+	LITSORT_SHADER_BITS = 14, // log2 MAX_SHADERS
+	LITSORT_STATICGEO_BITS = 1,
+	LITSORT_CULLTYPE_BITS = 2,		// PSO part 1
+	LITSORT_POLYGONOFFSET_BITS = 1,	// PSO part 2
+	LITSORT_DEPTHTEST_BITS = 1,		// PSO part 3
+	// offsets
+	LITSORT_ENTITY_INDEX = 0,
+	LITSORT_SHADER_INDEX = LITSORT_ENTITY_INDEX + LITSORT_ENTITY_BITS,
+	LITSORT_STATICGEO_INDEX = LITSORT_SHADER_INDEX + LITSORT_SHADER_BITS,
+	LITSORT_CULLTYPE_INDEX = LITSORT_STATICGEO_INDEX + LITSORT_STATICGEO_BITS,
+	LITSORT_POLYGONOFFSET_INDEX = LITSORT_CULLTYPE_INDEX + LITSORT_CULLTYPE_BITS,
+	LITSORT_DEPTHTEST_INDEX = LITSORT_POLYGONOFFSET_INDEX + LITSORT_POLYGONOFFSET_BITS
+};
+
+
 #define MAX_TMUS 4
 
 
@@ -851,15 +870,6 @@ typedef struct {
 	qbool			projection2D;	// if qtrue, drawstretchpic doesn't need to change modes
 	byte			color2D[4];
 	trRefEntity_t	entity2D;		// currentEntity will point at this when doing 2D rendering
-
-	// dynamic lights data set by the back-end for the GAL
-	qbool			dlOpaque;		// qtrue when drawing an opaque surface
-	float			dlIntensity;	// 1 for most surfaces, but can be scaled down for liquids etc.
-	unsigned int	dlStateBits;	// the state bits to apply for this draw call
-	// quick explanation on why dlOpaque is useful in the first place:
-	// - opaque surfaces can have a diffuse texture whose alpha isn't 255 everywhere
-	// - when that happens and we multiply the color by the the alpha (DL uses additive blending),
-	//   we get "light holes" in opaque surfaces, which is not what we want
 
 	qbool			renderFrame;
 
@@ -1118,9 +1128,11 @@ void R_AddMD3Surfaces( trRefEntity_t *e );
 void R_AddPolygonSurfaces();
 
 void R_AddDrawSurf(const surfaceType_t* surface, const shader_t* shader, int fogIndex, int staticGeoChunk = 0, int zppFirstIndex = 0, int zppIndexCount = 0, float radiusOverZ = 666.0f );
-void R_AddLitSurf( const surfaceType_t* surface, const shader_t* shader, int fogIndex );
+void R_AddLitSurf( const surfaceType_t* surface, const shader_t* shader, int fogIndex, int staticGeoChunk );
 uint64_t R_ComposeSort( int entityNum, const shader_t* shader, int staticGeoChunk );
 void R_DecomposeSort( uint64_t sort, int* entityNum, const shader_t** shader );
+uint32_t R_ComposeLitSort( int entityNum, const shader_t* shader, int staticGeoChunk );
+void R_DecomposeLitSort( uint32_t sort, int* entityNum, const shader_t** shader );
 
 
 #define	CULL_IN		0		// completely unclipped
@@ -1310,7 +1322,6 @@ struct shaderCommands_t
 	vec2_t			texCoords[SHADER_MAX_VERTEXES];
 	vec2_t			texCoords2[SHADER_MAX_VERTEXES];
 	color4ub_t		vertexColors[SHADER_MAX_VERTEXES];
-	unsigned int	dlIndexes[SHADER_MAX_INDEXES];
 	stageVars_t		svars[MAX_SHADER_STAGES];
 	stageVars_t		svarsFog;
 
@@ -1322,7 +1333,6 @@ struct shaderCommands_t
 
 	int			numIndexes;
 	int			numVertexes;
-	int			dlNumIndexes;
 
 	const dlight_t* light;
 

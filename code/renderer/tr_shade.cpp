@@ -35,6 +35,10 @@ SURFACE SHADERS
 shaderCommands_t tess;
 
 
+// @TODO: remove all this...
+#if 0
+
+
 // we must set some things up before beginning any tesselation
 // because a surface may be forced to perform a RB_End due to overflow
 
@@ -251,3 +255,6 @@ void RB_EndSurface()
 	// clear shader so we can tell we don't have any unclosed surfaces
 	tess.numIndexes = 0;
 }
+
+
+#endif

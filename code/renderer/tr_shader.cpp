@@ -1809,8 +1809,8 @@ static void SortNewShader()
 	const int numLitSurfs = tr.refdef.numLitSurfs;
 	litSurf_t* litSurfs = tr.refdef.litSurfs;
 	for ( i = 0; i < numLitSurfs; ++i, ++litSurfs ) {
-		R_DecomposeSort( litSurfs->sort, &entityNum, &wrongShader );
-		litSurfs->sort = R_ComposeSort( entityNum, tr.shaders[litSurfs->shaderNum], drawSurfs->staticGeoChunk );
+		R_DecomposeLitSort( litSurfs->sort, &entityNum, &wrongShader );
+		litSurfs->sort = R_ComposeLitSort( entityNum, tr.shaders[litSurfs->shaderNum], drawSurfs->staticGeoChunk );
 	}
 }
 

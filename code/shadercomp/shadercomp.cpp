@@ -49,7 +49,9 @@ void CompileShader(const ShaderArgs& args, int extraCount = 0, const char** extr
 {
 	static char temp[4096];
 
-	strcpy(temp, va("dxc.exe -Fh %s -E %s -T %s -WX",
+	// -Ges: Enable strict mode
+	// -Gis: Force IEEE strictness
+	strcpy(temp, va("dxc.exe -Fh %s -E %s -T %s -WX -Ges -Gis",
 		args.headerPath, args.entryPoint, args.targetProfile));
 
 	for(int i = 0; i < extraCount; ++i)
@@ -231,6 +233,7 @@ int main(int /*argc*/, const char** argv)
 	CompileVSAndPS("imgui", "imgui.hlsl");
 	CompileVSAndPS("ui", "ui.hlsl");
 	CompileVSAndPS("depth_pre_pass", "depth_pre_pass.hlsl");
+	CompileVSAndPS("dynamic_light", "dynamic_light.hlsl");
 	CompileVS("fog_vs.h", "fog_inside.hlsl");
 	CompilePS("fog_inside_ps.h", "fog_inside.hlsl");
 	CompilePS("fog_outside_ps.h", "fog_outside.hlsl");

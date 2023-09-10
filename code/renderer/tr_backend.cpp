@@ -25,10 +25,13 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 backEndData_t*	backEndData;
 backEndState_t	backEnd;
 
+
+// @TODO: remove all this
+#if 0
+
+
 static int64_t startTime;
 
-
-#if 0
 
 static void RB_Set2D()
 {
