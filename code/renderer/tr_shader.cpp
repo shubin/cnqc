@@ -1579,7 +1579,6 @@ static qbool IsColorGenDynamic(colorGen_t cGen)
 		case CGEN_VERTEX:
 		case CGEN_EXACT_VERTEX:
 		case CGEN_ONE_MINUS_VERTEX:
-		case CGEN_FOG:
 			return qfalse;
 
 		case CGEN_WAVEFORM: // time-based
@@ -1628,7 +1627,6 @@ static qbool IsTexCoordGenDynamic(texCoordGen_t tcGen)
 		case TCGEN_TEXTURE:
 		case TCGEN_LIGHTMAP:
 		case TCGEN_VECTOR:
-		case TCGEN_FOG: // not relevant for us anyhow
 			return qfalse;
 
 		case TCGEN_ENVIRONMENT_MAPPED: // changes with camera position
@@ -1841,12 +1839,6 @@ static shader_t* GeneratePermanentShader( shader_t* sh )
 		const int hash = Q_FileHash( newShader->name, FILE_HASH_SIZE );
 		newShader->next = hashTable[hash];
 		hashTable[hash] = newShader;
-	}
-
-	if ( shader.sort <= SS_OPAQUE ) {
-		newShader->fogPass = FP_EQUAL;
-	} else if ( shader.contentFlags & CONTENTS_FOG ) {
-		newShader->fogPass = FP_LE;
 	}
 
 	for ( int i = 0; i < newShader->numStages; ++i ) {
@@ -2211,7 +2203,6 @@ static alphaGen_t GetActualAlphaTest(const shaderStage_t* stage)
 		case CGEN_VERTEX: return AGEN_VERTEX;
 		case CGEN_EXACT_VERTEX: return AGEN_VERTEX;
 		case CGEN_ONE_MINUS_VERTEX: return (alphaGen_t)__LINE__; // doesn't write to alpha currently...
-		case CGEN_FOG: return (alphaGen_t)__LINE__;
 		case CGEN_WAVEFORM: return AGEN_IDENTITY;
 		case CGEN_ENTITY: return AGEN_ENTITY;
 		case CGEN_ONE_MINUS_ENTITY: return AGEN_ONE_MINUS_ENTITY;
@@ -2445,37 +2436,10 @@ static shader_t* FinishShader( shader_t* sh = NULL )
 		}
 
 		//
-		// determine sort order and fog color adjustment
+		// determine sort order
 		//
 		if ( ( pStage->stateBits & ( GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS ) ) &&
 			 ( stages[0].stateBits & ( GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS ) ) ) {
-			int blendSrcBits = pStage->stateBits & GLS_SRCBLEND_BITS;
-			int blendDstBits = pStage->stateBits & GLS_DSTBLEND_BITS;
-
-			// fog color adjustment only works for blend modes that have a contribution
-			// that aproaches 0 as the modulate values aproach 0 --
-			// GL_ONE, GL_ONE
-			// GL_ZERO, GL_ONE_MINUS_SRC_COLOR
-			// GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA
-
-			// modulate, additive
-			if ( ( ( blendSrcBits == GLS_SRCBLEND_ONE ) && ( blendDstBits == GLS_DSTBLEND_ONE ) ) ||
-				( ( blendSrcBits == GLS_SRCBLEND_ZERO ) && ( blendDstBits == GLS_DSTBLEND_ONE_MINUS_SRC_COLOR ) ) ) {
-				pStage->adjustColorsForFog = ACFF_MODULATE_RGB;
-			}
-			// strict blend
-			else if ( ( blendSrcBits == GLS_SRCBLEND_SRC_ALPHA ) && ( blendDstBits == GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA ) )
-			{
-				pStage->adjustColorsForFog = ACFF_MODULATE_ALPHA;
-			}
-			// premultiplied alpha
-			else if ( ( blendSrcBits == GLS_SRCBLEND_ONE ) && ( blendDstBits == GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA ) )
-			{
-				pStage->adjustColorsForFog = ACFF_MODULATE_RGBA;
-			} else {
-				// we can't adjust this one correctly, so it won't be exactly correct in fog
-			}
-
 			// don't screw with sort order if this is a portal or environment
 			if ( !shader.sort ) {
 				// see through item, like a grill or grate

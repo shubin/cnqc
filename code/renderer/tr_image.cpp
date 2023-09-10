@@ -792,66 +792,6 @@ image_t* R_FindImageFile( const char* name, int flags, textureWrap_t glWrapClamp
 }
 
 
-void R_InitFogTable()
-{
-	const float exp = 0.5;
-
-	for (int i = 0; i < FOG_TABLE_SIZE; ++i) {
-		tr.fogTable[i] = pow( (float)i/(FOG_TABLE_SIZE-1), exp );
-	}
-}
-
-
-/*
-Returns a 0.0 to 1.0 fog density value
-This is called for each texel of the fog texture on startup
-and for each vertex of transparent shaders in fog dynamically
-*/
-float R_FogFactor( float s, float t )
-{
-	s -= 1.0/512;
-	if ( s < 0 ) {
-		return 0;
-	}
-	if ( t < 1.0/32 ) {
-		return 0;
-	}
-	if ( t < 31.0/32 ) {
-		s *= (t - 1.0f/32.0f) / (30.0f/32.0f);
-	}
-
-	// we need to leave a lot of clamp range
-	s *= 8;
-
-	if ( s > 1.0 ) {
-		s = 1.0;
-	}
-
-	return tr.fogTable[ (int)(s * (FOG_TABLE_SIZE-1)) ];
-}
-
-
-static void R_CreateFogImage()
-{
-	const int FOG_S = 256;
-	const int FOG_T = 32;
-
-	RI_AutoPtr ap( FOG_S * FOG_T * 4 );
-	byte* p = ap;
-
-	// S is distance, T is depth
-	for (int x = 0; x < FOG_S; ++x) {
-		for (int y = 0; y < FOG_T; ++y) {
-			float d = R_FogFactor( ( x + 0.5f ) / FOG_S, ( y + 0.5f ) / FOG_T );
-			p[(y*FOG_S+x)*4+0] = p[(y*FOG_S+x)*4+1] = p[(y*FOG_S+x)*4+2] = 255;
-			p[(y*FOG_S+x)*4+3] = 255*d;
-		}
-	}
-
-	tr.fogImage = R_CreateImage( "*fog", p, FOG_S, FOG_T, TF_RGBA8, IMG_NOPICMIP, TW_CLAMP_TO_EDGE );
-}
-
-
 static void R_CreateDefaultImage()
 {
 	const int DEFAULT_SIZE = 16;
@@ -893,8 +833,6 @@ static void R_CreateBuiltinImages()
 	// these are just placeholders: RE_StretchRaw will regenerate them when it wants them
 	for (i = 0; i < ARRAY_LEN(tr.scratchImage); ++i)
 		tr.scratchImage[i] = R_CreateImage( "*scratch", data, 1, 1, TF_RGBA8, IMG_NOMIPMAP | IMG_NOPICMIP, TW_CLAMP_TO_EDGE );
-
-	R_CreateFogImage();
 }
 
 

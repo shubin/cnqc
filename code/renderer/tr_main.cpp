@@ -1280,8 +1280,7 @@ static float SurfGreyscaleAmount( const shader_t* shader )
 }
 
 
-// @TODO: remove the fogIndex argument
-void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int /*fogIndex*/, int staticGeoChunk, int zppFirstIndex, int zppIndexCount, float radiusOverZ )
+void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int staticGeoChunk, int zppFirstIndex, int zppIndexCount, float radiusOverZ )
 {
 	if (tr.refdef.numDrawSurfs >= MAX_DRAWSURFS)
 		return;
@@ -1299,8 +1298,7 @@ void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int /*
 }
 
 
-// @TODO: remove the fogIndex argument
-void R_AddLitSurf( const surfaceType_t* surface, const shader_t* shader, int /*fogIndex*/, int staticGeoChunk )
+void R_AddLitSurf( const surfaceType_t* surface, const shader_t* shader, int staticGeoChunk )
 {
 	if (tr.refdef.numLitSurfs >= MAX_DRAWSURFS)
 		return;
@@ -1611,7 +1609,7 @@ static void R_AddEntitySurfaces()
 				continue;
 			}
 			shader = R_GetShaderByHandle( ent->e.customShader );
-			R_AddDrawSurf( &entitySurface, shader, R_SpriteFogNum( ent ) );
+			R_AddDrawSurf( &entitySurface, shader );
 			break;
 
 		case RT_MODEL:
@@ -1620,7 +1618,7 @@ static void R_AddEntitySurfaces()
 
 			tr.currentModel = R_GetModelByHandle( ent->e.hModel );
 			if (!tr.currentModel) {
-				R_AddDrawSurf( &entitySurface, tr.defaultShader, 0 );
+				R_AddDrawSurf( &entitySurface, tr.defaultShader );
 			} else {
 				switch ( tr.currentModel->type ) {
 				case MOD_MD3:
@@ -1635,7 +1633,7 @@ static void R_AddEntitySurfaces()
 				case MOD_BAD:		// null model axis
 					if ( (ent->e.renderfx & RF_THIRD_PERSON) && !tr.viewParms.isPortal)
 						break;
-					R_AddDrawSurf( &entitySurface, tr.defaultShader, 0 );
+					R_AddDrawSurf( &entitySurface, tr.defaultShader );
 					break;
 				default:
 					ri.Error( ERR_DROP, "R_AddEntitySurfaces: Bad modeltype" );

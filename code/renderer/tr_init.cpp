@@ -746,8 +746,6 @@ void R_Init()
 	if ((intptr_t)tess.xyz & 15)
 		Com_Printf( "WARNING: tess.xyz not 16 byte aligned\n" );
 
-	R_InitFogTable();
-
 	R_NoiseInit();
 
 	R_Register();

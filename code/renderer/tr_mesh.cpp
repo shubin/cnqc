@@ -314,7 +314,7 @@ void R_AddMD3Surfaces( trRefEntity_t* ent )
 
 		// don't add third_person objects if not viewing through a portal
 		if ( !personalModel ) {
-			R_AddDrawSurf( (const surfaceType_t*)surface, shader, fogNum );
+			R_AddDrawSurf( (const surfaceType_t*)surface, shader );
 		}
 
 		surface = (const md3Surface_t*)( (byte *)surface + surface->ofsEnd );
