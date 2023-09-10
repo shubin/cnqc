@@ -1201,21 +1201,43 @@ namespace RHI
 		}
 	}
 
+	static const char* GetUTF8String(const WCHAR* wideStr, const char* defaultUTF8Str)
+	{
+		static char utf8Str[256];
+		const char* utf8StrPtr = defaultUTF8Str;
+		if(WideCharToMultiByte(CP_UTF8, 0, wideStr, -1, utf8Str, sizeof(utf8Str), NULL, NULL) > 0)
+		{
+			utf8StrPtr = utf8Str;
+		}
+
+		return utf8StrPtr;
+	}
+
 	static bool IsSuitableAdapter(IDXGIAdapter1* adapter)
 	{
+		HRESULT hr = S_OK;
+
 		DXGI_ADAPTER_DESC1 desc;
-		if(FAILED(adapter->GetDesc1(&desc)))
+		hr = adapter->GetDesc1(&desc);
+		if(FAILED(hr))
 		{
+			ri.Printf(PRINT_WARNING, "D3D12: IDXGIAdapter1::GetDesc1 failed with code 0x%08X (%s)\n",
+				(unsigned int)hr, GetSystemErrorString(hr));
 			return false;
 		}
 
 		if(desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
 		{
+			//ri.Printf(PRINT_WARNING, "D3D12: '%s' is not real hardware\n",
+				//GetUTF8Name(desc.Description, "unknown adapter"));
 			return false;
 		}
 
-		if(FAILED(D3D12CreateDevice(adapter, FeatureLevel, __uuidof(ID3D12Device), NULL)))
+		hr = D3D12CreateDevice(adapter, FeatureLevel, __uuidof(ID3D12Device), NULL);
+		if(FAILED(hr))
 		{
+			ri.Printf(PRINT_WARNING, "D3D12: can't create device for '%s' with code 0x%08X (%s)\n",
+				GetUTF8String(desc.Description, "unknown adapter"), (unsigned int)hr, GetSystemErrorString(hr));
 			return false;
 		}
 
