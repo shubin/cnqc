@@ -29,22 +29,10 @@ to do:
 - git cherry-pick c75b2b27fa936854d27dadf458e3ec3b03829561
 - https://asawicki.info/news_1758_an_idea_for_visualization_of_frame_times
 - GPU resident vertex data for models: load on demand based on submitted { surface, shader } pairs
-- reloading a map can lead to a TDR timeout
-	could it be related to the copy queue?
-	use PIX to capture and replay the bad command list?
-	seems to not happen ever since I fixed the usage of the stale depth buffer?!
-- transparents don't batch properly I think -> entityMergeable support? ("entityMergable" in the code)
 - use Application Verifier to catch issues
 - tone mapping: look at https://github.com/h3r2tic/tony-mc-mapface
 - ubershader PS: run-time alpha test evaluation to reduce PSO count?
-- mip-map generation: figure out whether out of bounds texture UAV writes are OK or not
-	I think they are in this use case but an explicit confirmation would be nice...
-- working depth pre-pass (account for cull mode, generate buffers on demand)
-	full depth pre-pass -> Z-buffer is complete and won't get updated by opaque drawing
-	1 full-screen pass per dynamic light, culled early with the depth bounds test -> write out to a light buffer
-	draw opaques, locate the light stage and add the light buffer data to the light stage result
 - r_depthFade
-- r_dynamiclight
 - when creating the root signature, validate that neither of the tables have any gap
 - use root signature 1.1 to use the hints that help the drivers optimize out static resources
 - is it possible to force Resource Binding Tier 2 somehow? are we supposed to run on old HW to test? :(
@@ -57,7 +45,6 @@ to do:
 - move UI to the uber shader system, tessellate to generate proper data
 - share structs between HLSL and C++ with .hlsli files -> change cbuffer to ConstantBuffer<MyStruct>
 - share texture and sampler array sizes between HLSL and C++ with .hlsli files
-- what's the actual fog curve used by Q3?
 - roq video textures support?
 */
 
@@ -826,6 +813,7 @@ namespace RHI
 		else
 		{
 			mapped = (uint8_t*)MapBuffer(userHBuffer);
+			Q_assert(mapped != NULL);
 		}
 
 		userBuffer.uploading = true;
@@ -3108,9 +3096,10 @@ namespace RHI
 			return NULL;
 		}
 
-		void* mappedPtr;
+		void* mappedPtr = NULL;
 		D3D(buffer.buffer->Map(0, NULL, &mappedPtr));
 		buffer.mapped = true;
+		Q_assert(mappedPtr != NULL);
 
 		return (uint8_t*)mappedPtr;
 	}

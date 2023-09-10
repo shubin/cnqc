@@ -263,6 +263,9 @@
     <FxCompile Include="..\..\code\renderer\hlsl\depth_pre_pass.hlsl">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </FxCompile>
+    <FxCompile Include="..\..\code\renderer\hlsl\dynamic_light.hlsl">
+      <ExcludedFromBuild>true</ExcludedFromBuild>
+    </FxCompile>
     <FxCompile Include="..\..\code\renderer\hlsl\fog_inside.hlsl">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </FxCompile>

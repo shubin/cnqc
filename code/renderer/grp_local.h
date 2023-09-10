@@ -304,6 +304,16 @@ struct FrameStats
 	int skippedFrames;
 };
 
+struct BatchType
+{
+	enum Id
+	{
+		Standard,
+		DynamicLight,
+		Count
+	};
+};
+
 struct World
 {
 	void Init();
@@ -312,7 +322,7 @@ struct World
 	void Begin();
 	void End();
 	void DrawPrePass(const drawSceneViewCommand_t& cmd);
-	void BeginBatch(const shader_t* shader, bool hasStaticGeo);
+	void BeginBatch(const shader_t* shader, bool hasStaticGeo, BatchType::Id batchType);
 	void EndBatch();
 	void EndSkyBatch();
 	void RestartBatch();
@@ -322,6 +332,8 @@ struct World
 	void BindVertexBuffers(bool staticGeo, uint32_t firstStage, uint32_t stageCount);
 	void BindIndexBuffer(bool staticGeo);
 	void DrawFog();
+	void DrawLitSurfaces(dlight_t* dl, bool opaque);
+	void DrawDynamicLights(bool opaque);
 	void DrawSkyBox();
 	void DrawClouds();
 
@@ -356,6 +368,7 @@ struct World
 	uint32_t boundStaticVertexBuffersFirst;
 	uint32_t boundStaticVertexBuffersCount;
 	HPipeline batchPSO;
+	BatchType::Id batchType;
 	bool batchHasStaticGeo;
 	int psoChangeCount;
 	bool batchDepthHack;
@@ -384,6 +397,17 @@ struct World
 	// shader trace
 	HBuffer traceRenderBuffer;
 	HBuffer traceReadbackBuffer;
+
+	// dynamic lights
+	HRootSignature dlRootSignature;
+	HPipeline dlPipelines[CT_COUNT * 2 * 2]; // { cull type, polygon offset, depth test }
+	bool dlOpaque;
+	float dlIntensity; // 1 for most surfaces, but can be scaled down for liquids etc.
+	bool dlDepthTestEqual;
+	// quick explanation on why dlOpaque is useful in the first place:
+	// - opaque surfaces can have a diffuse texture whose alpha isn't 255 everywhere
+	// - when that happens and we multiply the color by the the alpha (DL uses additive blending),
+	//   we get "light holes" in opaque surfaces, which is not what we want
 };
 
 struct UI

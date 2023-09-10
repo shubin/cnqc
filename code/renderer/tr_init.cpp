@@ -511,7 +511,7 @@ static const cvarTableItem_t r_cvars[] =
 	},
 	{
 		&r_dynamiclight, "r_dynamiclight", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "enables dynamic lights",
-		"", 0, "", "" // @TODO: CVARCAT_GRAPHICS | CVARCAT_PERFORMANCE once implemented
+		"Enable dynamic lights", CVARCAT_GRAPHICS | CVARCAT_PERFORMANCE, "For power-ups, muzzle flashes, rockets, explosions, ...", ""
 	},
 	{
 		&r_lego, "r_lego", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "LEGO(R) texture filtering",
