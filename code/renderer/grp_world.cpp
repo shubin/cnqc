@@ -549,6 +549,7 @@ void World::DrawPrePass(const drawSceneViewCommand_t& cmd)
 	CmdBindRenderTargets(0, NULL, &depthTexture);
 	CmdBindRootSignature(zppRootSignature);
 	CmdBindPipeline(zppPipeline);
+	psoChangeCount++;
 	CmdBindDescriptorTable(zppRootSignature, zppDescriptorTable);
 
 	ZPPVertexRC vertexRC;
@@ -564,6 +565,19 @@ void World::DrawPrePass(const drawSceneViewCommand_t& cmd)
 
 void World::BeginBatch(const shader_t* shader, bool hasStaticGeo, BatchType::Id type)
 {
+	if(type == BatchType::DepthFade && batchType != BatchType::DepthFade)
+	{
+		TextureBarrier barrier(depthTexture, ResourceStates::PixelShaderAccessBit);
+		CmdBarrier(1, &barrier);
+		CmdBindRenderTargets(1, &grp.renderTarget, NULL);
+	}
+	else if(type != BatchType::DepthFade && batchType == BatchType::DepthFade)
+	{
+		TextureBarrier barrier(depthTexture, ResourceStates::DepthWriteBit);
+		CmdBarrier(1, &barrier);
+		CmdBindRenderTargets(1, &grp.renderTarget, &depthTexture);
+	}
+
 	tess.numVertexes = 0;
 	tess.numIndexes = 0;
 	tess.depthFade = DFT_NONE;
@@ -733,14 +747,17 @@ void World::EndBatch()
 
 			WorldPixelRC pixelRC = {};
 			pixelRC.greyscale = tess.greyscale;
-			pixelRC.frameSeed = grp.frameSeed;
-			pixelRC.noiseScale = r_ditherStrength->value;
-			pixelRC.invBrightness = 1.0f / r_brightness->value;
-			pixelRC.invGamma = 1.0f / r_gamma->value;
-			pixelRC.shaderTrace = (uint32_t)!!tr.traceWorldShader;
-			pixelRC.shaderIndex = (uint32_t)shader->index;
-			pixelRC.frameIndex = RHI::GetFrameIndex();
-			pixelRC.centerPixel = (glConfig.vidWidth / 2) | ((glConfig.vidHeight / 2) << 16);
+			pixelRC.hFrameSeed = f32tof16(grp.frameSeed);
+			pixelRC.hNoiseScale = f32tof16(r_ditherStrength->value);
+			pixelRC.hInvGamma = f32tof16(1.0f / r_gamma->value);
+			pixelRC.hInvBrightness = f32tof16(1.0f / r_brightness->value);
+			pixelRC.shaderTrace = (uint32_t)!!tr.traceWorldShader | (RHI::GetFrameIndex() << 1) | ((uint32_t)shader->index << 3);
+			pixelRC.centerPixelX = glConfig.vidWidth / 2;
+			pixelRC.centerPixelY = glConfig.vidHeight / 2;
+			pixelRC.hFadeDistance = f32tof16(tess.shader->dfInvDist);
+			pixelRC.hFadeOffset = f32tof16(tess.shader->dfBias);
+			pixelRC.depthFadeColorTex = (uint32_t)r_depthFadeScaleAndBias[tess.shader->dfType] | (depthTextureIndex << 8);
+
 			for(int s = 0; s < pipeline.numStages; ++s)
 			{
 				const image_t* image = GetBundleImage(shader->stages[pipeline.firstStage + s]->bundle);
@@ -803,7 +820,7 @@ void World::EndSkyBatch()
 void World::RestartBatch()
 {
 	EndBatch();
-	BeginBatch(tess.shader, batchHasStaticGeo, BatchType::Standard);
+	BeginBatch(tess.shader, batchHasStaticGeo, batchType);
 }
 
 void World::DrawGUI()
@@ -1065,6 +1082,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 	CmdBindDescriptorTable(grp.uberRootSignature, grp.descriptorTable);
 	CmdBindRenderTargets(1, &grp.renderTarget, &depthTexture);
 	batchPSO = RHI_MAKE_NULL_HANDLE();
+	batchType = BatchType::Standard;
 
 	const drawSurf_t* drawSurfs = cmd.drawSurfs;
 	const int surfCount = cmd.numDrawSurfs;
@@ -1107,6 +1125,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			CmdBindDescriptorTable(grp.uberRootSignature, grp.descriptorTable);
 			CmdBindRenderTargets(1, &grp.renderTarget, &depthTexture);
 			batchPSO = RHI_MAKE_NULL_HANDLE();
+			batchType = BatchType::Standard;
 			boundVertexBuffers = BufferFamily::Invalid;
 			boundIndexBuffer = BufferFamily::Invalid;
 
@@ -1142,6 +1161,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			continue;
 		}
 
+		const BatchType::Id type = IsDepthFadeEnabled(*shader) ? BatchType::DepthFade : BatchType::Standard;
 		if(staticChanged || shaderChanged || entityChanged)
 		{
 			oldShader = shader;
@@ -1149,7 +1169,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			oldHasStaticGeo = hasStaticGeo;
 			EndSkyBatch();
 			EndBatch();
-			BeginBatch(shader, hasStaticGeo, BatchType::Standard);
+			BeginBatch(shader, hasStaticGeo, type);
 			tess.greyscale = drawSurf->greyscale;
 			batchShadingRate = lowShadingRate;
 		}
@@ -1166,7 +1186,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			if(tess.numIndexes + chunk.indexCount > SHADER_MAX_INDEXES)
 			{
 				EndBatch();
-				BeginBatch(tess.shader, batchHasStaticGeo, BatchType::Standard);
+				BeginBatch(tess.shader, batchHasStaticGeo, type);
 				batchShadingRate = lowShadingRate;
 			}
 
@@ -1271,38 +1291,43 @@ void World::DrawFog()
 
 	SCOPED_RENDER_PASS("Fog", 0.25f, 0.125f, 0.0f);
 
-	CmdBindPipeline(fogOutsidePipeline);
-	CmdBindRootSignature(fogRootSignature);
-	CmdBindDescriptorTable(fogRootSignature, fogDescriptorTable);
-
-	const uint32_t stride = sizeof(vec3_t);
-	CmdBindVertexBuffers(1, &boxVertexBuffer, &stride, NULL);
-	CmdBindIndexBuffer(boxIndexBuffer, IndexType::UInt32, 0);
-
-	CmdBindRenderTargets(1, &grp.renderTarget, NULL);
-	const TextureBarrier depthReadBarrier(depthTexture, ResourceStates::PixelShaderAccessBit);
-	CmdBarrier(1, &depthReadBarrier);
-
+	// fog 0 is invalid, it must be skipped
 	int insideIndex = -1;
-	for(int f = 1; f < tr.world->numfogs; ++f)
+	if(tr.world->numfogs > 1)
 	{
-		const fog_t& fog = tr.world->fogs[f];
+		CmdBindPipeline(fogOutsidePipeline);
+		psoChangeCount++;
+		CmdBindRootSignature(fogRootSignature);
+		CmdBindDescriptorTable(fogRootSignature, fogDescriptorTable);
 
-		bool inside = true;
-		for(int a = 0; a < 3; ++a)
+		const uint32_t stride = sizeof(vec3_t);
+		CmdBindVertexBuffers(1, &boxVertexBuffer, &stride, NULL);
+		CmdBindIndexBuffer(boxIndexBuffer, IndexType::UInt32, 0);
+
+		CmdBindRenderTargets(1, &grp.renderTarget, NULL);
+		const TextureBarrier depthReadBarrier(depthTexture, ResourceStates::PixelShaderAccessBit);
+		CmdBarrier(1, &depthReadBarrier);
+
+		for(int f = 1; f < tr.world->numfogs; ++f)
 		{
-			if(backEnd.viewParms.orient.origin[a] <= fog.bounds[0][a] ||
-				backEnd.viewParms.orient.origin[a] >= fog.bounds[1][a])
+			const fog_t& fog = tr.world->fogs[f];
+
+			bool inside = true;
+			for(int a = 0; a < 3; ++a)
 			{
-				inside = false;
+				if(backEnd.viewParms.orient.origin[a] <= fog.bounds[0][a] ||
+					backEnd.viewParms.orient.origin[a] >= fog.bounds[1][a])
+				{
+					inside = false;
+					break;
+				}
+			}
+
+			if(inside)
+			{
+				insideIndex = f;
 				break;
 			}
-		}
-
-		if(inside)
-		{
-			insideIndex = f;
-			break;
 		}
 	}
 
@@ -1333,6 +1358,7 @@ void World::DrawFog()
 	if(insideIndex > 0)
 	{
 		CmdBindPipeline(fogInsidePipeline);
+		psoChangeCount++;
 		CmdBindRootSignature(fogRootSignature);
 		CmdBindDescriptorTable(fogRootSignature, fogDescriptorTable);
 

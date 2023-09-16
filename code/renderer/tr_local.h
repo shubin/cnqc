@@ -341,16 +341,15 @@ typedef struct {
 
 typedef enum {
 	DFT_NONE,   // disabled
-	DFT_BLEND,  // std alpha blend -> fade color = (R G B 0)
-	DFT_ADD,    // additive        -> fade color = (0 0 0 A)
-	DFT_MULT,   // multiplicative  -> fade color = (1 1 1 A)
-	DFT_PMA,    // pre-mult alpha  -> fade color = (0 0 0 0)
+	DFT_BLEND,  // standard alpha blend
+	DFT_ADD,    // additive
+	DFT_MULT,   // multiplicative
+	DFT_PMA,    // pre-multiplied alpha
 	DFT_TBD,    // to be determined, i.e. fix up later
 	DFT_COUNT
 } depthFadeType_t;
 
-extern const float r_depthFadeScale[DFT_COUNT][4];
-extern const float r_depthFadeBias [DFT_COUNT][4];
+extern const uint8_t r_depthFadeScaleAndBias[DFT_COUNT];
 
 struct pipeline_t {
 	int firstStage;

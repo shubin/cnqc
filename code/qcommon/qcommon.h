@@ -1294,6 +1294,10 @@ printHelpResult_t Com_PrintHelp( const char* name, printf_t print, qbool printNo
 #endif
 
 
+float f16tof32( uint16_t x );
+uint16_t f32tof16( float x );
+
+
 // the smallest power of 2 accepted is 1
 template<typename T>
 static T IsPowerOfTwo( T x )
