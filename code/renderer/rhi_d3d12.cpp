@@ -32,7 +32,6 @@ to do:
 - use Application Verifier to catch issues
 - tone mapping: look at https://github.com/h3r2tic/tony-mc-mapface
 - ubershader PS: run-time alpha test evaluation to reduce PSO count?
-- r_depthFade
 - when creating the root signature, validate that neither of the tables have any gap
 - use root signature 1.1 to use the hints that help the drivers optimize out static resources
 - is it possible to force Resource Binding Tier 2 somehow? are we supposed to run on old HW to test? :(
@@ -2729,7 +2728,7 @@ namespace RHI
 
 		glInfo.maxTextureSize = MAX_TEXTURE_SIZE;
 		glInfo.maxAnisotropy = 16;
-		glInfo.depthFadeSupport = qfalse;
+		glInfo.depthFadeSupport = qtrue;
 
 		rhi.initialized = true;
 

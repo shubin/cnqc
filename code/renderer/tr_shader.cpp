@@ -23,24 +23,15 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 // tr_shader.c -- this file deals with the parsing and definition of shaders
 
-const float r_depthFadeScale[DFT_COUNT][4] =
-{
-	{ 0.0f, 0.0f, 0.0f, 0.0f }, // DFT_NONE
-	{ 1.0f, 1.0f, 1.0f, 0.0f }, // DFT_BLEND
-	{ 0.0f, 0.0f, 0.0f, 1.0f }, // DFT_ADD
-	{ 0.0f, 0.0f, 0.0f, 1.0f }, // DFT_MULT
-	{ 0.0f, 0.0f, 0.0f, 0.0f }, // DFT_PMA
-	{ 0.0f, 0.0f, 0.0f, 0.0f }  // DFT_TBD
-};
 
-const float r_depthFadeBias[DFT_COUNT][4] =
+const uint8_t r_depthFadeScaleAndBias[DFT_COUNT] =
 {
-	{ 0.0f, 0.0f, 0.0f, 0.0f }, // DFT_NONE
-	{ 0.0f, 0.0f, 0.0f, 0.0f }, // DFT_BLEND
-	{ 0.0f, 0.0f, 0.0f, 0.0f }, // DFT_ADD
-	{ 1.0f, 1.0f, 1.0f, 0.0f }, // DFT_MULT
-	{ 0.0f, 0.0f, 0.0f, 0.0f }, // DFT_PMA
-	{ 0.0f, 0.0f, 0.0f, 0.0f }  // DFT_TBD
+	0x00, // DFT_NONE             R  G  B  A            R  G  B  A
+	0x07, // DFT_BLEND - scale = (1, 1, 1, 0) - bias = (0, 0, 0, 0)
+	0x08, // DFT_ADD   - scale = (0, 0, 0, 1) - bias = (0, 0, 0, 0)
+	0x78, // DFT_MULT  - scale = (0, 0, 0, 1) - bias = (1, 1, 1, 0)
+	0x00, // DFT_PMA   - scale = (0, 0, 0, 0) - bias = (0, 0, 0, 0)
+	0x00  // DFT_TBD
 };
 
 static char* s_shaderText = 0;

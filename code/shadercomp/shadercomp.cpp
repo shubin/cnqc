@@ -193,9 +193,13 @@ void CompileUberPS(const char* stateString)
 	extras[extraCount++] = va("-Vn g_ps_%s", stateString);
 	extras[extraCount++] = "-D USE_INCLUDES=1";
 	extras[extraCount++] = "-D PIXEL_SHADER=1";
-	if(state.globalState & 1)
+	if(state.globalState & UBERPS_DITHER_BIT)
 	{
 		extras[extraCount++] = "-D DITHER=1";
+	}
+	if(state.globalState & UBERPS_DEPTHFADE_BIT)
+	{
+		extras[extraCount++] = "-D DEPTH_FADE=1";
 	}
 	extras[extraCount++] = va("-D STAGE_COUNT=%d", state.stageCount);
 	for(int s = 0; s < state.stageCount; ++s)

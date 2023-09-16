@@ -159,7 +159,6 @@ static bool IsCommutativeBlendState(unsigned int stateBits)
 	return false;
 }
 
-
 static cullType_t GetMirrorredCullType(cullType_t cullType)
 {
 	switch(cullType)
@@ -409,8 +408,11 @@ void GRP::ProcessShader(shader_t& shader)
 
 	if(shader.isOpaque)
 	{
+		Q_assert(IsDepthFadeEnabled(shader) == false);
+
 		// @TODO: fix up cache.stageStateBits[0] based on depth state from follow-up states
 		CachedPSO cache = {};
+		cache.desc.depthFade = false;
 		cache.desc.polygonOffset = !!shader.polygonOffset;
 		cache.desc.clampDepth = clampDepth;
 		cache.stageStateBits[0] = shader.stages[0]->stateBits & (~GLS_POLYMODE_LINE);
@@ -432,6 +434,7 @@ void GRP::ProcessShader(shader_t& shader)
 	{
 		CachedPSO cache = {};
 		
+		cache.desc.depthFade = IsDepthFadeEnabled(shader);
 		cache.desc.polygonOffset = !!shader.polygonOffset;
 		cache.desc.clampDepth = clampDepth;
 		cache.stageCount = 0;
@@ -617,6 +620,9 @@ void GRP::DrawGUI()
 
 				ImGui::EndTable();
 			}
+
+			ImGui::Text("PSO count: %d", (int)grp.psoCount);
+			ImGui::Text("PSO changes: %d", (int)grp.world.psoChangeCount);
 		}
 		ImGui::End();
 	}
@@ -720,8 +726,11 @@ uint32_t GRP::CreatePSO(CachedPSO& cache, const char* name)
 	for(uint32_t i = 0; i < uberPixelShaderCacheSize; ++i)
 	{
 		const UberPixelShaderState& state = uberPixelShaderStates[i];
+		const int dither = (state.globalState & UBERPS_DITHER_BIT) != 0 ? 1 : 0;
+		const bool depthFade = (state.globalState & UBERPS_DEPTHFADE_BIT) != 0;
 		if(cache.stageCount != (uint32_t)state.stageCount ||
-			r_dither->integer != (state.globalState & 1))
+			r_dither->integer != dither ||
+			cache.desc.depthFade != depthFade)
 		{
 			continue;
 		}
@@ -760,6 +769,12 @@ uint32_t GRP::CreatePSO(CachedPSO& cache, const char* name)
 			macros[macroCount].value = "1";
 			macroCount++;
 		}
+		if(cache.desc.depthFade)
+		{
+			macros[macroCount].name = "DEPTH_FADE";
+			macros[macroCount].value = "1";
+			macroCount++;
+		}
 		for(int s = 0; s < cache.stageCount; ++s)
 		{
 			macros[macroCount].name = va("STAGE%d_BITS", s);
@@ -776,13 +791,31 @@ uint32_t GRP::CreatePSO(CachedPSO& cache, const char* name)
 		pixelShaderByteCode = uberPixelShaderByteCodes[uberPixelShaderIndex];
 	}
 
+	// important missing entries can be copy-pasted into UBER_SHADER_PS_LIST
 #if 0
-	Sys_DebugPrintf("PS: ");
-	for(int s = 0; s < cache.stageCount; ++s)
+	if(uberPixelShaderIndex < 0)
 	{
-		Sys_DebugPrintf(va("%X ", (int)cache.stageStateBits[s] & pixelShaderStateBits));
+		unsigned int flags = 0;
+		if(r_dither->integer)
+		{
+			flags |= UBERPS_DITHER_BIT;
+		}
+		if(cache.desc.depthFade)
+		{
+			flags |= UBERPS_DEPTHFADE_BIT;
+		}
+		Sys_DebugPrintf("\tshader: %s\n", name);
+		ri.Printf(PRINT_ALL, "^2    shader: %s\n", name);
+		Sys_DebugPrintf("\tPS(%d_%X", (int)cache.stageCount, flags);
+		ri.Printf(PRINT_ALL, "     PS(%d_%X", (int)cache.stageCount, flags);
+		for(int s = 0; s < cache.stageCount; ++s)
+		{
+			Sys_DebugPrintf("_%X", (unsigned int)(cache.stageStateBits[s] & pixelShaderStateBits));
+			ri.Printf(PRINT_ALL, "_%X", (unsigned int)(cache.stageStateBits[s] & pixelShaderStateBits));
+		}
+		Sys_DebugPrintf(") \\\n");
+		ri.Printf(PRINT_ALL, ") \\\n");
 	}
-	Sys_DebugPrintf("\n");
 #endif
 
 	uint32_t a = 0;
@@ -797,13 +830,20 @@ uint32_t GRP::CreatePSO(CachedPSO& cache, const char* name)
 		desc.vertexLayout.AddAttribute(a++, ShaderSemantic::TexCoord, DataType::Float32, 2, 0);
 		desc.vertexLayout.AddAttribute(a++, ShaderSemantic::Color, DataType::UNorm8, 4, 0);
 	}
-	desc.depthStencil.depthStencilFormat = TextureFormat::Depth32_Float;
-	desc.depthStencil.depthComparison =
-		(cache.stageStateBits[0] & GLS_DEPTHFUNC_EQUAL) != 0 ?
-		ComparisonFunction::Equal :
-		ComparisonFunction::GreaterEqual;
-	desc.depthStencil.enableDepthTest = (cache.stageStateBits[0] & GLS_DEPTHTEST_DISABLE) == 0;
-	desc.depthStencil.enableDepthWrites = (cache.stageStateBits[0] & GLS_DEPTHMASK_TRUE) != 0;
+	if(cache.desc.depthFade)
+	{
+		desc.depthStencil.DisableDepth();
+	}
+	else
+	{
+		desc.depthStencil.depthStencilFormat = TextureFormat::Depth32_Float;
+		desc.depthStencil.depthComparison =
+			(cache.stageStateBits[0] & GLS_DEPTHFUNC_EQUAL) != 0 ?
+			ComparisonFunction::Equal :
+			ComparisonFunction::GreaterEqual;
+		desc.depthStencil.enableDepthTest = (cache.stageStateBits[0] & GLS_DEPTHTEST_DISABLE) == 0;
+		desc.depthStencil.enableDepthWrites = (cache.stageStateBits[0] & GLS_DEPTHMASK_TRUE) != 0;
+	}
 	desc.rasterizer.cullMode = cache.desc.cullType;
 	desc.rasterizer.polygonOffset = cache.desc.polygonOffset;
 	desc.rasterizer.clampDepth = cache.desc.clampDepth;

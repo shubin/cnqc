@@ -424,11 +424,10 @@ static const cvarTableItem_t r_cvars[] =
 		&r_lightmapGreyscale, "r_lightmapGreyscale", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "0", "1", "how desaturated the lightmap looks",
 		"Lightmap desaturation", CVARCAT_GRAPHICS, "Desaturates the lightmap data", ""
 	},
-	// @TODO:
-	//{
-		//&r_depthFade, "r_depthFade", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_depthFade,
-		//"", CVARCAT_GRAPHICS | CVARCAT_PERFORMANCE, "", ""
-	//},
+	{
+		&r_depthFade, "r_depthFade", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_depthFade,
+		"Depth fade", CVARCAT_GRAPHICS | CVARCAT_PERFORMANCE, "Prevents transparent surfaces from creating sharp edges when \"cutting\" through opaque geometry", ""
+	},
 	{
 		&r_dither, "r_dither", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_dither,
 		"Dither", CVARCAT_GRAPHICS | CVARCAT_PERFORMANCE, "Adds noise to fight color banding artifacts", ""
