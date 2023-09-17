@@ -38,7 +38,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #define BASEGAME			"baseq3"
 #if defined( QC )
-#define APEXGAME			"qc"
+#define APEXGAME			"base"
 #else
 #define APEXGAME			"cpma"
 #endif
