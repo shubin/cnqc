@@ -4,7 +4,7 @@ Currently used build:
 premake v5.0.0-beta2
 
 There are 3 supported build toolchains:
-- Visual C++ on Windows x64 and x86
+- Visual C++ on Windows x64
 - GCC or Clang on Linux x64
 - Clang or GCC on FreeBSD x64
 
@@ -33,9 +33,15 @@ abs_path_q3 = string.format("$(%s)", envvar_q3dir)
 
 extra_warnings = 1
 
+-- premake tokens for this script:
+-- cfg.buildcfg -> "debug", "release"
+-- cfg.architecture -> "x86_64" ("x86" deprecated)
+-- cfg.system -> "windows", "linux", "bsd"
+-- cfg.platform -> "x64" ("x32" deprecated)
+
 local function GetBinDirName()
 
-	return "%{cfg.buildcfg}_%{cfg.platform}"
+	return "%{cfg.buildcfg}"
 
 end
 
@@ -112,25 +118,16 @@ local function GetMakePath(premakePath)
 
 end
 
--- premake tokens for this script:
--- cfg.buildcfg -> "debug", "release"
--- cfg.architecture -> "x86", "x86_64"
--- cfg.system -> "windows", "linux", "bsd"
--- cfg.platform -> "x32", "x64"
-
 local function GetLibJpegTurboNasmFlags()
 
 	libjpeg_turbo_nasm_flags_map =
 	{
-	   windows_x32 = "-fwin32 -DWIN32",
-	   windows_x64 = "-fwin64 -DWIN64 -D__x86_64__",
-	   linux_x32 = "-felf32 -DELF",
-	   linux_x64 = "-felf64 -DELF -D__x86_64__",
-	   bsd_x32 = "-felf32 -DELF",
-	   bsd_x64 = "-felf64 -DELF -D__x86_64__"
+		windows = "-fwin64 -DWIN64 -D__x86_64__",
+		linux = "-felf64 -DELF -D__x86_64__",
+		bsd = "-felf64 -DELF -D__x86_64__"
 	}
 
-	return "%{libjpeg_turbo_nasm_flags_map[cfg.system..\"_\"..cfg.platform]}"
+	return "%{libjpeg_turbo_nasm_flags_map[cfg.system]}"
 
 end
 
@@ -141,18 +138,6 @@ local function GetCompilerObjectExtension()
 	end
 
 	return ".obj"
-
-end
-
-local function GetExeNameSuffix()
-
-	platform_exe_name_suffix_map =
-	{
-	   x32 = "-x86",
-	   x64 = "-x64"
-	}
-
-	return "%{platform_exe_name_suffix_map[cfg.platform]}"
 
 end
 
@@ -234,9 +219,6 @@ local function ApplyProjectSettings(outputExe)
 		buildoptions { "/GL"  }
 		linkoptions { "" }
 
-	filter { "action:vs*", "platforms:x32" }
-		buildoptions { "/arch:SSE2" }
-
 	-- disable the "conversion from 'X' to 'Y', possible loss of data" warning
 	-- this should be removed once the x64 port is complete
 	filter { "action:vs*", "platforms:x64" }
@@ -268,9 +250,6 @@ local function ApplyProjectSettings(outputExe)
 		buildoptions { "-g1" }
 		linkoptions { "" }
 
-	filter { "action:gmake", "platforms:x32" }
-		buildoptions { "-mmmx -msse -msse2" }
-
 	filter { }
 
 end
@@ -287,7 +266,6 @@ local function ApplyExeProjectSettings(exeName, server)
 
 	filter { }
 
-	exeName = exeName..GetExeNameSuffix()
 	targetname(exeName)
 
 	local server_sources =
@@ -570,44 +548,6 @@ local function ApplyLibJpegTurboProjectSettings()
 		"jmemmgr.c"
 	}
 
-	local jpeg_asm_sources_x86 =
-	{
-		"jsimdcpu",
-		"jfdctflt-3dn",
-		"jidctflt-3dn",
-		"jquant-3dn",
-		"jccolor-mmx",
-		"jcgray-mmx",
-		"jcsample-mmx",
-		"jdcolor-mmx",
-		"jdmerge-mmx",
-		"jdsample-mmx",
-		"jfdctfst-mmx",
-		"jfdctint-mmx",
-		"jidctfst-mmx",
-		"jidctint-mmx",
-		"jidctred-mmx",
-		"jquant-mmx",
-		"jfdctflt-sse",
-		"jidctflt-sse",
-		"jquant-sse",
-		"jccolor-sse2",
-		"jcgray-sse2",
-		"jchuff-sse2",
-		"jcsample-sse2",
-		"jdcolor-sse2",
-		"jdmerge-sse2",
-		"jdsample-sse2",
-		"jfdctfst-sse2",
-		"jfdctint-sse2",
-		"jidctflt-sse2",
-		"jidctfst-sse2",
-		"jidctint-sse2",
-		"jidctred-sse2",
-		"jquantf-sse2",
-		"jquanti-sse2"
-	}
-
 	local jpeg_asm_sources_x64 =
 	{
 		"jfdctflt-sse-64",
@@ -631,11 +571,6 @@ local function ApplyLibJpegTurboProjectSettings()
 	AddSourcesFromArray("libjpeg-turbo", jpeg_sources)
 	includedirs { path_src.."/libjpeg-turbo", path_src.."/libjpeg-turbo/simd" }
 	defines { "WITH_SIMD" }
-
-	filter "platforms:x32"
-		AddAssemblerSourcesFromArray("libjpeg-turbo/simd", jpeg_asm_sources_x86)
-		files { path_src.."/libjpeg-turbo/simd/jsimd_i386.c" }
-		defines { "SIZEOF_SIZE_T=4" }
 
 	filter "platforms:x64"
 		AddAssemblerSourcesFromArray("libjpeg-turbo/simd", jpeg_asm_sources_x64)
@@ -674,11 +609,7 @@ end
 
 solution "cnq3"
 
-	if os.istarget("windows") then
-		platforms { "x64", "x32" }
-	else
-		platforms { "x64" }
-	end
+	platforms { "x64" }
 
 	location ( string.format("%s/%s_%s", path_make, os.target(), _ACTION) )
 	configurations { "debug", "release" }
@@ -714,7 +645,7 @@ solution "cnq3"
 			postbuildcommands { string.format("\"%s/renderer/hlsl/%%{cfg.buildtarget.name}\"", make_path_src) }
 			ApplyProjectSettings(true)
 			--[[
-			-- VC++ STILL requires absolute paths for these... maybe it will be fixed a few decades after I'm in the grave
+			VC++ STILL requires absolute paths for these... maybe it will be fixed a few decades after I'm in the grave
 			local debug_path_dir = string.format("%s/renderer/hlsl", make_path_src)
 			local debug_path_exe = string.format("%s/%%{cfg.buildtarget.name}", debug_path_dir)
 			debugdir(debug_path_dir)
