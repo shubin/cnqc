@@ -2,7 +2,7 @@
 See the end of this file for known issues.
 
 
-DD Mmm 23 - 1.53
+20 Sep 23 - 1.53
 
 add: /registerdemos   adds Windows file associations for demo files (.dm_68 .dm_67 .dm_66)
   /unregisterdemos removes Windows file associations for demo files
