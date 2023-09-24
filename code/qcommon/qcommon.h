@@ -472,6 +472,23 @@ typedef union {
 	floatValidator_s	f;
 } cvarValidator_t;
 
+struct cvarGuiValue_t {
+	const char* value;
+	const char* title;
+	const char* desc;
+	int valueLength;
+};
+
+struct cvarGui_t {
+	const char* title;
+	const char* desc;
+	const char* help;
+	cvarGuiValue_t* values;
+	int categories;
+	int numValues;
+	int maxValueLength;
+};
+
 // nothing outside the Cvar_*() functions should modify these fields!
 typedef struct cvar_s {
 	char		*name;
@@ -490,6 +507,7 @@ typedef struct cvar_s {
 	int			integer;			// atoi( string )
 	qbool		mismatchPrinted;	// have we already notified of mismatching initial values?
 	cvarValidator_t	validator;
+	cvarGui_t	gui;
 	struct cvar_s *next;
 	struct cvar_s *hashNext;
 } cvar_t;
@@ -503,7 +521,14 @@ typedef struct cvarTableItem_s {
 	const char*		min;
 	const char*		max;
 	const char*		help;
+	const char*		guiName;
+	int				categories;
+	const char*		guiDesc;
+	const char*		guiHelp;
+	const char*		guiValues;
 } cvarTableItem_t;
+
+#define CVARSET_BYPASSLATCH_BIT		1
 
 typedef void ( QDECL *printf_t )( PRINTF_FORMAT_STRING const char* fmt, ... );
 
@@ -521,6 +546,9 @@ void	Cvar_SetHelp( const char *var_name, const char *help );
 qbool	Cvar_GetHelp( const char **desc, const char **help, const char* var_name );	// qtrue if the cvar was found
 
 void	Cvar_SetRange( const char *var_name, cvarType_t type, const char *min, const char *max );
+
+void	Cvar_SetDataType( const char* cvarName, cvarType_t type );
+void	Cvar_SetMenuData( const char* cvarName, int categories, const char* title, const char* desc, const char* help, const char* values );
 
 void	Cvar_RegisterTable( const cvarTableItem_t* cvars, int count, module_t module );
 #define Cvar_RegisterArray(a, m)	Cvar_RegisterTable( a, ARRAY_LEN(a), m )
@@ -541,6 +569,9 @@ void	Cvar_Update( vmCvar_t *vmCvar );
 // updates an interpreted module's version of a cvar
 
 void	Cvar_Set( const char *var_name, const char *value );
+// will create the variable with no flags if it doesn't exist
+
+cvar_t* Cvar_Set2( const char *var_name, const char *value, int cvarSetFlags );
 // will create the variable with no flags if it doesn't exist
 
 void	Cvar_SetValue( const char *var_name, float value );
@@ -584,6 +615,8 @@ const char* Cvar_InfoString_Big( int bit );
 // returns an info string containing all the cvars that have the given bit set
 // in their flags ( CVAR_USERINFO, CVAR_SERVERINFO, CVAR_SYSTEMINFO, etc )
 void	Cvar_InfoStringBuffer( int bit, char *buff, int buffsize );
+
+cvar_t* Cvar_GetFirst();
 
 extern	int			cvar_modifiedFlags;
 // whenever a cvar is modifed, its flags will be OR'd into this, so
@@ -841,6 +874,17 @@ extern char cl_cdkey[34];
 // centralized and cleaned, that's the max string you can send to a Com_Printf / Com_DPrintf (above gets truncated)
 #define	MAXPRINTMSG	4096
 
+struct stats_t
+{
+	float minimum;
+	float maximum;
+	float average;
+	float median;
+	float variance;
+	float stdDev;
+	float percentile99;
+};
+
 char*		CopyString( const char *in );
 void		Info_Print( const char *s );
 
@@ -857,12 +901,16 @@ int			Com_Filter( const char* filter, const char* name );
 int			Com_FilterPath( const char* filter, const char* name );
 int			Com_RealTime(qtime_t *qtime);
 qbool		Com_SafeMode();
-const char	*Com_FormatBytes( int numBytes );
+const char	*Com_FormatBytes( uint64_t numBytes );
+void		Com_StatsFromArray( const int* input, int numSamples, int* temp, stats_t* stats );
+void		Com_StatsFromArray( const float* input, int numSamples, float* temp, stats_t* stats );
 
 void		Com_StartupVariable( const char *match );
 // checks for and removes command line "+set var arg" constructs
 // if match is NULL, all set commands will be executed, otherwise
 // only a set with the exact name.  Only used during startup.
+
+void		Com_ParseHexColor( float* color, const char* text, qbool hasAlpha );
 
 
 extern	cvar_t	*com_developer;
@@ -1034,6 +1082,9 @@ void CL_DisableFramerateLimiter();
 // which would leave the FPS limit enabled until the next successful map load
 // this should therefore always be called by Com_Error
 
+void CL_SetMenuData( qboolean typeOnly );
+// sets GUI data for CVars registered by ui.qvm and cgame.qvm
+
 void Key_KeyNameCompletion( void (*callback)(const char *s) );
 // for /bind and /unbind auto-completion
 
@@ -1119,6 +1170,9 @@ void QDECL	Sys_Error( PRINTF_FORMAT_STRING const char *error, ...);
 char	*Sys_GetClipboardData( void );
 void	Sys_SetClipboardData( const char* text );
 
+// relative to window's client rectangle
+void	Sys_GetCursorPosition( int* x, int* y );
+
 void	Sys_Print( const char *msg );
 
 // Sys_Milliseconds should only be used for profiling purposes,
@@ -1170,7 +1224,37 @@ qbool	Sys_IsMinimized();
 #if defined( QC )
 void Sys_FindQ3APath( void );
 qboolean Sys_LocateQ3APath( void );
+#endif // QC
+
+void	Sys_Crash( const char* message, const char* file, int line, const char* function );
+
+#define CNQ3_WINDOWS_EXCEPTION_CODE 0xDEADBEEF
+
+#define DIE(Message) Sys_Crash(Message, __FILE__, __LINE__, __FUNCTION__)
+
+#if defined(_MSC_VER)
+#define ASSERT_OR_DIE(Condition, Message) \
+	do { \
+		if (!(Condition)) { \
+			if (IsDebuggerPresent()) \
+				__debugbreak(); \
+			else \
+				Sys_Crash(Message, __FILE__, __LINE__, __FUNCTION__); \
+		} \
+	} while (false)
+#else
+#define ASSERT_OR_DIE(Condition, Message) \
+	do { \
+		if (!(Condition)) \
+			Sys_Crash(Message, __FILE__, __LINE__, __FUNCTION__); \
+	} while (false)
 #endif
+
+// RenderDoc integration - the API is grabbed at start-up by the OS module
+#define CNQ3_RENDERDOC_API_STRUCT  RENDERDOC_API_1_5_0
+#define CNQ3_RENDERDOC_API_VERSION eRENDERDOC_API_Version_1_1_0
+struct CNQ3_RENDERDOC_API_STRUCT;
+extern CNQ3_RENDERDOC_API_STRUCT* renderDocAPI;
 
 // huffman.cpp - id's original code
 // used for out-of-band (OOB) datagrams with dynamically created trees
@@ -1210,12 +1294,47 @@ typedef enum {
 
 printHelpResult_t Com_PrintHelp( const char* name, printf_t print, qbool printNotFound, qbool printModules, qbool printFlags );
 
-
 #if defined(_MSC_VER) && defined(_DEBUG)
 #define Q_assert(Cond) do { if(!(Cond)) { if(Sys_IsDebuggerAttached()) __debugbreak(); else assert((Cond)); } } while(0)
 #else
 #define Q_assert(Cond)
 #endif
+
+
+// the smallest power of 2 accepted is 1
+template<typename T>
+static T IsPowerOfTwo( T x )
+{
+	return x > 0 && (x & (x - 1)) == 0;
+}
+
+
+// returns the original value if the alignment is already respected
+// AlignUp(7, 4) -> 8
+// AlignUp(8, 4) -> 8
+template<typename T>
+static T AlignUp( T value, T alignment )
+{
+	Q_assert(IsPowerOfTwo(alignment));
+
+	const T mask = alignment - 1;
+
+	return (value + mask) & (~mask);
+}
+
+
+// returns the original value if the alignment is already respected
+// AlignDown(7, 4) -> 4
+// AlignDown(8, 4) -> 8
+template<typename T>
+static T AlignDown( T value, T alignment )
+{
+	Q_assert(IsPowerOfTwo(alignment));
+
+	const T mask = alignment - 1;
+
+	return value & (~mask);
+}
 
 
 #endif // _QCOMMON_H_

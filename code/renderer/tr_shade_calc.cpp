@@ -993,7 +993,6 @@ static void RB_CalcDiffuseColor( unsigned char *colors, int firstVertex, int num
 
 	float* v = tess.xyz[firstVertex];
 	float* normal = tess.normal[firstVertex];
-	colors += firstVertex * 4;
 
 #if defined( QC )
 	const float t = 1.0f - ( 1.0f - r_mapGreyscale->value ) * ( 1.0f - tr.viewParms.greyscale );
@@ -1079,7 +1078,8 @@ void R_ComputeColors( const shaderStage_t* pStage, stageVars_t& svars, int first
 		Com_Memcpy( &svars.colors[firstVertex], &tess.vertexColors[firstVertex], numVertexes * sizeof( tess.vertexColors[0] ) );
 		break;
 	case CGEN_ONE_MINUS_VERTEX:
-		if ( tr.identityLight == 1 )
+		if ( tr.identityLight == 1
+			)
 		{
 			for ( int i = firstVertex; i < firstVertex + numVertexes; i++ )
 			{

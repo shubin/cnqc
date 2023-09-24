@@ -180,6 +180,9 @@ static void R_LoadLightmaps( const lump_t* l )
 	for ( int a = 0; a < numAtlases; ++a ) {
 		tr.lightmaps[a] = R_CreateImage( va("*lightmapatlas%i", a), NULL, sizeX, sizeY, TF_RGBA8, IMG_LMATLAS, TW_CLAMP_TO_EDGE );
 
+		RHI::MappedTexture upload;
+		renderPipeline->BeginTextureUpload( upload, tr.lightmaps[a] );
+
 		for ( int t = 0; t < numTilesPerAtlas && i < numFileLightmaps; ++t ) {
 			for ( int y = 0; y < LMVirtPageSize; ++y ) {
 				const byte* s = p + y * LMVirtPageSize * 3;
@@ -197,7 +200,12 @@ static void R_LoadLightmaps( const lump_t* l )
 
 			const int offX = (t % countX) * LMPhysPageSize;
 			const int offY = (t / countX) * LMPhysPageSize;
-			R_UploadLightmapTile( tr.lightmaps[a], image, offX, offY, LMPhysPageSize, LMPhysPageSize );
+			const int srcRowByteCount = LMPhysPageSize * 4;
+			for ( int r = 0; r < LMPhysPageSize; ++r ) {
+				const byte* src = image + r * srcRowByteCount;
+				byte* dst = upload.mappedData + (offY + r) * upload.dstRowByteCount + offX * 4;
+				memcpy( dst, src, srcRowByteCount );
+			}
 
 			lightmapBiases[i][0] = (float)(offX + LMBorderSize) / (float)sizeX;
 			lightmapBiases[i][1] = (float)(offY + LMBorderSize) / (float)sizeY;
@@ -205,6 +213,8 @@ static void R_LoadLightmaps( const lump_t* l )
 			p += LMVirtPageSize * LMVirtPageSize * 3;
 			++i;
 		}
+
+		renderPipeline->EndTextureUpload();
 	}
 
 	tr.numLightmaps = numAtlases;
@@ -295,7 +305,7 @@ static shader_t* ShaderForShaderNum( int shaderNum, int lightmapNum )
 		flags |= FINDSHADER_VERTEXLIGHT_BIT;
 	shader_t* shader = R_FindShader( dsh->shader, lightmapNum, flags );
 
-	if ( r_singleShader->integer && (shader->sort != SS_ENVIRONMENT) )
+	if ( r_singleShader->integer && !shader->isSky )
 		return tr.defaultShader;
 
 	// if the shader had errors, just use default shader
@@ -1614,8 +1624,6 @@ void RE_LoadWorldMap( const char* name )
 	if ( tr.worldMapLoaded )
 		ri.Error( ERR_DROP, "ERROR: attempted to redundantly load world map\n" );
 
-	tr.worldMapLoaded = qtrue;
-
 	byte* buffer;
 	int pakChecksum = 0;
 	ri.FS_ReadFilePak( name, (void**)&buffer, &pakChecksum );
@@ -1657,6 +1665,7 @@ void RE_LoadWorldMap( const char* name )
 	R_LoadVisibility( &header->lumps[LUMP_VISIBILITY] );
 	R_LoadEntities( &header->lumps[LUMP_ENTITIES] );
 	R_LoadLightGrid( &header->lumps[LUMP_LIGHTGRID] );
+	renderPipeline->ProcessWorld( s_worldData );
 
 	s_worldData.dataSize = (byte*)ri.Hunk_Alloc( 0, h_low ) - startMarker;
 
@@ -1673,6 +1682,8 @@ void RE_LoadWorldMap( const char* name )
 	     !Q_stricmp( s_worldData.surfaces[2859].shader->name, "textures/inpe/m_liq/meat_liquid_bloodpool_A" ) ) {
 		s_worldData.surfaces[2859].shader = R_FindShader( "textures/liquids/calm_poollight", LIGHTMAP_NONE, 0 );
 	}
+
+	tr.worldMapLoaded = qtrue;
 }
 
 

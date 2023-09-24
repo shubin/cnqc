@@ -1206,6 +1206,7 @@ void CL_InitUI()
 
 	// init for this gamestate
 	VM_Call( uivm, UI_INIT, (cls.state >= CA_AUTHORIZING && cls.state < CA_ACTIVE) );
+	CL_SetMenuData( qfalse );
 }
 
 

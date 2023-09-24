@@ -18,7 +18,7 @@ ifeq ($(config),debug_x64)
   DEFINES += -DQC=1 -DBOTLIB -DDEBUG -D_DEBUG
   INCLUDES +=
   FORCE_INCLUDE +=
-  ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
+  ALL_CPPFLAGS += $(CPPFLAGS) -MD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g -Wno-unused-parameter -Wno-write-strings -Wno-parentheses -Wno-parentheses-equality  -std=c++98
   ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -g -fno-exceptions -fno-rtti -Wno-unused-parameter -Wno-write-strings -Wno-parentheses -Wno-parentheses-equality  -std=c++98
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
@@ -45,7 +45,7 @@ ifeq ($(config),release_x64)
   DEFINES += -DQC=1 -DBOTLIB -DNDEBUG
   INCLUDES +=
   FORCE_INCLUDE +=
-  ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
+  ALL_CPPFLAGS += $(CPPFLAGS) -MD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -ffast-math -fomit-frame-pointer -Os -g -msse2 -Wno-unused-parameter -Wno-write-strings -Wno-parentheses -Wno-parentheses-equality -g1 -std=c++98
   ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -ffast-math -fomit-frame-pointer -Os -g -msse2 -fno-exceptions -fno-rtti -Wno-unused-parameter -Wno-write-strings -Wno-parentheses -Wno-parentheses-equality -g1 -std=c++98
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)

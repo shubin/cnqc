@@ -57,8 +57,6 @@ void RB_CheckOverflow( int verts, int indexes )
 		return;
 	}
 
-	RB_EndSurface();
-
 	if ( verts >= SHADER_MAX_VERTEXES ) {
 		ri.Error( ERR_DROP, "RB_CheckOverflow: verts > MAX (%d > %d)", verts, SHADER_MAX_VERTEXES );
 	}
@@ -66,7 +64,7 @@ void RB_CheckOverflow( int verts, int indexes )
 		ri.Error( ERR_DROP, "RB_CheckOverflow: indices > MAX (%d > %d)", indexes, SHADER_MAX_INDEXES );
 	}
 
-	RB_BeginSurface( tess.shader, tess.fogNum );
+	renderPipeline->TessellationOverflow();
 }
 
 
@@ -592,15 +590,19 @@ static void RB_SurfaceFace( srfSurfaceFace_t* surf )
 }
 
 
-static float	LodErrorForVolume( vec3_t local, float radius ) {
-	vec3_t		world;
-	float		d;
-
+static float LodErrorForVolume( vec3_t local, float radius ) {
 	// never let it go negative
 	if ( r_lodCurveError->value < 0 ) {
 		return 0;
 	}
 
+	if ( !tr.worldMapLoaded ) {
+		// if we tessellate during map load, it's for static geometry pre-processing
+		// we want a high level of detail, so consider the distance d to be 1
+		return r_lodCurveError->value;
+	}
+
+	vec3_t world;
 	world[0] = local[0] * backEnd.orient.axis[0][0] + local[1] * backEnd.orient.axis[1][0] +
 		local[2] * backEnd.orient.axis[2][0] + backEnd.orient.origin[0];
 	world[1] = local[0] * backEnd.orient.axis[0][1] + local[1] * backEnd.orient.axis[1][1] +
@@ -608,8 +610,9 @@ static float	LodErrorForVolume( vec3_t local, float radius ) {
 	world[2] = local[0] * backEnd.orient.axis[0][2] + local[1] * backEnd.orient.axis[1][2] +
 		local[2] * backEnd.orient.axis[2][2] + backEnd.orient.origin[2];
 
+	// the final value of d is the distance to the closest point on the sphere along axis 0
 	VectorSubtract( world, backEnd.viewParms.orient.origin, world );
-	d = DotProduct( world, backEnd.viewParms.orient.axis[0] );
+	float d = DotProduct( world, backEnd.viewParms.orient.axis[0] );
 
 	if ( d < 0 ) {
 		d = -d;
@@ -686,8 +689,7 @@ void RB_SurfaceGrid( srfGridMesh_t *cv ) {
 
 			// if we don't have enough space for at least one strip, flush the buffer
 			if ( vrows < 2 || irows < 1 ) {
-				RB_EndSurface();
-				RB_BeginSurface(tess.shader, tess.fogNum );
+				renderPipeline->TessellationOverflow();
 			} else {
 				break;
 			}
@@ -832,7 +834,7 @@ static void RB_SurfaceEntity( surfaceType_t* surfType )
 }
 
 
-void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])( const void* ) = {
+static void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])( const void* ) = {
 	(void(*)( const void* ))RB_SurfaceBad,			// SF_BAD
 	(void(*)( const void* ))RB_SurfaceSkip,			// SF_SKIP
 	(void(*)( const void* ))RB_SurfaceFace,			// SF_FACE
@@ -843,3 +845,94 @@ void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])( const void* ) = {
 	(void(*)( const void* ))RB_SurfaceSkip,			// SF_FLARE
 	(void(*)( const void* ))RB_SurfaceEntity,		// SF_ENTITY
 };
+
+
+void R_TessellateSurface( const surfaceType_t* surfType )
+{
+	rb_surfaceTable[ *surfType ]( surfType );
+}
+
+
+static void RB_SurfaceSizeEmpty( int* numVertexes, int* numIndexes, const surfaceType_t* )
+{
+	*numVertexes = 0;
+	*numIndexes = 0;
+}
+
+
+static void RB_SurfaceSizeFace( int* numVertexes, int* numIndexes, const srfSurfaceFace_t* surf )
+{
+	*numVertexes = surf->numVerts;
+	*numIndexes = surf->numIndexes;
+}
+
+
+static void RB_SurfaceSizeGrid( int* numVertexes, int* numIndexes, const srfGridMesh_t* surf )
+{
+	// @TODO: estimate properly...
+	// @TODO: this can overflow and call the old EndSurface/BeginSurface pair...
+	const int prevNumVertexes = tess.numVertexes;
+	const int prevNumIndexes = tess.numIndexes;
+	RB_SurfaceGrid((srfGridMesh_t*)surf);
+	*numVertexes = tess.numVertexes - prevNumVertexes;
+	*numIndexes = tess.numIndexes - prevNumIndexes;
+	tess.numVertexes = prevNumVertexes;
+	tess.numIndexes = prevNumIndexes;
+}
+
+
+static void RB_SurfaceSizeTriangles( int* numVertexes, int* numIndexes, const srfTriangles_t* surf )
+{
+	*numVertexes = surf->numVerts;
+	*numIndexes = surf->numIndexes;
+}
+
+
+static void RB_SurfaceSizePolychain( int* numVertexes, int* numIndexes, const srfPoly_t* surf )
+{
+	*numVertexes = surf->numVerts;
+	*numIndexes = (surf->numVerts - 2) * 3;
+}
+
+
+static void RB_SurfaceSizeMesh( int* numVertexes, int* numIndexes, const md3Surface_t* surf )
+{
+	*numVertexes = surf->numVerts;
+	*numIndexes = surf->numTriangles * 3;
+}
+
+
+static void RB_SurfaceSizeEntity( int* numVertexes, int* numIndexes, const void* )
+{
+	switch( backEnd.currentEntity->e.reType ) {
+		case RT_SPRITE:
+		case RT_LIGHTNING:
+			*numVertexes = 4;
+			*numIndexes = 6;
+			break;
+
+		default:
+			*numVertexes = 0;
+			*numIndexes = 0;
+			break;
+	}
+}
+
+
+static void (*rb_surfaceSizeTable[SF_NUM_SURFACE_TYPES])( int*, int*, const void* ) = {
+	(void(*)( int*, int*, const void* ))RB_SurfaceSizeEmpty,		// SF_BAD
+	(void(*)( int*, int*, const void* ))RB_SurfaceSizeEmpty,		// SF_SKIP
+	(void(*)( int*, int*, const void* ))RB_SurfaceSizeFace,			// SF_FACE
+	(void(*)( int*, int*, const void* ))RB_SurfaceSizeGrid,			// SF_GRID
+	(void(*)( int*, int*, const void* ))RB_SurfaceSizeTriangles,	// SF_TRIANGLES
+	(void(*)( int*, int*, const void* ))RB_SurfaceSizePolychain,	// SF_POLY
+	(void(*)( int*, int*, const void* ))RB_SurfaceSizeMesh,			// SF_MD3
+	(void(*)( int*, int*, const void* ))RB_SurfaceSizeEmpty,		// SF_FLARE
+	(void(*)( int*, int*, const void* ))RB_SurfaceSizeEntity,		// SF_ENTITY
+};
+
+
+void R_ComputeTessellatedSize( int* numVertexes, int* numIndexes, const surfaceType_t* surfType )
+{
+	rb_surfaceSizeTable[ *surfType ]( numVertexes, numIndexes, surfType );
+}

@@ -34,6 +34,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <conio.h>
 #include <malloc.h>
 #include <VersionHelpers.h>
+#include "../renderdoc/renderdoc_app.h"
 
 
 WinVars_t g_wv;
@@ -41,37 +42,6 @@ WinVars_t g_wv;
 
 static qbool win_timePeriodActive = qfalse;
 
-#if defined( QC )
-/*
-==================
-SetTimerResolution
-
-Try to set lower timer period
-==================
-*/
-static void SetTimerResolution(void)
-{
-	typedef HRESULT(WINAPI * pfnNtQueryTimerResolution)(PULONG MinRes, PULONG MaxRes, PULONG CurRes);
-	typedef HRESULT(WINAPI * pfnNtSetTimerResolution)(ULONG NewRes, BOOLEAN SetRes, PULONG CurRes);
-	pfnNtQueryTimerResolution pNtQueryTimerResolution;
-	pfnNtSetTimerResolution pNtSetTimerResolution;
-	ULONG curr, minr, maxr;
-	HMODULE dll;
-
-	dll = LoadLibraryA("ntdll");
-	if (dll) {
-		pNtQueryTimerResolution = (pfnNtQueryTimerResolution)GetProcAddress(dll, "NtQueryTimerResolution");
-		pNtSetTimerResolution = (pfnNtSetTimerResolution)GetProcAddress(dll, "NtSetTimerResolution");
-		if (pNtQueryTimerResolution && pNtSetTimerResolution) {
-			pNtQueryTimerResolution(&minr, &maxr, &curr);
-			if (maxr < 5000) // well, we don't need less than 0.5ms periods for select()
-				maxr = 5000;
-			pNtSetTimerResolution(maxr, TRUE, &curr);
-		}
-		FreeLibrary(dll);
-	}
-}
-#endif
 
 static void WIN_BeginTimePeriod()
 {
@@ -79,9 +49,6 @@ static void WIN_BeginTimePeriod()
 		return;
 
 	timeBeginPeriod( 1 );
-#if defined( QC )
-	//SetTimerResolution();
-#endif
 	win_timePeriodActive = qtrue;
 }
 
@@ -362,7 +329,7 @@ char *Sys_GetClipboardData( void )
 				data = (char*)Z_Malloc( GlobalSize( hClipboardData ) + 1 );
 				Q_strncpyz( data, cliptext, GlobalSize( hClipboardData ) );
 				GlobalUnlock( hClipboardData );
-				strtok( data, "\n\r\b" );
+				//strtok( data, "\n\r\b" ); // keep all the lines...
 			}
 		}
 
@@ -393,6 +360,16 @@ void Sys_SetClipboardData( const char* text )
 }
 
 
+void Sys_GetCursorPosition( int* x, int* y )
+{
+	POINT point;
+	GetCursorPos( &point );
+	ScreenToClient( g_wv.hWnd, &point );
+	*x = point.x;
+	*y = point.y;
+}
+
+
 /*
 ========================================================================
 
@@ -418,22 +395,21 @@ void Sys_UnloadDll( void *dllHandle )
 void* QDECL Sys_LoadDll( const char* name, dllSyscall_t *entryPoint, dllSyscall_t systemcalls )
 {
 	char filename[MAX_QPATH];
-#if defined( QC )
-#if defined(_M_X64 )
+#if defined(QC)
+#if defined(_M_X64)
 	Com_sprintf(filename, sizeof(filename), "%sx86_64.dll", name);
 #else
-	Com_sprintf( filename, sizeof( filename ), "%sx86.dll", name );
+	Com_sprintf(filename, sizeof(filename), "%sx86.dll", name);
 #endif
 #else
-	Com_sprintf( filename, sizeof( filename ), "%sx86.dll", name );
+	Com_sprintf(filename, sizeof(filename), "%sx86.dll", name);
 #endif
 
 	const char* basepath = Cvar_VariableString( "fs_basepath" );
 	const char* gamedir = Cvar_VariableString( "fs_game" );
 	const char* fn = FS_BuildOSPath( basepath, gamedir, filename );
 
-#if !defined( QC )
-#ifdef NDEBUG
+#if !defined( QC ) && defined( NDEBUG )
 	static int lastWarning = 0;
 	int timestamp = Sys_Milliseconds();
 	if( ((timestamp - lastWarning) > (5 * 60000)) && !Cvar_VariableIntegerValue( "dedicated" )
@@ -450,7 +426,6 @@ void* QDECL Sys_LoadDll( const char* name, dllSyscall_t *entryPoint, dllSyscall_
 				return NULL;
 		}
 	}
-#endif
 #endif
 
 	HINSTANCE libHandle = LoadLibrary( fn );
@@ -697,6 +672,24 @@ static void S_Frame()
 }
 
 
+static void WIN_LoadRenderDoc()
+{
+	renderDocAPI = NULL;
+
+	const HMODULE module = GetModuleHandleA( "renderdoc.dll" );
+	if ( module != NULL ) {
+		const pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress( module, "RENDERDOC_GetAPI" );
+		if ( RENDERDOC_GetAPI( CNQ3_RENDERDOC_API_VERSION, (void**)&renderDocAPI ) != 1 ) {
+			renderDocAPI = NULL;
+		}
+	}
+
+	if ( renderDocAPI ) {
+		renderDocAPI->UnloadCrashHandler();
+	}
+}
+
+
 #endif
 
 
@@ -806,222 +799,21 @@ static void WIN_RegisterMonitorCommands()
 }
 
 
-static void WIN_FixCurrentDirectory()
+static void WIN_SetThreadName( PCWSTR name )
 {
-	char dirPath[1024];
-	Q_strncpyz( dirPath, __argv[0], sizeof( dirPath ) );
-	size_t i = strlen( dirPath );
-	if ( i <= 1 ) {
+	// SetThreadDescription is only available since Windows 10 version 1607
+
+	typedef HRESULT (WINAPI *SetThreadDescription_t)( HANDLE, PCWSTR );
+
+	HINSTANCE module = LoadLibraryA( "KernelBase.dll" );
+	if ( module == NULL )
 		return;
-	}
-	--i;
 
-	for ( ; i > 0; --i ) {
-		if ( dirPath[i] == '/' || dirPath[i] == '\\' ) {
-			dirPath[i] = '\0';
-			SetCurrentDirectoryA( dirPath );
-			break;
-		}
-	}
-}
+	SetThreadDescription_t pSetThreadDescription = (SetThreadDescription_t)GetProcAddress( module, "SetThreadDescription" );
+	if ( pSetThreadDescription != NULL )
+		(*pSetThreadDescription)( GetCurrentThread(), name );
 
-
-static void WIN_RegisterDemoExtensions()
-{
-	HKEY hkcr;
-	if ( RegOpenKeyExA( HKEY_CLASSES_ROOT, NULL, 0, KEY_ALL_ACCESS, &hkcr ) == ERROR_SUCCESS ) {
-		HKEY command;
-		if ( RegCreateKeyA( hkcr, "CNQ3.demo\\Shell\\Open\\Command", &command ) == ERROR_SUCCESS ) {
-			const char* const appCmdLine = va( "\"%s\" +demo \"%%1\"", __argv[0] );
-			RegSetValueA( command, "", REG_SZ, appCmdLine, 0 );
-			RegCloseKey( command );
-		}
-
-		HKEY cnq3Demo;
-		if ( RegOpenKeyA( hkcr, "CNQ3.demo", &cnq3Demo ) == ERROR_SUCCESS ) {
-			RegSetValueA( cnq3Demo, "", REG_SZ, "CNQ3 Demo File", 0 );
-			RegCloseKey( cnq3Demo );
-		}
-
-		const char* extensions[] = { ".dm_68", ".dm_67", ".dm_66" };
-		for ( int i = 0; i < ARRAY_LEN( extensions ); ++i ) {
-			HKEY demoExt;
-			if ( RegCreateKeyA( hkcr, extensions[i], &demoExt ) == ERROR_SUCCESS ) {
-				RegSetValueA( demoExt, "", REG_SZ, "CNQ3.demo", 0 );
-				RegCloseKey( demoExt );
-			}
-		}
-
-		RegCloseKey( hkcr );
-	}
-}
-
-
-static void WIN_UnregisterDemoExtensions()
-{
-	RegDeleteTreeA( HKEY_CLASSES_ROOT, "CNQ3.demo" );
-}
-
-
-static void WIN_RunProcessElevated( const char* cmdLine )
-{
-	char exeFileName[MAX_PATH];
-	if ( GetModuleFileNameA( NULL, exeFileName, sizeof( exeFileName ) ) == 0 ||
-	     GetLastError() == ERROR_INSUFFICIENT_BUFFER ) {
-		Com_Printf( "^1ERROR: WIN_RunProcessElevated: GetModuleFileNameA failed\n" );
-		return;
-	}
-
-	SHELLEXECUTEINFOA shExInfo = { 0 };
-	shExInfo.cbSize = sizeof(shExInfo);
-	shExInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
-	shExInfo.lpVerb = "runas";
-	shExInfo.lpFile = exeFileName;
-	shExInfo.lpParameters = cmdLine;
-	shExInfo.nShow = SW_HIDE;
-	if ( ShellExecuteEx( &shExInfo ) ) {
-		WaitForSingleObject( shExInfo.hProcess, INFINITE );
-		CloseHandle( shExInfo.hProcess );
-	} else {
-		Com_Printf("^1ERROR: WIN_RunProcessElevated: ShellExecuteEx failed\n");
-	}
-}
-
-
-static void WIN_RegisterDemoExtensions_f()
-{
-	WIN_RunProcessElevated( "/reg_demo_ext" );
-}
-
-
-static void WIN_UnregisterDemoExtensions_f()
-{
-	WIN_RunProcessElevated( "/unreg_demo_ext" );
-}
-
-
-static void WIN_RegisterDemoShellCommands()
-{
-	Cmd_AddCommand( "registerdemos", &WIN_RegisterDemoExtensions_f );
-	Cmd_SetModule( "registerdemos", MODULE_CLIENT );
-	Cmd_SetHelp( "registerdemos",
-		"associates demo files with CNQ3\n"
-		"Double-clicking a demo in the file explorer will open CNQ3 for playback.\n"
-		"Extensions: .dm_68 .dm_67 .dm_66" );
-
-	Cmd_AddCommand( "unregisterdemos", &WIN_UnregisterDemoExtensions_f );
-	Cmd_SetModule( "unregisterdemos", MODULE_CLIENT );
-	Cmd_SetHelp( "unregisterdemos", "dissociates demo files from CNQ3" );
-}
-
-
-static void WIN_SetCorePreference()
-{
-	struct local_resources_t {
-		~local_resources_t()
-		{
-			if ( cpuSetBuffer != NULL ) {
-				free( cpuSetBuffer );
-			}
-			if ( pcoreIdBuffer != NULL ) {
-				free( pcoreIdBuffer );
-			}
-			if ( library != NULL ) {
-				FreeLibrary( library );
-			}
-		}
-
-		byte* cpuSetBuffer = NULL;
-		ULONG* pcoreIdBuffer = NULL;
-		HMODULE library = NULL;
-	};
-
-	local_resources_t res;
-
-	res.library = LoadLibraryA( "kernel32.dll" );
-	if ( res.library == NULL ) {
-		Com_Printf( "^3WIN_SetCorePreference: Failed to open kernel32.dll\n" );
-		return;
-	}
-
-	typedef BOOL (WINAPI* GetSystemCpuSetInformationFPtr)( PSYSTEM_CPU_SET_INFORMATION Information, ULONG BufferLength, PULONG ReturnedLength, HANDLE Process, ULONG Flags );
-	typedef BOOL (WINAPI* SetThreadSelectedCpuSetsFPtr)( HANDLE Thread, const ULONG* CpuSetIds, ULONG CpuSetIdCount );
-	const GetSystemCpuSetInformationFPtr pGetSystemCpuSetInformation = (GetSystemCpuSetInformationFPtr)GetProcAddress( res.library, "GetSystemCpuSetInformation" );
-	const SetThreadSelectedCpuSetsFPtr pSetThreadSelectedCpuSets = (SetThreadSelectedCpuSetsFPtr)GetProcAddress( res.library, "SetThreadSelectedCpuSets" );
-	if ( pGetSystemCpuSetInformation == NULL || pSetThreadSelectedCpuSets == NULL ) {
-		Com_Printf( "^3WIN_SetCorePreference: Failed to grab function pointers\n" );
-		Com_Printf( "^3WIN_SetCorePreference: Ignore this if you're not on Windows 10/11\n" );
-		return;
-	}
-
-	ULONG requiredByteCount = 0;
-	if ( pGetSystemCpuSetInformation( NULL, 0, &requiredByteCount, GetCurrentProcess(), 0 ) != TRUE &&
-		GetLastError() != ERROR_INSUFFICIENT_BUFFER ) {
-		Com_Printf( "^3WIN_SetCorePreference: GetSystemCpuSetInformation failed\n" );
-		return;
-	}
-
-	res.cpuSetBuffer = (byte*)malloc( requiredByteCount );
-	if ( res.cpuSetBuffer == NULL ) {
-		Com_Printf( "^3WIN_SetCorePreference: malloc failed with %s\n", Com_FormatBytes( (int)requiredByteCount ) );
-		return;
-	}
-
-	if ( pGetSystemCpuSetInformation( (SYSTEM_CPU_SET_INFORMATION*)res.cpuSetBuffer, requiredByteCount, &requiredByteCount, GetCurrentProcess(), 0 ) != TRUE ) {
-		Com_Printf( "^3WIN_SetCorePreference: GetSystemCpuSetInformation failed\n" );
-		return;
-	}
-
-	ULONG pcoreCount = 0;
-	ULONG ecoreCount = 0;
-	byte* cpuSetByte = res.cpuSetBuffer;
-	for ( ULONG cpuSetByteOffset = 0; cpuSetByteOffset < requiredByteCount; ) {
-		SYSTEM_CPU_SET_INFORMATION* cpuSet = (SYSTEM_CPU_SET_INFORMATION*)cpuSetByte;
-		if ( cpuSet->Type == CpuSetInformation ) {
-			if ( cpuSet->CpuSet.EfficiencyClass > 0 ) {
-				pcoreCount++;
-			} else {
-				ecoreCount++;
-			}
-		}
-		cpuSetByte += cpuSet->Size;
-		cpuSetByteOffset += cpuSet->Size;
-	}
-	if ( pcoreCount + ecoreCount <= 1 ) {
-		Com_Printf( "^3WIN_SetCorePreference: no valid CPU core information found\n" );
-		return;
-	}
-
-	const size_t pcoreIdBufferSize = (size_t)pcoreCount * sizeof(ULONG);
-	res.pcoreIdBuffer = (ULONG*)malloc( pcoreIdBufferSize );
-	if ( res.pcoreIdBuffer == NULL ) {
-		Com_Printf( "^3WIN_SetCorePreference: malloc failed with %s\n", Com_FormatBytes( (int)pcoreIdBufferSize ) );
-		return;
-	}
-
-	ULONG* currPCoreId = res.pcoreIdBuffer;
-	cpuSetByte = res.cpuSetBuffer;
-	for ( ULONG cpuSetByteOffset = 0; cpuSetByteOffset < requiredByteCount; ) {
-		SYSTEM_CPU_SET_INFORMATION* cpuSet = (SYSTEM_CPU_SET_INFORMATION*)cpuSetByte;
-		if ( cpuSet->Type == CpuSetInformation ) {
-			if ( cpuSet->CpuSet.EfficiencyClass > 0 ) {
-				*currPCoreId++ = (ULONG)cpuSet->CpuSet.Id;
-			}
-		}
-		cpuSetByte += cpuSet->Size;
-		cpuSetByteOffset += cpuSet->Size;
-	}
-
-	if ( pcoreCount > 0 && ecoreCount > 0 ) {
-		Com_Printf( "CPU configuration: %dP/%dE hybrid cores\n", (int)pcoreCount, (int)ecoreCount );
-		if ( pSetThreadSelectedCpuSets( GetCurrentThread(), res.pcoreIdBuffer, pcoreCount) ) {
-			Com_Printf( "Main thread successfully set to run on P-Cores only\n" );
-		} else {
-			Com_Printf( "^3WIN_SetCorePreference: SetThreadSelectedCpuSets failed\n" );
-		}
-	} else {
-		Com_Printf( "CPU configuration: %d homogeneous cores\n", (int)(pcoreCount + ecoreCount) );
-	}
+	FreeLibrary( module );
 }
 
 
@@ -1036,21 +828,13 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 
 	g_wv.hInstance = hInstance;
 
+#ifndef DEDICATED
+	WIN_LoadRenderDoc(); // load first to avoid messing with our exception handlers
+#endif
+
 	WIN_InstallExceptionHandlers();
 
-#if !defined( QC )
-	WIN_FixCurrentDirectory();
-
-	if ( !Q_stricmp( lpCmdLine, "/reg_demo_ext" ) ) {
-		WIN_RegisterDemoExtensions();
-		return 0;
-	}
-
-	if ( !Q_stricmp( lpCmdLine, "/unreg_demo_ext" ) ) {
-		WIN_UnregisterDemoExtensions();
-		return 0;
-	}
-#endif // QC
+	WIN_SetThreadName( L"main thread" );
 
 	// done here so the early console can be shown on the primary monitor
 	WIN_InitMonitorList();
@@ -1066,10 +850,6 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	Com_Init( sys_cmdline );
 	WIN_RegisterExceptionCommands();
 	WIN_RegisterMonitorCommands();
-#if !defined( QC )
-	WIN_RegisterDemoShellCommands();
-#endif // QC
-	WIN_SetCorePreference();
 
 	NET_Init();
 

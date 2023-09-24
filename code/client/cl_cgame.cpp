@@ -404,6 +404,11 @@ static intptr_t CL_CgameSystemCalls( intptr_t *args )
 		Cvar_Update( VMA(1) );
 		return 0;
 	case CG_CVAR_SET:
+		// @TODO: remove
+		if(!Q_stricmp(VMA(1), "com_maxfps"))
+		{
+			return 0;
+		}
 		Cvar_Set( VMA(1), VMA(2) );
 		return 0;
 	case CG_CVAR_VARIABLESTRINGBUFFER:
@@ -748,14 +753,8 @@ static void CL_SetMaxFPS( int maxFPS )
 	if ( maxFPS > 0 && cls.maxFPS == 0 ) {
 		cls.maxFPS = maxFPS;
 		cls.nextFrameTimeMS = Sys_Milliseconds() + 1000 / maxFPS;
-		cls.oldSwapInterval = Cvar_VariableIntegerValue( "r_swapInterval" );
-		Cvar_Set( "r_swapInterval", "0" );
-	} else if ( maxFPS == 0 && cls.maxFPS > 0 ) {
+	} else {
 		cls.maxFPS = 0;
-		Cvar_Set( "r_swapInterval", va( "%i", cls.oldSwapInterval ) );
-	} else if ( maxFPS > 0 && cls.maxFPS > 0 ) {
-		cls.maxFPS = maxFPS;
-		cls.nextFrameTimeMS = Sys_Milliseconds() + 1000 / maxFPS;
 	}
 }
 
@@ -798,6 +797,7 @@ void CL_InitCGame()
 	CL_SetMaxFPS( 20 );
 	VM_Call( cgvm, CG_INIT, clc.serverMessageSequence, clc.lastExecutedServerCommand, clc.clientNum );
 	CL_SetMaxFPS( 0 );
+	CL_SetMenuData( qtrue );
 
 	// send a usercmd this frame, which will cause the server to send us the first snapshot
 	cls.state = CA_PRIMED;

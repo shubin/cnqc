@@ -97,7 +97,6 @@ typedef struct {
 
 	int			mouseDx[2], mouseDy[2];	// added to by mouse events
 	int			mouseIndex;
-	int			mouseTime;				// when the last mouse input was sampled, for cl_drawMouseLag
 	int			joystickAxis[MAX_JOYSTICK_AXIS];	// set by joystick events
 
 	// cgame communicates a few values to the client system
@@ -109,7 +108,6 @@ typedef struct {
 	usercmd_t	cmds[CMD_BACKUP];	// each mesage will send several old cmds
 	int			cmdNumber;			// incremented each frame, because multiple
 									// frames may need to be packed into a single packet
-	int			userCmdTime;		// when the last usercmd_t was generated, for cl_drawMouseLag
 
 	outPacket_t	outPackets[PACKET_BACKUP];	// information about each packet we have sent out
 
@@ -278,6 +276,9 @@ typedef struct {
 	qbool	uiStarted;
 	qbool	cgameStarted;
 
+	// a full client shut down has been initiated
+	qbool	fullClientShutDown;
+
 	// extensions VM calls indices
 	// 0 when not available
 	int			cgvmCalls[CGVM_COUNT];
@@ -329,7 +330,6 @@ typedef struct {
 	// frame-rate limiting, useful for scenarios like CGAME_INIT
 	int			maxFPS;				// only active if > 0
 	int			nextFrameTimeMS;
-	int			oldSwapInterval;
 } clientStatic_t;
 
 extern	clientStatic_t		cls;
@@ -378,8 +378,6 @@ extern	cvar_t	*cl_inGameVideo;
 extern	cvar_t	*cl_matchAlerts;	// bit mask, see the MAF_* constants
 extern	cvar_t	*cl_demoPlayer;
 extern	cvar_t	*cl_escapeAbortsDemo;
-
-extern	cvar_t	*r_khr_debug;
 
 extern	cvar_t	*s_autoMute;
 
@@ -571,10 +569,26 @@ void CL_MapDownload_DrawConsole( float cw, float ch );
 void CL_MapDownload_CrashCleanUp();
 
 //
-// cl_gl.cpp
+// cl_demo.cpp
 //
-qbool CL_GL_WantDebug();	// do we want a debug context from the platform layer?
-void CL_GL_Init();			// enables debug output if needed
+void CL_NDP_PlayDemo( qbool videoRestart );
+void CL_NDP_SetCGameTime();
+void CL_NDP_GetCurrentSnapshotNumber( int* snapshotNumber, int* serverTime );
+qbool CL_NDP_GetSnapshot( int snapshotNumber, snapshot_t* snapshot );
+qbool CL_NDP_GetServerCommand( int serverCommandNumber );
+int CL_NDP_Seek( int serverTime );
+void CL_NDP_ReadUntil( int serverTime );
+void CL_NDP_HandleError();
+
+//
+// cl_imgui.cpp
+//
+void CL_IMGUI_Init();
+void CL_IMGUI_Frame();
+void CL_IMGUI_MouseEvent( int dx, int dy );
+qbool CL_IMGUI_KeyEvent( int key, qbool down, const char* cmd ); // returns qtrue when handled
+void CL_IMGUI_CharEvent( char key );
+void CL_IMGUI_Shutdown();
 
 //
 // cl_demo.cpp
@@ -597,3 +611,6 @@ typedef enum {
 } sysMatchAlertEvent_t;
 
 void Sys_MatchAlert( sysMatchAlertEvent_t event );
+
+// a private key catcher for the debugging UI that the mod doesn't know about
+#define KEYCATCH_IMGUI 0x0010

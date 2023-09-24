@@ -117,6 +117,9 @@
     <ClInclude Include="..\..\code\botlib\l_struct.h">
       <Filter>botlib</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\code\client\cl_imgui.h">
+      <Filter>client</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\code\client\client.h">
       <Filter>client</Filter>
     </ClInclude>
@@ -327,9 +330,6 @@
       <Filter>win32</Filter>
     </ClCompile>
     <ClCompile Include="..\..\code\win32\win_syscon.cpp">
-      <Filter>win32</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\code\win32\win_files.cpp">
       <Filter>win32</Filter>
     </ClCompile>
   </ItemGroup>
