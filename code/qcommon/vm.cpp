@@ -1003,7 +1003,6 @@ vm_t *VM_Create( vmIndex_t index, syscall_t systemCalls, vmInterpret_t interpret
 	Com_Printf( "%s loaded in %d bytes on the hunk\n", vm->name, remaining - Hunk_MemoryRemaining() );
 
 	return vm;
-#endif
 }
 
 
