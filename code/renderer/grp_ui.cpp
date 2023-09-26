@@ -140,9 +140,12 @@ void UI::DrawBatch()
 	}
 
 	// @TODO: support for custom shaders?
+	Q_assert(shader->stages[0] != NULL);
+	const textureBundle_t& bundle = shader->stages[0]->bundle;
+	const textureWrap_t wrapMode = bundle.image[0] != NULL ? bundle.image[0]->wrapClampMode : TW_REPEAT;
 	PixelRC pixelRC = {};
-	pixelRC.texture = GetBundleImage(shader->stages[0]->bundle)->textureIndex;
-	pixelRC.sampler = GetSamplerIndex(TW_CLAMP_TO_EDGE, TextureFilter::Linear);
+	pixelRC.texture = GetBundleImage(bundle)->textureIndex;
+	pixelRC.sampler = GetSamplerIndex(wrapMode, TextureFilter::Linear);
 	CmdSetRootConstants(rootSignature, ShaderStage::Pixel, &pixelRC);
 
 	CmdDrawIndexed(indexCount, firstIndex, 0);
