@@ -1221,11 +1221,6 @@ qbool	Sys_IsDebuggerAttached();
 qbool	Sys_IsMinimized();
 #endif
 
-#if defined( QC )
-void Sys_FindQ3APath( void );
-qboolean Sys_LocateQ3APath( void );
-#endif // QC
-
 void	Sys_Crash( const char* message, const char* file, int line, const char* function );
 
 #define CNQ3_WINDOWS_EXCEPTION_CODE 0xDEADBEEF
@@ -1294,11 +1289,16 @@ typedef enum {
 
 printHelpResult_t Com_PrintHelp( const char* name, printf_t print, qbool printNotFound, qbool printModules, qbool printFlags );
 
+
 #if defined(_MSC_VER) && defined(_DEBUG)
 #define Q_assert(Cond) do { if(!(Cond)) { if(Sys_IsDebuggerAttached()) __debugbreak(); else assert((Cond)); } } while(0)
 #else
 #define Q_assert(Cond)
 #endif
+
+
+float f16tof32( uint16_t x );
+uint16_t f32tof16( float x );
 
 
 // the smallest power of 2 accepted is 1

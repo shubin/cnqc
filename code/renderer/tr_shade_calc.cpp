@@ -683,153 +683,6 @@ static void RB_CalcWaveAlpha( const waveForm_t *wf, unsigned char *dstColors, in
 }
 
 
-/*
-========================
-RB_CalcFogTexCoords
-
-To do the clipped fog plane really correctly, we should use
-projected textures, but I don't trust the drivers and it
-doesn't fit our shader data.
-========================
-*/
-void RB_CalcFogTexCoords( float *st, int firstVertex, int numVertexes ) {
-	int			i;
-	float		*v;
-	float		s, t;
-	float		eyeT;
-	qbool	eyeOutside;
-	fog_t		*fog;
-	vec3_t		local;
-	vec4_t		fogDistanceVector, fogDepthVector = {0, 0, 0, 0};
-
-	fog = tr.world->fogs + tess.fogNum;
-
-	// all fogging distance is based on world Z units
-	VectorSubtract( backEnd.orient.origin, backEnd.viewParms.orient.origin, local );
-	fogDistanceVector[0] = -backEnd.orient.modelMatrix[2];
-	fogDistanceVector[1] = -backEnd.orient.modelMatrix[6];
-	fogDistanceVector[2] = -backEnd.orient.modelMatrix[10];
-	fogDistanceVector[3] = DotProduct( local, backEnd.viewParms.orient.axis[0] );
-
-	// scale the fog vectors based on the fog's thickness
-	fogDistanceVector[0] *= fog->tcScale;
-	fogDistanceVector[1] *= fog->tcScale;
-	fogDistanceVector[2] *= fog->tcScale;
-	fogDistanceVector[3] *= fog->tcScale;
-
-	// rotate the gradient vector for this orientation
-	if ( fog->hasSurface ) {
-		fogDepthVector[0] = fog->surface[0] * backEnd.orient.axis[0][0] +
-			fog->surface[1] * backEnd.orient.axis[0][1] + fog->surface[2] * backEnd.orient.axis[0][2];
-		fogDepthVector[1] = fog->surface[0] * backEnd.orient.axis[1][0] +
-			fog->surface[1] * backEnd.orient.axis[1][1] + fog->surface[2] * backEnd.orient.axis[1][2];
-		fogDepthVector[2] = fog->surface[0] * backEnd.orient.axis[2][0] +
-			fog->surface[1] * backEnd.orient.axis[2][1] + fog->surface[2] * backEnd.orient.axis[2][2];
-		fogDepthVector[3] = -fog->surface[3] + DotProduct( backEnd.orient.origin, fog->surface );
-
-		eyeT = DotProduct( backEnd.orient.viewOrigin, fogDepthVector ) + fogDepthVector[3];
-	} else {
-		eyeT = 1;	// non-surface fog always has eye inside
-	}
-
-	// see if the viewpoint is outside
-	// this is needed for clipping distance even for constant fog
-
-	if ( eyeT < 0 ) {
-		eyeOutside = qtrue;
-	} else {
-		eyeOutside = qfalse;
-	}
-
-	fogDistanceVector[3] += 1.0/512;
-
-	v = tess.xyz[firstVertex];
-	st += firstVertex * 2;
-
-	// calculate density for each point
-	for (i = 0 ; i < numVertexes ; i++, v += 4) {
-		// calculate the length in fog
-		s = DotProduct( v, fogDistanceVector ) + fogDistanceVector[3];
-		t = DotProduct( v, fogDepthVector ) + fogDepthVector[3];
-
-		// partially clipped fogs use the T axis		
-		if ( eyeOutside ) {
-			if ( t < 1.0 ) {
-				t = 1.0/32;	// point is outside, so no fogging
-			} else {
-				t = 1.0/32 + 30.0/32 * t / ( t - eyeT );	// cut the distance at the fog plane
-			}
-		} else {
-			if ( t < 0 ) {
-				t = 1.0/32;	// point is outside, so no fogging
-			} else {
-				t = 31.0/32;
-			}
-		}
-
-		st[0] = s;
-		st[1] = t;
-		st += 2;
-	}
-}
-
-
-static void RB_CalcModulateColorsByFog( unsigned char *colors, int firstVertex, int numVertexes ) {
-	int		i;
-	float	texCoords[SHADER_MAX_VERTEXES][2];
-
-	// calculate texcoords so we can derive density
-	// this is not wasted, because it would only have
-	// been previously called if the surface was opaque
-	RB_CalcFogTexCoords( texCoords[0], firstVertex, numVertexes );
-
-	colors += firstVertex * 4;
-	for ( i = firstVertex; i < firstVertex + numVertexes; i++, colors += 4 ) {
-		float f = 1.0 - R_FogFactor( texCoords[i][0], texCoords[i][1] );
-		colors[0] *= f;
-		colors[1] *= f;
-		colors[2] *= f;
-	}
-}
-
-
-static void RB_CalcModulateAlphasByFog( unsigned char *colors, int firstVertex, int numVertexes ) {
-	int		i;
-	float	texCoords[SHADER_MAX_VERTEXES][2];
-
-	// calculate texcoords so we can derive density
-	// this is not wasted, because it would only have
-	// been previously called if the surface was opaque
-	RB_CalcFogTexCoords( texCoords[0], firstVertex, numVertexes );
-
-	colors += firstVertex * 4;
-	for ( i = firstVertex; i < firstVertex + numVertexes; i++, colors += 4 ) {
-		float f = 1.0 - R_FogFactor( texCoords[i][0], texCoords[i][1] );
-		colors[3] *= f;
-	}
-}
-
-
-static void RB_CalcModulateRGBAsByFog( unsigned char *colors, int firstVertex, int numVertexes ) {
-	int		i;
-	float	texCoords[SHADER_MAX_VERTEXES][2];
-
-	// calculate texcoords so we can derive density
-	// this is not wasted, because it would only have
-	// been previously called if the surface was opaque
-	RB_CalcFogTexCoords( texCoords[0], firstVertex, numVertexes );
-
-	colors += firstVertex * 4;
-	for ( i = firstVertex; i < firstVertex + numVertexes; i++, colors += 4 ) {
-		float f = 1.0 - R_FogFactor( texCoords[i][0], texCoords[i][1] );
-		colors[0] *= f;
-		colors[1] *= f;
-		colors[2] *= f;
-		colors[3] *= f;
-	}
-}
-
-
 static void RB_CalcEnvironmentTexCoords( float *st, int firstVertex, int numVertexes ) 
 {
 	int			i;
@@ -1098,14 +951,6 @@ void R_ComputeColors( const shaderStage_t* pStage, stageVars_t& svars, int first
 			}
 		}
 		break;
-	case CGEN_FOG:
-		{
-			const fog_t* fog = tr.world->fogs + tess.fogNum;
-			for ( int i = firstVertex; i < firstVertex + numVertexes; i++ ) {
-				*(int*)&svars.colors[i] = fog->colorInt;
-			}
-		}
-		break;
 	case CGEN_WAVEFORM:
 		RB_CalcWaveColor( &pStage->rgbWave, ( unsigned char * ) &svars.colors[firstVertex], numVertexes );
 		break;
@@ -1186,27 +1031,6 @@ void R_ComputeColors( const shaderStage_t* pStage, stageVars_t& svars, int first
 		}
 		break;
 	}
-
-	//
-	// fog adjustment for colors to fade out as fog increases
-	//
-	if ( tess.fogNum )
-	{
-		switch ( pStage->adjustColorsForFog )
-		{
-		case ACFF_MODULATE_RGB:
-			RB_CalcModulateColorsByFog( ( unsigned char * ) svars.colors, firstVertex, numVertexes );
-			break;
-		case ACFF_MODULATE_ALPHA:
-			RB_CalcModulateAlphasByFog( ( unsigned char * ) svars.colors, firstVertex, numVertexes );
-			break;
-		case ACFF_MODULATE_RGBA:
-			RB_CalcModulateRGBAsByFog( ( unsigned char * ) svars.colors, firstVertex, numVertexes );
-			break;
-		case ACFF_NONE:
-			break;
-		}
-	}
 }
 
 
@@ -1241,10 +1065,6 @@ void R_ComputeTexCoords( const shaderStage_t* pStage, stageVars_t& svars, int fi
 			svars.texcoords[i][0] = DotProduct( tess.xyz[i], pStage->tcGenVectors[0] );
 			svars.texcoords[i][1] = DotProduct( tess.xyz[i], pStage->tcGenVectors[1] );
 		}
-		break;
-
-	case TCGEN_FOG:
-		RB_CalcFogTexCoords( ( float * ) svars.texcoords, firstVertex, numVertexes );
 		break;
 
 	case TCGEN_ENVIRONMENT_MAPPED:

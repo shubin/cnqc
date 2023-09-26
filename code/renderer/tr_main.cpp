@@ -1087,35 +1087,6 @@ static qbool R_MirrorViewBySurface( drawSurf_t* drawSurf, int entityNum )
 }
 
 
-// see if a sprite is inside a fog volume
-
-static int R_SpriteFogNum( const trRefEntity_t* ent )
-{
-	int i, j;
-
-	if ( tr.refdef.rdflags & RDF_NOWORLDMODEL ) {
-		return 0;
-	}
-
-	for ( i = 1 ; i < tr.world->numfogs ; i++ ) {
-		const fog_t* fog = &tr.world->fogs[i];
-		for ( j = 0 ; j < 3 ; j++ ) {
-			if ( ent->e.origin[j] - ent->e.radius >= fog->bounds[1][j] ) {
-				break;
-			}
-			if ( ent->e.origin[j] + ent->e.radius <= fog->bounds[0][j] ) {
-				break;
-			}
-		}
-		if ( j == 3 ) {
-			return i;
-		}
-	}
-
-	return 0;
-}
-
-
 /*
 ==========================================================================================
 
@@ -1284,13 +1255,13 @@ static float SurfGreyscaleAmount( const shader_t* shader )
 }
 
 
-void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int fogIndex, int staticGeoChunk, int zppFirstIndex, int zppIndexCount, float radiusOverZ )
+void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int staticGeoChunk, int zppFirstIndex, int zppIndexCount, float radiusOverZ )
 {
 	if (tr.refdef.numDrawSurfs >= MAX_DRAWSURFS)
 		return;
 
 	drawSurf_t* const drawSurf = &tr.refdef.drawSurfs[tr.refdef.numDrawSurfs++];
-	drawSurf->sort = R_ComposeSort( tr.currentEntityNum, shader, fogIndex );
+	drawSurf->sort = R_ComposeSort( tr.currentEntityNum, shader, staticGeoChunk );
 	drawSurf->surface = surface;
 	drawSurf->model = tr.currentModel != NULL ? tr.currentModel->index : 0;
 	drawSurf->shaderNum = shader->index;
@@ -1302,7 +1273,7 @@ void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int fo
 }
 
 
-void R_AddLitSurf( const surfaceType_t* surface, const shader_t* shader, int fogIndex )
+void R_AddLitSurf( const surfaceType_t* surface, const shader_t* shader, int staticGeoChunk )
 {
 	if (tr.refdef.numLitSurfs >= MAX_DRAWSURFS)
 		return;
@@ -1310,10 +1281,11 @@ void R_AddLitSurf( const surfaceType_t* surface, const shader_t* shader, int fog
 	tr.pc[RF_LIT_SURFS]++;
 
 	litSurf_t* const litSurf = &tr.refdef.litSurfs[tr.refdef.numLitSurfs++];
-	litSurf->sort = R_ComposeSort( tr.currentEntityNum, shader, fogIndex );
+	litSurf->sort = R_ComposeLitSort( tr.currentEntityNum, shader, staticGeoChunk );
 	litSurf->surface = surface;
 	litSurf->shaderNum = shader->index;
 	litSurf->greyscale = SurfGreyscaleAmount( shader );
+	litSurf->staticGeoChunk = staticGeoChunk;
 
 	if (!tr.light->head)
 		tr.light->head = litSurf;
@@ -1343,7 +1315,28 @@ void R_DecomposeSort( uint64_t sort, int* entityNum, const shader_t** shader )
 {
 	*entityNum = ( sort >> DRAWSORT_ENTITY_INDEX ) & MAX_REFENTITIES;
 	*shader = tr.sortedShaders[ ( sort >> DRAWSORT_SHADER_INDEX ) & (MAX_SHADERS-1) ];
-	
+}
+
+
+uint32_t R_ComposeLitSort( int entityNum, const shader_t* shader, int staticGeoChunk )
+{
+	const int stageIndex = max( shader->lightingStages[ST_DIFFUSE], 0 );
+	const int depthTestEquals = ( shader->stages[stageIndex]->stateBits & GLS_DEPTHFUNC_EQUAL ) != 0;
+
+	return
+		( (uint32_t)entityNum << LITSORT_ENTITY_INDEX ) |
+		( (uint32_t)shader->sortedIndex << LITSORT_SHADER_INDEX ) |
+		( (uint32_t)( staticGeoChunk > 0 ? 0 : 1 ) << LITSORT_STATICGEO_INDEX ) |
+		( (uint32_t)shader->cullType << LITSORT_CULLTYPE_INDEX ) |
+		( (uint32_t)shader->polygonOffset << LITSORT_POLYGONOFFSET_INDEX ) |
+		( (uint32_t)depthTestEquals << LITSORT_DEPTHTEST_INDEX );
+}
+
+
+void R_DecomposeLitSort( uint32_t sort, int* entityNum, const shader_t** shader )
+{
+	*entityNum = ( sort >> LITSORT_ENTITY_INDEX ) & MAX_REFENTITIES;
+	*shader = tr.sortedShaders[ ( sort >> LITSORT_SHADER_INDEX ) & (MAX_SHADERS-1) ];
 }
 
 
@@ -1591,7 +1584,7 @@ static void R_AddEntitySurfaces()
 				continue;
 			}
 			shader = R_GetShaderByHandle( ent->e.customShader );
-			R_AddDrawSurf( &entitySurface, shader, R_SpriteFogNum( ent ) );
+			R_AddDrawSurf( &entitySurface, shader );
 			break;
 
 		case RT_MODEL:
@@ -1600,7 +1593,7 @@ static void R_AddEntitySurfaces()
 
 			tr.currentModel = R_GetModelByHandle( ent->e.hModel );
 			if (!tr.currentModel) {
-				R_AddDrawSurf( &entitySurface, tr.defaultShader, 0 );
+				R_AddDrawSurf( &entitySurface, tr.defaultShader );
 			} else {
 				switch ( tr.currentModel->type ) {
 				case MOD_MD3:
@@ -1615,7 +1608,7 @@ static void R_AddEntitySurfaces()
 				case MOD_BAD:		// null model axis
 					if ( (ent->e.renderfx & RF_THIRD_PERSON) && !tr.viewParms.isPortal)
 						break;
-					R_AddDrawSurf( &entitySurface, tr.defaultShader, 0 );
+					R_AddDrawSurf( &entitySurface, tr.defaultShader );
 					break;
 				default:
 					ri.Error( ERR_DROP, "R_AddEntitySurfaces: Bad modeltype" );

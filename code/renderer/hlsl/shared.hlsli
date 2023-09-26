@@ -65,3 +65,23 @@ float4 Dither(float4 color, float3 position, float seed, float noiseScale, float
 
 	return color + float4(noise, noise, noise, 0.0);
 }
+
+// from NVIDIA's 2007 "Soft Particles" whitepaper by Tristan Lorach
+float Contrast(float d, float power)
+{
+	bool aboveHalf = d > 0.5;
+	float base = saturate(2.0 * (aboveHalf ? (1.0 - d) : d));
+	float r = 0.5 * pow(base, power);
+
+	return aboveHalf ? (1.0 - r) : r;
+}
+
+float GetBitAsFloat(uint bits, uint bitIndex)
+{
+	return (bits & (1u << bitIndex)) ? 1.0 : 0.0;
+}
+
+float2 UnpackHalf2(uint data)
+{
+	return float2(f16tof32(data), f16tof32(data >> 16));
+}

@@ -83,7 +83,7 @@ void R_AddPolygonSurfaces()
 
 	const srfPoly_t* poly = tr.refdef.polys;
 	for (int i = 0; i < tr.refdef.numPolys; ++i, ++poly) {
-		R_AddDrawSurf( (const surfaceType_t*)poly, R_GetShaderByHandle( poly->hShader ), poly->fogIndex );
+		R_AddDrawSurf( (const surfaceType_t*)poly, R_GetShaderByHandle( poly->hShader ) );
 	}
 }
 

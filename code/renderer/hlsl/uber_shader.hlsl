@@ -99,6 +99,8 @@ struct VOut
 	STAGE_ATTRIBS(7)
 #endif
 	float clipDist : SV_ClipDistance0;
+	float2 proj2232 : PROJ;
+	float depthVS : DEPTHVS;
 };
 
 #undef STAGE_ATTRIBS
@@ -150,6 +152,8 @@ VOut vs(VIn input)
 	STAGE_ATTRIBS(7)
 #endif
 	output.clipDist = dot(positionVS, clipPlane);
+	output.proj2232 = float2(-projectionMatrix[2][2], projectionMatrix[2][3]);
+	output.depthVS = -positionVS.z;
 
 	return output;
 }
@@ -166,26 +170,21 @@ VOut vs(VIn input)
 cbuffer RootConstants
 {
 	// general
-	uint4 stageIndices0; // low 16 = texture, high 16 = sampler
+	uint4 stageIndices0; // sampler: 16 - texture: 16
 	uint4 stageIndices1;
 	float greyscale;
-	float pad0;
-	float pad1;
-	float pad2;
 
 	// shader trace
-	uint shaderTrace;
-	uint shaderIndex;
-	uint frameIndex;
-	uint centerPixel; // x | (y << 16)
+	uint shaderTrace; // shader index: 14 - frame index: 2 - enable: 1
+	uint centerPixel; // y: 16 - x: 16
 
-#if DITHER
+	// depth fade
+	uint halfDistOffset; // low: distance - high: offset
+	uint depthFadeColorTex; // texture index: 12 - color bias: 4 - color scale: 4
+
 	// dither
-	float frameSeed;
-	float noiseScale;
-	float invGamma;
-	float invBrightness;
-#endif
+	uint halfSeedNoise; // low: frame seed - high: noise scale
+	uint halfInvGammaBright; // low: inv gamma - high: inv brightness
 };
 
 Texture2D textures2D[4096] : register(t0);
@@ -335,16 +334,33 @@ float4 ps(VOut input) : SV_Target
 	dst = MakeGreyscale(dst, greyscale);
 
 #if DITHER
-	dst = Dither(dst, input.position.xyz, frameSeed, noiseScale, invBrightness, invGamma);
+	float2 seedNoise = UnpackHalf2(halfSeedNoise);
+	float2 invGammaBright = UnpackHalf2(halfInvGammaBright);
+	dst = Dither(dst, input.position.xyz, seedNoise.x, seedNoise.y, invGammaBright.y, invGammaBright.x);
 #endif
 
-	if(shaderTrace)
+#if DEPTH_FADE
+#define BIT(Index) GetBitAsFloat(depthFadeColorTex, Index)
+	float2 distOffset = UnpackHalf2(halfDistOffset);
+	float4 fadeColorScale = float4(BIT(0), BIT(1), BIT(2), BIT(3));
+	float4 fadeColorBias = float4(BIT(4), BIT(5), BIT(6), BIT(7));
+	float zwDepth = textures2D[depthFadeColorTex >> 8].Load(int3(input.position.xy, 0)).x;// stored depth, z/w
+	float depthS = LinearDepth(zwDepth, input.proj2232.x, input.proj2232.y); // stored depth, linear
+	float depthP = input.depthVS - distOffset.y; // fragment depth
+	float fadeScale = Contrast((depthS - depthP) * distOffset.x, 2.0);
+	dst = lerp(dst * fadeColorScale + fadeColorBias, dst, fadeScale);
+#undef BIT
+#endif
+
+	if(shaderTrace & 1)
 	{
 		// we only store the shader index of 1 pixel
 		uint2 fragmentCoords = uint2(input.position.xy);
 		uint2 centerCoords = uint2(centerPixel & 0xFFFF, centerPixel >> 16);
 		if(all(fragmentCoords == centerCoords))
 		{
+			uint frameIndex = (shaderTrace >> 1) & 3;
+			uint shaderIndex = shaderTrace >> 3;
 			shaderIndexBuffer.Store(frameIndex * 4, shaderIndex);
 		}
 	}

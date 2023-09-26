@@ -48,7 +48,7 @@ ifeq ($(config),release_x64)
   ALL_CPPFLAGS += $(CPPFLAGS) -MD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -ffast-math -fomit-frame-pointer -Os -g -msse2 -Wno-unused-parameter -Wno-write-strings -Wno-parentheses -Wno-parentheses-equality -g1 -std=c++98
   ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -ffast-math -fomit-frame-pointer -Os -g -msse2 -fno-exceptions -fno-rtti -Wno-unused-parameter -Wno-write-strings -Wno-parentheses -Wno-parentheses-equality -g1 -std=c++98
-  ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
+  ALL_RESFLAGS += $(RESFLAGS) $(DEFIfNES) $(INCLUDES)
   LIBS +=
   LDDEPS +=
   ALL_LDFLAGS += $(LDFLAGS) -L../../.build/release_x64 -L/usr/lib64 -m64 

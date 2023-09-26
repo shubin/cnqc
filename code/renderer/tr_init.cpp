@@ -423,11 +423,10 @@ static const cvarTableItem_t r_cvars[] =
 		&r_lightmapGreyscale, "r_lightmapGreyscale", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_FLOAT, "0", "1", "how desaturated the lightmap looks",
 		"Lightmap desaturation", CVARCAT_GRAPHICS, "Desaturates the lightmap data", ""
 	},
-	// @TODO:
-	//{
-		//&r_depthFade, "r_depthFade", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_depthFade,
-		//"", CVARCAT_GRAPHICS | CVARCAT_PERFORMANCE, "", ""
-	//},
+	{
+		&r_depthFade, "r_depthFade", "1", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_depthFade,
+		"Depth fade", CVARCAT_GRAPHICS | CVARCAT_PERFORMANCE, "Prevents transparent surfaces from creating sharp edges when \"cutting\" through opaque geometry", ""
+	},
 	{
 		&r_dither, "r_dither", "0", CVAR_ARCHIVE | CVAR_LATCH, CVART_BOOL, NULL, NULL, help_r_dither,
 		"Dither", CVARCAT_GRAPHICS | CVARCAT_PERFORMANCE, "Adds noise to fight color banding artifacts", ""
@@ -510,7 +509,7 @@ static const cvarTableItem_t r_cvars[] =
 	},
 	{
 		&r_dynamiclight, "r_dynamiclight", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "enables dynamic lights",
-		"", 0, "", "" // @TODO: CVARCAT_GRAPHICS | CVARCAT_PERFORMANCE once implemented
+		"Enable dynamic lights", CVARCAT_GRAPHICS | CVARCAT_PERFORMANCE, "For power-ups, muzzle flashes, rockets, explosions, ...", ""
 	},
 	{
 		&r_lego, "r_lego", "0", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "LEGO(R) texture filtering",
@@ -740,8 +739,6 @@ void R_Init()
 
 	if ((intptr_t)tess.xyz & 15)
 		Com_Printf( "WARNING: tess.xyz not 16 byte aligned\n" );
-
-	R_InitFogTable();
 
 	R_NoiseInit();
 

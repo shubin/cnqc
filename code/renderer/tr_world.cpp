@@ -210,7 +210,7 @@ static void R_AddWorldSurface( msurface_t* surf )
 		radiusOverZ = triangles->radius / max( dist, 0.001f );
 	}
 
-	R_AddDrawSurf( surf->data, surf->shader, surf->fogIndex, surf->staticGeoChunk, surf->zppFirstIndex, surf->zppIndexCount, radiusOverZ );
+	R_AddDrawSurf( surf->data, surf->shader, surf->staticGeoChunk, surf->zppFirstIndex, surf->zppIndexCount, radiusOverZ );
 }
 
 
@@ -350,6 +350,10 @@ static void R_AddLitSurface( msurface_t* surf, const dlight_t* light )
 	if ( surf->shader->sort < SS_OPAQUE )
 		return;
 
+	// lighting a fog box' surface looks absolutely terrible
+	if ( (surf->shader->contentFlags & CONTENTS_FOG) != 0 )
+		return;
+
 	if ( surf->lightCount == tr.lightCount )
 		return; // already in the lit list (or already culled) for this light
 
@@ -374,7 +378,7 @@ static void R_AddLitSurface( msurface_t* surf, const dlight_t* light )
 		return;
 	}
 
-	R_AddLitSurf( surf->data, surf->shader, surf->fogIndex );
+	R_AddLitSurf( surf->data, surf->shader, surf->staticGeoChunk );
 }
 
 

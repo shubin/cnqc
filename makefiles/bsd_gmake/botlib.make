@@ -12,9 +12,9 @@ endif
 
 ifeq ($(config),debug_x64)
   RESCOMP = windres
-  TARGETDIR = ../../.build/debug_x64
+  TARGETDIR = ../../.build/debug
   TARGET = $(TARGETDIR)/libbotlib.a
-  OBJDIR = ../../.build/debug_x64/botlib
+  OBJDIR = ../../.build/debug/botlib
   DEFINES += -DBOTLIB -DDEBUG -D_DEBUG
   INCLUDES +=
   FORCE_INCLUDE +=
@@ -24,7 +24,7 @@ ifeq ($(config),debug_x64)
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
   LIBS +=
   LDDEPS +=
-  ALL_LDFLAGS += $(LDFLAGS) -L../../.build/debug_x64 -L/usr/lib64 -m64 
+  ALL_LDFLAGS += $(LDFLAGS) -L../../.build/debug -L/usr/lib64 -m64 
   LINKCMD = $(AR) -rcs "$@" $(OBJECTS)
   define PREBUILDCMDS
   endef
@@ -39,9 +39,9 @@ endif
 
 ifeq ($(config),release_x64)
   RESCOMP = windres
-  TARGETDIR = ../../.build/release_x64
+  TARGETDIR = ../../.build/release
   TARGET = $(TARGETDIR)/libbotlib.a
-  OBJDIR = ../../.build/release_x64/botlib
+  OBJDIR = ../../.build/release/botlib
   DEFINES += -DBOTLIB -DNDEBUG
   INCLUDES +=
   FORCE_INCLUDE +=
@@ -51,7 +51,7 @@ ifeq ($(config),release_x64)
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
   LIBS +=
   LDDEPS +=
-  ALL_LDFLAGS += $(LDFLAGS) -L../../.build/release_x64 -L/usr/lib64 -m64 
+  ALL_LDFLAGS += $(LDFLAGS) -L../../.build/release -L/usr/lib64 -m64 
   LINKCMD = $(AR) -rcs "$@" $(OBJECTS)
   define PREBUILDCMDS
   endef

@@ -179,7 +179,7 @@ typedef struct {
 	// transforms window (client rect) coordinates into render target coordinates
 	void	(*ComputeCursorPosition)( int* x, int* y );
 #if defined( QC )
-	void (*GetAdvertisements)(int *num, float *verts, void *shaders);
+	void	(*GetAdvertisements)( int *num, float *verts, void *shaders );
 #endif
 } refexport_t;
 

@@ -17,7 +17,11 @@ ifndef verbose
   SILENT = @
 endif
 
-PROJECTS := server client
+# if client
+#PROJECTS := server client
+# else
+PROJECTS := server
+# endif
 
 help:
 	@echo "Usage: $(make_name) [config=name] target"
@@ -28,13 +32,19 @@ help:
 	@echo ""
 	@echo "TARGETS:"
 	@echo "  server"
-	@echo "  client"
-	@echo "  all (server + client)"
+# if client
+#	@echo "  client"
+#	@echo "  all (server + client)"
+# else
+	@echo "  all (server only for now)"
+# end
 	@echo "  clean"
 	@echo "  help (default)"
-	@echo ""
-	@echo "REQUIREMENTS:"
-	@echo "  NASM is required for building the client."
+# if client
+#	@echo ""
+#	@echo "REQUIREMENTS:"
+#	@echo "  NASM is required for building the client."
+# endif
 	@echo ""
 	@echo "OPTIONS:"
 	@echo "  If the environment variable QUAKE3DIR is defined,"
@@ -43,11 +53,17 @@ help:
 
 server:
 	@${MAKE} --no-print-directory -C $(make_dir) cnq3-server config=$(config)_x64
-	
-client:
-	@${MAKE} --no-print-directory -C $(make_dir) cnq3 config=$(config)_x64
+
+# if client
+#client:
+#	@${MAKE} --no-print-directory -C $(make_dir) cnq3 config=$(config)_x64
+# endif
 	
 clean:
 	@${MAKE} --no-print-directory -C $(make_dir) clean config=$(config)_x64
 
-all: server client
+# if client
+#all: server client
+# else
+all: server
+# endif

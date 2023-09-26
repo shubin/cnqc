@@ -267,6 +267,10 @@ static char lastValidGame[MAX_OSPATH];
 static FILE* missingFiles = NULL;
 #endif
 
+#if defined( QC ) && defined( WIN32 )
+void Sys_FindQ3APath( void );
+qboolean Sys_LocateQ3APath( void );
+#endif // QC
 
 int Q_FileHash( const char* s, int tablesize )
 {

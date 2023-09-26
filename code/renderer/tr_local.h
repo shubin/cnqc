@@ -195,7 +195,6 @@ typedef enum {
 	CGEN_ONE_MINUS_VERTEX,
 	CGEN_WAVEFORM,			// programmatically generated
 	CGEN_LIGHTING_DIFFUSE,
-	CGEN_FOG,				// standard fog
 	CGEN_CONST,				// fixed color
 	CGEN_DEBUG_ALPHA		// debug only: replicate the alpha channel
 } colorGen_t;
@@ -206,16 +205,8 @@ typedef enum {
 	TCGEN_LIGHTMAP,
 	TCGEN_TEXTURE,
 	TCGEN_ENVIRONMENT_MAPPED,
-	TCGEN_FOG,
 	TCGEN_VECTOR			// S and T from world coordinates
 } texCoordGen_t;
-
-typedef enum {
-	ACFF_NONE,
-	ACFF_MODULATE_RGB,
-	ACFF_MODULATE_RGBA,
-	ACFF_MODULATE_ALPHA
-} acff_t;
 
 typedef struct {
 	genFunc_t	func;
@@ -321,8 +312,6 @@ typedef struct {
 
 	unsigned		stateBits;					// GLS_xxxx mask
 
-	acff_t			adjustColorsForFog;
-
 	qbool			isDetail;
 	stageType_t		type;
 } shaderStage_t;
@@ -340,12 +329,6 @@ typedef enum {
 	CT_COUNT
 } cullType_t;
 
-typedef enum {
-	FP_NONE,		// surface is translucent and will just be adjusted properly
-	FP_EQUAL,		// surface is opaque but possibly alpha tested
-	FP_LE			// surface is trnaslucent, but still needs a fog pass (fog surface)
-} fogPass_t;
-
 typedef struct {
 	float		cloudHeight;
 	image_t *outerbox[6], *innerbox[6]; // innerbox was never actually used by Q3
@@ -358,16 +341,15 @@ typedef struct {
 
 typedef enum {
 	DFT_NONE,   // disabled
-	DFT_BLEND,  // std alpha blend -> fade color = (R G B 0)
-	DFT_ADD,    // additive        -> fade color = (0 0 0 A)
-	DFT_MULT,   // multiplicative  -> fade color = (1 1 1 A)
-	DFT_PMA,    // pre-mult alpha  -> fade color = (0 0 0 0)
+	DFT_BLEND,  // standard alpha blend
+	DFT_ADD,    // additive
+	DFT_MULT,   // multiplicative
+	DFT_PMA,    // pre-multiplied alpha
 	DFT_TBD,    // to be determined, i.e. fix up later
 	DFT_COUNT
 } depthFadeType_t;
 
-extern const float r_depthFadeScale[DFT_COUNT][4];
-extern const float r_depthFadeBias [DFT_COUNT][4];
+extern const uint8_t r_depthFadeScaleAndBias[DFT_COUNT];
 
 struct pipeline_t {
 	int firstStage;
@@ -414,11 +396,9 @@ struct shader_t {
 	int			numDeforms;
 	deformStage_t	deforms[MAX_SHADER_DEFORMS];
 
-	int			numStages;			// not counting fog pass (if any)
+	int			numStages;
 	shaderStage_t	*stages[MAX_SHADER_STAGES];
 	int lightingStages[ST_MAX];
-
-	fogPass_t	fogPass;			// draw a blended pass, possibly with depth test equals
 
 	double clampTime;				// time this shader is clamped to
 	double timeOffset;				// current time offset for this shader
@@ -557,6 +537,7 @@ struct litSurf_t {
 	const surfaceType_t* surface;		// any of surface*_t
 	litSurf_t* next;
 	float greyscale;
+	int staticGeoChunk;
 };
 
 struct dlight_t {
@@ -842,6 +823,24 @@ enum drawSurfGeneralSort_t {
 };
 
 
+enum litSurfGeneralSort_t {
+	// dimensions - the sum should stay within 32 bits
+	LITSORT_ENTITY_BITS = 10, // GENTITYNUM_BITS
+	LITSORT_SHADER_BITS = 14, // log2 MAX_SHADERS
+	LITSORT_STATICGEO_BITS = 1,
+	LITSORT_CULLTYPE_BITS = 2,		// PSO part 1
+	LITSORT_POLYGONOFFSET_BITS = 1,	// PSO part 2
+	LITSORT_DEPTHTEST_BITS = 1,		// PSO part 3
+	// offsets
+	LITSORT_ENTITY_INDEX = 0,
+	LITSORT_SHADER_INDEX = LITSORT_ENTITY_INDEX + LITSORT_ENTITY_BITS,
+	LITSORT_STATICGEO_INDEX = LITSORT_SHADER_INDEX + LITSORT_SHADER_BITS,
+	LITSORT_CULLTYPE_INDEX = LITSORT_STATICGEO_INDEX + LITSORT_STATICGEO_BITS,
+	LITSORT_POLYGONOFFSET_INDEX = LITSORT_CULLTYPE_INDEX + LITSORT_CULLTYPE_BITS,
+	LITSORT_DEPTHTEST_INDEX = LITSORT_POLYGONOFFSET_INDEX + LITSORT_POLYGONOFFSET_BITS
+};
+
+
 #define MAX_TMUS 4
 
 
@@ -857,24 +856,12 @@ typedef struct {
 	byte			color2D[4];
 	trRefEntity_t	entity2D;		// currentEntity will point at this when doing 2D rendering
 
-	// dynamic lights data set by the back-end for the GAL
-	qbool			dlOpaque;		// qtrue when drawing an opaque surface
-	float			dlIntensity;	// 1 for most surfaces, but can be scaled down for liquids etc.
-	unsigned int	dlStateBits;	// the state bits to apply for this draw call
-	// quick explanation on why dlOpaque is useful in the first place:
-	// - opaque surfaces can have a diffuse texture whose alpha isn't 255 everywhere
-	// - when that happens and we multiply the color by the the alpha (DL uses additive blending),
-	//   we get "light holes" in opaque surfaces, which is not what we want
-
 	qbool			renderFrame;
 
 	int* pc; // current stats set, depending on projection2D
 	int pc2D[RB_STATS_MAX];
 	int pc3D[RB_STATS_MAX];
 } backEndState_t;
-
-
-#define FOG_TABLE_SIZE		256
 
 
 enum renderMode_t {
@@ -916,7 +903,6 @@ typedef struct {
 	image_t*		defaultImage;
 	image_t*		whiteImage;			// { 255, 255, 255, 255 }
 	image_t*		fullBrightImage;	// RGB scale based on r_mapBrightness, alpha 255
-	image_t*		fogImage;
 	image_t*		scratchImage[16];	// MAX_VIDEO_HANDLES
 
 	shader_t*		defaultShader;
@@ -971,8 +957,6 @@ typedef struct {
 
 	int			numSkins;
 	skin_t*		skins[MAX_SKINS];
-
-	float		fogTable[FOG_TABLE_SIZE];
 
 	float		mipFilter[4]; // only used by the GPU generators
 
@@ -1114,18 +1098,18 @@ extern	cvar_t	*r_debugInput;
 void  R_NoiseInit();
 double R_NoiseGet4f( double x, double y, double z, double t );
 
-void R_SwapBuffers( int );
-
 void R_RenderScene( const viewParms_t* parms );
 
 void R_AddMD3Surfaces( trRefEntity_t *e );
 
 void R_AddPolygonSurfaces();
 
-void R_AddDrawSurf(const surfaceType_t* surface, const shader_t* shader, int fogIndex, int staticGeoChunk = 0, int zppFirstIndex = 0, int zppIndexCount = 0, float radiusOverZ = 666.0f );
-void R_AddLitSurf( const surfaceType_t* surface, const shader_t* shader, int fogIndex );
+void R_AddDrawSurf( const surfaceType_t* surface, const shader_t* shader, int staticGeoChunk = 0, int zppFirstIndex = 0, int zppIndexCount = 0, float radiusOverZ = 666.0f );
+void R_AddLitSurf( const surfaceType_t* surface, const shader_t* shader, int staticGeoChunk );
 uint64_t R_ComposeSort( int entityNum, const shader_t* shader, int staticGeoChunk );
 void R_DecomposeSort( uint64_t sort, int* entityNum, const shader_t** shader );
+uint32_t R_ComposeLitSort( int entityNum, const shader_t* shader, int staticGeoChunk );
+void R_DecomposeLitSort( uint32_t sort, int* entityNum, const shader_t** shader );
 
 
 #define	CULL_IN		0		// completely unclipped
@@ -1216,10 +1200,7 @@ void	R_SkinList_f( void );
 
 void	R_AddImageShader( image_t* image, shader_t* shader );
 
-void	R_InitFogTable();
-float	R_FogFactor( float s, float t );
 void	R_InitImages();
-void	R_DeleteTextures();
 void	R_InitSkins();
 const skin_t* R_GetSkinByHandle( qhandle_t hSkin );
 
@@ -1315,19 +1296,15 @@ struct shaderCommands_t
 	vec2_t			texCoords[SHADER_MAX_VERTEXES];
 	vec2_t			texCoords2[SHADER_MAX_VERTEXES];
 	color4ub_t		vertexColors[SHADER_MAX_VERTEXES];
-	unsigned int	dlIndexes[SHADER_MAX_INDEXES];
 	stageVars_t		svars[MAX_SHADER_STAGES];
-	stageVars_t		svarsFog;
 
 	enum { TP_BASE, TP_LIGHT } pass;
 
 	const shader_t* shader;
 	double		shaderTime;
-	int			fogNum;
 
 	int			numIndexes;
 	int			numVertexes;
-	int			dlNumIndexes;
 
 	const dlight_t* light;
 
@@ -1338,12 +1315,6 @@ struct shaderCommands_t
 
 	// when qtrue, RB_EndSurface doesn't need to compute deforms, colors, texture coordinates
 	qbool deformsPreApplied;
-
-	// when qtrue, draw a fog pass using fogStateBits and svarsFog
-	qbool drawFog;
-
-	// use this state vector when drawing the fog pass
-	unsigned int fogStateBits;
 
 	// how to process the colors of the current batch
 	float greyscale;
@@ -1468,8 +1439,6 @@ void	R_TransformClipToWindow( const vec4_t clip, const viewParms_t *view, vec4_t
 
 void	RB_DeformTessGeometry( int firstVertex, int numVertexes, int firstIndex, int numIndexes );
 
-void	RB_CalcFogTexCoords( float *st, int firstVertex, int numVertexes );
-
 
 /*
 =============================================================
@@ -1538,7 +1507,9 @@ struct drawSceneViewCommand_t : renderCommandBase_t {
 
 struct endSceneCommand_t : renderCommandBase_t {
 	viewParms_t viewParms;
+#if !defined( QC )
 	uint32_t padding2;
+#endif // !QC
 };
 
 struct screenshotCommand_t : renderCommandBase_t {
@@ -1648,7 +1619,7 @@ int SaveJPGToBuffer( byte* out, int quality, int image_width, int image_height, 
 void RE_TakeVideoFrame( int width, int height,
 		byte *captureBuffer, byte *encodeBuffer, qbool motionJpeg );
 #if defined( QC )
-void RE_GetAdvertisements(int *num, float *verts, void *shaders);
+void RE_GetAdvertisements( int *num, float *verts, void *shaders );
 #endif
 
 void R_EndScene( const viewParms_t* viewParms );

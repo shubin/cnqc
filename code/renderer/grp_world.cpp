@@ -43,6 +43,11 @@ namespace fog_outside
 {
 #include "hlsl/fog_outside_ps.h"
 }
+namespace dyn_light
+{
+#include "hlsl/dynamic_light_vs.h"
+#include "hlsl/dynamic_light_ps.h"
+}
 
 
 #pragma pack(push, 4)
@@ -66,6 +71,26 @@ struct FogPixelRC
 	float colorDepth[4];
 };
 
+struct DynLightVertexRC
+{
+	float modelViewMatrix[16];
+	float projectionMatrix[16];
+	float osLightPos[4];
+	float osEyePos[4];
+};
+
+struct DynLightPixelRC
+{
+	uint32_t stageIndices; // low 16 = texture, high 16 = sampler
+	uint32_t pad0[3];
+	float color[3];
+	float recSqrRadius; // 1 / (r * r)
+	float greyscale;
+	float intensity;
+	float opaque;
+	float pad1;
+};
+
 #pragma pack(pop)
 
 
@@ -85,15 +110,20 @@ static const uint32_t zppMaxIndexCount = 8 * zppMaxVertexCount;
 static uint32_t zppIndices[zppMaxIndexCount];
 
 
-static bool HasStaticGeo(const drawSurf_t* drawSurf, const shader_t* shader)
+static bool HasStaticGeo(int staticGeoChunk, const shader_t* shader)
 {
+	if(forceDynamic)
+	{
+		return false;
+	}
+
 	// @NOTE: the shader->isDynamic check is needed because of the shader editing feature
 	// without it, an edited shader that changes vertex attributes won't display correctly
 	// because the original "baked" vertex attributes would be used instead
 	return
 		!shader->isDynamic &&
-		drawSurf->staticGeoChunk > 0 &&
-		drawSurf->staticGeoChunk < ARRAY_LEN(grp.world.statChunks);
+		staticGeoChunk > 0 &&
+		staticGeoChunk < ARRAY_LEN(grp.world.statChunks);
 }
 
 static void UpdateEntityData(bool& depthHack, int entityNum, double originalTime)
@@ -128,6 +158,11 @@ static void UpdateEntityData(bool& depthHack, int entityNum, double originalTime
 		// the world (like water) continue with the wrong frame
 		tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
 	}
+}
+
+static int GetDynamicLightPipelineIndex(cullType_t cullType, qbool polygonOffset, qbool depthTestEquals)
+{
+	return (int)cullType + CT_COUNT * (int)polygonOffset + CT_COUNT * 2 * (int)depthTestEquals;
 }
 
 
@@ -294,6 +329,22 @@ void World::Init()
 			desc.memoryUsage = MemoryUsage::Readback;
 			traceReadbackBuffer = CreateBuffer(desc);
 		}
+
+		//
+		// dynamic lights
+		//
+		{
+			RootSignatureDesc desc("dynamic lights");
+			desc.usingVertexBuffers = true;
+			desc.samplerCount = ARRAY_LEN(grp.samplers);
+			desc.samplerVisibility = ShaderStages::PixelBit;
+			desc.genericVisibility = ShaderStages::VertexBit | ShaderStages::PixelBit;
+			desc.AddRange(DescriptorType::Texture, 0, MAX_DRAWIMAGES * 2);
+			desc.AddRange(DescriptorType::RWBuffer, MAX_DRAWIMAGES * 2, 1);
+			desc.constants[ShaderStage::Vertex].byteCount = sizeof(DynLightVertexRC);
+			desc.constants[ShaderStage::Pixel].byteCount = sizeof(DynLightPixelRC);
+			dlRootSignature = CreateRootSignature(desc);
+		}
 	}
 
 	//
@@ -324,6 +375,37 @@ void World::Init()
 		desc.AddRenderTarget(GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, grp.renderTargetFormat);
 		desc.vertexLayout.AddAttribute(0, ShaderSemantic::Position, DataType::Float32, 3, 0);
 		fogInsidePipeline = CreateGraphicsPipeline(desc);
+	}
+
+	//
+	// dynamic lights
+	//
+	{
+		GraphicsPipelineDesc desc("dynamic light opaque", dlRootSignature);
+		desc.shortLifeTime = true;
+		desc.vertexShader = ShaderByteCode(dyn_light::g_vs);
+		desc.pixelShader = ShaderByteCode(dyn_light::g_ps);
+		desc.depthStencil.enableDepthWrites = false;
+		desc.rasterizer.clampDepth = r_depthClamp->integer != 0;
+		desc.AddRenderTarget(GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE, grp.renderTargetFormat);
+		desc.vertexLayout.AddAttribute(0, ShaderSemantic::Position, DataType::Float32, 3, 0);
+		desc.vertexLayout.AddAttribute(1, ShaderSemantic::Normal, DataType::Float32, 3, 0);
+		desc.vertexLayout.AddAttribute(2, ShaderSemantic::TexCoord, DataType::Float32, 2, 0);
+		desc.vertexLayout.AddAttribute(3, ShaderSemantic::Color, DataType::UNorm8, 4, 0);
+		for(int cullType = 0; cullType < CT_COUNT; ++cullType)
+		{
+			desc.rasterizer.cullMode = (cullType_t)cullType;
+			for(int polygonOffset = 0; polygonOffset < 2; ++polygonOffset)
+			{
+				desc.rasterizer.polygonOffset = polygonOffset != 0;
+				for(int depthTestEquals = 0; depthTestEquals < 2; ++depthTestEquals)
+				{
+					desc.depthStencil.depthComparison = depthTestEquals ? ComparisonFunction::Equal : ComparisonFunction::GreaterEqual;
+					const int index = GetDynamicLightPipelineIndex((cullType_t)cullType, (qbool)polygonOffset, (qbool)depthTestEquals);
+					dlPipelines[index] = CreateGraphicsPipeline(desc);
+				}
+			}
+		}
 	}
 }
 
@@ -413,8 +495,6 @@ void World::Begin()
 
 void World::End()
 {
-	EndBatch();
-
 	grp.renderMode = RenderMode::None;
 }
 
@@ -469,6 +549,7 @@ void World::DrawPrePass(const drawSceneViewCommand_t& cmd)
 	CmdBindRenderTargets(0, NULL, &depthTexture);
 	CmdBindRootSignature(zppRootSignature);
 	CmdBindPipeline(zppPipeline);
+	psoChangeCount++;
 	CmdBindDescriptorTable(zppRootSignature, zppDescriptorTable);
 
 	ZPPVertexRC vertexRC;
@@ -482,11 +563,23 @@ void World::DrawPrePass(const drawSceneViewCommand_t& cmd)
 	CmdDrawIndexed(fullIndexCount, firstIndex, 0);
 }
 
-void World::BeginBatch(const shader_t* shader, bool hasStaticGeo)
+void World::BeginBatch(const shader_t* shader, bool hasStaticGeo, BatchType::Id type)
 {
+	if(type == BatchType::DepthFade && batchType != BatchType::DepthFade)
+	{
+		TextureBarrier barrier(depthTexture, ResourceStates::PixelShaderAccessBit);
+		CmdBarrier(1, &barrier);
+		CmdBindRenderTargets(1, &grp.renderTarget, NULL);
+	}
+	else if(type != BatchType::DepthFade && batchType == BatchType::DepthFade)
+	{
+		TextureBarrier barrier(depthTexture, ResourceStates::DepthWriteBit);
+		CmdBarrier(1, &barrier);
+		CmdBindRenderTargets(1, &grp.renderTarget, &depthTexture);
+	}
+
 	tess.numVertexes = 0;
 	tess.numIndexes = 0;
-	tess.fogNum = 0;
 	tess.depthFade = DFT_NONE;
 	tess.deformsPreApplied = qfalse;
 	tess.xstages = (const shaderStage_t**)shader->stages;
@@ -497,6 +590,7 @@ void World::BeginBatch(const shader_t* shader, bool hasStaticGeo)
 		tess.shaderTime = tess.shader->clampTime;
 	}
 	batchHasStaticGeo = hasStaticGeo;
+	batchType = type;
 }
 
 void World::EndBatch()
@@ -508,17 +602,23 @@ void World::EndBatch()
 		tess.shader->numStages == 0 ||
 		tess.shader->numPipelines <= 0)
 	{
-		// @TODO: make sure we never get tess.shader->numStages 0 here in the first place
-		tess.numVertexes = 0;
-		tess.numIndexes = 0;
-		return;
+		goto clean_up;
+	}
+
+	if(batchType == BatchType::DynamicLight)
+	{
+		if(tess.shader->lightingStages[ST_DIFFUSE] < 0 ||
+			tess.shader->lightingStages[ST_DIFFUSE] >= MAX_SHADER_STAGES)
+		{
+			goto clean_up;
+		}
 	}
 
 	// for debugging of sort order issues, stop rendering after a given sort value
 	if(r_debugSort->value > 0.0f &&
 		r_debugSort->value < tess.shader->sort)
 	{
-		return;
+		goto clean_up;
 	}
 
 	GeometryBuffers& db = dynBuffers[GetFrameIndex()];
@@ -526,17 +626,29 @@ void World::EndBatch()
 		!db.indexBuffer.CanAdd(indexCount))
 	{
 		Q_assert(!"Dynamic buffer too small!");
-		return;
+		goto clean_up;
 	}
 
 	const shader_t* const shader = tess.shader;
 	if(!tess.deformsPreApplied)
 	{
 		RB_DeformTessGeometry(0, vertexCount, 0, indexCount);
-		for(int s = 0; s < shader->numStages; ++s)
+		if(batchType == BatchType::DynamicLight)
 		{
-			R_ComputeColors(shader->stages[s], tess.svars[s], 0, vertexCount);
-			R_ComputeTexCoords(shader->stages[s], tess.svars[s], 0, vertexCount, qfalse);
+			const int stageIndex = shader->lightingStages[ST_DIFFUSE];
+			if(stageIndex >= 0 && stageIndex < MAX_SHADER_STAGES)
+			{
+				R_ComputeColors(shader->stages[stageIndex], tess.svars[0], 0, vertexCount);
+				R_ComputeTexCoords(shader->stages[stageIndex], tess.svars[0], 0, vertexCount, qfalse);
+			}
+		}
+		else
+		{
+			for(int s = 0; s < shader->numStages; ++s)
+			{
+				R_ComputeColors(shader->stages[s], tess.svars[s], 0, vertexCount);
+				R_ComputeTexCoords(shader->stages[s], tess.svars[s], 0, vertexCount, qfalse);
+			}
 		}
 	}
 
@@ -575,46 +687,90 @@ void World::EndBatch()
 		batchOldShadingRate = batchShadingRate;
 	}
 
-	for(int p = 0; p < shader->numPipelines; ++p)
+	if(batchType == BatchType::DynamicLight)
 	{
-		const pipeline_t& pipeline = shader->pipelines[p];
-		const int psoIndex = backEnd.viewParms.isMirror ? pipeline.mirrorPipeline : pipeline.pipeline;
-		if(batchPSO != grp.psos[psoIndex].pipeline)
+		const dlight_t* const dl = tess.light;
+		const int stageIndex = tess.shader->lightingStages[ST_DIFFUSE];
+		const image_t* image = GetBundleImage(shader->stages[stageIndex]->bundle);
+		const uint32_t texIdx = image->textureIndex;
+		const uint32_t sampIdx = GetSamplerIndex(image);
+		Q_assert(texIdx > 0);
+
+		const int pipelineIndex = GetDynamicLightPipelineIndex(shader->cullType, shader->polygonOffset, dlDepthTestEqual);
+		const HPipeline pipeline = dlPipelines[pipelineIndex];
+		if(batchPSO != pipeline)
 		{
-			batchPSO = grp.psos[psoIndex].pipeline;
+			batchPSO = pipeline;
 			CmdBindPipeline(batchPSO);
 			psoChangeCount++;
 		}
 
-		WorldVertexRC vertexRC = {};
+		DynLightVertexRC vertexRC = {};
 		memcpy(vertexRC.modelViewMatrix, backEnd.orient.modelMatrix, sizeof(vertexRC.modelViewMatrix));
 		memcpy(vertexRC.projectionMatrix, backEnd.viewParms.projectionMatrix, sizeof(vertexRC.projectionMatrix));
-		memcpy(vertexRC.clipPlane, clipPlane, sizeof(vertexRC.clipPlane));
-		CmdSetRootConstants(grp.uberRootSignature, ShaderStage::Vertex, &vertexRC);
+		VectorCopy(dl->transformed, vertexRC.osLightPos);
+		vertexRC.osLightPos[3] = 1.0f;
+		VectorCopy(backEnd.orient.viewOrigin, vertexRC.osEyePos);
+		vertexRC.osEyePos[3] = 1.0f;
+		CmdSetRootConstants(dlRootSignature, ShaderStage::Vertex, &vertexRC);
 
-		WorldPixelRC pixelRC = {};
+		DynLightPixelRC pixelRC = {};
 		pixelRC.greyscale = tess.greyscale;
-		pixelRC.frameSeed = grp.frameSeed;
-		pixelRC.noiseScale = r_ditherStrength->value;
-		pixelRC.invBrightness = 1.0f / r_brightness->value;
-		pixelRC.invGamma = 1.0f / r_gamma->value;
-		pixelRC.shaderTrace = (uint32_t)!!tr.traceWorldShader;
-		pixelRC.shaderIndex = (uint32_t)shader->index;
-		pixelRC.frameIndex = RHI::GetFrameIndex();
-		pixelRC.centerPixel = (glConfig.vidWidth / 2) | ((glConfig.vidHeight / 2) << 16);
-		for(int s = 0; s < pipeline.numStages; ++s)
-		{
-			const image_t* image = GetBundleImage(shader->stages[pipeline.firstStage + s]->bundle);
-			const uint32_t texIdx = image->textureIndex;
-			const uint32_t sampIdx = GetSamplerIndex(image);
-			Q_assert(texIdx > 0);
-			pixelRC.stageIndices[s] = (sampIdx << 16) | (texIdx);
-		}
-		CmdSetRootConstants(grp.uberRootSignature, ShaderStage::Pixel, &pixelRC);
+		pixelRC.stageIndices = (sampIdx << 16) | (texIdx);
+		VectorCopy(tess.light->color, pixelRC.color);
+		pixelRC.recSqrRadius = 1.0f / Square(dl->radius);
+		pixelRC.intensity = dlIntensity;
+		pixelRC.opaque = dlOpaque ? 1.0f : 0.0f;
+		CmdSetRootConstants(dlRootSignature, ShaderStage::Pixel, &pixelRC);
 
-		BindVertexBuffers(batchHasStaticGeo, pipeline.firstStage, pipeline.numStages);
-		
+		BindVertexBuffers(batchHasStaticGeo, 0, 1);
 		CmdDrawIndexed(indexCount, db.indexBuffer.batchFirst, batchHasStaticGeo ? 0 : db.vertexBuffers.batchFirst);
+	}
+	else
+	{
+		for(int p = 0; p < shader->numPipelines; ++p)
+		{
+			const pipeline_t& pipeline = shader->pipelines[p];
+			const int psoIndex = backEnd.viewParms.isMirror ? pipeline.mirrorPipeline : pipeline.pipeline;
+			if(batchPSO != grp.psos[psoIndex].pipeline)
+			{
+				batchPSO = grp.psos[psoIndex].pipeline;
+				CmdBindPipeline(batchPSO);
+				psoChangeCount++;
+			}
+
+			WorldVertexRC vertexRC = {};
+			memcpy(vertexRC.modelViewMatrix, backEnd.orient.modelMatrix, sizeof(vertexRC.modelViewMatrix));
+			memcpy(vertexRC.projectionMatrix, backEnd.viewParms.projectionMatrix, sizeof(vertexRC.projectionMatrix));
+			memcpy(vertexRC.clipPlane, clipPlane, sizeof(vertexRC.clipPlane));
+			CmdSetRootConstants(grp.uberRootSignature, ShaderStage::Vertex, &vertexRC);
+
+			WorldPixelRC pixelRC = {};
+			pixelRC.greyscale = tess.greyscale;
+			pixelRC.hFrameSeed = f32tof16(grp.frameSeed);
+			pixelRC.hNoiseScale = f32tof16(r_ditherStrength->value);
+			pixelRC.hInvGamma = f32tof16(1.0f / r_gamma->value);
+			pixelRC.hInvBrightness = f32tof16(1.0f / r_brightness->value);
+			pixelRC.shaderTrace = (uint32_t)!!tr.traceWorldShader | (RHI::GetFrameIndex() << 1) | ((uint32_t)shader->index << 3);
+			pixelRC.centerPixelX = glConfig.vidWidth / 2;
+			pixelRC.centerPixelY = glConfig.vidHeight / 2;
+			pixelRC.hFadeDistance = f32tof16(tess.shader->dfInvDist);
+			pixelRC.hFadeOffset = f32tof16(tess.shader->dfBias);
+			pixelRC.depthFadeColorTex = (uint32_t)r_depthFadeScaleAndBias[tess.shader->dfType] | (depthTextureIndex << 8);
+
+			for(int s = 0; s < pipeline.numStages; ++s)
+			{
+				const image_t* image = GetBundleImage(shader->stages[pipeline.firstStage + s]->bundle);
+				const uint32_t texIdx = image->textureIndex;
+				const uint32_t sampIdx = GetSamplerIndex(image);
+				Q_assert(texIdx > 0);
+				pixelRC.stageIndices[s] = (sampIdx << 16) | (texIdx);
+			}
+			CmdSetRootConstants(grp.uberRootSignature, ShaderStage::Pixel, &pixelRC);
+
+			BindVertexBuffers(batchHasStaticGeo, pipeline.firstStage, pipeline.numStages);
+			CmdDrawIndexed(indexCount, db.indexBuffer.batchFirst, batchHasStaticGeo ? 0 : db.vertexBuffers.batchFirst);
+		}
 	}
 
 	if(!batchHasStaticGeo)
@@ -622,6 +778,8 @@ void World::EndBatch()
 		db.vertexBuffers.EndBatch(tess.numVertexes);
 	}
 	db.indexBuffer.EndBatch(tess.numIndexes);
+
+clean_up:
 	tess.numVertexes = 0;
 	tess.numIndexes = 0;
 }
@@ -662,7 +820,7 @@ void World::EndSkyBatch()
 void World::RestartBatch()
 {
 	EndBatch();
-	BeginBatch(tess.shader, batchHasStaticGeo);
+	BeginBatch(tess.shader, batchHasStaticGeo, batchType);
 }
 
 void World::DrawGUI()
@@ -924,6 +1082,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 	CmdBindDescriptorTable(grp.uberRootSignature, grp.descriptorTable);
 	CmdBindRenderTargets(1, &grp.renderTarget, &depthTexture);
 	batchPSO = RHI_MAKE_NULL_HANDLE();
+	batchType = BatchType::Standard;
 
 	const drawSurf_t* drawSurfs = cmd.drawSurfs;
 	const int surfCount = cmd.numDrawSurfs;
@@ -935,6 +1094,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 	const shader_t* oldShader = NULL;
 	int oldEntityNum = -1;
 	bool oldHasStaticGeo = false;
+	bool forceEntityChange = false;
 	backEnd.currentEntity = &tr.worldEntity;
 
 	ShadingRate::Id lowShadingRate = (ShadingRate::Id)r_shadingRate->integer;
@@ -955,20 +1115,22 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 
 			CmdSetShadingRate(lowShadingRate);
 			batchOldShadingRate = lowShadingRate;
+			DrawDynamicLights(qtrue);
 			DrawFog();
 
-			if(transpCount > 0)
-			{
-				CmdBindRootSignature(grp.uberRootSignature);
-				CmdBindDescriptorTable(grp.uberRootSignature, grp.descriptorTable);
-				CmdBindRenderTargets(1, &grp.renderTarget, &depthTexture);
-				batchPSO = RHI_MAKE_NULL_HANDLE();
-				boundVertexBuffers = BufferFamily::Invalid;
-				boundIndexBuffer = BufferFamily::Invalid;
+			// needed after DrawDynamicLights
+			forceEntityChange = true;
 
-				const TextureBarrier depthWriteBarrier(depthTexture, ResourceStates::DepthWriteBit);
-				CmdBarrier(1, &depthWriteBarrier);
-			}
+			CmdBindRootSignature(grp.uberRootSignature);
+			CmdBindDescriptorTable(grp.uberRootSignature, grp.descriptorTable);
+			CmdBindRenderTargets(1, &grp.renderTarget, &depthTexture);
+			batchPSO = RHI_MAKE_NULL_HANDLE();
+			batchType = BatchType::Standard;
+			boundVertexBuffers = BufferFamily::Invalid;
+			boundIndexBuffer = BufferFamily::Invalid;
+
+			const TextureBarrier depthWriteBarrier(depthTexture, ResourceStates::DepthWriteBit);
+			CmdBarrier(1, &depthWriteBarrier);
 		}
 
 		int entityNum;
@@ -985,7 +1147,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			}
 		}
 
-		const bool hasStaticGeo = forceDynamic ? false : HasStaticGeo(drawSurf, shader);
+		const bool hasStaticGeo = HasStaticGeo(drawSurf->staticGeoChunk, shader);
 		const bool staticChanged = hasStaticGeo != oldHasStaticGeo;
 		const bool shaderChanged = shader != oldShader;
 		bool entityChanged = entityNum != oldEntityNum;
@@ -999,6 +1161,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			continue;
 		}
 
+		const BatchType::Id type = IsDepthFadeEnabled(*shader) ? BatchType::DepthFade : BatchType::Standard;
 		if(staticChanged || shaderChanged || entityChanged)
 		{
 			oldShader = shader;
@@ -1006,14 +1169,15 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			oldHasStaticGeo = hasStaticGeo;
 			EndSkyBatch();
 			EndBatch();
-			BeginBatch(shader, hasStaticGeo);
+			BeginBatch(shader, hasStaticGeo, type);
 			tess.greyscale = drawSurf->greyscale;
 			batchShadingRate = lowShadingRate;
 		}
 
-		if(entityChanged)
+		if(entityChanged || forceEntityChange)
 		{
 			UpdateEntityData(batchDepthHack, entityNum, originalTime);
+			forceEntityChange = false;
 		}
 
 		if(hasStaticGeo)
@@ -1022,7 +1186,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 			if(tess.numIndexes + chunk.indexCount > SHADER_MAX_INDEXES)
 			{
 				EndBatch();
-				BeginBatch(tess.shader, batchHasStaticGeo);
+				BeginBatch(tess.shader, batchHasStaticGeo, type);
 				batchShadingRate = lowShadingRate;
 			}
 
@@ -1053,11 +1217,16 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 	EndSkyBatch();
 	EndBatch();
 
-	CmdSetShadingRate(ShadingRate::SR_1x1);
-
 	if(transpCount <= 0)
 	{
+		DrawDynamicLights(qtrue);
+		CmdSetShadingRate(lowShadingRate);
+		batchOldShadingRate = lowShadingRate;
 		DrawFog();
+	}
+	else
+	{
+		DrawDynamicLights(qfalse);
 	}
 
 	db.vertexBuffers.EndUpload();
@@ -1122,38 +1291,43 @@ void World::DrawFog()
 
 	SCOPED_RENDER_PASS("Fog", 0.25f, 0.125f, 0.0f);
 
-	CmdBindPipeline(fogOutsidePipeline);
-	CmdBindRootSignature(fogRootSignature);
-	CmdBindDescriptorTable(fogRootSignature, fogDescriptorTable);
-
-	const uint32_t stride = sizeof(vec3_t);
-	CmdBindVertexBuffers(1, &boxVertexBuffer, &stride, NULL);
-	CmdBindIndexBuffer(boxIndexBuffer, IndexType::UInt32, 0);
-
-	CmdBindRenderTargets(1, &grp.renderTarget, NULL);
-	const TextureBarrier depthReadBarrier(depthTexture, ResourceStates::PixelShaderAccessBit);
-	CmdBarrier(1, &depthReadBarrier);
-
+	// fog 0 is invalid, it must be skipped
 	int insideIndex = -1;
-	for(int f = 1; f < tr.world->numfogs; ++f)
+	if(tr.world->numfogs > 1)
 	{
-		const fog_t& fog = tr.world->fogs[f];
+		CmdBindPipeline(fogOutsidePipeline);
+		psoChangeCount++;
+		CmdBindRootSignature(fogRootSignature);
+		CmdBindDescriptorTable(fogRootSignature, fogDescriptorTable);
 
-		bool inside = true;
-		for(int a = 0; a < 3; ++a)
+		const uint32_t stride = sizeof(vec3_t);
+		CmdBindVertexBuffers(1, &boxVertexBuffer, &stride, NULL);
+		CmdBindIndexBuffer(boxIndexBuffer, IndexType::UInt32, 0);
+
+		CmdBindRenderTargets(1, &grp.renderTarget, NULL);
+		const TextureBarrier depthReadBarrier(depthTexture, ResourceStates::PixelShaderAccessBit);
+		CmdBarrier(1, &depthReadBarrier);
+
+		for(int f = 1; f < tr.world->numfogs; ++f)
 		{
-			if(backEnd.viewParms.orient.origin[a] <= fog.bounds[0][a] ||
-				backEnd.viewParms.orient.origin[a] >= fog.bounds[1][a])
+			const fog_t& fog = tr.world->fogs[f];
+
+			bool inside = true;
+			for(int a = 0; a < 3; ++a)
 			{
-				inside = false;
+				if(backEnd.viewParms.orient.origin[a] <= fog.bounds[0][a] ||
+					backEnd.viewParms.orient.origin[a] >= fog.bounds[1][a])
+				{
+					inside = false;
+					break;
+				}
+			}
+
+			if(inside)
+			{
+				insideIndex = f;
 				break;
 			}
-		}
-
-		if(inside)
-		{
-			insideIndex = f;
-			break;
 		}
 	}
 
@@ -1184,6 +1358,7 @@ void World::DrawFog()
 	if(insideIndex > 0)
 	{
 		CmdBindPipeline(fogInsidePipeline);
+		psoChangeCount++;
 		CmdBindRootSignature(fogRootSignature);
 		CmdBindDescriptorTable(fogRootSignature, fogDescriptorTable);
 
@@ -1202,6 +1377,154 @@ void World::DrawFog()
 		CmdSetRootConstants(fogRootSignature, ShaderStage::Pixel, &pixelRC);
 
 		CmdDrawIndexed(36, 0, 0);
+	}
+}
+
+void World::DrawLitSurfaces(dlight_t* dl, bool opaque)
+{
+	if(dl->head == NULL)
+	{
+		return;
+	}
+
+	if(!opaque && !drawTransparents)
+	{
+		return;
+	}
+
+	const shader_t* shader = NULL;
+	const shader_t* oldShader = NULL;
+	int oldEntityNum = -666;
+	bool oldHasStaticGeo = false;
+
+	// save original time for entity shader offsets
+	const double originalTime = backEnd.refdef.floatTime;
+
+	// draw everything
+	const int liquidFlags = CONTENTS_LAVA | CONTENTS_SLIME | CONTENTS_WATER;
+	oldEntityNum = -1;
+	dlOpaque = opaque;
+	backEnd.currentEntity = &tr.worldEntity;
+	tess.light = dl;
+	tess.numVertexes = 0;
+	tess.numIndexes = 0;
+
+	for(litSurf_t* litSurf = dl->head; litSurf != NULL; litSurf = litSurf->next)
+	{
+		backEnd.pc3D[RB_LIT_SURFACES]++;
+
+		int entityNum;
+		R_DecomposeLitSort(litSurf->sort, &entityNum, &shader);
+
+		if(opaque && shader->sort > SS_OPAQUE)
+		{
+			continue;
+		}
+		if(!opaque && shader->sort <= SS_OPAQUE)
+		{
+			continue;
+		}
+
+		const int stageIndex = shader->lightingStages[ST_DIFFUSE];
+		if(stageIndex < 0 || stageIndex >= shader->numStages)
+		{
+			continue;
+		}
+
+		const bool hasStaticGeo = HasStaticGeo(litSurf->staticGeoChunk, shader);
+		const bool staticChanged = hasStaticGeo != oldHasStaticGeo;
+		const bool shaderChanged = shader != oldShader;
+		bool entityChanged = entityNum != oldEntityNum;
+		Q_assert(shader != NULL);
+		if(!hasStaticGeo && !drawDynamic)
+		{
+			continue;
+		}
+
+		if(staticChanged || shaderChanged || entityChanged)
+		{
+			oldShader = shader;
+			oldEntityNum = entityNum;
+			oldHasStaticGeo = hasStaticGeo;
+			EndBatch();
+			BeginBatch(shader, hasStaticGeo, BatchType::DynamicLight);
+			tess.greyscale = litSurf->greyscale;
+
+			const shaderStage_t* const stage = shader->stages[stageIndex];
+			dlIntensity = (shader->contentFlags & liquidFlags) != 0 ? 0.5f : 1.0f;
+			dlDepthTestEqual = opaque || (stage->stateBits & GLS_ATEST_BITS) != 0;
+		}
+
+		if(entityChanged)
+		{
+			UpdateEntityData(batchDepthHack, entityNum, originalTime);
+		}
+
+		R_TransformDlights(1, dl, &backEnd.orient);
+
+		if(hasStaticGeo)
+		{
+			const StaticGeometryChunk& chunk = statChunks[litSurf->staticGeoChunk];
+			if(tess.numIndexes + chunk.indexCount > SHADER_MAX_INDEXES)
+			{
+				EndBatch();
+				BeginBatch(tess.shader, batchHasStaticGeo, BatchType::DynamicLight);
+			}
+
+			memcpy(tess.indexes + tess.numIndexes, statIndices + chunk.firstCPUIndex, chunk.indexCount * sizeof(uint32_t));
+			tess.numIndexes += chunk.indexCount;
+			backEnd.pc3D[RB_LIT_INDICES_LATECULL_IN] += chunk.indexCount;
+		}
+		else
+		{
+			const int oldNumIndexes = tess.numIndexes;
+			R_TessellateSurface(litSurf->surface);
+			backEnd.pc3D[RB_LIT_INDICES_LATECULL_IN] += tess.numIndexes - oldNumIndexes;
+		}
+	}
+
+	// draw the contents of the last shader batch
+	if(shader != NULL)
+	{
+		EndBatch();
+	}
+
+	backEnd.refdef.floatTime = originalTime;
+}
+
+void World::DrawDynamicLights(bool opaque)
+{
+	SCOPED_RENDER_PASS("Dynamic Lights", 1.0f, 0.25f, 0.25f);
+
+	if(r_dynamiclight->integer == 0 ||
+		backEnd.refdef.num_dlights == 0 ||
+		backEnd.viewParms.isMirror)
+	{
+		return;
+	}
+
+	CmdBindRootSignature(dlRootSignature);
+	CmdBindDescriptorTable(dlRootSignature, grp.descriptorTable);
+	CmdBindRenderTargets(1, &grp.renderTarget, &depthTexture);
+	batchPSO = RHI_MAKE_NULL_HANDLE();
+	boundVertexBuffers = BufferFamily::Invalid;
+	boundIndexBuffer = BufferFamily::Invalid;
+
+	ShadingRate::Id lowShadingRate = (ShadingRate::Id)r_shadingRate->integer;
+	batchShadingRate = lowShadingRate;
+	batchOldShadingRate = ShadingRate::SR_1x1;
+	CmdSetShadingRate(lowShadingRate);
+
+	CmdSetViewportAndScissor(backEnd.viewParms);
+	batchOldDepthHack = false;
+	batchDepthHack = false;
+
+	tess.numVertexes = 0;
+	tess.numIndexes = 0;
+
+	for(int i = 0; i < backEnd.refdef.num_dlights; ++i)
+	{
+		DrawLitSurfaces(&backEnd.refdef.dlights[i], opaque);
 	}
 }
 

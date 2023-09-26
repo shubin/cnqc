@@ -87,14 +87,30 @@ void SMAA::Update()
 	const bool resChanged = newWidth != width || newHeight != height;
 	const bool presetChanged = newMode != mode;
 
-	const bool createFixed = justEnabled && !fixedLoaded;
-	const bool destroyFixed = justDisabled && fixedLoaded;
+	bool createFixed = justEnabled && !fixedLoaded;
+	bool destroyFixed = justDisabled && fixedLoaded;
 
-	const bool createResDep = justEnabled || (alwaysEnabled && resChanged);
-	const bool destroyResDep = justDisabled || (alwaysEnabled && resChanged);
+	bool createResDep = justEnabled || (alwaysEnabled && resChanged);
+	bool destroyResDep = justDisabled || (alwaysEnabled && resChanged);
 
-	const bool createPresetDep = justEnabled || (alwaysEnabled && presetChanged);
-	const bool destroyPresetDep = justDisabled || (alwaysEnabled && presetChanged);
+	bool createPresetDep = justEnabled || (alwaysEnabled && presetChanged);
+	bool destroyPresetDep = justDisabled || (alwaysEnabled && presetChanged);
+
+	if(grp.firstInit)
+	{
+		// first init or device change: we have nothing to destroy
+		const bool enableSMAA = newMode != Mode::Disabled;
+		createFixed = enableSMAA;
+		createResDep = enableSMAA;
+		createPresetDep = enableSMAA;
+		destroyFixed = false;
+		destroyResDep = false;
+		destroyPresetDep = false;
+		mode = Mode::Disabled;
+		width = -1;
+		height = -1;
+		fixedLoaded = false;
+	}
 
 	if(destroyFixed || destroyResDep || destroyPresetDep)
 	{

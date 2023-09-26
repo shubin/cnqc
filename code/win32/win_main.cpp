@@ -395,7 +395,7 @@ void Sys_UnloadDll( void *dllHandle )
 void* QDECL Sys_LoadDll( const char* name, dllSyscall_t *entryPoint, dllSyscall_t systemcalls )
 {
 	char filename[MAX_QPATH];
-#if defined(QC)
+#if defined( QC )
 #if defined(_M_X64)
 	Com_sprintf(filename, sizeof(filename), "%sx86_64.dll", name);
 #else

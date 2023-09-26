@@ -23,24 +23,15 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 // tr_shader.c -- this file deals with the parsing and definition of shaders
 
-const float r_depthFadeScale[DFT_COUNT][4] =
-{
-	{ 0.0f, 0.0f, 0.0f, 0.0f }, // DFT_NONE
-	{ 1.0f, 1.0f, 1.0f, 0.0f }, // DFT_BLEND
-	{ 0.0f, 0.0f, 0.0f, 1.0f }, // DFT_ADD
-	{ 0.0f, 0.0f, 0.0f, 1.0f }, // DFT_MULT
-	{ 0.0f, 0.0f, 0.0f, 0.0f }, // DFT_PMA
-	{ 0.0f, 0.0f, 0.0f, 0.0f }  // DFT_TBD
-};
 
-const float r_depthFadeBias[DFT_COUNT][4] =
+const uint8_t r_depthFadeScaleAndBias[DFT_COUNT] =
 {
-	{ 0.0f, 0.0f, 0.0f, 0.0f }, // DFT_NONE
-	{ 0.0f, 0.0f, 0.0f, 0.0f }, // DFT_BLEND
-	{ 0.0f, 0.0f, 0.0f, 0.0f }, // DFT_ADD
-	{ 1.0f, 1.0f, 1.0f, 0.0f }, // DFT_MULT
-	{ 0.0f, 0.0f, 0.0f, 0.0f }, // DFT_PMA
-	{ 0.0f, 0.0f, 0.0f, 0.0f }  // DFT_TBD
+	0x00, // DFT_NONE             R  G  B  A            R  G  B  A
+	0x07, // DFT_BLEND - scale = (1, 1, 1, 0) - bias = (0, 0, 0, 0)
+	0x08, // DFT_ADD   - scale = (0, 0, 0, 1) - bias = (0, 0, 0, 0)
+	0x78, // DFT_MULT  - scale = (0, 0, 0, 1) - bias = (1, 1, 1, 0)
+	0x00, // DFT_PMA   - scale = (0, 0, 0, 0) - bias = (0, 0, 0, 0)
+	0x00  // DFT_TBD
 };
 
 static char* s_shaderText = 0;
@@ -1612,7 +1603,6 @@ static qbool IsColorGenDynamic(colorGen_t cGen)
 		case CGEN_CONST:
 		case CGEN_VERTEX:
 		case CGEN_EXACT_VERTEX:
-		case CGEN_FOG:
 		case CGEN_ONE_MINUS_VERTEX:
 			return qfalse;
 
@@ -1662,7 +1652,6 @@ static qbool IsTexCoordGenDynamic(texCoordGen_t tcGen)
 		case TCGEN_TEXTURE:
 		case TCGEN_LIGHTMAP:
 		case TCGEN_VECTOR:
-		case TCGEN_FOG: // not relevant for us anyhow
 			return qfalse;
 
 		case TCGEN_ENVIRONMENT_MAPPED: // changes with camera position
@@ -1843,8 +1832,8 @@ static void SortNewShader()
 	const int numLitSurfs = tr.refdef.numLitSurfs;
 	litSurf_t* litSurfs = tr.refdef.litSurfs;
 	for ( i = 0; i < numLitSurfs; ++i, ++litSurfs ) {
-		R_DecomposeSort( litSurfs->sort, &entityNum, &wrongShader );
-		litSurfs->sort = R_ComposeSort( entityNum, tr.shaders[litSurfs->shaderNum], drawSurfs->staticGeoChunk );
+		R_DecomposeLitSort( litSurfs->sort, &entityNum, &wrongShader );
+		litSurfs->sort = R_ComposeLitSort( entityNum, tr.shaders[litSurfs->shaderNum], drawSurfs->staticGeoChunk );
 	}
 }
 
@@ -1875,12 +1864,6 @@ static shader_t* GeneratePermanentShader( shader_t* sh )
 		const int hash = Q_FileHash( newShader->name, FILE_HASH_SIZE );
 		newShader->next = hashTable[hash];
 		hashTable[hash] = newShader;
-	}
-
-	if ( shader.sort <= SS_OPAQUE ) {
-		newShader->fogPass = FP_EQUAL;
-	} else if ( shader.contentFlags & CONTENTS_FOG ) {
-		newShader->fogPass = FP_LE;
 	}
 
 	for ( int i = 0; i < newShader->numStages; ++i ) {
@@ -2245,7 +2228,6 @@ static alphaGen_t GetActualAlphaTest(const shaderStage_t* stage)
 		case CGEN_VERTEX: return AGEN_VERTEX;
 		case CGEN_EXACT_VERTEX: return AGEN_VERTEX;
 		case CGEN_ONE_MINUS_VERTEX: return (alphaGen_t)__LINE__; // doesn't write to alpha currently...
-		case CGEN_FOG: return (alphaGen_t)__LINE__;
 		case CGEN_WAVEFORM: return AGEN_IDENTITY;
 		case CGEN_ENTITY: return AGEN_ENTITY;
 		case CGEN_ONE_MINUS_ENTITY: return AGEN_ONE_MINUS_ENTITY;
@@ -2479,37 +2461,10 @@ static shader_t* FinishShader( shader_t* sh = NULL )
 		}
 
 		//
-		// determine sort order and fog color adjustment
+		// determine sort order
 		//
 		if ( ( pStage->stateBits & ( GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS ) ) &&
 			 ( stages[0].stateBits & ( GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS ) ) ) {
-			int blendSrcBits = pStage->stateBits & GLS_SRCBLEND_BITS;
-			int blendDstBits = pStage->stateBits & GLS_DSTBLEND_BITS;
-
-			// fog color adjustment only works for blend modes that have a contribution
-			// that aproaches 0 as the modulate values aproach 0 --
-			// GL_ONE, GL_ONE
-			// GL_ZERO, GL_ONE_MINUS_SRC_COLOR
-			// GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA
-
-			// modulate, additive
-			if ( ( ( blendSrcBits == GLS_SRCBLEND_ONE ) && ( blendDstBits == GLS_DSTBLEND_ONE ) ) ||
-				( ( blendSrcBits == GLS_SRCBLEND_ZERO ) && ( blendDstBits == GLS_DSTBLEND_ONE_MINUS_SRC_COLOR ) ) ) {
-				pStage->adjustColorsForFog = ACFF_MODULATE_RGB;
-			}
-			// strict blend
-			else if ( ( blendSrcBits == GLS_SRCBLEND_SRC_ALPHA ) && ( blendDstBits == GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA ) )
-			{
-				pStage->adjustColorsForFog = ACFF_MODULATE_ALPHA;
-			}
-			// premultiplied alpha
-			else if ( ( blendSrcBits == GLS_SRCBLEND_ONE ) && ( blendDstBits == GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA ) )
-			{
-				pStage->adjustColorsForFog = ACFF_MODULATE_RGBA;
-			} else {
-				// we can't adjust this one correctly, so it won't be exactly correct in fog
-			}
-
 			// don't screw with sort order if this is a portal or environment
 			if ( !shader.sort ) {
 				// see through item, like a grill or grate
@@ -2531,6 +2486,8 @@ static shader_t* FinishShader( shader_t* sh = NULL )
 	//
 	// if we are in r_vertexLight mode, never use a lightmap texture
 	//
+	if ( shader.vlWanted )
+		ApplyVertexLighting();
 
 	shader.numStages = stage;
 
@@ -2720,10 +2677,6 @@ shader_t* R_FindShader( const char *name, int lightmapIndex, int flags )
 	char		fileName[MAX_QPATH];
 	int			hash;
 	shader_t	*sh;
-
-	if (strstr(name, "white")) {
-		int bp = 1;
-	}
 
 	if ( name[0] == 0 ) {
 		return tr.defaultShader;

@@ -29,6 +29,9 @@ static byte check_srfVertTC[(offsetof(srfVert_t, st2) == offsetof(srfVert_t, st)
 static byte check_drawVertTC[(offsetof(drawVert_t, lightmap) == offsetof(drawVert_t, st) + 8) ? 1 : -1];
 #endif
 
+shaderCommands_t tess;
+
+
 /*
 
   THIS ENTIRE FILE IS BACK END

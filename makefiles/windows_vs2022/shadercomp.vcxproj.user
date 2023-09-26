@@ -5,7 +5,17 @@
     <LocalDebuggerWorkingDirectory>..\..\..\code\renderer\hlsl</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='debug qc|x64'">
+    <LocalDebuggerCommand>..\..\..\code\renderer\hlsl\shadercomp.exe</LocalDebuggerCommand>
+    <LocalDebuggerWorkingDirectory>..\..\..\code\renderer\hlsl</LocalDebuggerWorkingDirectory>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">
+    <LocalDebuggerCommand>C:\Code\cpma_dev\code\renderer\hlsl\$(TargetFileName)</LocalDebuggerCommand>
+    <LocalDebuggerWorkingDirectory>..\..\..\code\renderer\hlsl</LocalDebuggerWorkingDirectory>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='debug qc|Win32'">
     <LocalDebuggerCommand>C:\Code\cpma_dev\code\renderer\hlsl\$(TargetFileName)</LocalDebuggerCommand>
     <LocalDebuggerWorkingDirectory>..\..\..\code\renderer\hlsl</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
@@ -15,7 +25,17 @@
     <LocalDebuggerWorkingDirectory>..\..\..\code\renderer\hlsl</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">
+    <LocalDebuggerCommand>C:\Code\cpma_dev\code\renderer\hlsl\$(TargetFileName)</LocalDebuggerCommand>
+    <LocalDebuggerWorkingDirectory>..\..\..\code\renderer\hlsl</LocalDebuggerWorkingDirectory>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='release|Win32'">
+    <LocalDebuggerCommand>C:\Code\cpma_dev\code\renderer\hlsl\$(TargetFileName)</LocalDebuggerCommand>
+    <LocalDebuggerWorkingDirectory>..\..\..\code\renderer\hlsl</LocalDebuggerWorkingDirectory>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='release qc|Win32'">
     <LocalDebuggerCommand>C:\Code\cpma_dev\code\renderer\hlsl\$(TargetFileName)</LocalDebuggerCommand>
     <LocalDebuggerWorkingDirectory>..\..\..\code\renderer\hlsl</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
