@@ -128,8 +128,8 @@
       <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>copy "..\..\.bin\debug\cnq3.exe" "$(QUAKE3DIR)"
-copy "..\..\.bin\debug\cnq3.pdb" "$(QUAKE3DIR)"</Command>
+      <Command>copy "$(OutDir)$(TargetName).exe" "..\..\..\workdir\"
+copy "$(OutDir)$(TargetName).pdb" "..\..\..\workdir\"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='debug qc|x64'">
@@ -200,8 +200,8 @@ copy "$(OutDir)$(TargetName).pdb" "..\..\..\workdir\"</Command>
       <Command>"..\create_git_header.cmd" "..\..\code\qcommon\git.h"</Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>copy "..\..\.bin\release\cnq3.exe" "$(QUAKE3DIR)"
-copy "..\..\.bin\release\cnq3.pdb" "$(QUAKE3DIR)"</Command>
+      <Command>copy "$(OutDir)$(TargetName).exe" "..\..\..\workdir\"
+copy "$(OutDir)$(TargetName).pdb" "..\..\..\workdir\"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release qc|x64'">
@@ -400,7 +400,10 @@ copy "$(OutDir)$(TargetName).pdb" "..\..\..\workdir\"</Command>
     <ClCompile Include="..\..\code\server\sv_snapshot.cpp" />
     <ClCompile Include="..\..\code\server\sv_world.cpp" />
     <ClCompile Include="..\..\code\win32\win_exception.cpp" />
-    <ClCompile Include="..\..\code\win32\win_files.cpp" />
+    <ClCompile Include="..\..\code\win32\win_files.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\..\code\win32\win_glimp.cpp" />
     <ClCompile Include="..\..\code\win32\win_input.cpp" />
     <ClCompile Include="..\..\code\win32\win_main.cpp" />

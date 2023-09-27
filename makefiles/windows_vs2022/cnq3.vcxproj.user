@@ -13,7 +13,7 @@
     <LocalDebuggerCommand>C:\projects\q3c\workdir\bloodrun-debug.exe</LocalDebuggerCommand>
     <LocalDebuggerWorkingDirectory>..\..\..\workdir</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
-    <LocalDebuggerCommandArguments>+set fs_game base +set sv_pure 0 +set r_fullscreen 0 +devmap qcdm3</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>+set fs_game base +set sv_pure 0 +set r_fullscreen 0 +set vm_cgame 0 +set vm_ui 0 +set vm_game 0 +devmap qcdm3</LocalDebuggerCommandArguments>
     <NintendoTargetName>Default</NintendoTargetName>
     <NXTargetSerialNumber>$(NintendoTargetSerialNumber)</NXTargetSerialNumber>
     <NXTargetName>$(NintendoTargetName)</NXTargetName>

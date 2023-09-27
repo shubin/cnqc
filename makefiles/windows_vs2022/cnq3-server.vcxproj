@@ -343,7 +343,10 @@ copy "..\..\.bin\release\cnq3-server.pdb" "$(QUAKE3DIR)"</Command>
     <ClCompile Include="..\..\code\server\sv_snapshot.cpp" />
     <ClCompile Include="..\..\code\server\sv_world.cpp" />
     <ClCompile Include="..\..\code\win32\win_exception.cpp" />
-    <ClCompile Include="..\..\code\win32\win_files.cpp" />
+    <ClCompile Include="..\..\code\win32\win_files.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\..\code\win32\win_main.cpp" />
     <ClCompile Include="..\..\code\win32\win_shared.cpp" />
     <ClCompile Include="..\..\code\win32\win_syscon.cpp" />
