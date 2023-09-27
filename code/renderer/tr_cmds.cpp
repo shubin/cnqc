@@ -198,6 +198,7 @@ void R_AddDrawSurfCmd( drawSurf_t* drawSurfs, int numDrawSurfs, int numTranspSur
 	Q_assert( cmd );
 
 	qbool shouldClearColor = qfalse;
+	qbool shouldDrawScene = qtrue;
 	vec4_t clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
 	if ( tr.refdef.rdflags & RDF_HYPERSPACE ) {
 		const float c = RB_HyperspaceColor();
@@ -205,6 +206,7 @@ void R_AddDrawSurfCmd( drawSurf_t* drawSurfs, int numDrawSurfs, int numTranspSur
 		clearColor[1] = c;
 		clearColor[2] = c;
 		shouldClearColor = qtrue;
+		shouldDrawScene = qfalse;
 	} else if ( r_fastsky->integer && !(tr.refdef.rdflags & RDF_NOWORLDMODEL) ) {
 		shouldClearColor = qtrue;
 	} else if ( r_clear->integer ) {
@@ -220,6 +222,7 @@ void R_AddDrawSurfCmd( drawSurf_t* drawSurfs, int numDrawSurfs, int numTranspSur
 	cmd->refdef = tr.refdef;
 	cmd->viewParms = tr.viewParms;
 	cmd->shouldClearColor = shouldClearColor;
+	cmd->shouldDrawScene = shouldDrawScene;
 	Vector4Copy( clearColor, cmd->clearColor );
 }
 
