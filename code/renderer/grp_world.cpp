@@ -1045,7 +1045,7 @@ void World::DrawSceneView(const drawSceneViewCommand_t& cmd)
 		CmdClearColorTarget(grp.renderTarget, cmd.clearColor, &rect);
 	}
 
-	if(cmd.numDrawSurfs <= 0)
+	if(cmd.numDrawSurfs <= 0 || !cmd.shouldDrawScene)
 	{
 		return;
 	}
