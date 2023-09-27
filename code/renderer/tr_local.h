@@ -1491,6 +1491,7 @@ struct drawSceneViewCommand_t : renderCommandBase_t {
 	int numTranspSurfs;
 	drawSurf_t* drawSurfs;
 	qbool shouldClearColor;
+	qbool shouldDrawScene;
 	vec4_t clearColor;
 };
 
