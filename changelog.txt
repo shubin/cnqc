@@ -2,11 +2,11 @@
 See the end of this file for known issues.
 
 
-20 Sep 23 - 1.53
+29 Sep 23 - 1.53
 
 add: /registerdemos   adds Windows file associations for demo files (.dm_68 .dm_67 .dm_66)
   /unregisterdemos removes Windows file associations for demo files
-  in addition, /demo can now play demo files that have an absolute path (e.g. /demo C:\test.dm_68)
+  on Windows, /demo can now play demo files that have an absolute path (e.g. /demo C:\test.dm_68)
 
 add: r_teleporterFlash <0|1> (default: 1) draws bright colors when being teleported (use 0 for black)
 
