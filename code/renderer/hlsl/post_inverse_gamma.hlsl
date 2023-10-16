@@ -62,8 +62,7 @@ SamplerState sampler0 : register(s0);
 
 float4 ps(VOut input) : SV_Target
 {
-	float3 raw = texture0.Sample(sampler0, input.texCoords).rgb;
-	float3 base = saturate(raw); // can have negative values in the float render target
+	float3 base = texture0.Sample(sampler0, input.texCoords).rgb;
 	float3 linearSpace = pow(base * invBrightness, gamma);
 
 	return float4(linearSpace, 1.0f);

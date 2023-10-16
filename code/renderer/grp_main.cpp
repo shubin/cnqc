@@ -260,7 +260,7 @@ void GRP::Init()
 				renderTargetFormat = TextureFormat::R10G10B10A2_UNorm;
 				break;
 			case RTCF_R16G16B16A16:
-				renderTargetFormat = TextureFormat::RGBA64_Float;
+				renderTargetFormat = TextureFormat::RGBA64_UNorm;
 				break;
 			case RTCF_R8G8B8A8:
 			default:

@@ -158,6 +158,7 @@ namespace RHI
 		enum Id
 		{
 			RGBA32_UNorm,
+			RGBA64_UNorm,
 			RGBA64_Float,
 			Depth32_Float,
 			RG16_UNorm,

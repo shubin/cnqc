@@ -1497,6 +1497,7 @@ namespace RHI
 		switch(format)
 		{
 			case TextureFormat::RGBA32_UNorm: return DXGI_FORMAT_R8G8B8A8_UNORM;
+			case TextureFormat::RGBA64_UNorm: return DXGI_FORMAT_R16G16B16A16_UNORM;
 			case TextureFormat::RGBA64_Float: return DXGI_FORMAT_R16G16B16A16_FLOAT;
 			case TextureFormat::Depth32_Float: return DXGI_FORMAT_D32_FLOAT;
 			case TextureFormat::Depth24_Stencil8: return DXGI_FORMAT_D24_UNORM_S8_UINT;
@@ -3809,14 +3810,17 @@ namespace RHI
 		PushArg(entryPointW);
 		PushArg(L"-T");
 		PushArg(targetW);
-		PushArg(DXC_ARG_WARNINGS_ARE_ERRORS);
+		PushArg(DXC_ARG_WARNINGS_ARE_ERRORS); // -WX
 #if defined(D3D_DEBUG)
-		PushArg(DXC_ARG_DEBUG);
-		PushArg(DXC_ARG_SKIP_OPTIMIZATIONS);
+		PushArg(DXC_ARG_DEBUG); // -Zi embeds debug info
+		PushArg(DXC_ARG_SKIP_OPTIMIZATIONS); // -Od disables optimizations
+		PushArg(DXC_ARG_ENABLE_STRICTNESS); // -Ges enables strict mode
+		PushArg(DXC_ARG_IEEE_STRICTNESS); // -Gis forces IEEE strictness
+		PushArg(L"-Qembed_debug"); // -Qembed_debug embeds debug info in shader container
 #else
 		PushArg(L"-Qstrip_debug");
 		PushArg(L"-Qstrip_reflect");
-		PushArg(DXC_ARG_OPTIMIZATION_LEVEL3);
+		PushArg(DXC_ARG_OPTIMIZATION_LEVEL3); // -O3
 #endif
 		PushArg(L"-D");
 		PushArg(desc.stage == ShaderStage::Vertex ? L"VERTEX_SHADER=1" : L"VERTEX_SHADER=0");
