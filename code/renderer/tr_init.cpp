@@ -59,6 +59,8 @@ cvar_t	*r_teleporterFlash;
 cvar_t	*r_sleepThreshold;
 cvar_t	*r_shadingRate;
 cvar_t	*r_guiFont;
+cvar_t	*r_guiFontFile;
+cvar_t	*r_guiFontHeight;
 cvar_t	*r_novis;
 cvar_t	*r_nocull;
 cvar_t	*r_nocurves;
@@ -578,10 +580,19 @@ static const cvarTableItem_t r_cvars[] =
 		CVAR_GUI_VALUE("6", "4x4", "4x horizontal, 4x vertical")
 	},
 	{
-		&r_guiFont, "r_guiFont", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "1", help_r_guiFont,
+		&r_guiFont, "r_guiFont", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "2", help_r_guiFont,
 		"GUI font", CVARCAT_GUI, "", "",
 		CVAR_GUI_VALUE("0", "Proggy Clean (13px)", "")
 		CVAR_GUI_VALUE("1", "Sweet16 Mono (16px)", "")
+		CVAR_GUI_VALUE("2", "Custom Font File", "")
+	},
+	{
+		&r_guiFontFile, "r_guiFontFile", "", CVAR_ARCHIVE, CVART_STRING, NULL, NULL, "custom font .ttf file",
+		"GUI font file", CVARCAT_GUI, "Path of the custom .ttf font file", "", NULL
+	},
+	{
+		&r_guiFontHeight, "r_guiFontHeight", "24", CVAR_ARCHIVE, CVART_INTEGER, "7", "48", "custom font height",
+		"GUI font height", CVARCAT_GUI, "Height of the custom font", "", NULL
 	},
 
 	//

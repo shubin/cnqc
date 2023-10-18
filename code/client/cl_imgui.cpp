@@ -23,8 +23,8 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 
 #include "client.h"
 #include "cl_imgui.h"
-#include "../imgui/ProggyClean.h"
-#include "../imgui/Sweet16Mono.h"
+#include "../imgui/font_proggy_clean.h"
+#include "../imgui/font_sweet16_mono.h"
 
 
 static int keyMap[256];
@@ -297,6 +297,80 @@ static void SetClipboardText(void*, const char* text)
 	Sys_SetClipboardData(text);
 }
 
+static const ImWchar codepointRanges[] =
+{
+	32, 126,
+	0
+};
+
+static void AddProggyCleanFont()
+{
+	ImFontConfig config;
+	config.FontDataOwnedByAtlas = false;
+	config.OversampleH = 1;
+	config.OversampleV = 1;
+	config.PixelSnapH = true;
+	config.SizePixels = 13.0f;
+	Q_strncpyz(config.Name, "Proggy Clean (13px)", sizeof(config.Name));
+
+	ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF(
+		ProggyClean_compressed_data, ProggyClean_compressed_size, config.SizePixels, &config, codepointRanges);
+}
+
+static void AddSweet16MonoFont()
+{
+	ImFontConfig config;
+	config.FontDataOwnedByAtlas = false;
+	config.OversampleH = 1;
+	config.OversampleV = 1;
+	config.PixelSnapH = true;
+	config.SizePixels = 16.0f;
+	Q_strncpyz(config.Name, "Sweet16 Mono (16px)", sizeof(config.Name));
+
+	ImGui::GetIO().Fonts->AddFontFromMemoryCompressedBase85TTF(
+		Sweet16mono_compressed_data_base85, config.SizePixels, &config, codepointRanges);
+}
+
+static void AddCustomFont()
+{
+	const char* const filePath = Cvar_VariableString("r_guiFontFile");
+	if(filePath == NULL || filePath[0] == '\0')
+	{
+		return;
+	}
+
+	const int height = Cvar_VariableIntegerValue("r_guiFontHeight");
+
+	const char* name = filePath;
+	for(int i = strlen(filePath) - 2; i > 0; i--)
+	{
+		if(filePath[i] == '/' || filePath[i] == '\\')
+		{
+			name = filePath + i + 1;
+			break;
+		}
+	}
+
+	ImFontConfig config;
+	config.FontDataOwnedByAtlas = false;
+	config.OversampleH = 1;
+	config.OversampleV = 1;
+	config.PixelSnapH = true;
+	config.SizePixels = height;
+	Com_sprintf(config.Name, sizeof(config.Name), "%s (%dpx)", name, height);
+
+	void* data = NULL;
+	const int dataSize = FS_ReadFile(filePath, &data);
+	if(data == NULL || dataSize <= 0)
+	{
+		Com_Printf("^3WARNING: failed to open font file: %s\n", filePath);
+		return;
+	}
+
+	ImGui::GetIO().Fonts->AddFontFromMemoryTTF(data, dataSize, config.SizePixels, &config, codepointRanges);
+	FS_FreeFile(data);
+}
+
 void CL_IMGUI_Init()
 {
 	Cmd_RegisterArray(imgui_cmds, MODULE_CLIENT);
@@ -310,14 +384,21 @@ void CL_IMGUI_Init()
 	io.IniFilename = "cnq3/imgui.ini";
 	io.GetClipboardTextFn = &GetClipboardText;
 	io.SetClipboardTextFn = &SetClipboardText;
-	//io.MouseDrawCursor = true; // just use the operating system's
+	io.MouseDrawCursor = false; // just use the operating system's
 
-	ImFontConfig fontConfig = {};
-	fontConfig.FontDataOwnedByAtlas = false;
-	Q_strncpyz(fontConfig.Name, "Proggy Clean (13px)", sizeof(fontConfig.Name));
-	io.FontDefault = io.Fonts->AddFontFromMemoryCompressedTTF(
-		ProggyClean_compressed_data, ProggyClean_compressed_size, 13.0f, &fontConfig);
+	AddProggyCleanFont();
 	AddSweet16MonoFont();
+	AddCustomFont();
+	const int fontIndex = Cvar_VariableIntegerValue("r_guiFont");
+	if(fontIndex >= 0 && fontIndex < io.Fonts->Fonts.Size)
+	{
+		io.FontDefault = io.Fonts->Fonts[fontIndex];
+	}
+	else
+	{
+		io.FontDefault = io.Fonts->Fonts[0];
+		Cvar_Set("r_guiFont", "0");
+	}
 
 	ImGUI_ApplyTheme();
 
@@ -470,4 +551,19 @@ void CL_IMGUI_Shutdown()
 	ImGui::DestroyContext();
 
 	Cmd_UnregisterArray(imgui_cmds);
+}
+
+qbool CL_IMGUI_IsCustomFontLoaded(const char** debugName)
+{
+	if(ImGui::GetIO().Fonts->Fonts.Size != 3)
+	{
+		return qfalse;
+	}
+
+	if(debugName != NULL)
+	{
+		*debugName = ImGui::GetIO().Fonts->Fonts[2]->GetDebugName();
+	}
+	
+	return qtrue;
 }

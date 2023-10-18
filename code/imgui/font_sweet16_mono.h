@@ -103,28 +103,3 @@ static const char Sweet16mono_compressed_data_base85[14165+1] =
     "gW_e?.Fn-NVndL2WqiG3TQ)a-h^he?-I3INYq;IN,KdD-UKdD-UKdD-UKdD-UKdD-UKdD-UKdD-VT)a-k+wb%Y.wb%VbD,3vgu2MlkiU8Vs]G3gP#<-$D7F%=Ht2M[)E.3vgu2MlkiU8"
     "Vs]G3gP#<-$D7F%=Ht2MlkiU8Vs]G3gP#<-$D7F%=Ht2MlkiU8Vs]G3gP#<-$D7F%=Ht2MlkiU8Vs]G3gP#<-$D7F%=Ht2M^;&f3vgu2MlkiU8Vs]G3jlu8.h@8(#xb9B#%;cY#/o8gL"
     "vlsIhj]o'M6qlR*0x4:ZP+q3#";
-
-static ImFont *AddSweet16MonoFont()
-{
-    static const ImWchar Sweet16mono_ranges[] =
-    {
-        0x0020, 0x017F, // Basic Latin + Latin supplement + Latin extended A
-        0,
-    };
-
-    ImFontConfig config;
-    config.OversampleH = 1;
-    config.OversampleV = 1;
-    config.PixelSnapH = true;
-    config.SizePixels = 16;
-
-    // copy font name manually to avoid warnings
-    const char *name = "Sweet16 Mono (16px)";
-    char *dst = config.Name;
-
-    while (*name)
-        *dst++ = *name++;
-    *dst = '\0';
-
-    return ImGui::GetIO().Fonts->AddFontFromMemoryCompressedBase85TTF(Sweet16mono_compressed_data_base85, config.SizePixels, &config, Sweet16mono_ranges);
-}

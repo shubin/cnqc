@@ -1044,6 +1044,8 @@ extern cvar_t	*r_teleporterFlash;		// 1 is default Q3 behavior, 0 is pure black
 extern cvar_t	*r_sleepThreshold;		// time cushion in us for a call to Sleep(1+)
 extern cvar_t	*r_shadingRate;			// variable-rate shading (VRS) mode
 extern cvar_t	*r_guiFont;				// Dear ImGui font
+extern cvar_t	*r_guiFontFile;			// Dear ImGui font, custom .ttf
+extern cvar_t	*r_guiFontHeight;		// Dear ImGui font, custom height
 extern cvar_t	*r_fullbright;			// avoid lightmap pass
 extern cvar_t	*r_depthFade;			// fades marked shaders based on depth
 extern cvar_t	*r_dither;				// enables dithering

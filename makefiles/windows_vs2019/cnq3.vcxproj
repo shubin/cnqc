@@ -168,8 +168,8 @@ copy "..\..\.bin\release\cnq3.pdb" "$(QUAKE3DIR)"</Command>
     <ClInclude Include="..\..\code\client\snd_codec.h" />
     <ClInclude Include="..\..\code\client\snd_local.h" />
     <ClInclude Include="..\..\code\client\snd_public.h" />
-    <ClInclude Include="..\..\code\imgui\ProggyClean.h" />
-    <ClInclude Include="..\..\code\imgui\Sweet16Mono.h" />
+    <ClInclude Include="..\..\code\imgui\font_proggy_clean.h" />
+    <ClInclude Include="..\..\code\imgui\font_sweet16_mono.h" />
     <ClInclude Include="..\..\code\imgui\imconfig.h" />
     <ClInclude Include="..\..\code\imgui\imgui.h" />
     <ClInclude Include="..\..\code\imgui\imgui_internal.h" />
