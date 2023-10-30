@@ -794,7 +794,7 @@ void Cvar_SetValue( const char *var_name, float value )
 	if ( value == (int)value ) {
 		Cvar_Set( var_name, va("%i", (int)value) );
 	} else {
-		Cvar_Set( var_name, va("%f", value) );
+		Cvar_Set( var_name, va("%g", value) );
 	}
 }
 
@@ -1037,7 +1037,7 @@ static void Cvar_ExecuteOp( qbool multiply )
 
 		const float fValU = multiply ? ( cvar->value * fTemp ) : ( cvar->value + fTemp );
 		const float fValC = Com_Clamp( cvar->validator.f.min, cvar->validator.f.max, fValU );
-		Cvar_Set( Cmd_Argv(1), va("%f", fValC) );
+		Cvar_Set( Cmd_Argv(1), va("%g", fValC) );
 	}
 }
 
