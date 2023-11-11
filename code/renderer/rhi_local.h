@@ -29,20 +29,25 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 
 namespace RHI
 {
-	// @TODO: turn into uint32_t constants too
-#define RHI_MAX_TEXTURES_2D 4096 // real max: unlimited
-#define RHI_MAX_SAMPLERS 128 // real max: 2048
-
-	// this has 2 meanings:
+	// FrameCount has 2 meanings:
 	// 1. maximum number of frames queued
 	// 2. number of frames in the back buffer
 	const uint32_t FrameCount = 2;
-	const uint32_t MaxVertexBufferCount = 16;
-	const uint32_t MaxVertexAttributeCount = 32;
-	const uint32_t MaxRenderTargetCount = 8;
+	const uint32_t MaxVertexBuffers = 16;
+	const uint32_t MaxVertexAttributes = 32;
+	const uint32_t MaxRenderTargets = 8;
 	const uint32_t MaxDurationQueries = 64;
 	const uint32_t MaxTextureMips = 16;
 	const uint32_t InvalidDescriptorIndex = UINT16_MAX;
+	const uint32_t MaxCPUGenericDescriptors = 16384; // real max: unlimited
+	const uint32_t MaxCPUSamplerDescriptors = 128; // real max: 2048
+	const uint32_t MaxCPURTVDescriptors = 64;
+	const uint32_t MaxCPUDSVDescriptors = 64;
+	const uint32_t MaxCPUDescriptors =
+		MaxCPUGenericDescriptors +
+		MaxCPUSamplerDescriptors +
+		MaxCPURTVDescriptors +
+		MaxCPUDSVDescriptors;
 
 #define RHI_ENUM_OPERATORS(EnumType) \
 	inline EnumType operator|(EnumType a, EnumType b) { return (EnumType)((uint32_t)(a) | (uint32_t)(b)); } \
@@ -355,9 +360,9 @@ namespace RHI
 		ShaderByteCode pixelShader;
 		struct VertexLayout
 		{
-			VertexAttribute attributes[MaxVertexAttributeCount];
+			VertexAttribute attributes[MaxVertexAttributes];
 			uint32_t attributeCount = 0;
-			uint32_t bindingStrides[MaxVertexBufferCount] = { 0 }; // total byte size of a vertex for each buffer
+			uint32_t bindingStrides[MaxVertexBuffers] = { 0 }; // total byte size of a vertex for each buffer
 
 			void AddAttribute(
 				uint32_t vertexBufferIndex,
@@ -366,7 +371,7 @@ namespace RHI
 				uint32_t vectorLength,
 				uint32_t structByteOffset)
 			{
-				Q_assert(attributeCount < MaxVertexAttributeCount);
+				Q_assert(attributeCount < MaxVertexAttributes);
 				VertexAttribute& va = attributes[attributeCount++];
 				va.dataType = dataType;
 				va.semantic = semantic;
@@ -405,17 +410,15 @@ namespace RHI
 		rasterizer;
 		struct RenderTarget
 		{
-			// @TODO:
-			//uint32_t q3BlendMode = GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
-			uint32_t q3BlendMode = 0x00000005 | 0x00000060;
+			uint32_t q3BlendMode = GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
 			TextureFormat::Id format = TextureFormat::RGBA32_UNorm;
 		}
-		renderTargets[MaxRenderTargetCount];
+		renderTargets[MaxRenderTargets];
 		uint32_t renderTargetCount = 0;
 
 		void AddRenderTarget(uint32_t q3BlendMode, TextureFormat::Id format)
 		{
-			Q_assert(renderTargetCount < MaxRenderTargetCount);
+			Q_assert(renderTargetCount < MaxRenderTargets);
 			RenderTarget& rt = renderTargets[renderTargetCount++];
 			rt.q3BlendMode = q3BlendMode;
 			rt.format = format;
@@ -516,9 +519,7 @@ namespace RHI
 			mipLODBias = mipLODBias_;
 		}
 
-		// @TODO:
-		//textureWrap_t wrapMode = TW_REPEAT;
-		textureWrap_t wrapMode = (textureWrap_t)0;
+		textureWrap_t wrapMode = TW_REPEAT;
 		TextureFilter::Id filterMode = TextureFilter::Linear;
 		float minLOD = 0.0f;
 		float mipLODBias = 0.0f;

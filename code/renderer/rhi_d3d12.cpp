@@ -190,15 +190,6 @@ namespace RHI
 	// - 64 UAVs
 	// - 2048 samplers
 	static const D3D_FEATURE_LEVEL FeatureLevel = D3D_FEATURE_LEVEL_12_0;
-	static const uint32_t MaxCPUGenericDescriptors = RHI_MAX_TEXTURES_2D * 4;
-	static const uint32_t MaxCPUSamplerDescriptors = RHI_MAX_SAMPLERS;
-	static const uint32_t MaxCPURTVDescriptors = 64;
-	static const uint32_t MaxCPUDSVDescriptors = 64;
-	static const uint32_t MaxCPUDescriptors =
-		MaxCPUGenericDescriptors +
-		MaxCPUSamplerDescriptors +
-		MaxCPURTVDescriptors +
-		MaxCPUDSVDescriptors;
 
 	struct ResourceType
 	{
@@ -3663,7 +3654,7 @@ namespace RHI
 		desc.SampleMask = UINT_MAX;
 
 		UINT semanticIndices[ShaderSemantic::Count] = { 0 };
-		D3D12_INPUT_ELEMENT_DESC inputElementDescs[MaxVertexAttributeCount];
+		D3D12_INPUT_ELEMENT_DESC inputElementDescs[MaxVertexAttributes];
 		for(int a = 0; a < rhiDesc.vertexLayout.attributeCount; ++a)
 		{
 			const VertexAttribute& va = rhiDesc.vertexLayout.attributes[a];
@@ -3896,7 +3887,7 @@ namespace RHI
 		Q_assert(CanWriteCommands());
 		Q_assert(colorCount > 0 || colorTargets == NULL);
 
-		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[MaxRenderTargetCount] = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[MaxRenderTargets] = {};
 		for(uint32_t t = 0; t < colorCount; ++t)
 		{
 			const uint32_t rtvIndex = rhi.textures.Get(colorTargets[t]).rtvIndex;
@@ -3985,11 +3976,11 @@ namespace RHI
 	void CmdBindVertexBuffers(uint32_t count, const HBuffer* vertexBuffers, const uint32_t* byteStrides, const uint32_t* startByteOffsets)
 	{
 		Q_assert(CanWriteCommands());
-		Q_assert(count <= MaxVertexBufferCount);
+		Q_assert(count <= MaxVertexBuffers);
 
-		count = min(count, MaxVertexBufferCount);
+		count = min(count, MaxVertexBuffers);
 
-		D3D12_VERTEX_BUFFER_VIEW views[MaxVertexBufferCount];
+		D3D12_VERTEX_BUFFER_VIEW views[MaxVertexBuffers];
 		for(uint32_t v = 0; v < count; ++v)
 		{
 			const Buffer& buffer = rhi.buffers.Get(vertexBuffers[v]);
