@@ -940,6 +940,11 @@ extern	qbool	com_errorEntered;
 
 extern	fileHandle_t	com_journalDataFile;
 
+// use these variables instead of including git.h to avoid triggering rebuilds
+extern	const char* const	com_cnq3VersionWithHash;
+extern	const char* const	com_gitBranch;
+extern	const char* const	com_gitCommit;
+
 typedef enum {
 	TAG_FREE,
 	TAG_GENERAL,

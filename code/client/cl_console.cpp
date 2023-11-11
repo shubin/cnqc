@@ -793,11 +793,11 @@ static void Con_DrawSolidConsole( float frac )
 	Con_FillRect( 0, y, cls.glconfig.vidWidth, 2, colBorder );
 
 	re.SetColor( colText );
-	i = sizeof( Q3_VERSION )/sizeof(char) - 1;
+	i = strlen( com_cnq3VersionWithHash );
 	x = cls.glconfig.vidWidth - SMALLCHAR_WIDTH;
 	while (--i >= 0) {
 		x -= SMALLCHAR_WIDTH;
-		SCR_DrawChar( x, scanlines - (SMALLCHAR_HEIGHT * 1.5), SMALLCHAR_WIDTH, SMALLCHAR_HEIGHT, Q3_VERSION[i] );
+		SCR_DrawChar( x, scanlines - (SMALLCHAR_HEIGHT * 1.5), SMALLCHAR_WIDTH, SMALLCHAR_HEIGHT, com_cnq3VersionWithHash[i] );
 	}
 
 	const int cw = (int)ceilf( con.cw );

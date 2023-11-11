@@ -2,6 +2,82 @@
 See the end of this file for known issues.
 
 
+DD Mmm YY - 1.54
+
+add: togglegui and toggleguiinput to toggle (the mouse input of) the built-in GUI system
+
+add: key binds starting with "keycatchgui" always take precedence over everything else
+  they will work in the main menu, the demo player in protected mode, when the console is down, ...
+  here's how you would bind keys to access the new built-in GUI:
+  bind F1 "keycatchgui;togglegui"
+  bind F2 "keycatchgui;toggleguiinput"
+
+add: r_guiFont <0 to 2> (default: 0) sets the GUI's font
+  0 - Proggy Clean (13px)
+  1 - Sweet16 Mono (16px)
+  2 - custom font file (see r_guiFontFile and r_guiFontHeight)
+  note that the custom font can only get loaded at client start-up
+
+add: r_guiFontFile <string> (default: "") is the file path to the custom .ttf font file
+
+add: r_guiFontHeight <7 to 48> (default: 24) is the custom font's height
+
+add: r_gpuPreference <0 to 2> (default: 0) sets the GPU selection preference
+  0 - high performance (discrete graphics)
+  1 - low power (integrated graphics)
+  2 - none
+
+add: r_sleepThreshold <2000 to 4000> (default: 2500) is the frame sleep time cushion, in microseconds
+  it's a trade-off between frame time consistency and CPU usage
+  set to 2000 if you have a struggling old/low-power CPU
+  2500 should be enough to deal with delayed thread wake-ups
+  use the frame graph to confirm that higher values help on your system
+
+add: r_smaa <0 to 4> (default: 0) enables enhanced sub-pixel morphological anti-aliasing
+  0 - no SMAA
+  1 - low quality
+  2 - medium quality
+  3 - high quality
+  4 - ultra quality
+
+add: r_shadingRate <0 to 6> (default: 0) sets the variable-rate shading (VRS) mode
+  0 - 1x1 (VRS off)
+  1 - 2x1 (base mode)
+  2 - 1x2 (base mode)
+  3 - 2x2 (base mode)
+  4 - 4x2 (extended mode)
+  5 - 2x4 (extended mode)
+  6 - 4x4 (extended mode)
+  the numbers are the horizontal and vertical subsampling factors
+  1x1 is forced for the sky, nopicmipped sprites (e.g. simple items)
+  and nopicmipped alpha tested surfaces (e.g. grates)
+  if extended modes are not supported, 2x2 is used instead
+  prefer horizontal subsampling as many maps have textures with thin horizontal lines
+  which become an aliased mess when vertically subsampled
+
+chg: dropped 32-bit support
+
+chg: dropped Linux/FreeBSD client
+
+chg: Windows support is limited to 10 and 11
+
+chg: much improved rendering:
+  - removed all Direct3D 11 and OpenGL code
+  - rendering with Direct3D 12 (improved performance and better worst case input latency)
+  - much improved input latency when V-Sync is enabled
+  - improved frame-time consistency
+  - surfaces are sorted and rendered more efficiently
+  - fog handling has been completely overhauled (faster, simpler, decoupled from surfaces)
+  - MSAA and alpha-to-coverage have been removed
+  - added SMAA for anti-aliasing (gamma-corrected and not applied to UI for best results)
+
+chg: removed cl_drawMouseLag, r_backend, r_frameSleep, r_gpuMipGen, r_alphaToCoverage, r_alphaToCoverageMipBoost
+  removed r_d3d11_syncOffsets, r_d3d11_presentMode, r_gl3_geoStream, r_ignoreGLErrors, r_finish, r_khr_debug
+  removed r_verbose, r_customaspect, r_speeds, r_msaa
+  replaced r_swapInterval with r_vsync <0|1> (default: 0) to enable V-Sync
+  replaced r_textureMode with r_lego <0|1> (default: 0) to enable nearest-neighbor texture filtering
+
+
 30 Oct 23 - 1.53
 
 add: /registerdemos   adds Windows file associations for demo files (.dm_68 .dm_67 .dm_66)

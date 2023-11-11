@@ -24,6 +24,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "q_shared.h"
 #include "qcommon.h"
 #include "common_help.h"
+#include "git.h"
 #include <setjmp.h>
 #include <float.h>
 
@@ -104,6 +105,10 @@ qbool	com_fullyInitialized;
 int64_t	com_nextTargetTimeUS = INT64_MIN;
 
 static char com_errorMessage[MAXPRINTMSG];
+
+const char* const com_cnq3VersionWithHash = Q3_VERSION " " GIT_COMMIT_SHORT;
+const char* const com_gitBranch = GIT_BRANCH;
+const char* const com_gitCommit = GIT_COMMIT;
 
 static void Com_WriteConfigToFile( const char* filename, qbool forceWrite );
 static void Com_WriteConfig_f();
@@ -2301,7 +2306,7 @@ void Com_Init( char *commandLine )
 
 	Cmd_RegisterArray( com_cmds, MODULE_COMMON );
 
-	const char* s = Q3_VERSION " " PLATFORM_STRING " " __DATE__;
+	const char* const s = Q3_VERSION " " GIT_COMMIT_SHORT " " PLATFORM_STRING " " __DATE__;
 	com_version = Cvar_Get( "version", s, CVAR_ROM | CVAR_SERVERINFO );
 
 	Cvar_Get( "sys_compiler", Com_GetCompilerInfo(), CVAR_ROM );
