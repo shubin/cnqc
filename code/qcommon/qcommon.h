@@ -1049,13 +1049,18 @@ void CL_PacketEvent( netadr_t from, msg_t *msg );
 
 void CL_ConsolePrint( const char* s );
 
+void CL_AbortFrame();
+
+void CL_ShutdownCGame();
+void CL_ShutdownUI();
+
 void CL_MapLoading( void );
 // do a screen update before starting to load a map
 // when the server is going to load a new map, the entire hunk
 // will be cleared, so the client must shutdown cgame, ui, and
 // the renderer
 
-void	CL_ForwardCommandToServer( const char *string );
+void CL_ForwardCommandToServer( const char *string );
 // adds the current command line as a clc_clientCommand to the client message.
 // things like godmode, noclip, etc, are commands directed to the server,
 // so when they are typed in at the console, they will need to be forwarded.
@@ -1089,6 +1094,9 @@ void CL_DisableFramerateLimiter();
 void CL_SetMenuData( qboolean typeOnly );
 // sets GUI data for CVars registered by ui.qvm and cgame.qvm
 
+void CL_NDP_HandleError();
+// the new demo player's own error handler
+
 void Key_KeyNameCompletion( void (*callback)(const char *s) );
 // for /bind and /unbind auto-completion
 
@@ -1097,6 +1105,9 @@ void Key_WriteBindings( fileHandle_t f );
 
 void S_ClearSoundBuffer( void );
 // call before filesystem access
+
+void R_WaitBeforeInputSampling();
+// delays input sampling when V-Sync is enabled to reduce input latency
 
 
 //
@@ -1108,6 +1119,7 @@ void SV_Frame( int msec );
 int SV_FrameSleepMS();	// the number of milli-seconds Com_Frame should sleep
 void SV_PacketEvent( const netadr_t& from, msg_t* msg );
 qbool SV_GameCommand();
+void SV_ShutdownGameProgs();
 
 
 //

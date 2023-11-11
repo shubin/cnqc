@@ -257,7 +257,6 @@ void QDECL Com_ErrorExt( int code, int module, qbool realError, PRINTF_FORMAT_ST
 
 	if ( code == ERR_DROP_NDP ) {
 #if !defined(DEDICATED)
-		void CL_NDP_HandleError();
 		CL_NDP_HandleError();
 #endif
 		code = ERR_DROP;
@@ -1481,12 +1480,6 @@ qbool Hunk_CheckMark()
 void Hunk_Clear()
 {
 #ifndef DEDICATED
-	extern void CL_ShutdownCGame();
-	extern void CL_ShutdownUI();
-#endif
-	extern void SV_ShutdownGameProgs();
-
-#ifndef DEDICATED
 	CL_ShutdownCGame();
 	CL_ShutdownUI();
 #endif
@@ -2516,7 +2509,6 @@ void Com_Frame( qbool demoPlayback )
 {
 	if ( setjmp(abortframe) ) {
 #ifndef DEDICATED
-		void CL_AbortFrame();
 		CL_AbortFrame();
 #endif
 		return;			// an ERR_DROP was thrown
@@ -2598,8 +2590,6 @@ void Com_Frame( qbool demoPlayback )
 	// client system
 	//
 	if ( !com_dedicated->integer ) {
-		// @TODO:
-		void R_WaitBeforeInputSampling();
 		R_WaitBeforeInputSampling();
 
 		//
