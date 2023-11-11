@@ -87,9 +87,6 @@ cvar_t	*r_singleShader;
 cvar_t	*r_roundImagesDown;
 cvar_t	*r_colorMipLevels;
 cvar_t	*r_picmip;
-cvar_t	*r_showsky;
-cvar_t	*r_showtris;
-cvar_t	*r_shownormals;
 cvar_t	*r_clear;
 cvar_t	*r_vsync;
 cvar_t	*r_lego;
@@ -653,18 +650,6 @@ static const cvarTableItem_t r_cvars[] =
 	},
 	{
 		&r_debugSurface, "r_debugSurface", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "draws collision models",
-		"", CVARCAT_GRAPHICS | CVARCAT_DEBUGGING, "", ""
-	},
-	{
-		&r_showsky, "r_showsky", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "forces sky in front of all surfaces",
-		"", CVARCAT_GRAPHICS | CVARCAT_DEBUGGING, "", ""
-	},
-	{
-		&r_showtris, "r_showtris", "0", CVAR_CHEAT, CVART_BITMASK, "0", XSTRING(SHOWTRIS_MAX), help_r_showtris,
-		"", CVARCAT_GRAPHICS | CVARCAT_DEBUGGING, "", ""
-	},
-	{
-		&r_shownormals, "r_shownormals", "0", CVAR_CHEAT, CVART_BITMASK, "0", XSTRING(SHOWTRIS_MAX), help_r_shownormals,
 		"", CVARCAT_GRAPHICS | CVARCAT_DEBUGGING, "", ""
 	},
 	{

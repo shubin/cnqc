@@ -996,14 +996,6 @@ extern trGlobals_t	tr;
 #define RTCF_R16G16B16A16	2
 #define RTCF_MAX			2
 
-// r_showtris + r_shownormals
-#define SHOWTRIS_ENABLE_BIT			1
-#define SHOWTRIS_OCCLUDE_BIT		2
-#define SHOWTRIS_BACKFACE_BIT		4
-#define SHOWTRIS_VERTEX_COLOR_BIT	8
-#define SHOWTRIS_VERTEX_ALPHA_BIT	16
-#define SHOWTRIS_MAX				31
-
 // r_gpuPreference
 #define GPUPREF_HIGHPERF		0
 #define GPUPREF_LOWPOWER		1
@@ -1069,9 +1061,6 @@ extern	cvar_t	*r_lego;
 extern	cvar_t	*r_vertexLight;			// vertex lighting mode for better performance
 extern	cvar_t	*r_uiFullScreen;		// ui is running fullscreen
 
-extern	cvar_t	*r_showsky;				// forces sky in front of all surfaces
-extern	cvar_t	*r_showtris;			// draws wireframe triangles
-extern	cvar_t	*r_shownormals;			// draws wireframe normals
 extern	cvar_t	*r_clear;				// clear to violet instead of black for debugging
 
 extern	cvar_t	*r_lockpvs;

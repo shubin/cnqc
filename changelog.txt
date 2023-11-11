@@ -73,7 +73,7 @@ chg: much improved rendering:
 
 chg: removed cl_drawMouseLag, r_backend, r_frameSleep, r_gpuMipGen, r_alphaToCoverage, r_alphaToCoverageMipBoost
   removed r_d3d11_syncOffsets, r_d3d11_presentMode, r_gl3_geoStream, r_ignoreGLErrors, r_finish, r_khr_debug
-  removed r_verbose, r_customaspect, r_speeds, r_msaa
+  removed r_verbose, r_customaspect, r_speeds, r_msaa, r_showsky, r_showtris, r_shownormals
   replaced r_swapInterval with r_vsync <0|1> (default: 0) to enable V-Sync
   replaced r_textureMode with r_lego <0|1> (default: 0) to enable nearest-neighbor texture filtering
 
