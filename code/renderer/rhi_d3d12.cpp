@@ -180,6 +180,7 @@ extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8".\\cnq3\
 
 
 RHIExport rhie;
+RHIInfo rhiInfo;
 
 
 namespace RHI
@@ -2721,6 +2722,17 @@ namespace RHI
 		glInfo.maxTextureSize = MAX_TEXTURE_SIZE;
 		glInfo.maxAnisotropy = 16;
 		glInfo.depthFadeSupport = qtrue;
+
+		Q_strncpyz(glConfig.vendor_string, rhi.adapterName, sizeof(glConfig.vendor_string));
+		Q_strncpyz(glConfig.renderer_string, "Direct3D 12", sizeof(glConfig.renderer_string));
+
+		Q_strncpyz(rhiInfo.name, "Direct3D 12", sizeof(rhiInfo.name));
+		Q_strncpyz(rhiInfo.adapter, rhi.adapterName, sizeof(rhiInfo.adapter));
+		rhiInfo.hasTearing = rhi.isTearingSupported;
+		rhiInfo.hasBaseVRS = rhi.baseVRSSupport;
+		rhiInfo.hasExtendedVRS = rhi.extendedVRSSupport;
+		rhiInfo.isUMA = rhi.allocator->IsUMA();
+		rhiInfo.isCacheCoherentUMA = rhi.allocator->IsCacheCoherentUMA();
 
 		rhi.initialized = true;
 

@@ -1563,8 +1563,6 @@ extern	int		max_polyverts;
 
 extern	backEndData_t*		backEndData;
 
-void GfxInfo_f( void );
-
 const byte* RB_TakeScreenshotCmd( const screenshotCommand_t* cmd );
 const byte* RB_TakeVideoFrameCmd( const videoFrameCommand_t* cmd );
 
@@ -1691,6 +1689,19 @@ struct RHIExport
 };
 
 extern RHIExport rhie;
+
+struct RHIInfo
+{
+	char name[MAX_QPATH];
+	char adapter[MAX_QPATH];
+	qbool hasTearing;
+	qbool hasBaseVRS;
+	qbool hasExtendedVRS;
+	qbool isUMA;
+	qbool isCacheCoherentUMA;
+};
+
+extern RHIInfo rhiInfo;
 
 
 #endif //TR_LOCAL_H

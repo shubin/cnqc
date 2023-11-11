@@ -298,13 +298,15 @@ const byte *RB_TakeVideoFrameCmd( const videoFrameCommand_t *cmd )
 ///////////////////////////////////////////////////////////////
 
 
-void GfxInfo_f( void )
+static void GfxInfo_f()
 {
-	if ( glConfig.vendor_string[0] != '\0' )
-		ri.Printf( PRINT_ALL, "Vendor: %s\n", glConfig.vendor_string );
-	if ( glConfig.renderer_string[0] != '\0' )
-		ri.Printf( PRINT_ALL, "Renderer: %s\n", glConfig.renderer_string );
-	//@TODO: RHI::PrintInfo();
+	ri.Printf(PRINT_ALL, "RHI:                    %s\n", rhiInfo.name);
+	ri.Printf(PRINT_ALL, "Adapter:                %s\n", rhiInfo.adapter);
+	ri.Printf(PRINT_ALL, "  Tearing support:      %s\n", rhiInfo.hasTearing ? "YES" : "NO");
+	ri.Printf(PRINT_ALL, "  Base VRS support:     %s\n", rhiInfo.hasBaseVRS ? "YES" : "NO");
+	ri.Printf(PRINT_ALL, "  Extended VRS support: %s\n", rhiInfo.hasExtendedVRS ? "YES" : "NO");
+	ri.Printf(PRINT_ALL, "  UMA:                  %s\n", rhiInfo.isUMA ? "YES" : "NO");
+	ri.Printf(PRINT_ALL, "  Cache coherent UMA:   %s\n", rhiInfo.isCacheCoherentUMA ? "YES" : "NO");
 }
 
 
@@ -758,7 +760,6 @@ void R_Init()
 	R_InitMipFilter();
 
 	renderPipeline->Init();
-	GfxInfo_f();
 
 	R_InitImages();
 
