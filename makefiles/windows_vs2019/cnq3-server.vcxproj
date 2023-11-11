@@ -187,7 +187,6 @@ copy "..\..\.bin\release\cnq3-server.pdb" "$(QUAKE3DIR)"</Command>
     <ClInclude Include="..\..\code\qcommon\vm_local.h" />
     <ClInclude Include="..\..\code\qcommon\vm_shim.h" />
     <ClInclude Include="..\..\code\server\server.h" />
-    <ClInclude Include="..\..\code\win32\glw_win.h" />
     <ClInclude Include="..\..\code\win32\resource.h" />
     <ClInclude Include="..\..\code\win32\win_help.h" />
     <ClInclude Include="..\..\code\win32\win_local.h" />

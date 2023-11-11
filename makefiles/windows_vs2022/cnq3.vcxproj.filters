@@ -276,9 +276,6 @@
     <ClInclude Include="..\..\code\server\server.h">
       <Filter>server</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\code\win32\glw_win.h">
-      <Filter>win32</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\code\win32\resource.h">
       <Filter>win32</Filter>
     </ClInclude>

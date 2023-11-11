@@ -27,7 +27,6 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 #include "../client/client.h"
 #endif
 #include "win_local.h"
-#include "glw_win.h"
 #include <DbgHelp.h>
 #include <strsafe.h>
 
@@ -543,8 +542,8 @@ static LONG WIN_HandleCrash( EXCEPTION_POINTERS* ep )
 
 #ifndef DEDICATED
 	__try {
-		wasDevModeValid = glw_state.cdsDevModeValid;
-		if (glw_state.cdsDevModeValid)
+		wasDevModeValid = g_wv.cdsDevModeValid;
+		if (g_wv.cdsDevModeValid)
 			WIN_SetDesktopDisplaySettings();
 	} __except (EXCEPTION_EXECUTE_HANDLER) {}
 
