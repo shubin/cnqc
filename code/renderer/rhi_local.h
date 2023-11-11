@@ -31,7 +31,6 @@ namespace RHI
 {
 	// @TODO: turn into uint32_t constants too
 #define RHI_MAX_TEXTURES_2D 4096 // real max: unlimited
-#define RHI_MAX_RW_TEXTURES_2D 64 // real max: 64
 #define RHI_MAX_SAMPLERS 128 // real max: 2048
 
 	// this has 2 meanings:
@@ -44,7 +43,6 @@ namespace RHI
 	const uint32_t MaxDurationQueries = 64;
 	const uint32_t MaxTextureMips = 16;
 	const uint32_t InvalidDescriptorIndex = UINT16_MAX;
-	const uint32_t U32WholeRange = UINT32_MAX;
 
 #define RHI_ENUM_OPERATORS(EnumType) \
 	inline EnumType operator|(EnumType a, EnumType b) { return (EnumType)((uint32_t)(a) | (uint32_t)(b)); } \
@@ -735,11 +733,6 @@ namespace RHI
 	void CmdSetStencilReference(uint8_t stencilRef);
 	void CmdCopyBuffer(HBuffer dest, HBuffer source);
 	void CmdSetShadingRate(ShadingRate::Id shadingRate);
-
-#if 0
-	void CmdClearUAV(HTexture htexture, uint32_t mip);
-	void CmdNullUAVBarrier();
-#endif
 
 	// the duration at index 0 is for the entire frame
 	uint32_t GetDurationCount();

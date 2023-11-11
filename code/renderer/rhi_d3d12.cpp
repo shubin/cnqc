@@ -148,11 +148,11 @@ D3D(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&graphicsAnalysis)));
 
 
 #if defined(_DEBUG)
-#define D3D_DEBUG 1
+#define D3D_DEBUG
 #endif
-#define D3D_AGILITY_SDK 1
-#define D3D_GPU_BASED_VALIDATION 1
-#define DEBUG_FENCE 0
+#define D3D_AGILITY_SDK
+//#define D3D_GPU_BASED_VALIDATION
+//#define RHI_DEBUG_FENCE
 
 
 #include "rhi_local.h"
@@ -2842,7 +2842,7 @@ namespace RHI
 
 		{
 			const UINT64 currentFenceValue = rhi.mainFenceValues[rhi.frameIndex];
-#if DEBUG_FENCE
+#if RHI_DEBUG_FENCE
 			Sys_DebugPrintf("Wait: %d (BeginFrame)\n", (int)currentFenceValue);
 #endif
 			rhi.mainFence.WaitOnCPU(currentFenceValue);
@@ -2918,7 +2918,7 @@ namespace RHI
 		// stop recording
 		D3D(rhi.commandList->Close());
 
-#if DEBUG_FENCE
+#if RHI_DEBUG_FENCE
 		Sys_DebugPrintf("Signal: %d (EndFrame)\n", rhi.mainFenceValues[rhi.frameIndex]);
 #endif
 		rhi.mainFence.Signal(rhi.mainCommandQueue, rhi.mainFenceValues[rhi.frameIndex]);
@@ -4159,19 +4159,6 @@ namespace RHI
 		}
 	}
 
-#if 0
-	void CmdNullUAVBarrier()
-	{
-		Q_assert(CanWriteCommands());
-
-		D3D12_RESOURCE_BARRIER barrier = {};
-		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-		barrier.UAV.pResource = NULL;
-		rhi.commandList->ResourceBarrier(1, &barrier);
-	}
-#endif
-
 	void CmdClearColorTarget(HTexture texture, const vec4_t clearColor, const Rect* rect)
 	{
 		Q_assert(CanWriteCommands());
@@ -4193,19 +4180,6 @@ namespace RHI
 		const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rhi.descHeapRTVs.GetCPUHandle(renderTarget.rtvIndex);
 		rhi.commandList->ClearRenderTargetView(rtvHandle, clearColor, rectCount, d3dRectPtr);
 	}
-
-#if 0
-	void CmdClearUAV(HTexture htexture, uint32_t mip)
-	{
-		const Texture& texture = rhi.textures.Get(htexture);
-		const uint32_t uavIndex = texture.mips[mip].uavIndex;
-		const D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = rhi.descHeapGeneric.GetCPUHandle(uavIndex);
-		D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle = rhi.descHeapGeneric.heap->GetGPUDescriptorHandleForHeapStart();
-		gpuHandle.ptr += uavIndex * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		const UINT values[4] = { 0, 255, 0, 255 };
-		rhi.commandList->ClearUnorderedAccessViewUint(gpuHandle, cpuHandle, texture.texture, values, 0, NULL);
-	}
-#endif
 
 	void CmdClearDepthStencilTarget(HTexture texture, bool clearDepth, float depth, bool clearStencil, uint8_t stencil, const Rect* rect)
 	{
@@ -4402,7 +4376,7 @@ namespace RHI
 	{
 		// direct queue
 		rhi.mainFenceValues[rhi.frameIndex]++;
-#if DEBUG_FENCE
+#if RHI_DEBUG_FENCE
 		Sys_DebugPrintf("Signal: %d (WaitUntilDeviceIsIdle)\n", (int)rhi.mainFenceValues[rhi.frameIndex]);
 		Sys_DebugPrintf("Wait: %d (WaitUntilDeviceIsIdle)\n", (int)rhi.mainFenceValues[rhi.frameIndex]);
 #endif
