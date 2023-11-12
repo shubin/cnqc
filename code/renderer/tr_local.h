@@ -524,6 +524,8 @@ struct drawSurf_t {
 
 void R_TessellateSurface( const surfaceType_t* surfType );
 void R_ComputeTessellatedSize( int* numVertexes, int* numIndexes, const surfaceType_t* surfType );
+// R_ComputeTessellatedSize is unused for now but might be of use a bit later
+// we can use it to compute the required size of the static geometry buffers in the GRP
 
 
 struct litSurf_t {

@@ -868,15 +868,28 @@ static void RB_SurfaceSizeFace( int* numVertexes, int* numIndexes, const srfSurf
 
 static void RB_SurfaceSizeGrid( int* numVertexes, int* numIndexes, const srfGridMesh_t* surf )
 {
-	// @TODO: estimate properly...
-	// @TODO: this can overflow and call the old EndSurface/BeginSurface pair...
-	const int prevNumVertexes = tess.numVertexes;
-	const int prevNumIndexes = tess.numIndexes;
-	RB_SurfaceGrid((srfGridMesh_t*)surf);
-	*numVertexes = tess.numVertexes - prevNumVertexes;
-	*numIndexes = tess.numIndexes - prevNumIndexes;
-	tess.numVertexes = prevNumVertexes;
-	tess.numIndexes = prevNumIndexes;
+	srfGridMesh_t* const cv = (srfGridMesh_t*)surf;
+
+	const float lodError = LodErrorForVolume( cv->lodOrigin, cv->lodRadius );
+
+	int lodWidth = 1;
+	for ( int i = 1; i < cv->width - 1; i++ ) {
+		if ( cv->widthLodError[i] <= lodError ) {
+			lodWidth++;
+		}
+	}
+	lodWidth++;
+
+	int lodHeight = 1;
+	for ( int i = 1; i < cv->height - 1; i++ ) {
+		if ( cv->heightLodError[i] <= lodError ) {
+			lodHeight++;
+		}
+	}
+	lodHeight++;
+
+	*numVertexes = lodWidth * lodHeight;
+	*numIndexes = max( lodWidth - 1, 0 ) * max( lodHeight - 1, 0 ) * 6;
 }
 
 
