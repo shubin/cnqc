@@ -247,6 +247,9 @@ static qbool Cvar_IsValidValue( cvar_t *var, const char *value, qboolean printWa
 			WARNING( "must be a single char" );
 		if ( !IsCPMAColorCode(value[0]) )
 			WARNING( "invalid color code, must be [a-zA-Z0-9]" );
+	} else if ( var->type == CVART_COLOR_CPMA_E ) {
+		if ( value[0] != '\0' && !IsCPMAColorCode(value[0]) )
+			WARNING( "invalid color code, must be [a-zA-Z0-9] or empty" );
 	} else if ( var->type == CVART_COLOR_CHBLS ) {
 		if ( strlen(value) != 5 )
 			WARNING( "must be 5 chars" );
@@ -640,6 +643,7 @@ void Cvar_SetDataType( const char* cvarName, cvarType_t type )
 		Q_assert(
 			type == CVART_STRING ||
 			type == CVART_COLOR_CPMA ||
+			type == CVART_COLOR_CPMA_E ||
 			type == CVART_COLOR_CHBLS ||
 			type == CVART_COLOR_RGB ||
 			type == CVART_COLOR_RGBA );
@@ -826,10 +830,10 @@ void Cvar_PrintTypeAndRange( const char *var_name, printf_t print )
 		print( "RGB" );
 	} else if ( var->type == CVART_COLOR_RGBA ) {
 		print( "RGBA" );
-	} else if ( var->type == CVART_COLOR_CPMA ) {
-		print( "color_code" );
+	} else if ( var->type == CVART_COLOR_CPMA || var->type == CVART_COLOR_CPMA_E ) {
+		print( "color code" );
 	} else if ( var->type == CVART_COLOR_CHBLS ) {
-		print( "color_CHBLS" );
+		print( "CHBLS colors" );
 	} else {
 		print( "string" );
 	}

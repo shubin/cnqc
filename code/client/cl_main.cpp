@@ -2440,11 +2440,11 @@ static const cvarTableItemCPMA_t cpma_cvars[] =
 		"Crosshair text", CVARCAT_HUD, "Crosshair uses this text instead of an icon", ""
 	},
 	{
-		"ch_crosshairHitColor", CVART_COLOR_CPMA,
+		"ch_crosshairHitColor", CVART_COLOR_CPMA_E,
 		"Crosshair hit color", CVARCAT_HUD, "", ""
 	},
 	{
-		"ch_crosshairFragColor", CVART_COLOR_CPMA,
+		"ch_crosshairFragColor", CVART_COLOR_CPMA_E,
 		"Crosshair kill color", CVARCAT_HUD, "", ""
 	},
 	{
