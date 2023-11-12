@@ -202,7 +202,8 @@ static qbool IsCPMAColorCode( char c )
 
 static qbool Cvar_IsValidValue( cvar_t *var, const char *value, qboolean printWarnings )
 {
-#define WARNING( Message )	{ if ( printWarnings ) Com_Printf( "^3%s: " Message "\n", var->name ); return qfalse; }
+#define ERROR( Message , ...)	{ if ( printWarnings ) Com_Printf( "^3%s: " Message "\n", var->name, ## __VA_ARGS__ ); return qfalse; }
+#define WARNING( Message, ... )	{ if ( printWarnings ) Com_Printf( "^3%s: " Message "\n", var->name, ## __VA_ARGS__ ); }
 
 	if ( var->type == CVART_STRING )
 		return qtrue;
@@ -210,52 +211,57 @@ static qbool Cvar_IsValidValue( cvar_t *var, const char *value, qboolean printWa
 	if ( var->type == CVART_FLOAT ) {
 		float f;
 		if ( sscanf(value, "%f", &f) != 1 || !isfinite(f) )
-			WARNING( "not a finite floating-point value" )
+			ERROR( "not a finite floating-point value" )
 		if( f < var->validator.f.min )
-			WARNING( "float value too low" )
+			ERROR( "float value too low" )
 		if( f > var->validator.f.max )
-			WARNING( "float value too high" )
+			ERROR( "float value too high" )
 	} else if ( var->type == CVART_INTEGER || var->type == CVART_BITMASK ) {
 		int i;
 		if ( sscanf(value, "%d", &i) != 1 )
-			WARNING( "not a whole number (integer)" )
+			ERROR( "not a whole number (integer)" )
 		if( i < var->validator.i.min )
-			WARNING( "integer value too low" )
+			ERROR( "integer value too low" )
 		if( i > var->validator.i.max )
-			WARNING( "integer value too high" )
+			ERROR( "integer value too high" )
 	} else if ( var->type == CVART_BOOL ) {
 		if ( strlen(value) != 1 )
-			WARNING( "must be a single char" );
+			ERROR( "must be a single char" );
 		if ( value[0] != '0' && value[0] != '1' )
-			WARNING( "must be 0 or 1" );
+			ERROR( "must be 0 or 1" );
 	} else if ( var->type == CVART_COLOR_RGB ) {
 		if ( strlen(value) != 6 )
-			WARNING( "must be 6 hex chars" );
+			ERROR( "must be 6 hex chars" );
 		for ( int i = 0; i < 6; ++i ) {
 			if ( !IsHexChar(value[i]) )
-				WARNING( "must be 6 hex chars" );
+				ERROR( "must be 6 hex chars" );
 		}
 	} else if ( var->type == CVART_COLOR_RGBA ) {
 		if ( strlen(value) != 8 )
-			WARNING( "must be 8 hex chars" );
+			ERROR( "must be 8 hex chars" );
 		for ( int i = 0; i < 8; ++i ) {
 			if ( !IsHexChar(value[i]) )
-				WARNING( "must be 8 hex chars" );
+				ERROR( "must be 8 hex chars" );
 		}
 	} else if ( var->type == CVART_COLOR_CPMA ) {
 		if ( strlen(value) != 1 )
-			WARNING( "must be a single char" );
+			ERROR( "must be a single char" );
 		if ( !IsCPMAColorCode(value[0]) )
-			WARNING( "invalid color code, must be [a-zA-Z0-9]" );
+			ERROR( "invalid color code, must be [a-zA-Z0-9]" );
 	} else if ( var->type == CVART_COLOR_CPMA_E ) {
 		if ( value[0] != '\0' && !IsCPMAColorCode(value[0]) )
-			WARNING( "invalid color code, must be [a-zA-Z0-9] or empty" );
+			ERROR( "invalid color code, must be [a-zA-Z0-9] or empty" );
 	} else if ( var->type == CVART_COLOR_CHBLS ) {
-		if ( strlen(value) != 5 )
-			WARNING( "must be 5 chars" );
-		for ( int i = 0; i < 5; ++i ) {
+		const char* const names[] = { "rail core", "head", "body", "legs", "rail spiral" };
+		const int count = strlen(value);
+		if ( count != 5 )
+			WARNING( "should be 5 color codes [a-zA-Z0-9]" );
+		for ( int i = 0, end = min(count, 5); i < end; ++i ) {
 			if ( !IsCPMAColorCode(value[i]) )
-				WARNING( "must be 5 color codes [a-zA-Z0-9]" );
+				WARNING( "color code #%d (%s) is invalid, white will be used", i + 1, names[i] );
+		}
+		for ( int i = count; i < 5; ++i ) {
+			WARNING( "color code #%d (%s) is missing, white will be used", i + 1, names[i] );
 		}
 	} else {
 		Q_assert( !"Unsupported CVar type" );
@@ -263,6 +269,7 @@ static qbool Cvar_IsValidValue( cvar_t *var, const char *value, qboolean printWa
 
 	return qtrue;
 
+#undef ERROR
 #undef WARNING
 }
 
@@ -587,14 +594,14 @@ qbool Cvar_GetHelp( const char **desc, const char **help, const char* var_name )
 
 void Cvar_SetRange( const char *var_name, cvarType_t type, const char *minStr, const char *maxStr )
 {
-#define WARNING( Message ) { assert(0); Com_Printf( "^3Cvar_SetRange on %s: " Message "\n", var_name ); return; }
+#define ERROR( Message ) { assert(0); Com_Printf( "^3Cvar_SetRange on %s: " Message "\n", var_name ); return; }
 
 	cvar_t* var = Cvar_FindVar( var_name );
 	if( !var )
-		WARNING( "cvar not found" );
+		ERROR( "cvar not found" );
 
 	if( (unsigned int)type >= CVART_COUNT )
-		WARNING( "invalid cvar type" );
+		ERROR( "invalid cvar type" );
 
 	if ( type == CVART_BOOL ) {
 		var->validator.i.min = 0;
@@ -603,11 +610,11 @@ void Cvar_SetRange( const char *var_name, cvarType_t type, const char *minStr, c
 		int min = INT_MIN;
 		int max = INT_MAX;
 		if ( minStr && sscanf(minStr, "%d", &min) != 1 )
-			WARNING( "invalid min value" )
+			ERROR( "invalid min value" )
 		if ( maxStr && sscanf(maxStr, "%d", &max) != 1 )
-			WARNING( "invalid max value" )
+			ERROR( "invalid max value" )
 		if ( min > max )
-			WARNING( "min greater than max" )
+			ERROR( "min greater than max" )
 		var->validator.i.min = min;
 		var->validator.i.max = max;
 	} else if ( type == CVART_FLOAT ) {
@@ -615,11 +622,11 @@ void Cvar_SetRange( const char *var_name, cvarType_t type, const char *minStr, c
 		float min = -FLT_MAX;
 		float max =  FLT_MAX;
 		if ( minStr && sscanf(minStr, "%f", &min) != 1 && !isfinite(min) )
-			WARNING( "invalid min value" )
+			ERROR( "invalid min value" )
 		if ( maxStr && sscanf(maxStr, "%f", &max) != 1 && !isfinite(max) )
-			WARNING( "invalid max value" )
+			ERROR( "invalid max value" )
 		if ( min > max )
-			WARNING( "min greater than max" )
+			ERROR( "min greater than max" )
 		var->validator.f.min = min;
 		var->validator.f.max = max;
 	}
