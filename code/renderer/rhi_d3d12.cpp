@@ -153,6 +153,7 @@ D3D(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&graphicsAnalysis)));
 #define D3D_AGILITY_SDK
 //#define D3D_GPU_BASED_VALIDATION
 //#define RHI_DEBUG_FENCE
+//#define RHI_ENABLE_NVAPI
 
 
 #include "rhi_local.h"
@@ -164,7 +165,9 @@ D3D(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&graphicsAnalysis)));
 #include <dwmapi.h> // for DwmGetCompositionTimingInfo
 #define D3D12MA_D3D12_HEADERS_ALREADY_INCLUDED
 #include "D3D12MemAlloc.h"
+#if defined(RHI_ENABLE_NVAPI)
 #include "../nvapi/nvapi.h"
+#endif
 #include "../pix/pix3.h"
 #include "../client/cl_imgui.h"
 
@@ -2177,6 +2180,8 @@ namespace RHI
 				TableRow(2, "VRS: 2x4, 4x2, 4x4 support", options6.AdditionalShadingRatesSupported ? "YES" : "NO");
 			}
 
+			// the validation layer reports live objects at shutdown when NvAPI_D3D12_QueryCpuVisibleVidmem is called
+#if defined(RHI_ENABLE_NVAPI)
 			NvU64 cvvTotal, cvvFree;
 			if(NvAPI_D3D12_QueryCpuVisibleVidmem(rhi.device, &cvvTotal, &cvvFree) == NvAPI_Status::NVAPI_OK &&
 				cvvTotal > 0)
@@ -2188,6 +2193,7 @@ namespace RHI
 			{
 				TableRow(2, "CPU Visible VRAM", "N/A");
 			}
+#endif
 
 			ImGui::EndTable();
 		}
@@ -2660,6 +2666,7 @@ namespace RHI
 
 		WaitUntilDeviceIsIdle();
 
+#if defined(RHI_ENABLE_NVAPI)
 		{
 			const NvAPI_Status nr = NvAPI_Initialize();
 			if(nr == NvAPI_Status::NVAPI_OK)
@@ -2687,6 +2694,7 @@ namespace RHI
 				}
 			}
 		}
+#endif
 
 		rhi.pix.module = LoadLibraryA("cnq3/WinPixEventRuntime.dll");
 		if(rhi.pix.module != NULL)
@@ -2813,7 +2821,9 @@ namespace RHI
 		FreeLibrary(rhi.dxilModule);
 		FreeLibrary(rhi.dxcModule);
 
+#if defined(RHI_ENABLE_NVAPI)
 		NvAPI_Unload();
+#endif
 		
 #if defined(D3D_DEBUG)
 		IDXGIDebug1* debug = NULL;
