@@ -279,6 +279,18 @@ void GRP::Init()
 		renderTarget = RHI::CreateTexture(desc);
 	}
 
+	{
+		TextureDesc desc("readback render target", glConfig.vidWidth, glConfig.vidHeight);
+		desc.initialState = ResourceStates::RenderTargetBit;
+		desc.allowedState = ResourceStates::RenderTargetBit | ResourceStates::PixelShaderAccessBit;
+		Vector4Clear(desc.clearColor);
+		desc.usePreferredClearValue = true;
+		desc.committedResource = true;
+		desc.format = TextureFormat::RGBA32_UNorm;
+		desc.shortLifeTime = true;
+		readbackRenderTarget = RHI::CreateTexture(desc);
+	}
+
 	ui.Init();
 	world.Init();
 	mipMapGen.Init();
@@ -328,6 +340,7 @@ void GRP::EndFrame()
 	imgui.Draw();
 	post.Draw("Post-process", GetSwapChainTexture());
 	world.EndFrame();
+	UpdateReadbackTexture();
 	RHI::EndFrame();
 
 	if(rhie.presentToPresentUS > 0)
@@ -344,6 +357,16 @@ void GRP::EndFrame()
 	{
 		Sys_V_EndFrame();
 	}
+}
+
+void GRP::UpdateReadbackTexture()
+{
+	if(!updateReadbackTexture)
+	{
+		return;
+	}
+
+	post.Draw("Readback post-process", readbackRenderTarget);
 }
 
 void GRP::CreateTexture(image_t* image, int mipCount, int width, int height)
@@ -863,6 +886,10 @@ uint32_t GRP::CreatePSO(CachedPSO& cache, const char* name)
 
 void GRP::ExecuteRenderCommands(const byte* data)
 {
+	updateReadbackTexture =
+		R_FindRenderCommand(RC_SCREENSHOT) != NULL ||
+		R_FindRenderCommand(RC_VIDEOFRAME) != NULL;
+
 	for(;;)
 	{
 		const int commandId = ((const renderCommandBase_t*)data)->commandId;
@@ -931,10 +958,8 @@ void GRP::ExecuteRenderCommands(const byte* data)
 
 void GRP::ReadPixels(int w, int h, int alignment, colorSpace_t colorSpace, void* outPixels)
 {
-	const HTexture sourceTexture = GetSwapChainTexture();
-
 	MappedTexture mapped;
-	BeginTextureReadback(mapped, sourceTexture);
+	BeginTextureReadback(mapped, grp.readbackRenderTarget);
 
 	byte* const out0 = (byte*)outPixels;
 	const byte* const in0 = mapped.mappedData;

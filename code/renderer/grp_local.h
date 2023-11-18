@@ -680,6 +680,8 @@ struct GRP : IRenderPipeline
 
 	uint32_t CreatePSO(CachedPSO& cache, const char* name);
 
+	void UpdateReadbackTexture();
+
 	UI ui;
 	World world;
 	MipMapGenerator mipMapGen;
@@ -689,12 +691,14 @@ struct GRP : IRenderPipeline
 	bool firstInit = true;
 	RenderMode::Id renderMode; // necessary for sampler selection, useful for debugging
 	float frameSeed;
+	bool updateReadbackTexture;
 
 	// @TODO: what's up with rootSignature and uberRootSignature?
 	// probably need to nuke one of them...
 
 	HTexture renderTarget;
 	TextureFormat::Id renderTargetFormat;
+	HTexture readbackRenderTarget;
 	RootSignatureDesc rootSignatureDesc;
 	HRootSignature rootSignature;
 	HDescriptorTable descriptorTable;
