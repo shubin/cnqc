@@ -321,6 +321,13 @@ void SMAA::Draw(const viewParms_t& parms)
 		return;
 	}
 
+	// a render pass for every little 3D head in the scoreboard? no thanks
+	const int sizeThreshold = (max(glConfig.vidWidth, glConfig.vidHeight) + 29) / 30;
+	if(parms.viewportWidth <= sizeThreshold && parms.viewportHeight <= sizeThreshold)
+	{
+		return;
+	}
+
 	const char* const presetNames[] = { "", "Low", "Medium", "High", "Ultra" };
 	SCOPED_RENDER_PASS(va("SMAA %s", presetNames[r_smaa->integer]), 0.5f, 0.25f, 0.75f);
 
