@@ -326,7 +326,7 @@ void GRP::EndFrame()
 	DrawGUI();
 	R_DrawGUI();
 	imgui.Draw();
-	post.Draw();
+	post.Draw("Post-process", GetSwapChainTexture());
 	world.EndFrame();
 	RHI::EndFrame();
 

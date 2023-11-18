@@ -160,6 +160,7 @@ namespace RHI
 	{
 		enum Id
 		{
+			Invalid,
 			RGBA32_UNorm,
 			RGBA64_UNorm,
 			RGBA64_Float,

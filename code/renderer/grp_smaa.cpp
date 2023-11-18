@@ -357,7 +357,7 @@ void SMAA::Draw(const viewParms_t& parms)
 		CmdBarrier(ARRAY_LEN(barriers), barriers);
 
 		CmdBindRenderTargets(1, &inputTexture, NULL);
-		grp.post.ToneMap(); // writes to grp.renderTarget
+		grp.post.ToneMap(); // RTCF_R8G8B8A8 is assumed
 	}
 
 	CmdBindRootSignature(rootSignature);
@@ -415,6 +415,6 @@ void SMAA::Draw(const viewParms_t& parms)
 		CmdBarrier(ARRAY_LEN(barriers), barriers);
 
 		CmdBindRenderTargets(1, &grp.renderTarget, NULL);
-		grp.post.InverseToneMap(); // writes to outputTexture
+		grp.post.InverseToneMap(r_rtColorFormat->integer);
 	}
 }

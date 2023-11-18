@@ -581,9 +581,9 @@ struct CachedPSO
 struct PostProcess
 {
 	void Init();
-	void Draw();
+	void Draw(const char* renderPassName, HTexture renderTarget);
 	void ToneMap();
-	void InverseToneMap();
+	void InverseToneMap(int colorFormat);
 	void SetToneMapInput(HTexture toneMapInput);
 	void SetInverseToneMapInput(HTexture inverseToneMapInput);
 
@@ -591,7 +591,7 @@ struct PostProcess
 	HRootSignature toneMapRootSignature;
 	HDescriptorTable toneMapDescriptorTable;
 
-	HPipeline inverseToneMapPipeline;
+	HPipeline inverseToneMapPipelines[RTCF_COUNT];
 	HRootSignature inverseToneMapRootSignature;
 	HDescriptorTable inverseToneMapDescriptorTable;
 };

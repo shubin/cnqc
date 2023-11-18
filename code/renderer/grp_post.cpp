@@ -65,6 +65,15 @@ void PostProcess::Init()
 		return;
 	}
 
+	TextureFormat::Id rtFormats[RTCF_COUNT] = {};
+	rtFormats[RTCF_R8G8B8A8] = TextureFormat::RGBA32_UNorm;
+	rtFormats[RTCF_R10G10B10A2] = TextureFormat::R10G10B10A2_UNorm;
+	rtFormats[RTCF_R16G16B16A16] = TextureFormat::RGBA64_UNorm;
+	for(int i = 0; i < RTCF_COUNT; ++i)
+	{
+		Q_assert((int)rtFormats[i] > 0 && (int)rtFormats[i] < TextureFormat::Count);
+	}
+
 	{
 		RootSignatureDesc desc("tone map");
 		desc.usingVertexBuffers = false;
@@ -113,26 +122,26 @@ void PostProcess::Init()
 		update.SetSamplers(1, &grp.samplers[GetSamplerIndex(TW_CLAMP_TO_EDGE, TextureFilter::Linear)]);
 		UpdateDescriptorTable(inverseToneMapDescriptorTable, update);
 	}
+	for(int i = 0; i < RTCF_COUNT; ++i)
 	{
 		GraphicsPipelineDesc desc("inverse tone map", inverseToneMapRootSignature);
 		desc.vertexShader = ShaderByteCode(inverse_tone_map::g_vs);
 		desc.pixelShader = ShaderByteCode(inverse_tone_map::g_ps);
 		desc.depthStencil.DisableDepth();
 		desc.rasterizer.cullMode = CT_TWO_SIDED;
-		desc.AddRenderTarget(0, TextureFormat::RGBA32_UNorm);
-		inverseToneMapPipeline = CreateGraphicsPipeline(desc);
+		desc.AddRenderTarget(0, rtFormats[i]);
+		inverseToneMapPipelines[i] = CreateGraphicsPipeline(desc);
 	}
 }
 
-void PostProcess::Draw()
+void PostProcess::Draw(const char* renderPassName, HTexture renderTarget)
 {
-	SCOPED_RENDER_PASS("Post-process", 0.125f, 0.125f, 0.5f);
+	SCOPED_RENDER_PASS(renderPassName, 0.125f, 0.125f, 0.5f);
 
-	const HTexture swapChain = GetSwapChainTexture();
 	const TextureBarrier barriers[2] =
 	{
 		TextureBarrier(grp.renderTarget, ResourceStates::PixelShaderAccessBit),
-		TextureBarrier(swapChain, ResourceStates::RenderTargetBit)
+		TextureBarrier(renderTarget, ResourceStates::RenderTargetBit)
 	};
 	CmdBarrier(ARRAY_LEN(barriers), barriers);
 
@@ -170,7 +179,7 @@ void PostProcess::Draw()
 
 	if(vsX != 1.0f || vsY != 1.0f)
 	{
-		CmdClearColorTarget(swapChain, colorBlack);
+		CmdClearColorTarget(renderTarget, colorBlack);
 
 		const int x = (glInfo.winWidth - glInfo.winWidth * vsX) / 2.0f;
 		const int y = (glInfo.winHeight - glInfo.winHeight * vsY) / 2.0f;
@@ -191,7 +200,7 @@ void PostProcess::Draw()
 	pixelRC.brightness = r_brightness->value;
 	pixelRC.greyscale = r_greyscale->value;
 
-	CmdBindRenderTargets(1, &swapChain, NULL);
+	CmdBindRenderTargets(1, &renderTarget, NULL);
 	CmdBindPipeline(toneMapPipeline);
 	CmdBindRootSignature(toneMapRootSignature);
 	CmdBindDescriptorTable(toneMapRootSignature, toneMapDescriptorTable);
@@ -219,13 +228,13 @@ void PostProcess::ToneMap()
 	CmdDraw(3, 0);
 }
 
-void PostProcess::InverseToneMap()
+void PostProcess::InverseToneMap(int colorFormat)
 {
 	InverseGammaPixelRC pixelRC = {};
 	pixelRC.gamma = r_gamma->value;
 	pixelRC.invBrightness = 1.0f / r_brightness->value;
 
-	CmdBindPipeline(inverseToneMapPipeline);
+	CmdBindPipeline(inverseToneMapPipelines[colorFormat]);
 	CmdBindRootSignature(inverseToneMapRootSignature);
 	CmdBindDescriptorTable(inverseToneMapRootSignature, inverseToneMapDescriptorTable);
 	CmdSetRootConstants(inverseToneMapRootSignature, ShaderStage::Pixel, &pixelRC);

@@ -997,6 +997,7 @@ extern trGlobals_t	tr;
 #define RTCF_R10G10B10A2	1
 #define RTCF_R16G16B16A16	2
 #define RTCF_MAX			2
+#define RTCF_COUNT			3
 
 // r_gpuPreference
 #define GPUPREF_HIGHPERF		0
