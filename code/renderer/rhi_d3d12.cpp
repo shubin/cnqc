@@ -186,6 +186,130 @@ RHIExport rhie;
 RHIInfo rhiInfo;
 
 
+#define DXGI_FORMAT_LIST(X) \
+	X(UNKNOWN) \
+	X(R32G32B32A32_TYPELESS) \
+	X(R32G32B32A32_FLOAT) \
+	X(R32G32B32A32_UINT) \
+	X(R32G32B32A32_SINT) \
+	X(R32G32B32_TYPELESS) \
+	X(R32G32B32_FLOAT) \
+	X(R32G32B32_UINT) \
+	X(R32G32B32_SINT) \
+	X(R16G16B16A16_TYPELESS) \
+	X(R16G16B16A16_FLOAT) \
+	X(R16G16B16A16_UNORM) \
+	X(R16G16B16A16_UINT) \
+	X(R16G16B16A16_SNORM) \
+	X(R16G16B16A16_SINT) \
+	X(R32G32_TYPELESS) \
+	X(R32G32_FLOAT) \
+	X(R32G32_UINT) \
+	X(R32G32_SINT) \
+	X(R32G8X24_TYPELESS) \
+	X(D32_FLOAT_S8X24_UINT) \
+	X(R32_FLOAT_X8X24_TYPELESS) \
+	X(X32_TYPELESS_G8X24_UINT) \
+	X(R10G10B10A2_TYPELESS) \
+	X(R10G10B10A2_UNORM) \
+	X(R10G10B10A2_UINT) \
+	X(R11G11B10_FLOAT) \
+	X(R8G8B8A8_TYPELESS) \
+	X(R8G8B8A8_UNORM) \
+	X(R8G8B8A8_UNORM_SRGB) \
+	X(R8G8B8A8_UINT) \
+	X(R8G8B8A8_SNORM) \
+	X(R8G8B8A8_SINT) \
+	X(R16G16_TYPELESS) \
+	X(R16G16_FLOAT) \
+	X(R16G16_UNORM) \
+	X(R16G16_UINT) \
+	X(R16G16_SNORM) \
+	X(R16G16_SINT) \
+	X(R32_TYPELESS) \
+	X(D32_FLOAT) \
+	X(R32_FLOAT) \
+	X(R32_UINT) \
+	X(R32_SINT) \
+	X(R24G8_TYPELESS) \
+	X(D24_UNORM_S8_UINT) \
+	X(R24_UNORM_X8_TYPELESS) \
+	X(X24_TYPELESS_G8_UINT) \
+	X(R8G8_TYPELESS) \
+	X(R8G8_UNORM) \
+	X(R8G8_UINT) \
+	X(R8G8_SNORM) \
+	X(R8G8_SINT) \
+	X(R16_TYPELESS) \
+	X(R16_FLOAT) \
+	X(D16_UNORM) \
+	X(R16_UNORM) \
+	X(R16_UINT) \
+	X(R16_SNORM) \
+	X(R16_SINT) \
+	X(R8_TYPELESS) \
+	X(R8_UNORM) \
+	X(R8_UINT) \
+	X(R8_SNORM) \
+	X(R8_SINT) \
+	X(A8_UNORM) \
+	X(R1_UNORM) \
+	X(R9G9B9E5_SHAREDEXP) \
+	X(R8G8_B8G8_UNORM) \
+	X(G8R8_G8B8_UNORM) \
+	X(BC1_TYPELESS) \
+	X(BC1_UNORM) \
+	X(BC1_UNORM_SRGB) \
+	X(BC2_TYPELESS) \
+	X(BC2_UNORM) \
+	X(BC2_UNORM_SRGB) \
+	X(BC3_TYPELESS) \
+	X(BC3_UNORM) \
+	X(BC3_UNORM_SRGB) \
+	X(BC4_TYPELESS) \
+	X(BC4_UNORM) \
+	X(BC4_SNORM) \
+	X(BC5_TYPELESS) \
+	X(BC5_UNORM) \
+	X(BC5_SNORM) \
+	X(B5G6R5_UNORM) \
+	X(B5G5R5A1_UNORM) \
+	X(B8G8R8A8_UNORM) \
+	X(B8G8R8X8_UNORM) \
+	X(R10G10B10_XR_BIAS_A2_UNORM) \
+	X(B8G8R8A8_TYPELESS) \
+	X(B8G8R8A8_UNORM_SRGB) \
+	X(B8G8R8X8_TYPELESS) \
+	X(B8G8R8X8_UNORM_SRGB) \
+	X(BC6H_TYPELESS) \
+	X(BC6H_UF16) \
+	X(BC6H_SF16) \
+	X(BC7_TYPELESS) \
+	X(BC7_UNORM) \
+	X(BC7_UNORM_SRGB) \
+	X(AYUV) \
+	X(Y410) \
+	X(Y416) \
+	X(NV12) \
+	X(P010) \
+	X(P016) \
+	X(420_OPAQUE) \
+	X(YUY2) \
+	X(Y210) \
+	X(Y216) \
+	X(NV11) \
+	X(AI44) \
+	X(IA44) \
+	X(P8) \
+	X(A8P8) \
+	X(B4G4R4A4_UNORM) \
+	X(P208) \
+	X(V208) \
+	X(V408) \
+	X(SAMPLER_FEEDBACK_MIN_MIP_OPAQUE) \
+	X(SAMPLER_FEEDBACK_MIP_REGION_USED_OPAQUE)
+
+
 namespace RHI
 {
 	// D3D_FEATURE_LEVEL_12_0 is the minimum to ensure at least Resource Binding Tier 2:
@@ -1676,6 +1800,17 @@ namespace RHI
 		}
 	}
 
+	static const char* GetNameForD3DFormat(DXGI_FORMAT format)
+	{
+		switch(format)
+		{
+#define FORMAT(Enum) case DXGI_FORMAT_##Enum: return #Enum;
+			DXGI_FORMAT_LIST(FORMAT)
+			default: return "???";
+#undef FORMAT
+		}
+	}
+
 	static const char* GetHeapTypeName(D3D12_HEAP_TYPE type)
 	{
 		switch(type)
@@ -2209,9 +2344,9 @@ namespace RHI
 		ImGui::SameLine();
 		ImGui::InputText(" ", filter, ARRAY_LEN(filter));
 
-		if(BeginTable("Textures", 3))
+		if(BeginTable("Textures", 4))
 		{
-			TableHeader(3, "Name", "State", "Size");
+			TableHeader(4, "Name", "State", "Size", "Format");
 
 			int i = 0;
 			Texture* texture;
@@ -2222,11 +2357,13 @@ namespace RHI
 				{
 					continue;
 				}
+				const D3D12_RESOURCE_DESC desc = texture->texture->GetDesc();
 				const uint64_t byteCount = texture->allocation != NULL ? texture->allocation->GetSize() : 0;
-				TableRow(3,
+				TableRow(4,
 					texture->desc.name,
 					GetNameForD3DResourceStates(texture->currentState),
-					Com_FormatBytes(byteCount));
+					Com_FormatBytes(byteCount),
+					GetNameForD3DFormat(desc.Format));
 			}
 
 			ImGui::EndTable();
