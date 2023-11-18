@@ -1162,17 +1162,27 @@ namespace RHI
 		srcBox.bottom = textureDesc.Height;
 		srcBox.back = 1;
 
+		const D3D12_RESOURCE_STATES prevState = texture.currentState;
+
 		// @TODO: use CmdBarrier
 		D3D12_RESOURCE_BARRIER barrier = {};
 		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 		barrier.Transition.pResource = texture.texture;
-		barrier.Transition.StateBefore = texture.currentState;
+		barrier.Transition.StateBefore = prevState;
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
-		readbackCommandList->ResourceBarrier(1, &barrier);
+		if(texture.currentState != D3D12_RESOURCE_STATE_COPY_SOURCE)
+		{
+			readbackCommandList->ResourceBarrier(1, &barrier);
+			texture.currentState = D3D12_RESOURCE_STATE_COPY_SOURCE;
+		}
 		readbackCommandList->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, &srcBox);
 		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
-		barrier.Transition.StateAfter = texture.currentState;
-		readbackCommandList->ResourceBarrier(1, &barrier);
+		barrier.Transition.StateAfter = prevState;
+		if(texture.currentState != prevState)
+		{
+			readbackCommandList->ResourceBarrier(1, &barrier);
+			texture.currentState = prevState;
+		}
 
 		D3D(readbackCommandList->Close());
 		ID3D12CommandList* commandListArray[] = { readbackCommandList };
