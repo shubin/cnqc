@@ -30,63 +30,42 @@ const int renderCommandSizes[RC_COUNT + 1] =
 };
 #undef RC
 
-
 // we reserve space for frame ending commands as well as transition commands (begin/end 2D/3D rendering)
 static const int CmdListReservedBytes = (int)(sizeof(swapBuffersCommand_t) + sizeof(screenshotCommand_t) + 16 * sizeof(void*));
 
 
+static qbool R_IsReadbackRequested( readbackCommands_t* readback )
+{
+	Q_assert( readback );
+
+	return
+		readback->screenshot.requested != 0 ||
+		readback->videoFrame.requested != 0;
+}
+
+
 void R_IssueRenderCommands()
 {
-	renderCommandList_t* cmdList = &backEndData->commands;
-
 	// add an end-of-list command
+	renderCommandList_t* cmdList = &backEndData->commands;
 	((renderCommandBase_t*)(cmdList->cmds + cmdList->used))->commandId = RC_END_OF_LIST;
 
 	// clear it out, in case this is a sync and not a buffer flip
 	cmdList->used = 0;
 
-	renderPipeline->ExecuteRenderCommands( cmdList->cmds );
-}
+	// process render commands
+	readbackCommands_t* const readback = &backEndData->readbackCommands;
+	renderPipeline->ExecuteRenderCommands( cmdList->cmds, R_IsReadbackRequested( readback ) );
 
-
-byte* R_FindRenderCommand( renderCommand_t type )
-{
-	renderCommandList_t* cmdList = &backEndData->commands;
-	byte* data = cmdList->cmds;
-	byte* end = cmdList->cmds + cmdList->used;
-
-	for ( ;; ) {
-		const int commandId = ((const renderCommandBase_t*)data)->commandId;
-
-		if( commandId == type )
-			return (byte*)data;
-
-		if ( data >= end )
-			return NULL;
-
-		if ( commandId < 0 || commandId >= RC_COUNT ) {
-			Q_assert( !"Invalid render command type" );
-			return NULL;
-		}
-
-		if ( commandId == RC_END_OF_LIST )
-			return NULL;
-
-		data += renderCommandSizes[commandId];
+	// process readback commands
+	if ( readback->screenshot.requested ) {
+		RB_TakeScreenshotCmd( &readback->screenshot );
 	}
-}
-
-
-static void RemoveRenderCommand( byte* cmd, int cmdSize )
-{
-	renderCommandList_t* cmdList = &backEndData->commands;
-	const int endOffset = (cmd + cmdSize) - cmdList->cmds;
-	const int endBytes = cmdList->used - endOffset;
-	Q_assert( cmd >= cmdList->cmds );
-	Q_assert( cmd + cmdSize <= cmdList->cmds + cmdList->used );
-
-	memmove( cmd, cmd + cmdSize, endBytes );
-	cmdList->used -= cmdSize;
+	if ( readback->videoFrame.requested ) {
+		RB_TakeVideoFrameCmd( &readback->videoFrame );
+	}
+	readback->screenshot.requested = qfalse;
+	readback->videoFrame.requested = qfalse;
 }
 
 
@@ -301,7 +280,7 @@ void RE_DrawTriangle( float x0, float y0, float x1, float y1, float x2, float y2
 
 void RE_BeginFrame( stereoFrame_t stereoFrame )
 {
-	if (!tr.registered)
+	if ( !tr.registered )
 		return;
 
 	tr.frameCount++;
@@ -311,13 +290,11 @@ void RE_BeginFrame( stereoFrame_t stereoFrame )
 	// delayed screenshot
 	if ( r_delayedScreenshotPending ) {
 		r_delayedScreenshotFrame++;
-		if ( r_delayedScreenshotFrame >= 2 ) {
-			screenshotCommand_t* const cmd = AllocateRenderCommand<screenshotCommand_t>( RC_SCREENSHOT );
-			if ( cmd ) {
-				*cmd = r_delayedScreenshot;
-				r_delayedScreenshotPending = qfalse;
-				r_delayedScreenshotFrame = 0;
-			}
+		if ( r_delayedScreenshotFrame >= 1 ) {
+			backEndData->readbackCommands.screenshot = r_delayedScreenshot;
+			backEndData->readbackCommands.screenshot.requested = qtrue;
+			r_delayedScreenshotPending = qfalse;
+			r_delayedScreenshotFrame = 0;
 		}
 	}
 
@@ -330,26 +307,16 @@ void RE_BeginFrame( stereoFrame_t stereoFrame )
 
 void RE_EndFrame( qbool render )
 {
-	if (!tr.registered)
+	if ( !tr.registered )
 		return;
 
-	qbool delayScreenshot = qfalse;
 	if ( !render && r_delayedScreenshotPending )
 		render = qtrue;
 
 	if ( !render ) {
-		screenshotCommand_t* ssCmd = (screenshotCommand_t*)R_FindRenderCommand( RC_SCREENSHOT );
-
-		if ( ssCmd )
+		readbackCommands_t* const readback = &backEndData->readbackCommands;
+		if ( R_IsReadbackRequested( readback ) )
 			render = qtrue;
-
-		if ( ssCmd && !ssCmd->delayed ) {
-			// save and remove the command so we can push it back after the frame's done
-			r_delayedScreenshot = *ssCmd;
-			r_delayedScreenshot.delayed = qtrue;
-			RemoveRenderCommand( (byte*)ssCmd, sizeof(screenshotCommand_t) );
-			delayScreenshot = qtrue;
-		}
 	}
 
 	backEnd.renderFrame = render;
@@ -359,10 +326,6 @@ void RE_EndFrame( qbool render )
 
 	if ( render ) {
 		AllocateRenderCommand<swapBuffersCommand_t>( RC_SWAP_BUFFERS, qtrue );
-		if ( delayScreenshot ) {
-			screenshotCommand_t* const cmd = AllocateRenderCommand<screenshotCommand_t>( RC_SCREENSHOT, qtrue );
-			*cmd = r_delayedScreenshot;
-		}
 	} else {
 		R_ClearFrame();
 	}
@@ -385,9 +348,8 @@ void RE_TakeVideoFrame( int width, int height, byte *captureBuffer, byte *encode
 	End2D();
 	End3D();
 
-	videoFrameCommand_t* const cmd = AllocateRenderCommand<videoFrameCommand_t>( RC_VIDEOFRAME );
-	Q_assert( cmd );
-
+	videoFrameCommand_t* const cmd = &backEndData->readbackCommands.videoFrame;
+	cmd->requested = qtrue;
 	cmd->width = width;
 	cmd->height = height;
 	cmd->captureBuffer = captureBuffer;

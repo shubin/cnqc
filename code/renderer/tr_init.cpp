@@ -184,7 +184,7 @@ static void RB_TakeScreenshotJPG( int width, int height, const char* fileName )
 }
 
 
-const byte* RB_TakeScreenshotCmd( const screenshotCommand_t* cmd )
+void RB_TakeScreenshotCmd( const screenshotCommand_t* cmd )
 {
 	switch (cmd->type) {
 		case screenshotCommand_t::SS_JPG:
@@ -202,8 +202,6 @@ const byte* RB_TakeScreenshotCmd( const screenshotCommand_t* cmd )
 		r_delayedScreenshotPending = qfalse;
 		r_delayedScreenshotFrame = 0;
 	}
-
-	return (const byte*)(cmd + 1);
 }
 
 
@@ -220,14 +218,10 @@ static void R_TakeScreenshot( const char* ext, screenshotCommand_t::ss_type type
 		cmd = &r_delayedScreenshot;
 		r_delayedScreenshotPending = qtrue;
 		r_delayedScreenshotFrame = 0;
-		cmd->delayed = qtrue;
 	} else {
-		if ( R_FindRenderCommand( RC_SCREENSHOT ) )
+		cmd = &backEndData->readbackCommands.screenshot;
+		if ( cmd->requested )
 			return;
-		cmd = (screenshotCommand_t*)R_AllocateRenderCommand( sizeof(screenshotCommand_t), RC_SCREENSHOT, qfalse );
-		if ( !cmd )
-			return;
-		cmd->delayed = qfalse;
 	}
 
 	if (ri.Cmd_Argc() == 2) {
@@ -240,7 +234,7 @@ static void R_TakeScreenshot( const char* ext, screenshotCommand_t::ss_type type
 			1900+t.tm_year, 1+t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec, ms, ext );
 	}
 
-	cmd->commandId = RC_SCREENSHOT;
+	cmd->requested = qtrue;
 	cmd->width = glConfig.vidWidth;
 	cmd->height = glConfig.vidHeight;
 	cmd->fileName = s;
@@ -276,7 +270,7 @@ static void R_ScreenShotNoConJPG_f()
 //============================================================================
 
 
-const byte *RB_TakeVideoFrameCmd( const videoFrameCommand_t *cmd )
+void RB_TakeVideoFrameCmd( const videoFrameCommand_t *cmd )
 {
 	if( cmd->motionJpeg )
 	{
@@ -290,8 +284,6 @@ const byte *RB_TakeVideoFrameCmd( const videoFrameCommand_t *cmd )
 		const int frameSize = PAD( cmd->width, 4 ) * cmd->height * 3;
 		ri.CL_WriteAVIVideoFrame( cmd->captureBuffer, frameSize );
 	}
-
-	return (const byte *)(cmd + 1);
 }
 
 

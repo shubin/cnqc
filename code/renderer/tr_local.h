@@ -1490,23 +1490,30 @@ struct endSceneCommand_t : renderCommandBase_t {
 	uint32_t padding2;
 };
 
-struct screenshotCommand_t : renderCommandBase_t {
+struct readbackCommandBase_t {
+	qbool requested;
+};
+
+struct screenshotCommand_t : readbackCommandBase_t {
 	int width;
 	int height;
 	const char* fileName;
 	enum ss_type { SS_TGA, SS_JPG } type;
 	float conVis;	// if > 0, this is a delayed screenshot and we need to 
 					// restore the console visibility to that value
-	qbool delayed;
 };
 
-struct videoFrameCommand_t : renderCommandBase_t {
-	int		commandId;
+struct videoFrameCommand_t : readbackCommandBase_t {
 	int		width;
 	int		height;
 	byte	*captureBuffer;
 	byte	*encodeBuffer;
 	qbool	motionJpeg;
+};
+
+struct readbackCommands_t {
+	screenshotCommand_t screenshot;
+	videoFrameCommand_t videoFrame;
 };
 
 #pragma pack(pop)
@@ -1523,9 +1530,7 @@ struct videoFrameCommand_t : renderCommandBase_t {
 	Cmd(RC_DRAW_SCENE_VIEW, drawSceneViewCommand_t) \
 	Cmd(RC_END_SCENE, endSceneCommand_t) \
 	Cmd(RC_BEGIN_FRAME, beginFrameCommand_t) \
-	Cmd(RC_SWAP_BUFFERS, swapBuffersCommand_t) \
-	Cmd(RC_SCREENSHOT, screenshotCommand_t) \
-	Cmd(RC_VIDEOFRAME, videoFrameCommand_t)
+	Cmd(RC_SWAP_BUFFERS, swapBuffersCommand_t)
 
 #define RC(Enum, Type) Enum,
 enum renderCommand_t {
@@ -1550,6 +1555,7 @@ typedef struct {
 	srfPoly_t	*polys;
 	polyVert_t	*polyVerts;
 	renderCommandList_t	commands;
+	readbackCommands_t readbackCommands;
 } backEndData_t;
 
 #define SKY_SUBDIVISIONS		8
@@ -1566,8 +1572,8 @@ extern	int		max_polyverts;
 
 extern	backEndData_t*		backEndData;
 
-const byte* RB_TakeScreenshotCmd( const screenshotCommand_t* cmd );
-const byte* RB_TakeVideoFrameCmd( const videoFrameCommand_t* cmd );
+void RB_TakeScreenshotCmd( const screenshotCommand_t* cmd );
+void RB_TakeVideoFrameCmd( const videoFrameCommand_t* cmd );
 
 void RB_PushSingleStageShader( int stateBits, cullType_t cullType );
 void RB_PopShader();
@@ -1578,7 +1584,6 @@ void RB_DrawSky();
 void R_BuildCloudData();
 
 void R_IssueRenderCommands();
-byte* R_FindRenderCommand( renderCommand_t type );
 byte* R_AllocateRenderCommand( int bytes, int commandId, qbool endFrame );
 
 void R_AddDrawSurfCmd( drawSurf_t* drawSurfs, int numDrawSurfs, int numTranspSurfs );
@@ -1666,7 +1671,7 @@ struct IRenderPipeline
 	virtual void BeginTextureUpload(RHI::MappedTexture& mappedTexture, image_t* image) = 0;
 	virtual void EndTextureUpload() = 0;
 
-	virtual void ExecuteRenderCommands(const byte* data) = 0;
+	virtual void ExecuteRenderCommands(const byte* data, bool readbackRequested) = 0;
 
 	virtual void UISetColor(const uiSetColorCommand_t& cmd) = 0;
 	virtual void UIDrawQuad(const uiDrawQuadCommand_t& cmd) = 0;

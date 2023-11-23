@@ -884,11 +884,9 @@ uint32_t GRP::CreatePSO(CachedPSO& cache, const char* name)
 	return index;
 }
 
-void GRP::ExecuteRenderCommands(const byte* data)
+void GRP::ExecuteRenderCommands(const byte* data, bool readbackRequested)
 {
-	updateReadbackTexture =
-		R_FindRenderCommand(RC_SCREENSHOT) != NULL ||
-		R_FindRenderCommand(RC_VIDEOFRAME) != NULL;
+	updateReadbackTexture = readbackRequested;
 
 	for(;;)
 	{
@@ -939,12 +937,6 @@ void GRP::ExecuteRenderCommands(const byte* data)
 				break;
 			case RC_END_SCENE:
 				smaa.Draw(((const endSceneCommand_t*)data)->viewParms);
-				break;
-			case RC_SCREENSHOT:
-				RB_TakeScreenshotCmd((const screenshotCommand_t*)data);
-				break;
-			case RC_VIDEOFRAME:
-				RB_TakeVideoFrameCmd((const videoFrameCommand_t*)data);
 				break;
 
 			default:

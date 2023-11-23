@@ -656,7 +656,7 @@ struct GRP : IRenderPipeline
 	void ProcessModel(model_t& model) override;
 	void ProcessShader(shader_t& shader) override;
 
-	void ExecuteRenderCommands(const byte* data) override;
+	void ExecuteRenderCommands(const byte* data, bool readbackRequested) override;
 
 	void UISetColor(const uiSetColorCommand_t& cmd) override { ui.UISetColor(cmd); }
 	void UIDrawQuad(const uiDrawQuadCommand_t& cmd) override { ui.UIDrawQuad(cmd); }
