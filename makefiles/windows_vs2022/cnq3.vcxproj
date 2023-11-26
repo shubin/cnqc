@@ -150,7 +150,7 @@ copy "$(OutDir)$(TargetName).pdb" "..\..\..\workdir\"</Command>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Winmm.lib;ws2_32.lib;Version.lib;D3D12.lib;DXGI.lib;Dwmapi.lib;nvapi64.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Shlwapi.lib;Winmm.lib;ws2_32.lib;Version.lib;D3D12.lib;DXGI.lib;Dwmapi.lib;nvapi64.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\..\code\nvapi;..\..\.build\debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <EntryPointSymbol>WinMainCRTStartup</EntryPointSymbol>
       <AdditionalOptions> ..\..\code\win32\winquake.res /STACK:8388608 /MANIFEST:EMBED /MANIFESTINPUT:..\..\code\win32\client.manifest %(AdditionalOptions)</AdditionalOptions>

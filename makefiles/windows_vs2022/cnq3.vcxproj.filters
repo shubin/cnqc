@@ -150,12 +150,6 @@
     <ClInclude Include="..\..\code\client\snd_public.h">
       <Filter>client</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\code\imgui\font_proggy_clean.h">
-      <Filter>imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\code\imgui\font_sweet16_mono.h">
-      <Filter>imgui</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\code\imgui\imconfig.h">
       <Filter>imgui</Filter>
     </ClInclude>
@@ -287,6 +281,15 @@
     </ClInclude>
     <ClInclude Include="..\..\code\win32\windows.h">
       <Filter>win32</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\imgui\ProggyClean.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\imgui\Sweet16Mono.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\win32\glw_win.h">
+      <Filter>imgui</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

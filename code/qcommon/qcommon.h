@@ -1063,7 +1063,7 @@ void CL_MapLoading( void );
 // will be cleared, so the client must shutdown cgame, ui, and
 // the renderer
 
-void	CL_ForwardCommandToServer( const char *string );
+void CL_ForwardCommandToServer( const char *string );
 // adds the current command line as a clc_clientCommand to the client message.
 // things like godmode, noclip, etc, are commands directed to the server,
 // so when they are typed in at the console, they will need to be forwarded.
@@ -1189,6 +1189,9 @@ void QDECL	Sys_Error( PRINTF_FORMAT_STRING const char *error, ...);
 char	*Sys_GetClipboardData( void );
 void	Sys_SetClipboardData( const char* text );
 
+// relative to window's client rectangle
+void	Sys_GetCursorPosition( int* x, int* y );
+
 void	Sys_Print( const char *msg );
 
 // Sys_Milliseconds should only be used for profiling purposes,
@@ -1233,9 +1236,41 @@ int64_t	Sys_Microseconds();
 void	Sys_DebugPrintf( PRINTF_FORMAT_STRING const char* fmt, ... );
 qbool	Sys_IsDebuggerAttached();
 
+qbool	Sys_IsAbsolutePath( const char* path );
+
 #ifndef DEDICATED
 qbool	Sys_IsMinimized();
 #endif
+
+void	Sys_Crash( const char* message, const char* file, int line, const char* function );
+
+#define CNQ3_WINDOWS_EXCEPTION_CODE 0xDEADBEEF
+
+#define DIE(Message) Sys_Crash(Message, __FILE__, __LINE__, __FUNCTION__)
+
+#if defined(_MSC_VER)
+#define ASSERT_OR_DIE(Condition, Message) \
+	do { \
+		if (!(Condition)) { \
+			if (IsDebuggerPresent()) \
+				__debugbreak(); \
+			else \
+				Sys_Crash(Message, __FILE__, __LINE__, __FUNCTION__); \
+		} \
+	} while (false)
+#else
+#define ASSERT_OR_DIE(Condition, Message) \
+	do { \
+		if (!(Condition)) \
+			Sys_Crash(Message, __FILE__, __LINE__, __FUNCTION__); \
+	} while (false)
+#endif
+
+// RenderDoc integration - the API is grabbed at start-up by the OS module
+#define CNQ3_RENDERDOC_API_STRUCT  RENDERDOC_API_1_5_0
+#define CNQ3_RENDERDOC_API_VERSION eRENDERDOC_API_Version_1_1_0
+struct CNQ3_RENDERDOC_API_STRUCT;
+extern CNQ3_RENDERDOC_API_STRUCT* renderDocAPI;
 
 // huffman.cpp - id's original code
 // used for out-of-band (OOB) datagrams with dynamically created trees
@@ -1281,6 +1316,46 @@ printHelpResult_t Com_PrintHelp( const char* name, printf_t print, qbool printNo
 #else
 #define Q_assert(Cond)
 #endif
+
+
+float f16tof32( uint16_t x );
+uint16_t f32tof16( float x );
+
+
+// the smallest power of 2 accepted is 1
+template<typename T>
+static T IsPowerOfTwo( T x )
+{
+	return x > 0 && (x & (x - 1)) == 0;
+}
+
+
+// returns the original value if the alignment is already respected
+// AlignUp(7, 4) -> 8
+// AlignUp(8, 4) -> 8
+template<typename T>
+static T AlignUp( T value, T alignment )
+{
+	Q_assert(IsPowerOfTwo(alignment));
+
+	const T mask = alignment - 1;
+
+	return (value + mask) & (~mask);
+}
+
+
+// returns the original value if the alignment is already respected
+// AlignDown(7, 4) -> 4
+// AlignDown(8, 4) -> 8
+template<typename T>
+static T AlignDown( T value, T alignment )
+{
+	Q_assert(IsPowerOfTwo(alignment));
+
+	const T mask = alignment - 1;
+
+	return value & (~mask);
+}
 
 
 #endif // _QCOMMON_H_

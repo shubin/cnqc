@@ -929,5 +929,9 @@ const refexport_t* GetRefAPI( const refimport_t* rimp )
 
 	re.ComputeCursorPosition = RE_ComputeCursorPosition;
 
-	return &re;
+#if defined(QC)
+	re.GetAdvertisements = RE_GetAdvertisements;
+#endif
+
+	return& re;
 }

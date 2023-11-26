@@ -478,6 +478,7 @@ typedef struct {
 	float		zFar;
 #if defined( QC )
 	float		greyscale;
+	int32_t		pad0;
 #endif // QC
 } viewParms_t;
 

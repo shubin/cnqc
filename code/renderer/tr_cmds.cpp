@@ -369,3 +369,10 @@ void R_EndScene( const viewParms_t* viewParms )
 
 	cmd->viewParms = *viewParms;
 }
+
+#if defined(QC)
+void RE_GetAdvertisements(int* num, float* verts, void* shaders)
+{
+	*num = 0;
+}
+#endif
