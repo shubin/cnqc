@@ -1525,10 +1525,12 @@ static void R_SortDrawSurfs( int firstDrawSurf, int firstLitSurf )
 
 #if 0
 	if ( r_ignoreShaderSortKey->integer == 0 ) {
+		// all surfaces must be in sort order except the sky
+		// because we draw it after all the other opaque surfaces
 		float prevSort = -1.0f;
 		for ( int i = 0; i < numDrawSurfs; ++i ) {
-			R_DecomposeSort( (drawSurfs + i)->sort, &entityNum, &shader, &fogNum );
-			assert( shader->sort >= prevSort );
+			R_DecomposeSort( (drawSurfs + i)->sort, &entityNum, &shader );
+			Q_assert( shader->isSky || shader->sort >= prevSort );
 			prevSort = shader->sort;
 		}
 	}

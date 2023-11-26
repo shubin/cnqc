@@ -1494,11 +1494,15 @@ void World::DrawLitSurfaces(dlight_t* dl, bool opaque)
 
 void World::DrawDynamicLights(bool opaque)
 {
-	SCOPED_RENDER_PASS("Dynamic Lights", 1.0f, 0.25f, 0.25f);
-
 	if(r_dynamiclight->integer == 0 ||
-		backEnd.refdef.num_dlights == 0 ||
 		backEnd.viewParms.isMirror)
+	{
+		return;
+	}
+
+	SCOPED_RENDER_PASS(opaque ? "DL Opaque" : "DL Transp.", 1.0f, 0.25f, 0.25f);
+
+	if(backEnd.refdef.num_dlights == 0)
 	{
 		return;
 	}

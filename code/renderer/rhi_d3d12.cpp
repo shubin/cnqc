@@ -148,11 +148,12 @@ D3D(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&graphicsAnalysis)));
 
 
 #if defined(_DEBUG)
-#define D3D_DEBUG 1
+#define D3D_DEBUG
 #endif
-#define D3D_AGILITY_SDK 1
-#define D3D_GPU_BASED_VALIDATION 1
-#define DEBUG_FENCE 0
+#define D3D_AGILITY_SDK
+//#define D3D_GPU_BASED_VALIDATION
+//#define RHI_DEBUG_FENCE
+//#define RHI_ENABLE_NVAPI
 
 
 #include "rhi_local.h"
@@ -164,7 +165,9 @@ D3D(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&graphicsAnalysis)));
 #include <dwmapi.h> // for DwmGetCompositionTimingInfo
 #define D3D12MA_D3D12_HEADERS_ALREADY_INCLUDED
 #include "D3D12MemAlloc.h"
+#if defined(RHI_ENABLE_NVAPI)
 #include "../nvapi/nvapi.h"
+#endif
 #include "../pix/pix3.h"
 #include "../client/cl_imgui.h"
 
@@ -180,6 +183,131 @@ extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8".\\cnq3\
 
 
 RHIExport rhie;
+RHIInfo rhiInfo;
+
+
+#define DXGI_FORMAT_LIST(X) \
+	X(UNKNOWN) \
+	X(R32G32B32A32_TYPELESS) \
+	X(R32G32B32A32_FLOAT) \
+	X(R32G32B32A32_UINT) \
+	X(R32G32B32A32_SINT) \
+	X(R32G32B32_TYPELESS) \
+	X(R32G32B32_FLOAT) \
+	X(R32G32B32_UINT) \
+	X(R32G32B32_SINT) \
+	X(R16G16B16A16_TYPELESS) \
+	X(R16G16B16A16_FLOAT) \
+	X(R16G16B16A16_UNORM) \
+	X(R16G16B16A16_UINT) \
+	X(R16G16B16A16_SNORM) \
+	X(R16G16B16A16_SINT) \
+	X(R32G32_TYPELESS) \
+	X(R32G32_FLOAT) \
+	X(R32G32_UINT) \
+	X(R32G32_SINT) \
+	X(R32G8X24_TYPELESS) \
+	X(D32_FLOAT_S8X24_UINT) \
+	X(R32_FLOAT_X8X24_TYPELESS) \
+	X(X32_TYPELESS_G8X24_UINT) \
+	X(R10G10B10A2_TYPELESS) \
+	X(R10G10B10A2_UNORM) \
+	X(R10G10B10A2_UINT) \
+	X(R11G11B10_FLOAT) \
+	X(R8G8B8A8_TYPELESS) \
+	X(R8G8B8A8_UNORM) \
+	X(R8G8B8A8_UNORM_SRGB) \
+	X(R8G8B8A8_UINT) \
+	X(R8G8B8A8_SNORM) \
+	X(R8G8B8A8_SINT) \
+	X(R16G16_TYPELESS) \
+	X(R16G16_FLOAT) \
+	X(R16G16_UNORM) \
+	X(R16G16_UINT) \
+	X(R16G16_SNORM) \
+	X(R16G16_SINT) \
+	X(R32_TYPELESS) \
+	X(D32_FLOAT) \
+	X(R32_FLOAT) \
+	X(R32_UINT) \
+	X(R32_SINT) \
+	X(R24G8_TYPELESS) \
+	X(D24_UNORM_S8_UINT) \
+	X(R24_UNORM_X8_TYPELESS) \
+	X(X24_TYPELESS_G8_UINT) \
+	X(R8G8_TYPELESS) \
+	X(R8G8_UNORM) \
+	X(R8G8_UINT) \
+	X(R8G8_SNORM) \
+	X(R8G8_SINT) \
+	X(R16_TYPELESS) \
+	X(R16_FLOAT) \
+	X(D16_UNORM) \
+	X(R16_UNORM) \
+	X(R16_UINT) \
+	X(R16_SNORM) \
+	X(R16_SINT) \
+	X(R8_TYPELESS) \
+	X(R8_UNORM) \
+	X(R8_UINT) \
+	X(R8_SNORM) \
+	X(R8_SINT) \
+	X(A8_UNORM) \
+	X(R1_UNORM) \
+	X(R9G9B9E5_SHAREDEXP) \
+	X(R8G8_B8G8_UNORM) \
+	X(G8R8_G8B8_UNORM) \
+	X(BC1_TYPELESS) \
+	X(BC1_UNORM) \
+	X(BC1_UNORM_SRGB) \
+	X(BC2_TYPELESS) \
+	X(BC2_UNORM) \
+	X(BC2_UNORM_SRGB) \
+	X(BC3_TYPELESS) \
+	X(BC3_UNORM) \
+	X(BC3_UNORM_SRGB) \
+	X(BC4_TYPELESS) \
+	X(BC4_UNORM) \
+	X(BC4_SNORM) \
+	X(BC5_TYPELESS) \
+	X(BC5_UNORM) \
+	X(BC5_SNORM) \
+	X(B5G6R5_UNORM) \
+	X(B5G5R5A1_UNORM) \
+	X(B8G8R8A8_UNORM) \
+	X(B8G8R8X8_UNORM) \
+	X(R10G10B10_XR_BIAS_A2_UNORM) \
+	X(B8G8R8A8_TYPELESS) \
+	X(B8G8R8A8_UNORM_SRGB) \
+	X(B8G8R8X8_TYPELESS) \
+	X(B8G8R8X8_UNORM_SRGB) \
+	X(BC6H_TYPELESS) \
+	X(BC6H_UF16) \
+	X(BC6H_SF16) \
+	X(BC7_TYPELESS) \
+	X(BC7_UNORM) \
+	X(BC7_UNORM_SRGB) \
+	X(AYUV) \
+	X(Y410) \
+	X(Y416) \
+	X(NV12) \
+	X(P010) \
+	X(P016) \
+	X(420_OPAQUE) \
+	X(YUY2) \
+	X(Y210) \
+	X(Y216) \
+	X(NV11) \
+	X(AI44) \
+	X(IA44) \
+	X(P8) \
+	X(A8P8) \
+	X(B4G4R4A4_UNORM) \
+	X(P208) \
+	X(V208) \
+	X(V408) \
+	X(SAMPLER_FEEDBACK_MIN_MIP_OPAQUE) \
+	X(SAMPLER_FEEDBACK_MIP_REGION_USED_OPAQUE)
 
 
 namespace RHI
@@ -190,15 +318,6 @@ namespace RHI
 	// - 64 UAVs
 	// - 2048 samplers
 	static const D3D_FEATURE_LEVEL FeatureLevel = D3D_FEATURE_LEVEL_12_0;
-	static const uint32_t MaxCPUGenericDescriptors = RHI_MAX_TEXTURES_2D * 4;
-	static const uint32_t MaxCPUSamplerDescriptors = RHI_MAX_SAMPLERS;
-	static const uint32_t MaxCPURTVDescriptors = 64;
-	static const uint32_t MaxCPUDSVDescriptors = 64;
-	static const uint32_t MaxCPUDescriptors =
-		MaxCPUGenericDescriptors +
-		MaxCPUSamplerDescriptors +
-		MaxCPURTVDescriptors +
-		MaxCPUDSVDescriptors;
 
 	struct ResourceType
 	{
@@ -1043,17 +1162,27 @@ namespace RHI
 		srcBox.bottom = textureDesc.Height;
 		srcBox.back = 1;
 
+		const D3D12_RESOURCE_STATES prevState = texture.currentState;
+
 		// @TODO: use CmdBarrier
 		D3D12_RESOURCE_BARRIER barrier = {};
 		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 		barrier.Transition.pResource = texture.texture;
-		barrier.Transition.StateBefore = texture.currentState;
+		barrier.Transition.StateBefore = prevState;
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
-		readbackCommandList->ResourceBarrier(1, &barrier);
+		if(texture.currentState != D3D12_RESOURCE_STATE_COPY_SOURCE)
+		{
+			readbackCommandList->ResourceBarrier(1, &barrier);
+			texture.currentState = D3D12_RESOURCE_STATE_COPY_SOURCE;
+		}
 		readbackCommandList->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, &srcBox);
 		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
-		barrier.Transition.StateAfter = texture.currentState;
-		readbackCommandList->ResourceBarrier(1, &barrier);
+		barrier.Transition.StateAfter = prevState;
+		if(texture.currentState != prevState)
+		{
+			readbackCommandList->ResourceBarrier(1, &barrier);
+			texture.currentState = prevState;
+		}
 
 		D3D(readbackCommandList->Close());
 		ID3D12CommandList* commandListArray[] = { readbackCommandList };
@@ -1497,6 +1626,7 @@ namespace RHI
 		switch(format)
 		{
 			case TextureFormat::RGBA32_UNorm: return DXGI_FORMAT_R8G8B8A8_UNORM;
+			case TextureFormat::RGBA64_UNorm: return DXGI_FORMAT_R16G16B16A16_UNORM;
 			case TextureFormat::RGBA64_Float: return DXGI_FORMAT_R16G16B16A16_FLOAT;
 			case TextureFormat::Depth32_Float: return DXGI_FORMAT_D32_FLOAT;
 			case TextureFormat::Depth24_Stencil8: return DXGI_FORMAT_D24_UNORM_S8_UINT;
@@ -1677,6 +1807,17 @@ namespace RHI
 			case D3D12_RESOURCE_STATE_GENERIC_READ: return "generic read";
 			case D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE: return "generic shader resource";
 			default: return "???";
+		}
+	}
+
+	static const char* GetNameForD3DFormat(DXGI_FORMAT format)
+	{
+		switch(format)
+		{
+#define FORMAT(Enum) case DXGI_FORMAT_##Enum: return #Enum;
+			DXGI_FORMAT_LIST(FORMAT)
+			default: return "???";
+#undef FORMAT
 		}
 	}
 
@@ -2184,6 +2325,8 @@ namespace RHI
 				TableRow(2, "VRS: 2x4, 4x2, 4x4 support", options6.AdditionalShadingRatesSupported ? "YES" : "NO");
 			}
 
+			// the validation layer reports live objects at shutdown when NvAPI_D3D12_QueryCpuVisibleVidmem is called
+#if defined(RHI_ENABLE_NVAPI)
 			NvU64 cvvTotal, cvvFree;
 			if(NvAPI_D3D12_QueryCpuVisibleVidmem(rhi.device, &cvvTotal, &cvvFree) == NvAPI_Status::NVAPI_OK &&
 				cvvTotal > 0)
@@ -2195,6 +2338,7 @@ namespace RHI
 			{
 				TableRow(2, "CPU Visible VRAM", "N/A");
 			}
+#endif
 
 			ImGui::EndTable();
 		}
@@ -2210,9 +2354,9 @@ namespace RHI
 		ImGui::SameLine();
 		ImGui::InputText(" ", filter, ARRAY_LEN(filter));
 
-		if(BeginTable("Textures", 3))
+		if(BeginTable("Textures", 4))
 		{
-			TableHeader(3, "Name", "State", "Size");
+			TableHeader(4, "Name", "State", "Size", "Format");
 
 			int i = 0;
 			Texture* texture;
@@ -2223,11 +2367,13 @@ namespace RHI
 				{
 					continue;
 				}
+				const D3D12_RESOURCE_DESC desc = texture->texture->GetDesc();
 				const uint64_t byteCount = texture->allocation != NULL ? texture->allocation->GetSize() : 0;
-				TableRow(3,
+				TableRow(4,
 					texture->desc.name,
 					GetNameForD3DResourceStates(texture->currentState),
-					Com_FormatBytes(byteCount));
+					Com_FormatBytes(byteCount),
+					GetNameForD3DFormat(desc.Format));
 			}
 
 			ImGui::EndTable();
@@ -2667,6 +2813,7 @@ namespace RHI
 
 		WaitUntilDeviceIsIdle();
 
+#if defined(RHI_ENABLE_NVAPI)
 		{
 			const NvAPI_Status nr = NvAPI_Initialize();
 			if(nr == NvAPI_Status::NVAPI_OK)
@@ -2694,6 +2841,7 @@ namespace RHI
 				}
 			}
 		}
+#endif
 
 		rhi.pix.module = LoadLibraryA("cnq3/WinPixEventRuntime.dll");
 		if(rhi.pix.module != NULL)
@@ -2729,6 +2877,17 @@ namespace RHI
 		glInfo.maxTextureSize = MAX_TEXTURE_SIZE;
 		glInfo.maxAnisotropy = 16;
 		glInfo.depthFadeSupport = qtrue;
+
+		Q_strncpyz(glConfig.vendor_string, rhi.adapterName, sizeof(glConfig.vendor_string));
+		Q_strncpyz(glConfig.renderer_string, "Direct3D 12", sizeof(glConfig.renderer_string));
+
+		Q_strncpyz(rhiInfo.name, "Direct3D 12", sizeof(rhiInfo.name));
+		Q_strncpyz(rhiInfo.adapter, rhi.adapterName, sizeof(rhiInfo.adapter));
+		rhiInfo.hasTearing = rhi.isTearingSupported;
+		rhiInfo.hasBaseVRS = rhi.baseVRSSupport;
+		rhiInfo.hasExtendedVRS = rhi.extendedVRSSupport;
+		rhiInfo.isUMA = rhi.allocator->IsUMA();
+		rhiInfo.isCacheCoherentUMA = rhi.allocator->IsCacheCoherentUMA();
 
 		rhi.initialized = true;
 
@@ -2809,7 +2968,9 @@ namespace RHI
 		FreeLibrary(rhi.dxilModule);
 		FreeLibrary(rhi.dxcModule);
 
+#if defined(RHI_ENABLE_NVAPI)
 		NvAPI_Unload();
+#endif
 		
 #if defined(D3D_DEBUG)
 		IDXGIDebug1* debug = NULL;
@@ -2841,7 +3002,7 @@ namespace RHI
 
 		{
 			const UINT64 currentFenceValue = rhi.mainFenceValues[rhi.frameIndex];
-#if DEBUG_FENCE
+#if RHI_DEBUG_FENCE
 			Sys_DebugPrintf("Wait: %d (BeginFrame)\n", (int)currentFenceValue);
 #endif
 			rhi.mainFence.WaitOnCPU(currentFenceValue);
@@ -2917,7 +3078,7 @@ namespace RHI
 		// stop recording
 		D3D(rhi.commandList->Close());
 
-#if DEBUG_FENCE
+#if RHI_DEBUG_FENCE
 		Sys_DebugPrintf("Signal: %d (EndFrame)\n", rhi.mainFenceValues[rhi.frameIndex]);
 #endif
 		rhi.mainFence.Signal(rhi.mainCommandQueue, rhi.mainFenceValues[rhi.frameIndex]);
@@ -3662,7 +3823,7 @@ namespace RHI
 		desc.SampleMask = UINT_MAX;
 
 		UINT semanticIndices[ShaderSemantic::Count] = { 0 };
-		D3D12_INPUT_ELEMENT_DESC inputElementDescs[MaxVertexAttributeCount];
+		D3D12_INPUT_ELEMENT_DESC inputElementDescs[MaxVertexAttributes];
 		for(int a = 0; a < rhiDesc.vertexLayout.attributeCount; ++a)
 		{
 			const VertexAttribute& va = rhiDesc.vertexLayout.attributes[a];
@@ -3809,14 +3970,17 @@ namespace RHI
 		PushArg(entryPointW);
 		PushArg(L"-T");
 		PushArg(targetW);
-		PushArg(DXC_ARG_WARNINGS_ARE_ERRORS);
+		PushArg(DXC_ARG_WARNINGS_ARE_ERRORS); // -WX
 #if defined(D3D_DEBUG)
-		PushArg(DXC_ARG_DEBUG);
-		PushArg(DXC_ARG_SKIP_OPTIMIZATIONS);
+		PushArg(DXC_ARG_DEBUG); // -Zi embeds debug info
+		PushArg(DXC_ARG_SKIP_OPTIMIZATIONS); // -Od disables optimizations
+		PushArg(DXC_ARG_ENABLE_STRICTNESS); // -Ges enables strict mode
+		PushArg(DXC_ARG_IEEE_STRICTNESS); // -Gis forces IEEE strictness
+		PushArg(L"-Qembed_debug"); // -Qembed_debug embeds debug info in shader container
 #else
 		PushArg(L"-Qstrip_debug");
 		PushArg(L"-Qstrip_reflect");
-		PushArg(DXC_ARG_OPTIMIZATION_LEVEL3);
+		PushArg(DXC_ARG_OPTIMIZATION_LEVEL3); // -O3
 #endif
 		PushArg(L"-D");
 		PushArg(desc.stage == ShaderStage::Vertex ? L"VERTEX_SHADER=1" : L"VERTEX_SHADER=0");
@@ -3892,7 +4056,7 @@ namespace RHI
 		Q_assert(CanWriteCommands());
 		Q_assert(colorCount > 0 || colorTargets == NULL);
 
-		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[MaxRenderTargetCount] = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[MaxRenderTargets] = {};
 		for(uint32_t t = 0; t < colorCount; ++t)
 		{
 			const uint32_t rtvIndex = rhi.textures.Get(colorTargets[t]).rtvIndex;
@@ -3981,11 +4145,11 @@ namespace RHI
 	void CmdBindVertexBuffers(uint32_t count, const HBuffer* vertexBuffers, const uint32_t* byteStrides, const uint32_t* startByteOffsets)
 	{
 		Q_assert(CanWriteCommands());
-		Q_assert(count <= MaxVertexBufferCount);
+		Q_assert(count <= MaxVertexBuffers);
 
-		count = min(count, MaxVertexBufferCount);
+		count = min(count, MaxVertexBuffers);
 
-		D3D12_VERTEX_BUFFER_VIEW views[MaxVertexBufferCount];
+		D3D12_VERTEX_BUFFER_VIEW views[MaxVertexBuffers];
 		for(uint32_t v = 0; v < count; ++v)
 		{
 			const Buffer& buffer = rhi.buffers.Get(vertexBuffers[v]);
@@ -4155,19 +4319,6 @@ namespace RHI
 		}
 	}
 
-#if 0
-	void CmdNullUAVBarrier()
-	{
-		Q_assert(CanWriteCommands());
-
-		D3D12_RESOURCE_BARRIER barrier = {};
-		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-		barrier.UAV.pResource = NULL;
-		rhi.commandList->ResourceBarrier(1, &barrier);
-	}
-#endif
-
 	void CmdClearColorTarget(HTexture texture, const vec4_t clearColor, const Rect* rect)
 	{
 		Q_assert(CanWriteCommands());
@@ -4189,19 +4340,6 @@ namespace RHI
 		const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rhi.descHeapRTVs.GetCPUHandle(renderTarget.rtvIndex);
 		rhi.commandList->ClearRenderTargetView(rtvHandle, clearColor, rectCount, d3dRectPtr);
 	}
-
-#if 0
-	void CmdClearUAV(HTexture htexture, uint32_t mip)
-	{
-		const Texture& texture = rhi.textures.Get(htexture);
-		const uint32_t uavIndex = texture.mips[mip].uavIndex;
-		const D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = rhi.descHeapGeneric.GetCPUHandle(uavIndex);
-		D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle = rhi.descHeapGeneric.heap->GetGPUDescriptorHandleForHeapStart();
-		gpuHandle.ptr += uavIndex * rhi.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		const UINT values[4] = { 0, 255, 0, 255 };
-		rhi.commandList->ClearUnorderedAccessViewUint(gpuHandle, cpuHandle, texture.texture, values, 0, NULL);
-	}
-#endif
 
 	void CmdClearDepthStencilTarget(HTexture texture, bool clearDepth, float depth, bool clearStencil, uint8_t stencil, const Rect* rect)
 	{
@@ -4398,7 +4536,7 @@ namespace RHI
 	{
 		// direct queue
 		rhi.mainFenceValues[rhi.frameIndex]++;
-#if DEBUG_FENCE
+#if RHI_DEBUG_FENCE
 		Sys_DebugPrintf("Signal: %d (WaitUntilDeviceIsIdle)\n", (int)rhi.mainFenceValues[rhi.frameIndex]);
 		Sys_DebugPrintf("Wait: %d (WaitUntilDeviceIsIdle)\n", (int)rhi.mainFenceValues[rhi.frameIndex]);
 #endif

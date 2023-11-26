@@ -23,6 +23,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../qcommon/q_shared.h"
 #include "../qcommon/qcommon.h"
 #include "win_local.h"
+#include <shlwapi.h>
 
 
 int Sys_Milliseconds()
@@ -168,9 +169,14 @@ qbool Sys_IsDebuggerAttached()
 }
 
 
+qbool Sys_IsAbsolutePath( const char* path )
+{
+	return PathIsRelativeA(path) != TRUE;
+}
+
+
 void Sys_Crash( const char* message, const char* file, int line, const char* function )
 {
 	const ULONG_PTR args[4] = { (ULONG_PTR)message, (ULONG_PTR)file, (ULONG_PTR)line, (ULONG_PTR)function };
 	RaiseException(CNQ3_WINDOWS_EXCEPTION_CODE, EXCEPTION_NONCONTINUABLE, ARRAY_LEN(args), args);
 }
-

@@ -12,7 +12,7 @@ endif
 
 ifeq ($(config),debug_x64)
   RESCOMP = windres
-  TARGETDIR = ../../.build/debug_x64
+  TARGETDIR = ../../.build/debug
   TARGET = $(TARGETDIR)/libbotlib.a
   OBJDIR = ../../.build/debug_x64/botlib
   DEFINES += -DQC=1 -DBOTLIB -DDEBUG -D_DEBUG
@@ -39,7 +39,7 @@ endif
 
 ifeq ($(config),release_x64)
   RESCOMP = windres
-  TARGETDIR = ../../.build/release_x64
+  TARGETDIR = ../../.build/release
   TARGET = $(TARGETDIR)/libbotlib.a
   OBJDIR = ../../.build/release_x64/botlib
   DEFINES += -DQC=1 -DBOTLIB -DNDEBUG

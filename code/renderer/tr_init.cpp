@@ -55,9 +55,12 @@ cvar_t	*r_lightmap;
 cvar_t	*r_lightmapGreyscale;
 cvar_t	*r_mapGreyscale;
 cvar_t	*r_mapGreyscaleCTF;
+cvar_t	*r_teleporterFlash;
 cvar_t	*r_sleepThreshold;
 cvar_t	*r_shadingRate;
 cvar_t	*r_guiFont;
+cvar_t	*r_guiFontFile;
+cvar_t	*r_guiFontHeight;
 cvar_t	*r_novis;
 cvar_t	*r_nocull;
 cvar_t	*r_nocurves;
@@ -84,9 +87,6 @@ cvar_t	*r_singleShader;
 cvar_t	*r_roundImagesDown;
 cvar_t	*r_colorMipLevels;
 cvar_t	*r_picmip;
-cvar_t	*r_showsky;
-cvar_t	*r_showtris;
-cvar_t	*r_shownormals;
 cvar_t	*r_clear;
 cvar_t	*r_vsync;
 cvar_t	*r_lego;
@@ -184,7 +184,7 @@ static void RB_TakeScreenshotJPG( int width, int height, const char* fileName )
 }
 
 
-const byte* RB_TakeScreenshotCmd( const screenshotCommand_t* cmd )
+void RB_TakeScreenshotCmd( const screenshotCommand_t* cmd )
 {
 	switch (cmd->type) {
 		case screenshotCommand_t::SS_JPG:
@@ -202,8 +202,6 @@ const byte* RB_TakeScreenshotCmd( const screenshotCommand_t* cmd )
 		r_delayedScreenshotPending = qfalse;
 		r_delayedScreenshotFrame = 0;
 	}
-
-	return (const byte*)(cmd + 1);
 }
 
 
@@ -220,14 +218,10 @@ static void R_TakeScreenshot( const char* ext, screenshotCommand_t::ss_type type
 		cmd = &r_delayedScreenshot;
 		r_delayedScreenshotPending = qtrue;
 		r_delayedScreenshotFrame = 0;
-		cmd->delayed = qtrue;
 	} else {
-		if ( R_FindRenderCommand( RC_SCREENSHOT ) )
+		cmd = &backEndData->readbackCommands.screenshot;
+		if ( cmd->requested )
 			return;
-		cmd = (screenshotCommand_t*)R_AllocateRenderCommand( sizeof(screenshotCommand_t), RC_SCREENSHOT, qfalse );
-		if ( !cmd )
-			return;
-		cmd->delayed = qfalse;
 	}
 
 	if (ri.Cmd_Argc() == 2) {
@@ -240,7 +234,7 @@ static void R_TakeScreenshot( const char* ext, screenshotCommand_t::ss_type type
 			1900+t.tm_year, 1+t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec, ms, ext );
 	}
 
-	cmd->commandId = RC_SCREENSHOT;
+	cmd->requested = qtrue;
 	cmd->width = glConfig.vidWidth;
 	cmd->height = glConfig.vidHeight;
 	cmd->fileName = s;
@@ -276,7 +270,7 @@ static void R_ScreenShotNoConJPG_f()
 //============================================================================
 
 
-const byte *RB_TakeVideoFrameCmd( const videoFrameCommand_t *cmd )
+void RB_TakeVideoFrameCmd( const videoFrameCommand_t *cmd )
 {
 	if( cmd->motionJpeg )
 	{
@@ -290,21 +284,21 @@ const byte *RB_TakeVideoFrameCmd( const videoFrameCommand_t *cmd )
 		const int frameSize = PAD( cmd->width, 4 ) * cmd->height * 3;
 		ri.CL_WriteAVIVideoFrame( cmd->captureBuffer, frameSize );
 	}
-
-	return (const byte *)(cmd + 1);
 }
 
 
 ///////////////////////////////////////////////////////////////
 
 
-void GfxInfo_f( void )
+static void GfxInfo_f()
 {
-	if ( glConfig.vendor_string[0] != '\0' )
-		ri.Printf( PRINT_ALL, "Vendor: %s\n", glConfig.vendor_string );
-	if ( glConfig.renderer_string[0] != '\0' )
-		ri.Printf( PRINT_ALL, "Renderer: %s\n", glConfig.renderer_string );
-	//@TODO: RHI::PrintInfo();
+	ri.Printf(PRINT_ALL, "RHI:                    %s\n", rhiInfo.name);
+	ri.Printf(PRINT_ALL, "Adapter:                %s\n", rhiInfo.adapter);
+	ri.Printf(PRINT_ALL, "  Tearing support:      %s\n", rhiInfo.hasTearing ? "YES" : "NO");
+	ri.Printf(PRINT_ALL, "  Base VRS support:     %s\n", rhiInfo.hasBaseVRS ? "YES" : "NO");
+	ri.Printf(PRINT_ALL, "  Extended VRS support: %s\n", rhiInfo.hasExtendedVRS ? "YES" : "NO");
+	ri.Printf(PRINT_ALL, "  UMA:                  %s\n", rhiInfo.isUMA ? "YES" : "NO");
+	ri.Printf(PRINT_ALL, "  Cache coherent UMA:   %s\n", rhiInfo.isCacheCoherentUMA ? "YES" : "NO");
 }
 
 
@@ -546,6 +540,10 @@ static const cvarTableItem_t r_cvars[] =
 		"CTF map desaturation", CVARCAT_GRAPHICS, "Desaturates CTF world surfaces", "CTF surfaces are the red/blue base banners/markers"
 	},
 	{
+		&r_teleporterFlash, "r_teleporterFlash", "1", CVAR_ARCHIVE, CVART_BOOL, NULL, NULL, "draws bright colors when being teleported",
+		"Bright teleporter flash", CVARCAT_GRAPHICS, "Draws bright colors while being teleported", ""
+	},
+	{
 		&r_sleepThreshold, "r_sleepThreshold", "2500", CVAR_ARCHIVE, CVART_INTEGER, "2000", "4000", help_r_sleepThreshold,
 		"Frame sleep threshold", CVARCAT_GRAPHICS | CVARCAT_PERFORMANCE, "Higher means more consistent frame times but higher CPU usage",
 		"This is the time cushion (in microseconds) for frame sleep.\n"
@@ -573,10 +571,19 @@ static const cvarTableItem_t r_cvars[] =
 		CVAR_GUI_VALUE("6", "4x4", "4x horizontal, 4x vertical")
 	},
 	{
-		&r_guiFont, "r_guiFont", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "1", help_r_guiFont,
+		&r_guiFont, "r_guiFont", "0", CVAR_ARCHIVE, CVART_INTEGER, "0", "2", help_r_guiFont,
 		"GUI font", CVARCAT_GUI, "", "",
 		CVAR_GUI_VALUE("0", "Proggy Clean (13px)", "")
 		CVAR_GUI_VALUE("1", "Sweet16 Mono (16px)", "")
+		CVAR_GUI_VALUE("2", "Custom Font File", "")
+	},
+	{
+		&r_guiFontFile, "r_guiFontFile", "", CVAR_ARCHIVE, CVART_STRING, NULL, NULL, "custom font .ttf file",
+		"GUI font file", CVARCAT_GUI, "Path of the custom .ttf font file", "", NULL
+	},
+	{
+		&r_guiFontHeight, "r_guiFontHeight", "24", CVAR_ARCHIVE, CVART_INTEGER, "7", "48", "custom font height",
+		"GUI font height", CVARCAT_GUI, "Height of the custom font", "", NULL
 	},
 
 	//
@@ -637,18 +644,6 @@ static const cvarTableItem_t r_cvars[] =
 	},
 	{
 		&r_debugSurface, "r_debugSurface", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "draws collision models",
-		"", CVARCAT_GRAPHICS | CVARCAT_DEBUGGING, "", ""
-	},
-	{
-		&r_showsky, "r_showsky", "0", CVAR_CHEAT, CVART_BOOL, NULL, NULL, "forces sky in front of all surfaces",
-		"", CVARCAT_GRAPHICS | CVARCAT_DEBUGGING, "", ""
-	},
-	{
-		&r_showtris, "r_showtris", "0", CVAR_CHEAT, CVART_BITMASK, "0", XSTRING(SHOWTRIS_MAX), help_r_showtris,
-		"", CVARCAT_GRAPHICS | CVARCAT_DEBUGGING, "", ""
-	},
-	{
-		&r_shownormals, "r_shownormals", "0", CVAR_CHEAT, CVART_BITMASK, "0", XSTRING(SHOWTRIS_MAX), help_r_shownormals,
 		"", CVARCAT_GRAPHICS | CVARCAT_DEBUGGING, "", ""
 	},
 	{
@@ -757,7 +752,6 @@ void R_Init()
 	R_InitMipFilter();
 
 	renderPipeline->Init();
-	GfxInfo_f();
 
 	R_InitImages();
 
@@ -934,9 +928,6 @@ const refexport_t* GetRefAPI( const refimport_t* rimp )
 	re.DepthClamp = RE_IsDepthClampEnabled;
 
 	re.ComputeCursorPosition = RE_ComputeCursorPosition;
-#if defined( QC )
-	re.GetAdvertisements = RE_GetAdvertisements;
-#endif
 
 	return &re;
 }

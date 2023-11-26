@@ -162,7 +162,9 @@ S_COLOR_VAL "    6 " S_COLOR_HELP "= 4x4 (extended mode)\n" \
 #define help_r_guiFont \
 "font for CNQ3's GUI\n" \
 S_COLOR_VAL "    0 " S_COLOR_HELP "= Proggy Clean (13px)\n" \
-S_COLOR_VAL "    1 " S_COLOR_HELP "= Sweet16 Mono (16px)"
+S_COLOR_VAL "    1 " S_COLOR_HELP "= Sweet16 Mono (16px)\n" \
+S_COLOR_VAL "    2 " S_COLOR_HELP "= Custom Font\n" \
+"Custom: " S_COLOR_CVAR "r_guiFontFile" S_COLOR_HELP ", " S_COLOR_CVAR "r_guiFontHeight"
 
 #define help_r_ignoreShaderSortKey \
 "ignores the shader sort key of transparent surfaces\n" \

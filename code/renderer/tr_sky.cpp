@@ -549,11 +549,6 @@ void RB_DrawSky()
 	RB_ClipSkyPolygons();
 	RB_CalcSkyBounds();
 
-	// @TODO:
-	// r_showsky will let all the sky blocks be drawn in
-	// front of everything to allow developers to see how
-	// much sky is getting sucked in
-	
 	if (tess.shader->sky.outerbox[0] && tess.shader->sky.outerbox[0] != tr.defaultImage)
 		DrawSkyBox();
 

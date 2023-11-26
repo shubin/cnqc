@@ -466,7 +466,7 @@ local function ApplyExeProjectSettings(exeName, server)
 		debugdir(abs_path_q3)
 
 	filter "system:windows"
-		links { "Winmm", "ws2_32", "Version" }
+		links { "Winmm", "ws2_32", "Version", "Shlwapi" }
 		if (server == 0) then
 			links { "D3D12", "DXGI", "Dwmapi", "nvapi64" }
 		end

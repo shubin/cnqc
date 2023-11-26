@@ -27,11 +27,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // A user mod should never modify this file
 
 #if defined( QC )
-#define Q3_VERSION				"Blood Run PB3 (CNQ3 1.52)"
+#define Q3_VERSION				"Blood Run PB3 (CNQ3 1.54)"
 #define CLIENT_WINDOW_TITLE		"Blood Run"
 #define CONSOLE_WINDOW_TITLE	"Blood Run"
 #else
-#define Q3_VERSION				"CNQ3 1.52"
+#define Q3_VERSION				"CNQ3 1.54"
 #define CLIENT_WINDOW_TITLE		"CNQ3"
 #define CONSOLE_WINDOW_TITLE	"CNQ3 Console"
 #endif
@@ -707,6 +707,7 @@ typedef enum {
 	CVART_BOOL,			// uses integer min/max bounds, min=0 and max=1
 	// extended data types (not currently used by the CPMA QVMs)
 	CVART_COLOR_CPMA,	// CPMA color code (0-9 A-Z a-z)
+	CVART_COLOR_CPMA_E,	// CPMA color code or empty
 	CVART_COLOR_CHBLS,	// CPMA color codes: rail Core, Head, Body, Legs, rail Spiral
 	CVART_COLOR_RGB,	// as hex, e.g. FF00FF
 	CVART_COLOR_RGBA,	// as hex, e.g. FF00FF00

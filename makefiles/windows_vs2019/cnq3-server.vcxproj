@@ -72,7 +72,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Winmm.lib;ws2_32.lib;Version.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Winmm.lib;ws2_32.lib;Version.lib;Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\..\.build\debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <EntryPointSymbol>WinMainCRTStartup</EntryPointSymbol>
       <AdditionalOptions> ..\..\code\win32\winquake.res /STACK:8388608 %(AdditionalOptions)</AdditionalOptions>
@@ -111,7 +111,7 @@ copy "..\..\.bin\debug\cnq3-server.pdb" "$(QUAKE3DIR)"</Command>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>Winmm.lib;ws2_32.lib;Version.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Winmm.lib;ws2_32.lib;Version.lib;Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\..\.build\release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <EntryPointSymbol>WinMainCRTStartup</EntryPointSymbol>
       <AdditionalOptions> ..\..\code\win32\winquake.res /STACK:8388608 /OPT:REF /OPT:ICF %(AdditionalOptions)</AdditionalOptions>
@@ -187,7 +187,6 @@ copy "..\..\.bin\release\cnq3-server.pdb" "$(QUAKE3DIR)"</Command>
     <ClInclude Include="..\..\code\qcommon\vm_local.h" />
     <ClInclude Include="..\..\code\qcommon\vm_shim.h" />
     <ClInclude Include="..\..\code\server\server.h" />
-    <ClInclude Include="..\..\code\win32\glw_win.h" />
     <ClInclude Include="..\..\code\win32\resource.h" />
     <ClInclude Include="..\..\code\win32\win_help.h" />
     <ClInclude Include="..\..\code\win32\win_local.h" />

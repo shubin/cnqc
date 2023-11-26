@@ -80,7 +80,7 @@ void RB_AddQuadStampExt( vec3_t origin, vec3_t left, vec3_t up, byte *color, flo
 	vec3_t		normal;
 	int			ndx;
 
-	RB_CHECKOVERFLOW( 4, 6 );
+	RB_CheckOverflow( 4, 6 );
 
 	ndx = tess.numVertexes;
 
@@ -185,7 +185,7 @@ static void RB_SurfacePolychain( const srfPoly_t* p )
 {
 	int i;
 
-	RB_CHECKOVERFLOW( p->numVerts, 3*(p->numVerts - 2) );
+	RB_CheckOverflow( p->numVerts, 3*(p->numVerts - 2) );
 
 	int numv = tess.numVertexes;
 	for ( i = 0; i < p->numVerts; ++i ) {
@@ -211,7 +211,7 @@ static void RB_SurfaceTriangles( srfTriangles_t* surf )
 {
 	int i, ndx;
 
-	RB_CHECKOVERFLOW( surf->numVerts, surf->numIndexes );
+	RB_CheckOverflow( surf->numVerts, surf->numIndexes );
 
 	unsigned int* tessIndexes = tess.indexes + tess.numIndexes;
 	for ( i = 0; i < surf->numIndexes; ++i )
@@ -482,7 +482,7 @@ void RB_SurfaceMesh(md3Surface_t *surface) {
 		backlerp = backEnd.currentEntity->e.backlerp;
 	}
 
-	RB_CHECKOVERFLOW( surface->numVerts, surface->numTriangles*3 );
+	RB_CheckOverflow( surface->numVerts, surface->numTriangles*3 );
 
 	LerpMeshVertexes (surface, backlerp);
 
@@ -509,7 +509,7 @@ void RB_SurfaceMesh(md3Surface_t *surface) {
 
 static void RB_SurfaceFace( srfSurfaceFace_t* surf )
 {
-	RB_CHECKOVERFLOW( surf->numVerts, surf->numIndexes );
+	RB_CheckOverflow( surf->numVerts, surf->numIndexes );
 
 	const int tessNumVertexes = tess.numVertexes;
 	const int* surfIndexes = surf->indexes;
@@ -872,15 +872,28 @@ static void RB_SurfaceSizeFace( int* numVertexes, int* numIndexes, const srfSurf
 
 static void RB_SurfaceSizeGrid( int* numVertexes, int* numIndexes, const srfGridMesh_t* surf )
 {
-	// @TODO: estimate properly...
-	// @TODO: this can overflow and call the old EndSurface/BeginSurface pair...
-	const int prevNumVertexes = tess.numVertexes;
-	const int prevNumIndexes = tess.numIndexes;
-	RB_SurfaceGrid((srfGridMesh_t*)surf);
-	*numVertexes = tess.numVertexes - prevNumVertexes;
-	*numIndexes = tess.numIndexes - prevNumIndexes;
-	tess.numVertexes = prevNumVertexes;
-	tess.numIndexes = prevNumIndexes;
+	srfGridMesh_t* const cv = (srfGridMesh_t*)surf;
+
+	const float lodError = LodErrorForVolume( cv->lodOrigin, cv->lodRadius );
+
+	int lodWidth = 1;
+	for ( int i = 1; i < cv->width - 1; i++ ) {
+		if ( cv->widthLodError[i] <= lodError ) {
+			lodWidth++;
+		}
+	}
+	lodWidth++;
+
+	int lodHeight = 1;
+	for ( int i = 1; i < cv->height - 1; i++ ) {
+		if ( cv->heightLodError[i] <= lodError ) {
+			lodHeight++;
+		}
+	}
+	lodHeight++;
+
+	*numVertexes = lodWidth * lodHeight;
+	*numIndexes = max( lodWidth - 1, 0 ) * max( lodHeight - 1, 0 ) * 6;
 }
 
 

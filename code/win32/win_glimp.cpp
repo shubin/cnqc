@@ -43,10 +43,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../client/client.h"
 #include "resource.h"
 #include "win_local.h"
-#include "glw_win.h"
-
-
-glwstate_t glw_state;
 
 
 // responsible for creating the Win32 window and initializing the OpenGL driver.
@@ -218,13 +214,13 @@ static qbool GLW_SetDisplaySettings( DEVMODE& dm )
 	const int ec = ChangeDisplaySettingsExA( deviceName, &dm, NULL, CDS_FULLSCREEN, NULL );
 	if ( ec == DISP_CHANGE_SUCCESSFUL )
 	{
-		glw_state.cdsDevMode = dm;
-		glw_state.cdsDevModeValid = qtrue;
+		g_wv.cdsDevMode = dm;
+		g_wv.cdsDevModeValid = qtrue;
 		GLW_UpdateMonitorRect( deviceName );
 		return qtrue;
 	}
 
-	glw_state.cdsDevModeValid = qfalse;
+	g_wv.cdsDevModeValid = qfalse;
 
 	ri.Printf( PRINT_ALL, "...CDS: %ix%i (C%i) failed: ", (int)dm.dmPelsWidth, (int)dm.dmPelsHeight, (int)dm.dmBitsPerPel );
 
@@ -252,20 +248,20 @@ static void GLW_ResetDisplaySettings( qbool invalidate )
 	ChangeDisplaySettingsEx( deviceName, NULL, NULL, 0, NULL );
 	GLW_UpdateMonitorRect( deviceName );
 	if ( invalidate )
-		glw_state.cdsDevModeValid = qfalse;
+		g_wv.cdsDevModeValid = qfalse;
 }
 
 
 void WIN_SetGameDisplaySettings()
 {
-	if ( glw_state.cdsDevModeValid )
-		GLW_SetDisplaySettings( glw_state.cdsDevMode );
+	if ( g_wv.cdsDevModeValid )
+		GLW_SetDisplaySettings( g_wv.cdsDevMode );
 }
 
 
 void WIN_SetDesktopDisplaySettings()
 {
-	// We don't invalidate glw_state.cdsDevModeValid so we can
+	// We don't invalidate g_wv.cdsDevModeValid so we can
 	// return to the previous mode later.
 	GLW_ResetDisplaySettings( qfalse );
 }
@@ -285,7 +281,7 @@ static qbool GLW_SetMode()
 	ZeroMemory( &dm, sizeof( dm ) );
 	dm.dmSize = sizeof( dm );
 
-	if (glInfo.vidFullscreen != glw_state.cdsDevModeValid) {
+	if (glInfo.vidFullscreen != g_wv.cdsDevModeValid) {
 		if (glInfo.vidFullscreen) {
 			dm.dmPelsWidth  = glConfig.vidWidth;
 			dm.dmPelsHeight = glConfig.vidHeight;
@@ -347,7 +343,7 @@ void Sys_V_Shutdown()
 	}
 
 	// reset display settings
-	if ( glw_state.cdsDevModeValid )
+	if ( g_wv.cdsDevModeValid )
 	{
 		ri.Printf( PRINT_DEVELOPER, "...resetting display\n" );
 		GLW_ResetDisplaySettings( qtrue );

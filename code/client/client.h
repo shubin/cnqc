@@ -520,7 +520,7 @@ void CL_CGameRendering( stereoFrame_t stereo );
 void CL_SetCGameTime();
 void CL_ConfigstringModified();
 void CL_CGNDP_EndAnalysis( const char* filePath, int firstServerTime, int lastServerTime, qbool videoRestart );
-void CL_CGNDP_AnalyzeSnapshot( int progress );
+qbool CL_CGNDP_AnalyzeSnapshot( int progress ); // qtrue when a server pause is active
 void CL_CGNDP_AnalyzeCommand( int serverTime );
 void CL_CGNDP_GenerateCommands( const char** commands, int* numCommandBytes );
 qbool CL_CGNDP_IsConfigStringNeeded( int csIndex );
@@ -589,18 +589,7 @@ void CL_IMGUI_MouseEvent( int dx, int dy );
 qbool CL_IMGUI_KeyEvent( int key, qbool down, const char* cmd ); // returns qtrue when handled
 void CL_IMGUI_CharEvent( char key );
 void CL_IMGUI_Shutdown();
-
-//
-// cl_demo.cpp
-//
-void CL_NDP_PlayDemo( qbool videoRestart );
-void CL_NDP_SetCGameTime();
-void CL_NDP_GetCurrentSnapshotNumber( int* snapshotNumber, int* serverTime );
-qbool CL_NDP_GetSnapshot( int snapshotNumber, snapshot_t* snapshot );
-qbool CL_NDP_GetServerCommand( int serverCommandNumber );
-int CL_NDP_Seek( int serverTime );
-void CL_NDP_ReadUntil( int serverTime );
-void CL_NDP_HandleError();
+qbool CL_IMGUI_IsCustomFontLoaded( const char** debugName );
 
 //
 // OS-specific

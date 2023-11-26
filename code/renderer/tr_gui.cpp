@@ -25,6 +25,9 @@ along with Challenge Quake 3. If not, see <https://www.gnu.org/licenses/>.
 #include "../client/cl_imgui.h"
 
 
+qbool CL_IMGUI_IsCustomFontLoaded(const char** customFontName);
+
+
 #define IMAGE_WINDOW_NAME  "Image Details"
 #define SHADER_WINDOW_NAME "Shader Details"
 #define EDIT_WINDOW_NAME   "Shader Editor"
@@ -1499,7 +1502,12 @@ static void DrawCVarValueCombo(const char* cvarName, int count, ...)
 		return;
 	}
 
-	Q_assert(count == cvar->validator.i.max - cvar->validator.i.min + 1);
+#if defined(_DEBUG)
+	if(Q_stricmp(cvarName, "r_guiFont"))
+	{
+		Q_assert(count == cvar->validator.i.max - cvar->validator.i.min + 1);
+	}
+#endif
 
 	const int oldValue = cvar->latchedString != NULL ? atoi(cvar->latchedString) : cvar->integer;
 
@@ -1653,7 +1661,20 @@ static void DrawFontSelection()
 	ImGui::AlignTextToFramePadding();
 	ImGui::Text("Font");
 	ImGui::SameLine();
-	DrawCVarValueCombo("r_guiFont", 2, "Proggy Clean (13px)", "Sweet16 Mono (16px)");
+	const char* customFontName = NULL;
+	if(CL_IMGUI_IsCustomFontLoaded(&customFontName))
+	{
+		DrawCVarValueCombo("r_guiFont", 3,
+			"Proggy Clean (13px)",
+			"Sweet16 Mono (16px)",
+			customFontName);
+	}
+	else
+	{
+		DrawCVarValueCombo("r_guiFont", 2,
+			"Proggy Clean (13px)",
+			"Sweet16 Mono (16px)");
+	}
 	const int fontIndex = Cvar_VariableIntegerValue("r_guiFont");
 	ImGuiIO& io = ImGui::GetIO();
 	if(fontIndex >= 0 && fontIndex < io.Fonts->Fonts.Size)

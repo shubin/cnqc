@@ -581,9 +581,9 @@ struct CachedPSO
 struct PostProcess
 {
 	void Init();
-	void Draw();
+	void Draw(const char* renderPassName, HTexture renderTarget);
 	void ToneMap();
-	void InverseToneMap();
+	void InverseToneMap(int colorFormat);
 	void SetToneMapInput(HTexture toneMapInput);
 	void SetInverseToneMapInput(HTexture inverseToneMapInput);
 
@@ -591,7 +591,7 @@ struct PostProcess
 	HRootSignature toneMapRootSignature;
 	HDescriptorTable toneMapDescriptorTable;
 
-	HPipeline inverseToneMapPipeline;
+	HPipeline inverseToneMapPipelines[RTCF_COUNT];
 	HRootSignature inverseToneMapRootSignature;
 	HDescriptorTable inverseToneMapDescriptorTable;
 };
@@ -656,7 +656,7 @@ struct GRP : IRenderPipeline
 	void ProcessModel(model_t& model) override;
 	void ProcessShader(shader_t& shader) override;
 
-	void ExecuteRenderCommands(const byte* data) override;
+	void ExecuteRenderCommands(const byte* data, bool readbackRequested) override;
 
 	void UISetColor(const uiSetColorCommand_t& cmd) override { ui.UISetColor(cmd); }
 	void UIDrawQuad(const uiDrawQuadCommand_t& cmd) override { ui.UIDrawQuad(cmd); }
@@ -680,6 +680,8 @@ struct GRP : IRenderPipeline
 
 	uint32_t CreatePSO(CachedPSO& cache, const char* name);
 
+	void UpdateReadbackTexture();
+
 	UI ui;
 	World world;
 	MipMapGenerator mipMapGen;
@@ -689,12 +691,14 @@ struct GRP : IRenderPipeline
 	bool firstInit = true;
 	RenderMode::Id renderMode; // necessary for sampler selection, useful for debugging
 	float frameSeed;
+	bool updateReadbackTexture;
 
 	// @TODO: what's up with rootSignature and uberRootSignature?
 	// probably need to nuke one of them...
 
 	HTexture renderTarget;
 	TextureFormat::Id renderTargetFormat;
+	HTexture readbackRenderTarget;
 	RootSignatureDesc rootSignatureDesc;
 	HRootSignature rootSignature;
 	HDescriptorTable descriptorTable;

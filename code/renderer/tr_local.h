@@ -529,6 +529,8 @@ struct drawSurf_t {
 
 void R_TessellateSurface( const surfaceType_t* surfType );
 void R_ComputeTessellatedSize( int* numVertexes, int* numIndexes, const surfaceType_t* surfType );
+// R_ComputeTessellatedSize is unused for now but might be of use a bit later
+// we can use it to compute the required size of the static geometry buffers in the GRP
 
 
 struct litSurf_t {
@@ -1000,14 +1002,7 @@ extern trGlobals_t	tr;
 #define RTCF_R10G10B10A2	1
 #define RTCF_R16G16B16A16	2
 #define RTCF_MAX			2
-
-// r_showtris + r_shownormals
-#define SHOWTRIS_ENABLE_BIT			1
-#define SHOWTRIS_OCCLUDE_BIT		2
-#define SHOWTRIS_BACKFACE_BIT		4
-#define SHOWTRIS_VERTEX_COLOR_BIT	8
-#define SHOWTRIS_VERTEX_ALPHA_BIT	16
-#define SHOWTRIS_MAX				31
+#define RTCF_COUNT			3
 
 // r_gpuPreference
 #define GPUPREF_HIGHPERF		0
@@ -1045,9 +1040,12 @@ extern cvar_t	*r_lightmap;			// render lightmaps only
 extern cvar_t	*r_lightmapGreyscale;	// how monochrome the lightmap looks
 extern cvar_t	*r_mapGreyscale;		// how monochrome the map looks
 extern cvar_t	*r_mapGreyscaleCTF;		// how monochrome CTF map surfaces look
+extern cvar_t	*r_teleporterFlash;		// 1 is default Q3 behavior, 0 is pure black
 extern cvar_t	*r_sleepThreshold;		// time cushion in us for a call to Sleep(1+)
 extern cvar_t	*r_shadingRate;			// variable-rate shading (VRS) mode
 extern cvar_t	*r_guiFont;				// Dear ImGui font
+extern cvar_t	*r_guiFontFile;			// Dear ImGui font, custom .ttf
+extern cvar_t	*r_guiFontHeight;		// Dear ImGui font, custom height
 extern cvar_t	*r_fullbright;			// avoid lightmap pass
 extern cvar_t	*r_depthFade;			// fades marked shaders based on depth
 extern cvar_t	*r_dither;				// enables dithering
@@ -1071,9 +1069,6 @@ extern	cvar_t	*r_lego;
 extern	cvar_t	*r_vertexLight;			// vertex lighting mode for better performance
 extern	cvar_t	*r_uiFullScreen;		// ui is running fullscreen
 
-extern	cvar_t	*r_showsky;				// forces sky in front of all surfaces
-extern	cvar_t	*r_showtris;			// draws wireframe triangles
-extern	cvar_t	*r_shownormals;			// draws wireframe normals
 extern	cvar_t	*r_clear;				// clear to violet instead of black for debugging
 
 extern	cvar_t	*r_lockpvs;
@@ -1322,11 +1317,7 @@ struct shaderCommands_t
 
 extern shaderCommands_t tess;
 
-// @TODO: nuke all this
-void RB_BeginSurface( const shader_t* shader, int fogNum );
-void RB_EndSurface();
 void RB_CheckOverflow( int verts, int indexes );
-#define RB_CHECKOVERFLOW(v,i) RB_CheckOverflow(v,i)
 
 void R_ComputeColors( const shaderStage_t* pStage, stageVars_t& svars, int firstVertex, int numVertexes );
 void R_ComputeTexCoords( const shaderStage_t* pStage, stageVars_t& svars, int firstVertex, int numVertexes, qbool ptrOpt );
@@ -1508,28 +1499,33 @@ struct drawSceneViewCommand_t : renderCommandBase_t {
 
 struct endSceneCommand_t : renderCommandBase_t {
 	viewParms_t viewParms;
-#if !defined( QC )
 	uint32_t padding2;
-#endif // !QC
 };
 
-struct screenshotCommand_t : renderCommandBase_t {
+struct readbackCommandBase_t {
+	qbool requested;
+};
+
+struct screenshotCommand_t : readbackCommandBase_t {
 	int width;
 	int height;
 	const char* fileName;
 	enum ss_type { SS_TGA, SS_JPG } type;
 	float conVis;	// if > 0, this is a delayed screenshot and we need to 
 					// restore the console visibility to that value
-	qbool delayed;
 };
 
-struct videoFrameCommand_t : renderCommandBase_t {
-	int		commandId;
+struct videoFrameCommand_t : readbackCommandBase_t {
 	int		width;
 	int		height;
 	byte	*captureBuffer;
 	byte	*encodeBuffer;
 	qbool	motionJpeg;
+};
+
+struct readbackCommands_t {
+	screenshotCommand_t screenshot;
+	videoFrameCommand_t videoFrame;
 };
 
 #pragma pack(pop)
@@ -1546,9 +1542,7 @@ struct videoFrameCommand_t : renderCommandBase_t {
 	Cmd(RC_DRAW_SCENE_VIEW, drawSceneViewCommand_t) \
 	Cmd(RC_END_SCENE, endSceneCommand_t) \
 	Cmd(RC_BEGIN_FRAME, beginFrameCommand_t) \
-	Cmd(RC_SWAP_BUFFERS, swapBuffersCommand_t) \
-	Cmd(RC_SCREENSHOT, screenshotCommand_t) \
-	Cmd(RC_VIDEOFRAME, videoFrameCommand_t)
+	Cmd(RC_SWAP_BUFFERS, swapBuffersCommand_t)
 
 #define RC(Enum, Type) Enum,
 enum renderCommand_t {
@@ -1573,6 +1567,7 @@ typedef struct {
 	srfPoly_t	*polys;
 	polyVert_t	*polyVerts;
 	renderCommandList_t	commands;
+	readbackCommands_t readbackCommands;
 } backEndData_t;
 
 #define SKY_SUBDIVISIONS		8
@@ -1589,10 +1584,8 @@ extern	int		max_polyverts;
 
 extern	backEndData_t*		backEndData;
 
-void GfxInfo_f( void );
-
-const byte* RB_TakeScreenshotCmd( const screenshotCommand_t* cmd );
-const byte* RB_TakeVideoFrameCmd( const videoFrameCommand_t* cmd );
+void RB_TakeScreenshotCmd( const screenshotCommand_t* cmd );
+void RB_TakeVideoFrameCmd( const videoFrameCommand_t* cmd );
 
 void RB_PushSingleStageShader( int stateBits, cullType_t cullType );
 void RB_PopShader();
@@ -1603,7 +1596,6 @@ void RB_DrawSky();
 void R_BuildCloudData();
 
 void R_IssueRenderCommands();
-byte* R_FindRenderCommand( renderCommand_t type );
 byte* R_AllocateRenderCommand( int bytes, int commandId, qbool endFrame );
 
 void R_AddDrawSurfCmd( drawSurf_t* drawSurfs, int numDrawSurfs, int numTranspSurfs );
@@ -1622,6 +1614,8 @@ void RE_TakeVideoFrame( int width, int height,
 #if defined( QC )
 void RE_GetAdvertisements( int *num, float *verts, void *shaders );
 #endif
+
+void R_EndScene( const viewParms_t* viewParms );
 
 void R_EndScene( const viewParms_t* viewParms );
 
@@ -1694,7 +1688,7 @@ struct IRenderPipeline
 	virtual void BeginTextureUpload(RHI::MappedTexture& mappedTexture, image_t* image) = 0;
 	virtual void EndTextureUpload() = 0;
 
-	virtual void ExecuteRenderCommands(const byte* data) = 0;
+	virtual void ExecuteRenderCommands(const byte* data, bool readbackRequested) = 0;
 
 	virtual void UISetColor(const uiSetColorCommand_t& cmd) = 0;
 	virtual void UIDrawQuad(const uiDrawQuadCommand_t& cmd) = 0;
@@ -1720,6 +1714,19 @@ struct RHIExport
 };
 
 extern RHIExport rhie;
+
+struct RHIInfo
+{
+	char name[MAX_QPATH];
+	char adapter[MAX_QPATH];
+	qbool hasTearing;
+	qbool hasBaseVRS;
+	qbool hasExtendedVRS;
+	qbool isUMA;
+	qbool isCacheCoherentUMA;
+};
+
+extern RHIInfo rhiInfo;
 
 
 #endif //TR_LOCAL_H

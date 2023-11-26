@@ -51,7 +51,9 @@ void CompileShader(const ShaderArgs& args, int extraCount = 0, const char** extr
 
 	// -Ges: Enable strict mode
 	// -Gis: Force IEEE strictness
-	strcpy(temp, va("dxc.exe -Fh %s -E %s -T %s -WX -Ges -Gis",
+	// -Zi: Embed debug info
+	// -Qembed_debug: Embed debug info in shader container
+	strcpy(temp, va("dxc.exe -Fh %s -E %s -T %s -WX -Ges -Gis -Zi -Qembed_debug",
 		args.headerPath, args.entryPoint, args.targetProfile));
 
 	for(int i = 0; i < extraCount; ++i)

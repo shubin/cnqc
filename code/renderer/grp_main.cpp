@@ -260,7 +260,7 @@ void GRP::Init()
 				renderTargetFormat = TextureFormat::R10G10B10A2_UNorm;
 				break;
 			case RTCF_R16G16B16A16:
-				renderTargetFormat = TextureFormat::RGBA64_Float;
+				renderTargetFormat = TextureFormat::RGBA64_UNorm;
 				break;
 			case RTCF_R8G8B8A8:
 			default:
@@ -277,6 +277,18 @@ void GRP::Init()
 		desc.format = renderTargetFormat;
 		desc.shortLifeTime = true;
 		renderTarget = RHI::CreateTexture(desc);
+	}
+
+	{
+		TextureDesc desc("readback render target", glConfig.vidWidth, glConfig.vidHeight);
+		desc.initialState = ResourceStates::RenderTargetBit;
+		desc.allowedState = ResourceStates::RenderTargetBit | ResourceStates::PixelShaderAccessBit;
+		Vector4Clear(desc.clearColor);
+		desc.usePreferredClearValue = true;
+		desc.committedResource = true;
+		desc.format = TextureFormat::RGBA32_UNorm;
+		desc.shortLifeTime = true;
+		readbackRenderTarget = RHI::CreateTexture(desc);
 	}
 
 	ui.Init();
@@ -326,8 +338,9 @@ void GRP::EndFrame()
 	DrawGUI();
 	R_DrawGUI();
 	imgui.Draw();
-	post.Draw();
+	post.Draw("Post-process", GetSwapChainTexture());
 	world.EndFrame();
+	UpdateReadbackTexture();
 	RHI::EndFrame();
 
 	if(rhie.presentToPresentUS > 0)
@@ -344,6 +357,16 @@ void GRP::EndFrame()
 	{
 		Sys_V_EndFrame();
 	}
+}
+
+void GRP::UpdateReadbackTexture()
+{
+	if(!updateReadbackTexture)
+	{
+		return;
+	}
+
+	post.Draw("Readback post-process", readbackRenderTarget);
 }
 
 void GRP::CreateTexture(image_t* image, int mipCount, int width, int height)
@@ -861,8 +884,10 @@ uint32_t GRP::CreatePSO(CachedPSO& cache, const char* name)
 	return index;
 }
 
-void GRP::ExecuteRenderCommands(const byte* data)
+void GRP::ExecuteRenderCommands(const byte* data, bool readbackRequested)
 {
+	updateReadbackTexture = readbackRequested;
+
 	for(;;)
 	{
 		const int commandId = ((const renderCommandBase_t*)data)->commandId;
@@ -913,12 +938,6 @@ void GRP::ExecuteRenderCommands(const byte* data)
 			case RC_END_SCENE:
 				smaa.Draw(((const endSceneCommand_t*)data)->viewParms);
 				break;
-			case RC_SCREENSHOT:
-				RB_TakeScreenshotCmd((const screenshotCommand_t*)data);
-				break;
-			case RC_VIDEOFRAME:
-				RB_TakeVideoFrameCmd((const videoFrameCommand_t*)data);
-				break;
 
 			default:
 				Q_assert(!"Unsupported render command type");
@@ -931,10 +950,8 @@ void GRP::ExecuteRenderCommands(const byte* data)
 
 void GRP::ReadPixels(int w, int h, int alignment, colorSpace_t colorSpace, void* outPixels)
 {
-	const HTexture sourceTexture = GetSwapChainTexture();
-
 	MappedTexture mapped;
-	BeginTextureReadback(mapped, sourceTexture);
+	BeginTextureReadback(mapped, grp.readbackRenderTarget);
 
 	byte* const out0 = (byte*)outPixels;
 	const byte* const in0 = mapped.mappedData;

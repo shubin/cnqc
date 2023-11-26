@@ -2,7 +2,89 @@
 See the end of this file for known issues.
 
 
-DD Mmm 20 - 1.53
+DD Mmm YY - 1.54
+
+add: togglegui and toggleguiinput to toggle (the mouse input of) the built-in GUI system
+
+add: key binds starting with "keycatchgui" always take precedence over everything else
+  they will work in the main menu, the demo player in protected mode, when the console is down, ...
+  here's how you would bind keys to access the new built-in GUI:
+  bind F1 "keycatchgui;togglegui"
+  bind F2 "keycatchgui;toggleguiinput"
+
+add: r_guiFont <0 to 2> (default: 0) sets the GUI's font
+  0 - Proggy Clean (13px)
+  1 - Sweet16 Mono (16px)
+  2 - custom font file (see r_guiFontFile and r_guiFontHeight)
+  note that the custom font can only get loaded at client start-up
+
+add: r_guiFontFile <string> (default: "") is the file path to the custom .ttf font file
+
+add: r_guiFontHeight <7 to 48> (default: 24) is the custom font's height
+
+add: r_gpuPreference <0 to 2> (default: 0) sets the GPU selection preference
+  0 - high performance (discrete graphics)
+  1 - low power (integrated graphics)
+  2 - none
+
+add: r_sleepThreshold <2000 to 4000> (default: 2500) is the frame sleep time cushion, in microseconds
+  it's a trade-off between frame time consistency and CPU usage
+  set to 2000 if you have a struggling old/low-power CPU
+  2500 should be enough to deal with delayed thread wake-ups
+  use the frame graph to confirm that higher values help on your system
+
+add: r_smaa <0 to 4> (default: 0) enables enhanced sub-pixel morphological anti-aliasing
+  0 - no SMAA
+  1 - low quality
+  2 - medium quality
+  3 - high quality
+  4 - ultra quality
+
+add: r_shadingRate <0 to 6> (default: 0) sets the variable-rate shading (VRS) mode
+  0 - 1x1 (VRS off)
+  1 - 2x1 (base mode)
+  2 - 1x2 (base mode)
+  3 - 2x2 (base mode)
+  4 - 4x2 (extended mode)
+  5 - 2x4 (extended mode)
+  6 - 4x4 (extended mode)
+  the numbers are the horizontal and vertical subsampling factors
+  1x1 is forced for the sky, nopicmipped sprites (e.g. simple items)
+  and nopicmipped alpha tested surfaces (e.g. grates)
+  if extended modes are not supported, 2x2 is used instead
+  prefer horizontal subsampling as many maps have textures with thin horizontal lines
+  which become an aliased mess when vertically subsampled
+
+chg: dropped 32-bit support
+
+chg: dropped Linux/FreeBSD client
+
+chg: Windows support is limited to 10 and 11
+
+chg: much improved rendering:
+  - removed all Direct3D 11 and OpenGL code
+  - rendering with Direct3D 12 (improved performance and better worst case input latency)
+  - much improved input latency when V-Sync is enabled
+  - improved frame-time consistency
+  - surfaces are sorted and rendered more efficiently
+  - fog handling has been completely overhauled (faster, simpler, decoupled from surfaces)
+  - MSAA and alpha-to-coverage have been removed
+  - added SMAA for anti-aliasing (gamma-corrected and not applied to UI for best results)
+
+chg: removed cl_drawMouseLag, r_backend, r_frameSleep, r_gpuMipGen, r_alphaToCoverage, r_alphaToCoverageMipBoost
+  removed r_d3d11_syncOffsets, r_d3d11_presentMode, r_gl3_geoStream, r_ignoreGLErrors, r_finish, r_khr_debug
+  removed r_verbose, r_customaspect, r_speeds, r_msaa, r_showsky, r_showtris, r_shownormals
+  replaced r_swapInterval with r_vsync <0|1> (default: 0) to enable V-Sync
+  replaced r_textureMode with r_lego <0|1> (default: 0) to enable nearest-neighbor texture filtering
+
+
+30 Oct 23 - 1.53
+
+add: /registerdemos   adds Windows file associations for demo files (.dm_68 .dm_67 .dm_66)
+  /unregisterdemos removes Windows file associations for demo files
+  on Windows, /demo can now play demo files that have an absolute path (e.g. /demo C:\test.dm_68)
+
+add: r_teleporterFlash <0|1> (default: 1) draws bright colors when being teleported (use 0 for black)
 
 add: s_khz <22|44> (default: 22) is the sound mixing sampling frequency: 22.05 kHz or 44.1 kHz
 
@@ -57,6 +139,11 @@ add: /waitms <milliseconds> to delay command executions by the specified number 
 add: r_alphaToCoverageMipBoost <0.0 to 0.5> (default: 0.125) boosts the alpha value of higher mip levels
   with A2C enabled, it prevents alpha-tested surfaces from fading (too much) in the distance
 
+chg: with hybrid core CPUs (e.g. Intel gen 12+) on Windows, the main thread will only run on the P-cores
+
+chg: the client can now read .wav files from the local file system when connected to a pure server
+  this allows e.g. cg_fragSound to load sounds from the local file system instead of .pk3 files
+
 chg: CVar sets will use all arguments instead of only the first one
   example: pressing n with `bind n "name x y z"` will rename to "x y z" instead of "x"
 
@@ -96,6 +183,19 @@ chg: with r_backend GL3, depth fade with MSAA now requires GLSL 4.00 at a minimu
   depth access is now correctly multi-sampled (less aliasing) and performance has improved as well
 
 chg: with r_backend GL3, alpha to coverage now requires GLSL 4.00 at a minimum
+
+fix: the renderer could crash on some maps without lightmaps (e.g. b0_beta5)
+
+fix: with r_backend GL2, the extra clip plane for mirror/portal surfaces was not being used
+  this quick fix is likely to fail for some drivers and vendors due to its use of deprecated features
+  based on a few tests: OK on NVIDIA and Intel, not working on AMD
+
+fix: long demo file names would cause video recording to output files with no extension or outright fail
+
+fix: invalid skybox texture mip-mapping and filtering settings (e.g. cpm25 skybox seams)
+
+fix: in render batches with multiple shaders where the second or later surface had a shader using
+  "rgbGen lightingDiffuse", the colors would be wrong and crashes could occur
 
 fix: the reported MSAA sample counts for the GL2 and GL3 back-ends could be wrong
 
@@ -1128,3 +1228,9 @@ iss: D3D11 full-screen toggles with the 32-bit client freeze myT's PC :-(
 cfg: nVidia GeForce GTX 1070 - Windows 7 SP1 x64 - drivers 445.87
 fix: use the 64-bit client
 act: can't fix (root cause unknown)
+
+iss: with GL2, mirror/portal surface rendering doesn't use the extra clip plane
+cfg: AMD Radeon 780M Graphics
+exp: AMD drivers are more strict
+fix: use another backend
+act: won't fix
